@@ -1,0 +1,12 @@
+
+<volist name="my_subject" id="vo">
+<tr>
+  <td>{{$vo.subject_id}}</td>
+  <td>{{$vo.subject_name}}</td>
+  <td>{{$vo.created}}</td>
+  <td>
+    <button class="layui-btn layui-btn-small" onclick="doEdit({{$vo.subject_id}}, '{{$vo.subject_name}}');"><i class="layui-icon">&#xe642;</i>&nbsp;编辑</button>
+    <button class="layui-btn layui-btn-small" onclick="doDelete({{$vo.subject_id}});"><i class="layui-icon">&#xe640;</i>&nbsp;删除</button>
+  </td>
+</tr>
+</volist>

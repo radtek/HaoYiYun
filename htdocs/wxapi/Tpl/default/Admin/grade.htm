@@ -1,0 +1,179 @@
+
+<include file = "Common:admin_header" />
+
+<style>
+.layui-form-label {
+  padding: 6px 0px;
+  width: 75px;
+}
+.layui-layer-input {
+  display: block;
+  width: 190px;
+  height: 30px;
+  margin: 0 15px;
+  line-height: 30px;
+  padding: 0 5px;
+  border: 1px solid #ccc;
+  box-shadow: 1px 1px 5px rgba(0,0,0,.1) inset;
+  color: #333;
+}
+.layui-input-block {
+  margin-left: 70px;
+}
+</style>
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-file-text-o">&nbsp;&nbsp;</i>年级管理</legend>
+        </fieldset>
+        <div style="width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="50">
+              <col width="150">
+              <col width="150">
+              <col width="150">
+              <col width="150">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>编号</th>
+                <th>类型</th>
+                <th>名称</th>
+                <th>时间</th>
+                <th>操作</th>
+              </tr> 
+            </thead>
+            <tbody class="js_grade"></tbody>
+          </table>
+          <div style="float:left;" id="myPage"></div>
+          <div style="float:right;margin:5px 60px 0px 0px;">
+            <button class="layui-btn" onclick="doAdd();">
+              <i class="layui-icon">&#xe61f;</i>&nbsp;添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+//获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 修改和添加合并操作...
+function doAction(inTitle, inID, inType, inName) {
+  // 弹出操作框..
+  var strContent;
+  var $ = layui.jquery;
+  strContent ='<div style="margin-top:25px"><label class="layui-form-label">年级类型</label><div class="layui-input-block"><input type="text" id="myType" class="layui-layer-input" value='+inType+'></div></div>';
+  strContent += '<div style="margin-top:15px"><label class="layui-form-label">年级名称</label><div class="layui-input-block"><input type="text" id="myName" class="layui-layer-input" value='+inName+'></div></div>';
+  layer.open({type: 1, resize: false, area: ['310px', '220px'], title: inTitle, btn: ['确定','取消'], content: strContent, success: function(){ $('#myType').focus(); }, yes: function(index){
+    // 判断输入数据的有效性...
+    var strType = $('#myType').val();
+    var strName = $('#myName').val();
+    if( strType.length <= 0 || strName.length <= 0 ) {
+      layer.msg('【年级类型】或【年级名称】不能为空！', {icon: 2});
+      $('#myType').focus();
+      return;
+    }
+    if( strType.length >= 20 || strName.length >= 20 ) {
+      layer.msg('【年级类型】或【年级名称】太长！', {icon: 2});
+      $('#myType').focus();
+      return;
+    }
+    layer.close(index);
+    // 加载动画层，获取jquery对象...
+    var index = layer.load(2);
+    // 向服务器发送保存命令...
+    $.ajax({
+      type: "post",
+      async: true,
+      url: siteurl+"/Admin/saveGrade",
+      data: {grade_id: inID, grade_type: strType, grade_name: strName},
+      success: function(ajaxData) {
+        layer.closeAll('loading');
+        location.reload();
+      },
+      error: function(e) {
+        layer.closeAll('loading');
+        layer.alert(e, {icon: 2});
+      }
+    });
+  }});
+}
+//
+// 执行添加操作...
+function doAdd()
+{
+  doAction("添加 - 年级", 0, "", "");
+}
+//
+// 执行修改操作...
+function doEdit(inID, inType, inName)
+{
+  doAction("编辑 - 年级", inID, inType, inName);
+}
+//
+// 执行删除操作...
+function doDelete(inID) {
+  layer.confirm('确实要删除选中记录？', {title: '删除 - 年级', btn: ['确定','取消']}, function(index){
+    layer.close(index);
+    // 加载动画层，获取jquery对象...
+    var index = layer.load(2);
+    var $ = layui.jquery;
+    // 向服务器发送保存命令...
+    $.ajax({
+      type: "post",
+      url: siteurl+"/Admin/delGrade",
+      data: {grade_id: inID},
+      async: true,
+      success: function(ajaxData) {
+        layer.closeAll('loading');
+        location.reload();
+      },
+      error: function(e) {
+        layer.closeAll('loading');
+        layer.alert(e, {icon: 2});
+      }
+    });    
+  });
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var laypage = layui.laypage;
+  var $ = layui.jquery;
+  laypage({
+    pages: {{$max_page}},   // 总页数...
+    cont: 'myPage',         // 分页对象...
+    groups: 5,              // 连续显示分页数
+    jump: function(obj, first) {
+      // 向服务器发送分页命令...
+      var index = layer.load(2);
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Admin/pageGrade/p/"+obj.curr,
+        success: function(ajaxData) {
+          layer.closeAll('loading');
+          $('.js_grade').html(ajaxData);
+        },
+        error: function(e) {
+          layer.closeAll('loading');
+          layer.alert(e, {icon: 2});
+        }
+      });    
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

@@ -1,0 +1,137 @@
+
+<include file = "Common:home_header" />
+
+<include file = "Common:home_nav" />
+
+<script src="/wxapi/public/js/jquery.royalslider.js"></script>
+<link href="/wxapi/public/css/royalslider.css" rel="stylesheet">
+<link href="/wxapi/public/css/play.css" rel="stylesheet">
+
+<section class="content-wrap">
+  <div class="container">
+    <div class="row">
+      <article class="base">
+        <div class="base_info">
+          <h1 class="base_title">
+            <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
+            <span class="js_title">{{$my_base.play_title}}</span>
+          </h1>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+      <article style="margin-bottom:20px;">
+        <div id="video-gallery" class="royalSlider videoGallery rsDefault">
+          <volist name="my_play" id="vo">
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/vod/id/{{$vo.record_id}}" href="{{$my_tracker}}{{$vo.image_fdfs}}_640x360">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover">
+                <img src="{{$my_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+                <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
+              </div>
+              <div class="headline">{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}}&nbsp;{{$vo.teacher_name}}&nbsp;{{$vo.title_name}}&nbsp;{{$vo.created}}</div>
+              <div class="status"><span>{{$vo.clicks}}次播放</span></div>
+            </div>
+          </a>
+          </volist>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+      <article style="height:130px;margin-bottom:20px;"></article>
+    </div>
+  </div>
+</section>
+
+<script>
+
+// 处理缩略图无法加载的问题...
+function doErrHead() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+// 由子窗口调用的播放结束事件接口...
+function doEndedEvent() {
+  // 直接得到slider对象，调用next接口...
+  var slider = $(".royalSlider").data('royalSlider');
+  slider.next();
+}
+
+$(document).ready( function () {
+  // 视频集合窗口的处理 => 初始化卡片参数...
+  $('#video-gallery').royalSlider({
+    arrowsNav: false,
+    fadeinLoadedSlide: true,
+    controlNavigationSpacing: 0,
+    controlNavigation: 'thumbnails',
+    thumbs: {
+      autoCenter: false,
+      fitInViewport: true,
+      orientation: 'vertical',
+      spacing: 0,
+      paddingBottom: 0
+    },
+    keyboardNavEnabled: true,
+    imageScaleMode: 'fill',
+    imageAlignCenter:true,
+    slidesSpacing: 0,
+    loop: false,
+    loopRewind: true,
+    numImagesToPreload: 3,
+    video: {
+      autoHideArrows:true,
+      autoHideControlNav:false,
+      autoHideBlocks: true
+    }, 
+    autoScaleSlider: true, 
+    autoScaleSliderWidth: 960,     
+    autoScaleSliderHeight: 450,
+    imgWidth: 640,
+    imgHeight: 360
+  });
+  /////////////////////////////////////////////////
+  // 注册slider的相关事件，方便自定义过程处理...
+  /////////////////////////////////////////////////
+  var slider = $(".royalSlider").data('royalSlider');
+  // 注册slider切换前事件 => 停止上一个视频对象...
+  slider.ev.on('rsBeforeMove', function(event, type, userAction ) {
+    this.stopVideo();
+  });
+  // 注册slider切换后事件 => 启动当前视频对象...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    this.playVideo();
+  });
+  // 当slider发生变化之后的事件响应...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    // 直接用jquery的样式特征定位比较简单，然后给标题赋值...
+    var theHeadLine = $('.rsNav .rsNavSelected .headline').html();
+    //var theStatus = $('.rsNav .rsNavSelected .status').text();
+    $('.js_title').html(theHeadLine);
+  });
+  // 第一个视频在0.5秒之后自动播放...
+  setTimeout(function() {
+    slider.toggleVideo();
+  }, 500);
+  // 注册窗口的滚动条函数...
+	$(window).scroll(function() {
+		if( $(this).scrollTop() > 100 ) {
+			$('#back-to-top').fadeIn();
+		} else {
+			$('#back-to-top').fadeOut();
+		}
+	});
+  // 设置点击back-to-top事件...
+	$('#back-to-top').on('click', function(e){
+		e.preventDefault();
+		$('html, body').animate({scrollTop : 0},1000);
+		return false;
+	});
+});
+</script>
+
+<include file = "Common:home_footer" />

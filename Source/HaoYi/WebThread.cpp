@@ -1,0 +1,377 @@
+
+#include "stdafx.h"
+#include "HaoYiView.h"
+#include "WebThread.h"
+#include "SocketUtils.h"
+#include "StringParser.h"
+#include "XmlConfig.h"
+#include "UtilTool.h"
+#include "tinyxml.h"
+#include <curl.h>
+
+CWebThread::CWebThread(CHaoYiView * lpView)
+  : m_eRegState(kRegGather)
+  , m_lpHaoYiView(lpView)
+  , m_strDBCameraName("")
+  , m_nDBCameraID(-1)
+  , m_nDBGatherID(-1)
+  , m_nRemotePort(0)
+  , m_nTrackerPort(0)
+  , m_strRemoteAddr("")
+  , m_strTrackerAddr("")
+  , m_nCurCameraCount(0)
+{
+	ASSERT( m_lpHaoYiView != NULL );
+}
+
+CWebThread::~CWebThread()
+{
+	// 停止线程，等待退出...
+	this->StopAndWaitForThread();
+}
+
+GM_Error CWebThread::Initialize()
+{
+	GM_Error theErr = GM_NoErr;
+
+	// 启动组播接收线程...
+	this->Start();
+	return theErr;
+}
+
+size_t procPostCurl(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+	CWebThread * lpThread = (CWebThread*)stream;
+	lpThread->doPostCurl((char*)ptr, size * nmemb);
+	return size * nmemb;
+}
+//
+// 返回一个json数据包...
+void CWebThread::doPostCurl(char * pData, size_t nSize)
+{
+	string strUTF8Data;
+	string strANSIData;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	strUTF8Data.assign(pData, nSize);
+	strANSIData = CUtilTool::UTF8_ANSI(strUTF8Data.c_str());
+	// 解析转换后的json数据包...
+	if( !reader.parse(strANSIData, value) ) {
+		MsgLogGM(GM_Err_Json);
+		return;
+	}
+	// 获取返回的采集端编号和错误信息...
+	if( value["err_code"].asBool() ) {
+		string & strData = value["err_msg"].asString();
+		string & strMsg = CUtilTool::UTF8_ANSI(strData.c_str());
+		MsgLogINFO(strMsg.c_str());
+		return;
+	}
+	// 获取有效的反馈数据信息...
+	if( m_eRegState == kRegGather ) {
+		// 正在处理注册采集端过程...
+		Json::Value & theID = value["gather_id"];
+		if( theID.isInt() ) {
+			m_nDBGatherID = theID.asInt();
+		} else if( theID.isString() ) {
+			m_nDBGatherID = atoi(theID.asString().c_str());
+		}
+		// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
+		Json::Value & theRemoteAddr = value["transmit_addr"];
+		Json::Value & theRemotePort = value["transmit_port"];
+		Json::Value & theTrackerAddr = value["tracker_addr"];
+		Json::Value & theTrackerPort = value["tracker_port"];
+		Json::Value & theLocalTime   = value["local_time"];
+		if( theTrackerAddr.isString() ) {
+			m_strTrackerAddr = theTrackerAddr.asString();
+		}
+		if( theTrackerPort.isString() ) {
+			m_nTrackerPort = atoi(theTrackerPort.asString().c_str());
+		}
+		if( theRemoteAddr.isString() ) {
+			m_strRemoteAddr = theRemoteAddr.asString();
+		}
+		if( theRemotePort.isString() ) {
+			m_nRemotePort = atoi(theRemotePort.asString().c_str());
+		}
+		// 同步网站服务器时钟...
+		if( theLocalTime.isString() ) {
+			COleDateTime theDate;
+			SYSTEMTIME   theST = {0};
+			string strLocalTime = theLocalTime.asString();
+			// 解析正确，并且得到系统时间正确，才进行设置...
+			if( theDate.ParseDateTime(strLocalTime.c_str()) && theDate.GetAsSystemTime(theST) ) {
+				::SetLocalTime(&theST);
+			}
+		}
+	} else if( m_eRegState == kRegCamera ) {
+		// 正在处理注册摄像头过程...
+		Json::Value & theID = value["camera_id"];
+		if( theID.isInt() ) {
+			m_nDBCameraID = theID.asInt();
+		} else if( theID.isString() ) {
+			m_nDBCameraID = atoi(theID.asString().c_str());
+		}
+		// 获取通道名称...
+		Json::Value & theCameraName = value["camera_name"];
+		if( theCameraName.isString() ) {
+			string & strData = theCameraName.asString();
+			m_strDBCameraName = CUtilTool::UTF8_ANSI(strData.c_str());
+		}
+		// 获取录像课程表...
+		Json::Value & theCourse = value["course"];
+		if( theCourse.isArray() ) {
+			for(int i = 0; i < theCourse.size(); ++i) {
+				int     nCourseID;
+				string  strValue;
+				GM_MapData theMapData;
+				strValue = CUtilTool::getJsonString(theCourse[i]["course_id"]);
+				theMapData["course_id"] = strValue;
+				nCourseID = atoi(strValue.c_str());
+				strValue = CUtilTool::getJsonString(theCourse[i]["camera_id"]);
+				theMapData["camera_id"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["subject_id"]);
+				theMapData["subject_id"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["teacher_id"]);
+				theMapData["teacher_id"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["repeat_id"]);
+				theMapData["repeat_id"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["elapse_sec"]);
+				theMapData["elapse_sec"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["start_time"]);
+				theMapData["start_time"] = strValue;
+				strValue = CUtilTool::getJsonString(theCourse[i]["end_time"]);
+				theMapData["end_time"] = strValue;
+				m_dbMapCourse[nCourseID] = theMapData;
+			}
+		}
+	}
+}
+//
+// 在网站上注册采集端...
+BOOL CWebThread::RegisterGather()
+{
+	// 先设置当前状态信息...
+	m_eRegState = kRegGather;
+	// 判断数据是否有效...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string  & strWebAddr = theConfig.GetWebAddr();
+	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
+	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
+	if( strWebAddr.size() <= 0 || nWebPort <= 0 )
+		return false;
+	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
+		return false;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	TCHAR	szDNS[MAX_PATH] = {0};
+	// 先对频道名称进行UTF8转换，再进行URI编码...
+	string  strDNSName = CUtilTool::GetServerDNSName();
+	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
+	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s", 
+					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS);
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/index", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报采集端信息...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 判断采集端是否注册成功...
+	if( m_nDBGatherID <= 0 )
+		return false;
+	ASSERT( m_nDBGatherID > 0 );
+	// 判断Tracker地址是否已经正确获取得到...
+	if( m_strTrackerAddr.size() <= 0 || m_nTrackerPort <= 0 )
+		return false;
+	if( m_strRemoteAddr.size() <= 0 || m_nRemotePort <= 0 )
+		return false;
+	// 存放到配置文件，但并不存盘...
+	theConfig.SetRemoteAddr(m_strRemoteAddr);
+	theConfig.SetRemotePort(m_nRemotePort);
+	theConfig.SetTrackerAddr(m_strTrackerAddr);
+	theConfig.SetTrackerPort(m_nTrackerPort);
+	return true;
+}
+//
+// 在网站上注册摄像头...
+BOOL CWebThread::RegisterCamera()
+{
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	GM_MapNodeCamera & theMapCamera = theConfig.GetNodeCamera();
+	GM_MapNodeCamera::iterator itorItem = theMapCamera.begin();
+	while( itorItem != theMapCamera.end() ) {
+		// 已注册摄像头数目不够，进行网站注册操作...
+		GM_MapData & theData = itorItem->second;
+		if( !this->doWebRegCamera(theData) ) {
+			// 注册摄像头失败，删除摄像头配置...
+			theMapCamera.erase(itorItem++);
+		} else {
+			// 注册摄像头成功，累加配置...
+			++itorItem;
+		}
+	}
+	return true;
+}
+//
+// 在网站上具体执行注册或更新摄像头操作...
+BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
+{
+	// 输入数据中必须包含ID字段...
+	GM_MapData::iterator itorID;
+	itorID = inData.find("ID");
+	if( itorID == inData.end() )
+		return false;
+	// 获取摄像头编号，用于存放和定位课表内容...
+	int nCameraID = atoi(itorID->second.c_str());
+	if( nCameraID <= 0 )
+		return false;
+	ASSERT( nCameraID > 0 );
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+		return false;
+	// 如果当前已注册摄像头数目超过了最大支持数，不用再注册...
+	if( m_nCurCameraCount >= theConfig.GetMaxCamera() )
+		return false;
+	// 初始化数据库里的摄像头编号...
+	m_dbMapCourse.clear();
+	m_strDBCameraName = "";
+	m_nDBCameraID = -1;
+	// 先设置当前状态信息...
+	m_eRegState = kRegCamera;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	TCHAR	szEncName[MAX_PATH] = {0};
+	// 先对频道名称进行UTF8转换，再进行URI编码...
+	string  strUTF8Name = CUtilTool::ANSI_UTF8(inData["Name"].c_str());
+	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szEncName, MAX_PATH);
+	strPost.Format("gather_id=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s",
+					m_nDBGatherID, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), 
+					inData["IPv4Address"].c_str(), inData["MAC"].c_str(), inData["DeviceType"].c_str());
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/camera", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 判断摄像头是否注册成功...
+	if( m_nDBCameraID <= 0 )
+		return false;
+	ASSERT( m_nDBCameraID > 0 );
+	// 将数据库中记录编号更新到摄像头配置当中，但不存入Config.xml当中...
+	TCHAR szDBCamera[32] = {0};
+	sprintf(szDBCamera, "%d", m_nDBCameraID);
+	inData["DBCameraID"] = szDBCamera;
+	// 保存数据库中通道名称...
+	if( m_strDBCameraName.size() > 0 ) {
+		inData["Name"] = m_strDBCameraName;
+	}
+	// 将数据库编号与本地的对应关系存放到集合当中...
+	theConfig.SetDBCameraID(m_nDBCameraID, nCameraID);
+	// 将获取得到的录像课程表存放起来，直接覆盖原来的记录，用本地编号定位...
+	// 录像课程表都是记录到内存当中，不存入Config.xml当中...
+	theConfig.SetCourse(nCameraID, m_dbMapCourse);
+	// 注册摄像头成功，摄像头累加计数...
+	++m_nCurCameraCount;
+	return true;
+}
+//
+// 在网站上更新摄像头名称...
+/*BOOL CWebThread::doSaveCameraName(string & strDBCameraID, CString & strCameraName)
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+		return false;
+	// 先设置当前状态信息...
+	m_eRegState = kSaveName;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	TCHAR	szEncName[MAX_PATH] = {0};
+	// 先对频道名称进行UTF8转换，再进行URI编码...
+	string  strUTF8Name = CUtilTool::ANSI_UTF8(strCameraName);
+	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szEncName, MAX_PATH);
+	strPost.Format("camera_id=%s&camera_name=%s", strDBCameraID.c_str(), szEncName);
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/saveCameraName", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 直接返回...
+	return true;
+}*/
+
+void CWebThread::Entry()
+{
+	while( !this->IsStopRequested() ) {
+		// 在网站上注册采集端信息，失败继续注册...
+		if( !this->RegisterGather() ) {
+			::Sleep(300);
+			continue;
+		}
+		// 开始注册摄像头，这里只能注册已知的，新建的不能注册，因此，需要在新扫描出来的地方增加注册功能...
+		if( !this->RegisterCamera() ) {
+			::Sleep(300);
+			continue;
+		}
+		// 主视图启动组播频道自动搜索线程，启动Tracker自动连接，中间视图创建等等...
+		m_lpHaoYiView->PostMessage(WM_WEB_LOAD_RESOURCE);
+		break;
+	}
+}

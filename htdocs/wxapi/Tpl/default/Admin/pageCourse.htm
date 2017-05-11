@@ -1,0 +1,16 @@
+
+<volist name="my_course" id="vo">
+<tr title="记录编号：{{$vo.course_id}}">
+  <td><switch name="vo.status"><case value="0"><i class="fa fa-power-off fa-wait">&nbsp;等待中</i></case><case value="1"><i class="fa fa-play-circle-o fa-rec">&nbsp;录像中</i></case><default /><i class="fa fa-power-off fa-wait">&nbsp;等待中</i></switch></td>
+  <td>{{$vo.subject_name}}</td>
+  <td>{{$vo.teacher_name}}&nbsp;{{$vo.title_name}}</td>
+  <td><switch name="vo.repeat_id"><case value="0">无</case><case value="1">每天</case><case value="2">每周</case></switch></td>
+  <td>{{$vo['elapse_sec']/3600|floor}}:{{$vo['elapse_sec']/60%60}}:{{$vo['elapse_sec']%60}}</td>
+  <td>{{$vo.start_time}}</td>
+  <td>{{$vo.end_time}}</td>
+  <td>
+    <button class="layui-btn layui-btn-small" onclick="doModify({{$vo.course_id}})"><i class="layui-icon">&#xe642;</i>&nbsp;编辑</button>
+    <button class="layui-btn layui-btn-small" onclick="doDelete({{$vo.course_id}});"><i class="layui-icon">&#xe640;</i>&nbsp;删除</button>
+  </td>
+</tr>
+</volist>

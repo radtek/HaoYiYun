@@ -1,0 +1,13 @@
+
+<volist name="my_grade" id="vo">
+<tr>
+  <td>{{$vo.grade_id}}</td>
+  <td>{{$vo.grade_type}}</td>
+  <td>{{$vo.grade_name}}</td>
+  <td>{{$vo.created}}</td>
+  <td>
+    <button class="layui-btn layui-btn-small" onclick="doEdit({{$vo.grade_id}}, '{{$vo.grade_type}}', '{{$vo.grade_name}}');"><i class="layui-icon">&#xe642;</i>&nbsp;编辑</button>
+    <button class="layui-btn layui-btn-small" onclick="doDelete({{$vo.grade_id}});"><i class="layui-icon">&#xe640;</i>&nbsp;删除</button>
+  </td>
+</tr>
+</volist>

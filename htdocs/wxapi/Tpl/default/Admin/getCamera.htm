@@ -1,0 +1,121 @@
+
+<include file = "Common:admin_header" />
+
+<style>
+.layui-form-pane .layui-form-label { width: 120px; }
+.layui-form-pane .layui-input-block { margin-left: 120px; }
+</style>
+
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>摄像头管理</legend>
+        </fieldset>
+        <fieldset class="layui-elem-field" style="padding:10px 10px 0px 10px;width:40%;">
+          <legend>{{$my_new_title}}</legend>
+          <div class="layui-field-box">
+            <form class="layui-form layui-form-pane" action="">
+              <div class="layui-form-item">
+                <label class="layui-form-label">所在年级</label>
+                <div class="layui-input-block">
+                  <select name="myCameraGrade" lay-verify="required" lay-search="">
+                    <volist name="my_list_grade" id="vo">
+                    <option value="{{$vo.grade_id}}">{{$vo.grade_type}} {{$vo.grade_name}}</option>
+                    </volist>
+                  </select>
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">所在班级</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_camera.camera_name}}">
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">设备类型</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myCameraType" lay-verify="required" autocomplete="off" class="layui-input" disabled value="<switch name='my_camera.camera_type'><case value='1'>海康设备</case><case value='2'>大华设备</case></switch>">
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">设备IP地址</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myDeviceIP" lay-verify="required" autocomplete="off" class="layui-input" disabled value="{{$my_camera.device_ip}}">
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">设备MAC地址</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myDeviceMAC" lay-verify="required" autocomplete="off" class="layui-input" disabled value="{{$my_camera.device_mac}}">
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">设备序列号</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myDeviceSN" lay-verify="required" autocomplete="off" class="layui-input" disabled value="{{$my_camera.device_sn}}">
+                </div>
+              </div>
+              <div class="layui-form-item" style="margin-bottom:10px;margin-top:20px;margin-left:110px;">
+                <button class="layui-btn" lay-submit lay-filter="formCamera">立即保存</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+              </div>
+            </form>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('myCameraGrade')[0].value = {{$my_camera.grade_id}};
+//
+// 处理 layui 过程...
+layui.use(['layer','form'], function(){
+  var $ = layui.jquery;
+  var form = layui.form();
+  form.on('submit(formCamera)', function(data) {
+    var theGatherID = {{$my_camera.gather_id}};
+    var theCameraID = {{$my_camera.camera_id}};
+    var theCameraName = data.field.myCameraName;
+    var theCameraGrade = data.field.myCameraGrade;
+    var theGradeName = $("select[name='myCameraGrade']").find("option:selected").text();
+    // 判断输入数据的有效性...
+    if( theCameraGrade <= 0 ) {
+      layer.msg('【所在年级】不能为空，请更正！', {icon: 2});
+      return false;
+    }
+    // 获取课表数据，通过ajax异步发送存盘命令...
+    // 传递 gather_id 和 grade_name 的目的是为了转发摄像头名称给采集端...
+    var index = layer.load(2);
+    $.ajax({
+      type: "post",
+      async: true,
+      url: siteurl+"/Admin/saveCamera",
+      data: {camera_id: theCameraID, gather_id: theGatherID, grade_id: theCameraGrade, grade_name: theGradeName, camera_name: theCameraName},
+      success: function(ajaxData) {
+        layer.closeAll('loading');
+        layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
+          location.href = siteurl+"/Admin/camera/gather_id/"+{{$my_camera.gather_id}};
+        });
+      },
+      error: function(e) {
+        layer.closeAll('loading');
+        layer.alert(e, {icon: 2});
+      }
+    });
+    // 否则，form会自动跳转...
+    return false;
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

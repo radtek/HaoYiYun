@@ -1,0 +1,131 @@
+
+<include file = "Common:admin_header" />
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend>
+            <i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理 - 
+            <i class="fa fa-video-camera">&nbsp;</i>摄像头 - 
+            <i class="fa fa-file-video-o">&nbsp;</i>录像课程表 - 
+            <i class="fa fa-list-alt">&nbsp;</i>{{$my_grade.grade_type}}&nbsp;{{$my_grade.grade_name}}&nbsp;{{$my_grade.camera_name}}
+          </legend>
+        </fieldset>
+        <span class="layui-breadcrumb">
+          <a href="{{:__APP__}}/Admin/gather">采集端</a>
+          <a href="{{:__APP__}}/Admin/camera/gather_id/{{$my_gather_id}}">摄像头</a>
+          <a><cite>录像课程表</cite></a>
+        </span>
+        <div style="margin-top:10px;width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="50">
+              <col width="60">
+              <col width="100">
+              <col width="60">
+              <col width="60">
+              <col width="100">
+              <col width="100">
+              <col width="100">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>状态</th>
+                <th>科目名称</th>
+                <th>授课老师</th>
+                <th>重复方式</th>
+                <th>持续时间</th>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>操作</th>
+              </tr> 
+            </thead>
+            <tbody class="js_course"></tbody>
+          </table>
+          <div style="float:left;" id="myPage"></div>
+          <div style="float:right;margin:5px 90px 0px 0px;">
+            <button class="layui-btn" onclick="doModify(0);">
+              <i class="layui-icon">&#xe61f;</i>&nbsp;添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 执行修改操作...
+function doModify(inID)
+{
+  location.href = siteurl+"/Admin/getCourse/course_id/"+inID+"/gather_id/"+{{$my_gather_id}}+"/camera_id/"+{{$my_camera_id}};
+}
+//
+// 执行删除操作...
+function doDelete(inID) {
+  layer.confirm('确实要删除选中记录？', {title: '删除 - 录像课程表', btn: ['确定','取消']}, function(index){
+    layer.close(index);
+    // 加载动画层，获取jquery对象...
+    var theGatherID = {{$my_gather_id}};
+    var theCameraID = {{$my_camera_id}};
+    var index = layer.load(2);
+    var $ = layui.jquery;
+    // 向服务器发送保存命令...
+    $.ajax({
+      type: "post",
+      async: true,
+      url: siteurl+"/Admin/delCourse",
+      data: {course_id: inID, gather_id: theGatherID, camera_id: theCameraID},
+      success: function(ajaxData) {
+        layer.closeAll('loading');
+        location.reload();
+      },
+      error: function(e) {
+        layer.closeAll('loading');
+        layer.alert(e, {icon: 2});
+      }
+    });    
+  });
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var theCameraID = {{$my_camera_id}};
+  var theGatherID = {{$my_gather_id}};
+  var element = layui.element();
+  var laypage = layui.laypage;
+  var $ = layui.jquery;
+  laypage({
+    pages: {{$max_page}},   // 总页数...
+    cont: 'myPage',         // 分页对象...
+    groups: 5,              // 连续显示分页数
+    jump: function(obj, first) {
+      // 向服务器发送分页命令...
+      var index = layer.load(2);
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Admin/pageCourse/p/"+obj.curr+"/camera_id/"+theCameraID+"/gather_id/"+theGatherID,
+        success: function(ajaxData) {
+          layer.closeAll('loading');
+          $('.js_course').html(ajaxData);
+        },
+        error: function(e) {
+          layer.closeAll('loading');
+          layer.alert(e, {icon: 2});
+        }
+      });
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

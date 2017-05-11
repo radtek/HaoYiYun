@@ -1,0 +1,14 @@
+
+<volist name="my_school" id="vo">
+<tr>
+  <td>{{$vo.school_id}}</td>
+  <td>{{$vo.name}}</td>
+  <td>{{$vo.addr}}</td>
+  <td>{{$vo.phone}}</td>
+  <td>{{$vo.created}}</td>
+  <td>
+    <button class="layui-btn layui-btn-small" onclick="doModify({{$vo.school_id}})"><i class="layui-icon">&#xe642;</i>&nbsp;编辑</button>
+    <button class="layui-btn layui-btn-small" onclick="doDelete({{$vo.school_id}});"><i class="layui-icon">&#xe640;</i>&nbsp;删除</button>
+  </td>
+</tr>
+</volist>
