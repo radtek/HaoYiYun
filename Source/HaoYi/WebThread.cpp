@@ -194,7 +194,8 @@ BOOL CWebThread::RegisterHaoYi()
 	do {
 		if( curl == NULL )
 			break;
-		// 设定curl参数，采用post模式...
+		// 设定curl参数，采用post模式，设置5秒超时...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
@@ -209,8 +210,8 @@ BOOL CWebThread::RegisterHaoYi()
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
-	// 通知主窗口授权验证结果...
-	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_EXPIRED, ((m_nMyHaoYiID > 0) ? true : false));
+	// 通知主窗口授权过期验证结果...
+	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((m_nMyHaoYiID > 0) ? true : false));
 	// 返回授权验证结果...
 	return ((m_nMyHaoYiID > 0) ? true : false);
 }
@@ -246,7 +247,8 @@ BOOL CWebThread::RegisterGather()
 	do {
 		if( curl == NULL )
 			break;
-		// 设定curl参数，采用post模式...
+		// 设定curl参数，采用post模式，设置5秒超时...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
@@ -261,6 +263,8 @@ BOOL CWebThread::RegisterGather()
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	// 通知主窗口授权网站注册结果...
+	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthRegiter, ((m_nDBGatherID > 0) ? true : false));
 	// 判断采集端是否注册成功...
 	if( m_nDBGatherID <= 0 )
 		return false;
@@ -361,6 +365,7 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		if( curl == NULL )
 			break;
 		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
@@ -421,6 +426,7 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 		if( curl == NULL )
 			break;
 		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
@@ -470,6 +476,7 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 		if( curl == NULL )
 			break;
 		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);

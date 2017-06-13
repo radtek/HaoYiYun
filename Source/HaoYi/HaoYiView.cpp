@@ -46,7 +46,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
 	ON_MESSAGE(WM_WEB_LOAD_RESOURCE,&CHaoYiView::OnMsgWebLoadResource)
-	ON_MESSAGE(WM_WEB_AUTH_EXPIRED,&CHaoYiView::OnMsgWebAuthExpired)
+	ON_MESSAGE(WM_WEB_AUTH_RESULT,&CHaoYiView::OnMsgWebAuthResult)
 	ON_MESSAGE(WM_EVENT_SESSION_MSG, &CHaoYiView::OnMsgEventSession)
 	ON_MESSAGE(WM_FIND_HK_CAMERA, &CHaoYiView::OnMsgFindHKCamera)
 	ON_MESSAGE(WM_FOCUS_VIDEO, &CHaoYiView::OnMsgFocusVideo)
@@ -359,10 +359,10 @@ void CHaoYiView::BuildResource()
 }
 //
 // 网站授权验证结果...
-LRESULT CHaoYiView::OnMsgWebAuthExpired(WPARAM wParam, LPARAM lParam)
+LRESULT CHaoYiView::OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam)
 {
 	ASSERT( m_lpMidView != NULL );
-	m_lpMidView->SetAuthExpired(wParam);
+	m_lpMidView->OnAuthResult(wParam, lParam);
 	return S_OK;
 }
 //

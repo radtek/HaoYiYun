@@ -19,7 +19,7 @@ protected:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	DECLARE_MESSAGE_MAP()
 public:
-	void			SetAuthExpired(BOOL bAuthOK);
+	void			OnAuthResult(int nType, BOOL bAuthOK);
 	CFont    *		GetVideoFont() { return &m_VideoFont; }
 	BOOL			IsFullScreen() { return m_bIsFullScreen; }
 	BOOL			Create(UINT wStyle, const CRect & rect, CWnd * pParentWnd);
@@ -43,11 +43,6 @@ private:
 	void			DrawNotice(CDC * pDC);				// 打印警告...
 	void			DrawBackLine(CDC * pDC);			// 绘制线框...
 	CCamera		*	BuildXmlCamera(GM_MapData & inXmlData);
-private:
-	enum {
-		kAuthExpired	= 0,							// 授权过期验证
-		kAuthRegiter	= 1,							// 网站注册授权
-	}m_eState;
 private:
 	CRect			m_rcOrigin;							// 原始矩形区
 	BOOL			m_bIsFullScreen;					// 全屏标志

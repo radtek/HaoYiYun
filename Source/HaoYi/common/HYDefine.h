@@ -103,13 +103,18 @@ using namespace std;
 #define WM_DVR_LOGIN_RESULT			(WM_USER + 107)
 #define WM_WEB_LOAD_RESOURCE		(WM_USER + 108)
 #define	WM_WEB_UPDATE_NAME			(WM_USER + 109)
-#define	WM_WEB_AUTH_EXPIRED			(WM_USER + 110)
+#define	WM_WEB_AUTH_RESULT			(WM_USER + 110)
 
 #define WM_ERR_TASK_MSG				(WM_USER + 501)			// 录像任务会话通知消息
 #define WM_ERR_PUSH_MSG				(WM_USER + 502)			// 拉转推会话通知消息
 #define WM_REC_SLICE_MSG			(WM_USER + 503)			// 录像切片通知消息
 #define WM_STOP_STREAM_MSG			(WM_USER + 504)			// 停止流上传通知消息
 #define WM_EVENT_SESSION_MSG		(WM_USER + 505)			// 事件会话通知消息
+
+typedef	enum AUTH_STATE {
+	kAuthExpired	= 1,		// 授权过期验证
+	kAuthRegiter	= 2,		// 网站注册授权
+};
 
 typedef enum OPT_PARAM {		// WPARAM参数定义
 	OPT_DelSession	= 1,		// 删除会话通知(所有)

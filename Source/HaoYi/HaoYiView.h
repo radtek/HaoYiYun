@@ -66,7 +66,7 @@ protected:
 	afx_msg LRESULT	OnMsgFocusVideo(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnMsgEventSession(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnMsgWebAuthExpired(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {

@@ -23,7 +23,6 @@ END_MESSAGE_MAP()
 
 CMidView::CMidView(CHaoYiView * lpParent)
   : m_bIsFullScreen(false)
-  , m_eState(kAuthExpired)
   , m_rcOrigin(0, 0, 0, 0)
   , m_lpParentDlg(lpParent)
 {
@@ -351,15 +350,13 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 }
 //
 // 网站授权验证结果处理...
-void CMidView::SetAuthExpired(BOOL bAuthOK)
+void CMidView::OnAuthResult(int nType, BOOL bAuthOK)
 {
-	// 如果授权成功，转入下一个状态...
-	if( bAuthOK ) {
-		m_strNotice = "没有发现网络摄像机...";
-		m_eState = kAuthRegiter;
-	} else {
-		// 如果授权失败，只更新文字信息...
-		m_strNotice = "网站授权过期，验证失败...";
+	// 根据不同状态，显示不同的信息...
+	if( nType == kAuthExpired ) {
+		m_strNotice = bAuthOK ? "正在注册采集端..." : "网站授权过期，验证失败...";
+	} else if( nType == kAuthRegiter ) {
+		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "网站注册失败，请检查网站链接...";
 	}
 	// 重新更新窗口背景...
 	this->Invalidate(true);

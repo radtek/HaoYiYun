@@ -23,10 +23,10 @@ CXmlConfig::CXmlConfig(void)
 	CString strVersion;
 	strVersion.Format("版 本：V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
 	m_strVersion = strVersion;
-	m_strCopyRight = "北京世纪葵花数字传媒技术有限公司 版权所有(C) 2002-2017";
-	m_strPhone = "电 话：400-050-1080";
-	m_strWebSite = "网 站：http://www.kuihua.net";	
-	m_strAddress = "地 址：北京市昌平区北清路1号珠江摩尔国际大厦3号楼2单元313";
+	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2016-2017";
+	m_strPhone = "电 话：15010119735";
+	m_strWebSite = "网 站：http://www.myhaoyi.com";	
+	m_strAddress = "地 址：北京市海淀区北四环西路68号6层C16";
 }
 
 CXmlConfig::~CXmlConfig(void)
