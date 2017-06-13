@@ -1,0 +1,1360 @@
+如何避免SSH Secure Shell Client连接Linux超时，自动断开？
+=============================================================
+vi /etc/ssh/sshd_config
+ClientAliveInterval 60
+ClientAliveCountMax 3
+service sshd restart
+
+手动删除某一个storage
+=============================================================
+fdfs_monitor /etc/fdfs/client.conf delete group1 10.2.x.x
+
+手动配置IP地址 => CentOS6.8
+=============================================================
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
+ONBOOT=yes
+BOOTPROTO=none
+IPADDR=192.168.1.180
+NETMASK=255.255.255.0
+GATEWAY=192.168.1.1
+DNS1=8.8.8.8
+DNS2=202.106.46.151
+
+service netword restart
+
+手动配置ssh => 2012
+=============================================================
+vi /etc/ssh/sshd_config
+service sshd restart
+
+手动配置防火墙
+=============================================================
+vi /etc/sysconfig/iptables
+service iptables restart
+
+安装rpm编译工具
+=============================================================
+yum -y install rpm-build
+
+目录结构 =>
+/root/rpmbuild/BUILD    => 编译时的临时目录
+/root/rpmbuild/RPMS     => 存放RPM包
+/root/rpmbuild/SOURCES  => 存放源代码和补丁
+/root/rpmbuild/SPECS    => 存放控制文件--spec文件
+/root/rpmbuild/SRPMS    => 存放源代码包
+
+CentOS6.8关闭SELINUX，为了安全不要关闭，ssh端口统一改成2012
+=============================================================
+vi /etc/selinux/config
+SELINUX=disabled
+reboot
+=============================================================
+注意：SELINUX 关闭之后再开启会耗费相当长时间，因为需要对硬盘上所有文件做处理。
+所有，保持安装状态不要改变，将ssh端口统一改成2012就可以了。
+
+SSH Secure Shell 解决中文乱码的终极方法：
+=============================================================
+1. http://www.cnblogs.com/52linux/archive/2012/03/24/2415082.html
+2. #vi /etc/sysconfig/i18n
+LANG="zh_CN.GB18030"  
+LANGUAGE="zh_CN.GB18030:zh_CN.GB2312:zh_CN"  
+SUPPORTED="zh_CN.GB18030:zh_CN:zh:en_US.UTF-8:en_US:en"  
+SYSFONT="lat0-sun16"
+
+瘦身后的CentOS_64.5.8版本的登录用户
+===================================================
+1. ussh:Hope@$816:1012
+2. root:hope#*hope:1012
+3. su root
+   vi /etc/ssh/sshd_config
+   PermitRootLogin yes
+   service sshd restart
+
+CentOS_64安装完毕之后需要做的手动工作
+===================================================
+1. 配置IP地址：
+   setup
+2. 配置DNS地址：ifcfg-eth0/1/2/3
+   vim /etc/sysconfig/network-scripts/ifcfg-eth0
+   DNS1=202.106.46.151
+   DNS2=202.106.0.20
+   ifup eth0
+3. 已将/etc/profile查找路径与开启NetworkManager管理，放到ks.cfg文件当中；
+   echo "PATH=\$PATH:/sbin:/usr/sbin" >> /etc/profile
+   /sbin/chkconfig NetworkManager on
+
+   
+时钟同步1     => ntpdate time.nist.gov
+时钟同步2     => date -s "12/18/2013 17:25:33" => 月/日/年 时:分:秒
+系统时钟与硬件时钟同步 => hwclock --systohc
+硬件时钟与系统时钟同步 => hwclock --hctosys
+
+wget -c http://www.happyhope.net/download/weike.64.sh
+wget -c http://www.happyhope.net/download/install.64.sh
+
+
+修改ssh访问
+===================================================
+vim /etc/ssh/sshd_config
+service sshd restart
+
+修改防火墙端口
+===================================================
+vim /etc/sysconfig/iptables  => 修改防火墙
+service iptables restart     => 生效防火墙
+service iptables status      => 防火墙状态
+lsof -i:800                  => 查看哪个服务在使用800端口
+
+统计哪些 IP 在不断尝试登录：
+===================================================
+lastb -f /var/log/btmp | awk '{print $3}' | sort | uniq -c | sort -n
+lastb => /var/log/btmp
+last  => /var/log/wtmp
+
+2014.04.07 - by jackey - nginx 状态查看
+==============================================================
+1. 修改 nginx.conf 文件，新增如下配置：
+   location /status {
+     stub_status on;
+	 access_log off;
+   }
+
+2014.03.30 - by jackey - ussh 远程跳板命令
+===================================================
+1. ssh -p 1012 ussh@61.158.108.33
+2. ssh -l ussh -p 1012 61.158.108.33
+
+2014.03.12 - by jackey
+===================================================
+1. hyper-v 虚拟机只能用MyCentOS_64_HDA.iso安装；
+2. hyper-v 虚拟机网卡需要安装微软官网的补丁包（LinuxICv35.iso）
+   里面有CentOS5.5-6.3的网卡补丁包，需要手动挂载光盘，我们用5.8
+   手动按照RedHat的内核版本安装补丁包，然后手动配置网卡地址；
+   vi /etc/sysconfig/network-scripts/ifcfg-eth0
+   ifconfig -a | ifdown eth0 | ifup eth0
+3. cnv-server第一次启动时，当web服务器的ip还没有配置时，
+会得到错误的ip，会用192.168.1.123入库，因此，遇到这种
+情况，需要把cnv-server重新启动一下才行；
+
+
+2015/04/02 - 异步上传目录到指定服务器并排除某些目录
+============================================================
+rsync -e'ssh -p 1012' -av /source_dir/ --exclude=download root@125.208.21.52:/dest_dir/
+
+2015/04/02 - 查看目录大小
+============================================================
+du -sh /weike/htdocs
+
+2014/06/06 - 编译单个文件
+============================================================
+gcc -g gprsserver.c -o gprsserver -lcurl
+g++ -g gprsserver.c -o gprsserver -lcurl
+gcc -g mp4parse.c mp4file.c -o mp4file
+ 
+2014/05/22 - vi 设置行号
+============================================================
+1. set number
+
+2014/05/08 - 找到让ThinkPHP支持memcache的方法。
+============================================================
+1. ThinkPHP\Lib\Think\Util\Cache\CacheMemcache.class.php
+2. 在Conf/config.php 中添加
+   'DATA_CACHE_TYPE' => 'Memcache', 
+   'MEMCACHE_HOST'   => 'tcp://127.0.0.1:11211', 
+   'DATA_CACHE_TIME' => '3600',  
+3. 需要在某个action里清除所有缓存时可以这样：
+   $cache = Cache::getInstance(); 
+   $cache ->clear(); 
+4. 具体参考 => http://www.cnblogs.com/tdalcn/archive/2012/09/03/2669032.html
+5. 通常是把sql语句进行md5，作为key，查找到的数据作为value
+6. memcache.php的默认登录账号memcache，密码admin，可以查看memcache的状态；
+
+2014/05/07 - 超过3秒的访问记录到slow.log日志当中，便于排错。
+============================================================
+1. vi /weike/php/etc/php-fpm.conf
+   <value name="request_slowlog_timeout">3s</value>
+   <value name="slowlog">/weike/php/logs/slow.log</value>
+
+2014/05/06 - 修改 php-cgi 的链接方式，单机状态时。
+============================================================
+1. vi /weike/php/etc/php-fpm.conf
+   <value name="listen_address">/tmp/php-cgi.sock</value>
+2. vi /weike/nginx/conf/nginx.conf
+   fastcgi_pass unix:/tmp/php-cgi.sock;
+3. /weike/php/sbin/php-fpm restart
+   /weike/nginx/sbin/nginx -p /weike/nginx/ -s reload
+4. 这种配置方式，可以最大限度的提高单机性能，使用127.0.0.1:9000适合多机扩展模式。
+
+2014/05/05 
+============================================================
+1. curl http://xxxx.xxx.xxx > xxx.mp4 => 用curl直接下载并存储视频文件。
+2. 需要考虑下载速度问题，异步下载问题；参考下面的写入回调方法。
+3. http://www.php.net/manual/zh/function.curl-setopt.php
+
+2014/04/25 
+============================================================
+1. rpm -Uvh xxx.rpm    => rpm包的升级更新机制，不会删除旧文件，只增不减。
+2. http://rpmfind.net/ => 专门用来查找rpm包的网站。
+3. http://my.oschina.net/alphajay/blog/4762 => 很好的介绍rpm命令的文章。
+4. rpm -Uvh --force xxx.rpm => 强制替换版本。
+5. 通过rpm包升级机制不太理想，新的用户用最新rpm包安装，后续功能升级，直接覆盖远程服务器代码即可；
+
+2014/04/07 
+============================================================
+1. 登录mysql命令 => /weike/mysql/bin/mysql -uroot -p
+2. 指定IP段的防火墙配置：（允许某个IP或某段IP访问80端口）
+-A RH-Firewall-1-INPUT -s 192.168.1.95 -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
+-A RH-Firewall-1-INPUT -s 192.168.1.0/255.255.255.0 -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
+3. nginx.conf.template 里面有详细的有关nginx的配置说明；
+
+2014/04/03 => 查找指定目录并删除
+============================================================
+1. find -type d|grep CVS | xargs rm -rf
+
+2014/02/13 => ffmpeg 把amr文件转码mp3
+============================================================
+1. ffmpeg-0.8.2 -i xxx.amr xxx.mp3        => 自动采用64k转码，文件较大，时间正确；
+2. ffmpeg-0.8.2 -i xxx.amr -ab 8k xxx.mp3 => 强制采用 8k转码，文件较小，时间正确；
+3. ffmpeg-2.1.1 -i xxx.amr xxx.mp3        => 自动采用24k转码，文件较小，时间不正确，只有1秒；
+4. 可以考虑改进php解析mp3文件格式的算法，Mp3file.class.php使用文件长度与bitrate的比值来计算了，2.1.1版本计算bitrate有误；
+
+2014/02/12 => 查看Linux版本信息
+============================================================
+uname -a
+
+2013/12/17 => 查看CPU型号的命令
+============================================================
+cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c
+dmesg | grep CPU
+free -m
+
+2013/12/12 => 编译mp3lame压缩器
+============================================================
+http://sourceforge.net/projects/lame/files/lame/
+tar -zxvf lame-3.97.tar.gz
+cd lame-3.97/
+./configure --prefix=/usr/local/ --enable-shared
+
+2013/12/12 => 查找相关联的动态库
+============================================================
+ldd `which ffmpeg`
+
+2013/12/03 => LINUX下通过外部SMTP发邮件 （直接抛弃sendmail和postfix）
+============================================================
+1. 关闭sendmail
+   service sendmail stop
+   chkconfig sendmail off
+   yum remove sendmail
+2. 安装mailx
+   http://www.filewatcher.com/m/mailx-12.4.tar.bz2.271482-0.html
+   tar jxvf mailx-12.4.tar.bz2
+   cd mailx-12.4  
+   make
+   make install UCBINSTALL=/usr/bin/install
+   whereis mailx
+   mailx -V
+3. 配置mailx
+   vi /etc/nail.rc
+   set from=15010119735@126.com
+   set smtp=smtp.126.com  
+   set smtp-auth-user=15010119735
+   set smtp-auth-password=ycw238
+   set smtp-auth=login
+
+2013/11/27 => 本地域名转义：
+============================================================
+1. 修改/etc/hosts文件进行本地域名转义:
+   127.0.0.1   weike.edu.cn
+   127.0.0.1   happyhope.net
+2. 我们的服务器用域名进行区分服务并导向不同的目录；
+
+2013/11/27 => 让ussh远程账号上传文件：
+============================================================
+1. 将ussh加入到www组
+   vi /etc/group
+   www:x:501:ussh
+   id ussh
+2. 将/weike/htdocs权限修改为 775
+   chmod -R 775 /weike/htdocs
+3. 这样就能通过sshclient用ussh账号上传文件到www用户组的文件夹了；
+
+2013/11/27 => 将进程推送到后台运行：
+============================================================
+nohup ./gprsserver > /dev/null 2>&1 &
+
+2013/11/25 => 域名的配置文件：
+============================================================
+1. vim /etc/resolv.conf
+2. 不要手动配置，通过其它地方配置，network/NetworkManager来自动改写；
+
+2013/11/25 => NetworkManager 的使用场景说明：
+============================================================
+1. 适合多网卡，无论网卡是否连接都可以使用
+2. 查看网卡0/1/2的配置情况，可以在最后追加DNS
+   vim /etc/sysconfig/network-scripts/ifcfg-eth0
+   vim /etc/sysconfig/network-scripts/ifcfg-eth1
+   vim /etc/sysconfig/network-scripts/ifcfg-eth2
+   DNS1=202.106.46.151
+   DNS2=202.97.224.69
+3. 重启网络服务，非常适合多网卡的自动管理：
+   A: service NetworkManager restart
+   B: 自动从刚刚的网卡配置文件中查找 DNS 的配置，写入 /etc/resolv.conf，把每个有效的网卡配置的DNS写入resolv.conf
+   C: 通过setup配置的DNS信息只对network服务有效，配置的IP，在network和NetworkManager中都有效；
+   D: /etc/resolv.conf 优先被NetworkManager从ifcfg-eth0/1/2当中获取并改写；
+   E: network与NetworkManager都可以从ifcfg-eth0/1/2中获取DNS，写入/etc/resolv.conf，最好是选择NetworkManager;
+4. 可以先通过setup配置IP、网关，然后修改域名（/etc/sysconfig/network-scripts/ifcfg-eth0），再重启NetworkManager；
+   这样无论多网卡或单网卡都不会出问题；
+
+2013/11/25 => network 的使用场景说明：
+============================================================
+1. 适合单网卡，多网卡如果有网卡没有连线，则会报错中断
+2. 查看网卡0的配置情况，可以在最后追加DNS
+   vim /etc/sysconfig/network-scripts/ifcfg-eth0
+   DNS1=202.106.46.151
+3. 重启网络服务，如果是多网卡容易会报错：
+   A: service network restart
+   B: 自动从 ifcfg-eth0 查找 DNS 的配置，写入 /etc/resolv.conf
+   C: 如果 ifcfg-eth0 没有，则从其它配置中获取DNS，写入 /etc/resolv.conf
+   D: 就是通过 setup 命令保存的DNS地址，setup是先从/etc/resolv.conf读取，再从其它配置中读取，保存到其它配置，/etc/resolv.conf由服务写入；
+
+2013/11/25 => scp => 文件传输指令
+============================================================
+1. 基本命令格式：
+   scp [可选参数] file_source file_target
+   scp local_file remote_username@remote_ip:remote_folder
+2. 复制目录命令：
+   scp -r local_folder remote_username@remote_ip:remote_folder
+3. 复制文件例子：
+   scp -P 1012 root@61.158.108.31:/root/31-1.log /root/
+4. 复制目录例子：
+   scp -rp -P 1012 root@61.158.108.31:/upload/ /root/
+5. 复制目录排除某个文件或目录
+   rsync -av source_dir --exclude=core user@remote:<DIR>
+
+2013/11/24 => lastb
+============================================================
+1. ll /var/log/btmp => 查看登录失败的日志文件。
+   updatedb         => 更新文件列表。
+   locate btmp      => 定位所有btmp文件，可能会发生切片。
+2. 统计哪些 IP 在不断尝试登录：
+   lastb -f /var/log/btmp | awk '{print $3}' | sort | uniq -c | sort -n
+3. 凡是端口在 22 的 ssh 容易被攻击（不断尝试登录，进行暴力破解），因此，一定要更换端口，加入复杂密码，避免暴力破解。
+4. last => /var/log/wtmp
+
+2013/11/22 => 其它经验积累
+============================================================
+1. -threads 0 => ffmpeg转码参数，采用最优的线程数，自动根据CPU核数来启动线程数。
+2. ks.cfg 当中不要用UTC时间的方法：（这样默认就是采用CST模式）
+   timezone Asia/Shanghai
+3. ntsysv => 设置服务的界面；/usr/sbin/ntsysv
+4. 设置命令的搜索路径
+   echo $PATH        => 查看当前路径配置
+   export            => 查看环境变量配置
+   vi .bash_profile  => PATH=$PATH:/usr/sbin:/sbin => 针对当前用户
+   vi /etc/profile   => PATH=$PATH:/usr/sbin:/sbin => 针对所有用户
+5. 查看命令所在的位置
+   whereis echo      => 命令所在的位置
+   which echo        => 命令所在的位置
+   ll -a             => 查看所有的文件
+
+2013/11/21 => 网络相关命令
+============================================================
+1. top -H => 查看当前进程的线程运行情况；
+2. 默认开启网络管理功能；（服务器是多网卡时需要用到）
+   chkconfig --level 23456 NetworkManager on  => 精确开启
+   chkconfig --list NetworkManager            => 查看状态
+   chkconfig NetworkManager on                => 简单开启
+3. 多网卡的自动化过程还需要处理；
+4. 针对网卡的命令：
+   /sbin/ifdown    => 关闭网卡
+   /sbin/ifup      => 开启网卡
+   /sbin/mii-tool  => 网卡状态信息
+   /sbin/ethtool   => 网卡驱动信息
+
+2013/11/18 => 重新安装CentOS64需要用的命令：
+============================================================
+1. 禁用 yum-updatesd 服务
+   service yum-updatesd status
+   service yum-updatesd stop
+   chkconfig --list yum-updatesd
+   chkconfig --level 123456 yum-updatesd off
+2. 安装的模块 => Server
+   Base/Development Libraries/Development Tools/Editors/System Tools
+   安装的数据包182主机32位系统，总共570个RPM包；180主机64位系统，总共739个RPM包
+3. timezone Asia/Shanghai => 还需要做实验验证这种方式是否就会变成CST时钟
+
+2013/11/11 => 监控整个网络流量状态：
+============================================================
+安装指南 => http://www.piaoyi.org/network/Linux-vnStat.html => http://t.tt/107/
+wget http://humdi.net/vnstat/vnstat-1.11.tar.gz
+tar xvzf vnstat-1.11.tar.gz
+cd vnstat-1.11
+make && make install           => /etc/vnstat.conf
+vi /etc/vnstat.conf            => 修改默认监视网卡
+/usr/bin/vnstat -u -i eth2     => /var/lib/vnstat/eth2 => 生成网卡数据库
+crontab -e                     => 执行任务计划配置
+*/05 * * * *   if [ -x /usr/bin/vnstat ] && [ `ls /var/lib/vnstat/ | wc -l` -ge 1 ]; then /usr/bin/vnstat -u;fi
+
+vnstat -u          => 更新流量数据库
+vnstat -l -i eth2  => 查看当前实时流量
+vnstat -d -i eth2  => 查看每天流量统计
+vnstat -m -i eth2  => 查看每月流量统计
+vnstat -l -i eth0  => 查看具体某个网卡实时流量
+
+2013/11/11 => 监控每个端口的流量情况：
+============================================================
+安装指南    => http://www.vpser.net/manage/iftop.html
+iftop       => 执行的命令
+
+2013/09/18 => 查看Linux(CentOS)网卡是100M或1000M：
+============================================================
+mii-tool -v   => 只能用于物理机查询
+ethtool eth0  => 只能用于物理机查询
+
+2013/06/07 => 自动创建带密码的账号：
+============================================================
+/usr/sbin/groupadd ussh
+/usr/sbin/useradd -g ussh ussh
+echo 'ussh:Hope@$816'|chpasswd
+
+2013/06/07 => 自动修改ssh端口，自动禁止root访问：
+============================================================
+cp /etc/ssh/sshd_config /etc/ssh/bak_sshd_config
+sed -i 's/#Port 22/Port 1012/g' /etc/ssh/sshd_config
+sed -i 's/#PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config
+
+2013/06/07 => 修改防火墙配置：
+============================================================
+vim /etc/sysconfig/iptables
+service iptables restart
+
+2013/04/19 => 查看目录下文件数量，目录大小，每个子目录大小：
+============================================================
+find . -type f |wc -l     => 查看目录下的文件个数
+find . -name '*srm*' -ls  => 查找包含 srm 的文件或目录并列出详情
+du -bs /upload            => 打印/upload目录的大小，以字节为单位
+
+2013/04/18 => wget下载目录命令：
+=======================================================
+wget -r -c -np -nH --cut-dirs=2 -P /upload/ http://202.205.10.21:80/download/media/photo/
+递归下载，存放到 /upload/photo/ 下面；
+wget -r -c -np -nH -P /upload/ http://202.205.10.21:80/
+--cut-dirs是针对源数据的目录减少级数；
+
+2013/03/29 => rpm强制删除命令：
+=======================================================
+rpm --erase --noscripts --verbose xxx.rpm
+
+2013/03/29 => 直接下载 rpm 包的网站：
+=======================================================
+1. http://rpmfind.net/linux/rpm2html/search.php
+2. 这个网站更厉害，能找到任何想要的rpm包，非常强大。
+3. http://pkgs.repoforge.org/
+4. fuse-ntfs-3g 就是这个网站上下载的；有些模块比较老，比如openssh。
+5. http://www.dotnux.com/?p=3，按照这个步骤编译最新的 openssh
+6. wget ftp://mirror.planetunix.net/pub/OpenBSD/OpenSSH/portable/openssh-6.2p1.tar.gz
+7. 6.2版本需要重启之后才能正常使用！！
+8. nessus-5.0.3 PCI模式检测到低版本的ssh的漏洞，因此需要升级到ssh6.2版本，需要自己编译打包rpm。
+
+2013/01/27 => 修改Linux时间方法：
+=======================================================
+1. CST => China Standard Time => UTC + 8:00
+2. UTC => Universal Time Coordinate => UTC
+3. UTC + 时区差 => 本地时间
+4. 直接用 date 查看的是本地时间
+5. date -u => 查看那 UTC 时间
+6. date -R => 查看带时区的本地时间
+7. date -s 月/日/年 date -s 时:分:秒(24小时)
+8. cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+9. date -s "12/18/2012 17:25:25"
+10. clock -w => 写入 CMOS 当中
+11. hwclock --show => 查看 CMOS 时钟
+系统时钟与硬件时钟同步 => hwclock --systohc
+硬件时钟与系统时钟同步 => hwclock --hctosys
+
+2011/02/25 => 配置Linux的网络参数
+=======================================================
+------------- 修改IP地址 --------------
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
+DEVICE=eth0 
+ONBOOT=yes 
+BOOTPROTO=static 
+IPADDR=192.168.1.97
+NETMASK=255.255.255.0 
+GATEWAY=192.168.1.1
+
+------------ 修改网关 ---------------- 
+vi /etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=RedHat
+GATEWAY=192.168.1.1
+
+------------ 修改DNS ---------------- 
+vi /etc/resolv.conf
+nameserver 202.106.0.20
+
+------------重新启动，可以远程操作-----------
+/etc/init.d/network restart
+service network restart
+
+2012/12/15 => 非常有用的Linux学习网站
+=====================================================================
+1. http://www.ha97.com/book/vbird_linux/ => 鸟哥的Linux私房菜（2009简体版）
+2. http://linux.vbird.org/ => 鸟哥的Linux私房菜（繁体版）
+3. https://wiki.archlinux.org/index.php/Daemons_List_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87)
+
+2012/12/15 => 开启启动服务配置命令
+=====================================================================
+1. chkconfig --list
+2.–level<等级代号>　指定读系统服务要在哪一个执行等级中开启或关闭。 　　
+等级0表示：表示关机 　　
+等级1表示：单用户模式 　　
+等级2表示：无网络连接的多用户命令行模式 　　
+等级3表示：有网络连接的多用户命令行模式 　　
+等级4表示：不可用 　　
+等级5表示：带图形界面的多用户模式 　　
+等级6表示：重新启动 　　
+需要说明的是，level选项可以指定要查看的运行级而不一定是当前运行级。
+对于每个运行级，只能有一个启动脚本或者停止脚本。
+当切换运行级时，init不会重新启动已经启动的服务，也不会再次去停止已经停止的服务。
+3. chkconfig --del ip6tables
+
+2012/07/10 => 最新版本的CentOS下载地址
+======================================================================
+1. http://mirrors.sohu.com/ 大量的开源系统软件下载基地
+2. http://mirrors.sohu.com/centos/5.8/isos/i386/
+   http://mirrors.sohu.com/centos/5.8/isos/x86_64/
+3. 5.8版本是坐隐的推荐
+   CentOS 5.8
+   php 5.3.10 or 5.3.14
+   http(apache) 2.2.22
+   mysql/nginx用最新版本
+
+2012/04/17 => Nginx 的配置体会
+======================================================================
+1. fastcgi配置 => by jackey 2012.04.17
+    fastcgi_connect_timeout 300;
+    fastcgi_send_timeout 300;
+    fastcgi_read_timeout 300;
+    fastcgi_buffer_size 64k;
+    fastcgi_buffers 4 64k;
+    fastcgi_busy_buffers_size 128k;
+    fastcgi_temp_file_write_size 128k;
+
+2. #打开gzip压缩 => by jackey 2012.04.17
+   #也可以在php.ini中直接让php支持gzip => zlib.output_compression = On
+   #curl --compressed -I http://url 可以验证是否开启了gzip功能
+   #gzip_http_version 在反向代理中可能要改为1.0(未验证)
+   gzip on;
+   gzip_min_length 1k;
+   gzip_buffers  4 16k;
+   gzip_http_version 1.1;
+   gzip_comp_level 2;
+   gzip_types text/plain application/x-javascript text/css application/xml;
+   gzip_vary on;
+
+3.  #反向代理服务器配置 => by jackey 2012.04.17
+    #跟后端服务器连接的超时时间_发起握手等候响应超时时间
+    proxy_connect_timeout 600;
+
+    #连接成功之后_等候后端服务器响应时间_其实已经进入后端的排队之中等待处理
+    proxy_read_timeout 600;
+    
+    #后端服务器数据回传时间_就是在规定时间内后端武器必须传完所有的数据
+    proxy_send_timeout 600;
+    
+    #代理请求缓存区_这个缓存区间会保存用户的头信息以供Nginx进行规则处理_一般只能保存下头信息即可
+    proxy_buffer_size 16k;
+    
+    #同上_告诉Nginx保存单个用的几个Buffer最大用多大空间
+    proxy_buffers  4 32k;
+    
+    #如果系统很忙的时候可以申请更大的proxy_buffers 官方推荐*2
+    proxy_busy_buffers_size 64k;
+
+    #proxy缓存临时文件的大小
+    proxy_temp_file_write_size 64k;
+
+    #配置实例 => 被代理的服务器访问列表，存放实际的网站内容
+    #upstream php_server_pool {
+    #    server 192.168.1.95:81 weight=3 max_fails=2 fail_timeout=30s;
+    #    server 192.168.1.126:80 weight=4 max_fails=2 fail_timeout=30s;
+    #    server 192.168.1.103:80 weight=3 max_fails=2 fail_timeout=30s;
+    #}
+
+    #配置实例 => 配置反向代理服务器
+    #server {
+    #    listen 80;
+    #    server_name ProxyServer;
+
+    #    location / {
+            #如果后端的服务器返回502、504、执行超市等错误，自动将请求转发到upstream负载均衡池中的另一台服务器，实现故障转移
+    #       proxy_next_upstream http_502 http_504 error timeout invalid_header;
+    #       proxy_pass http://php_server_pool;
+    #       proxy_set_header Host $host;
+    #       proxy_set_header X-Forwarded-For $remote_addr;
+    #   }
+    #}
+
+2012/04/16 => Nginx 的安装配置
+======================================================================
+1. http://blog.s135.com/nginx_php_v6/
+2. Nginx的安装配置文章；
+3. yum -y install gcc gcc-c++ autoconf automake
+4. yum -y install zlib zlib-devel openssl openssl-devel pcre pcre-devel
+5. tar zxvf nginx-0.x.xx.tar.gz
+   cd nginx-0.x.xx
+   ./configure
+   make
+   sudo make install
+6. nginx会被默认安装到/usr/local/nginx目录下，通过./configure --help查看编译选项；
+7. /usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
+8. /usr/local/nginx/sbin/nginx 默认加载 /usr/local/nginx/sbin/nginx/conf/nginx.conf]
+9. ps -ef | grep nginx
+   kill - 信号类型 `/usr/local/webserver/nginx/logs/nginx.pid`
+   kill - QUIT `/usr/local/webserver/nginx/logs/nginx.pid` 
+   kill - TERM `/usr/local/webserver/nginx/logs/nginx.pid`
+   kill - INT `/usr/local/webserver/nginx/logs/nginx.pid`
+   pkill - 9 nginx
+10. /usr/local/webserver/nginx/sbin/nginx -t -c
+    /usr/local/webserver/nginx/conf/nginx.conf
+11. kill -HUP `/usr/local/webserver/nginx/logs/nginx.pid`
+12. 信号类型说明：
+   TERM,INT 快速关闭
+   QUIT 从容关闭
+   HUP 平滑重启，重新加载配置文件
+   USR1 重新打开日志文件，在切割日志时用途交大
+   USR2 平滑升级可执行程序
+   WINCH 从容关闭工作进程；
+
+2012/04/16 => Nginx 简单的负载均衡配置
+======================================================================
+1. http://blog.s135.com/post/306/
+2. Nginx的负载均衡测试，用多台机器自动跳转负载；
+
+2012/04/16 => webbench 网站压力测试工具
+======================================================================
+1. http://blog.s135.com/post/288/
+2. webbench最多可以模拟3万个并发连接去测试网站的负载能力，个人感觉要比Apache自带的ab压力测试工具好，安装使用也特别方便。
+3. wget http://blog.s135.com/soft/linux/webbench/webbench-1.5.tar.gz
+   tar zxvf webbench-1.5.tar.gz
+   cd webbench-1.5
+   make && make install
+4. webbench -c 500 -t 30 http://127.0.0.1/test.jpg
+
+2012/04/16 => CentOS 5.4
+======================================================================
+1. 安装时需要选择中文界面(IDE/AHCI)，否则在安装过程中会出现蓝屏现象；
+
+2011/03/25 => Linux中用yum来安装apache/php/mysql的方法：
+=============================================================
+http://hi.baidu.com/chenshake/blog/item/1f8f0d38bc7f7cf7b311c772.html
+yum install httpd httpd-devel
+yum install mysql mysql-server mysql-devel
+yum install php php-mysql php-common php-gd php-mbstring php-mcrypt php-devel php-xml
+yum install phpmyadmin
+
+
+2011/03/25 => Linux中看到服务的网络解释：CentOS-V5.4
+=============================================================
+http://blog.163.com/myb_52/blog/static/19537812200611475616908/
+0. acpid, haldaemon, messagebus, klogd, network, syslogd，不要关闭这些服务（除非你有充足的理由）
+1. ntsysv => (已明白)设置系统可以自动启动服务，有界面，远程和本地都能配置；
+
+2. NetworkManager, NetworkManagerDispatcher => NetworkManager 是一个自动切换网络连接的后台进程。很多笔记本用户都需要启用该功能，它让你能够在无线网络和有线网络之间切换。大多数台式机用户应该关闭该服务。一些 DHCP 用户可能需要开启它。
+
+3. acpid => ACPI（全称 Advanced Configuration and Power Interface）服务是电源管理接口。建议所有的笔记本用户开启它。一些服务器可能不需要 acpi。支持的通用操作有：“电源开关“，”电池监视“，”笔记本 Lid 开关“，“笔记本显示屏亮度“，“休眠”， “挂机”，等等。配置文件：/proc/acpi/event 或 /etc/acpi/events/power.conf
+
+4. anacron, atd, cron => 这几个调度程序有很小的差别。 建议开启 cron，如果你的电脑将长时间运行，那就更应该开启它。对于服务器，应该更深入了解以确定应该开启哪个调度程序。大多数情况下，笔记本/台式机应该关闭 atd 和 anacron。注意：一些任务的执行需要 anacron，比如：清理 /tmp 或 /var。配置文件：/etc/anacrontab /var/spool/anacron
+
+5. apmd => 一些笔记本和旧的硬件使用 apmd。如果你的电脑支持 acpi，就应该关闭 apmd。如果支持 acpi，那么 apmd 的工作将会由 acpi 来完成。
+
+6. autofs => 该服务在需要时自动挂载可移动存储器（比如 USB 硬盘）。如果你使用移动介质，建议启用这个服务。Autofs 与 Mount/Umount 的不同之处在于，它是一种看守程序。如果它检测到用户正试图访问一个尚未挂接的文件系统，它就会自动检测该文件系统，如果存在，那么 Autofs 会自动将其挂接。另一方面，如果它检测到某个已挂接的文件系统在一段时间内没有被使用，那么 Autofs 会自动将其卸载。因此一旦运行了 Autofs 后，用户就不再需要手动完成文件系统的挂接和卸载。
+
+7. avahi-daemon, avahi-dnsconfd => Avahi 是 zeroconf 协议的实现。它可以在没有 DNS 服务的局域网里发现基于 zeroconf 协议的设备和服务。它跟 mDNS 一样。除非你有兼容的设备或使用 zeroconf 协议的服务，否则应该关闭它。我把它关闭。
+
+8. bluetooth, hcid, hidd, sdpd, dund, pand => 蓝牙（Bluetooth）是给无线便携设备使用的（非 wifi, 802.11）。很多笔记本提供蓝牙支持。有蓝牙鼠标，蓝牙耳机和支持蓝牙的手机。很多人都没有蓝牙设备或蓝牙相关的服务，所以应该关闭它。其他蓝牙相关的服务有：hcid 管理所有可见的蓝牙设备，hidd 对输入设备（键盘，鼠标）提供支持， dund 支持通过蓝牙拨号连接网络，pand 允许你通过蓝牙连接以太网。
+
+9. conman => 
+10. cpuspeed => 该服务可以在运行时动态调节 CPU 的频率来节约能源（省电）。许多笔记本的 CPU 支持该特性，现在，越来越多的台式机也支持这个特性了。如果你的 CPU 是：Petium-M，Centrino，AMD PowerNow， Transmetta，Intel SpeedStep，Athlon-64，Athlon-X2，Intel Core 2 中的一款，就应该开启它。如果你想让你的 CPU 以固定频率运行的话就关闭它。
+
+11. cupsd, cups-config-daemon => 打印机相关。如果你有能在 Fedora 中驱动的 CUPS 兼容的打印机，你应该开启它。
+12. dc_client, dc_server => 磁盘缓存（Distcache）用于分布式的会话缓存。主要用在 SSL/TLS 服务器。它可以被 Apache 使用。大多数的台式机应该关闭它。
+
+13. dhcdbd => 这是一个让 DBUS 系统控制 DHCP 的接口。可以保留默认的关闭状态。
+14. diskdump, netdump => 磁盘转储（Diskdump）用来帮助调试内核崩溃。内核崩溃后它将保存一个 “dump“ 文件以供分析之用。网络转储（Netdump）的功能跟 Diskdump 差不多，只不过它可以通过网络来存储。除非你在诊断内核相关的问题，它们应该被关闭。
+
+15. dnsmasq => 
+16. dovecot => Dovecot是Linux/UNIX类系统平台上的开源IMAP和POP3服务器。
+17. firstboot => 该服务是 Fedora 安装过程特有的。它执行在安装之后的第一次启动时仅仅需要执行一次的特定任务。它可以被关闭。
+
+18. gpm => 终端鼠标指针支持（无图形界面）。如果你不使用文本终端（CTRL-ALT-F1, F2..），那就关闭它。不过，我在运行级别 3 开启它，在运行级别 5 关闭它。
+
+19. haldaemon => 
+19. hplip, hpiod, hpssd => HPLIP 服务在 Linux 系统上实现 HP 打印机支持，包括 Inkjet，DeskJet，OfficeJet，Photosmart，Business InkJet 和一部分 LaserJet 打印机。这是 HP 赞助的惠普 Linux 打印项目（HP Linux Printing Project）的产物。如果你有相兼容的打印机，那就启用它。
+
+20. httpd => apache 服务器；
+21. ibmasm => 
+22. iptables => 它是 Linux 标准的防火墙（软件防火墙）。如果你直接连接到互联网（如，cable，DSL，T1），建议开启它。如果你使用硬件防火墙（比如：D-Link，Netgear，Linksys 等等），可以关闭它。强烈建议开启它。
+
+23. ip6tables => 如果你不知道你是否在使用 IPv6，大部分情况下说明你没有使用。该服务是用于 IPv6 的软件防火墙。大多数用户都应该关闭它。阅读这里了解如何关闭 Fedora 的 IPv6 支持。
+
+24. irda, irattach => IrDA 提供红外线设备（笔记本，PDA's，手机，计算器等等）间的通讯支持。大多数用户应该关闭它。
+25. irqbalance => 在多处理器系统中，启用该服务可以提高系统性能。大多数人不使用多处理器系统，所以关闭它。但是我不知道它作用于多核 CPU's 或 超线程 CPU's 系统的效果。在单 CPU 系统中关闭它应该不会出现问题。
+
+26. isdn => 这是一种互联网的接入方式。除非你使用 ISDN 猫来上网，否则你应该关闭它。
+27. kudzu => 该服务进行硬件探测，并进行配置。如果更换硬件或需要探测硬件更动，开启它。但是绝大部分的台式机和服务器都可以关闭它，仅仅在需要时启动。
+
+28. lm_sensors => 该服务可以探测主板感应器件的值或者特定硬件的状态（一般用于笔记本电脑）。你可以通过它来查看电脑的实时状态，了解电脑的健康状况。它在 GKrellM 用户中比较流行。查看 lm_sensors 的主页获得更多信息。如果没有特殊理由，建议关闭它。
+
+29. mctrans => 如果你使用 SELinux 就开启它。默认情况下 Fedora Core 开启 SELinux。
+
+30. lvm2-monitor => 
+31. mdmonitor => 该服务用来监测 Software RAID 或 LVM 的信息。它不是一个关键性的服务，可以关闭它。
+32. mdmpd => 该服务用来监测 Multi-Path 设备（该类型的存储设备能被一种以上的控制器或方法访问）。它应该被关闭。
+33. messagebus => 这是 Linux 的 IPC（Interprocess Communication，进程间通讯）服务。确切地说，它与 DBUS 交互，是重要的系统服务。强烈建议开启它。
+
+34. microcode_ctl => 可以编码以及发送新的微代码到kernel以更新Intel IA32系列处理器（Pentium Pro，PII，PIII，Pentium 4，Celeron, Xeon 等等 - 全部 P6 以及更高,不包括 pentium classics）。
+
+35. multipathd => 
+36. mysqld => mysql服务；
+37. named => 
+38. netconsole => 
+39. netplugd => Netplugd 用于监测网络接口并在接口状态改变时执行指定命令。建议保留它的默认关闭状态。
+40. netfs => 该服务用于在系统启动时自动挂载网络中的共享文件空间，比如：NFS，Samba 等等。如果你连接到局域网中的其它服务器并进行文件共享，就开启它。大多数台式机和笔记本用户应该关闭它。
+
+41. netplugd => 
+42. nfs, nfslock => 这是用于 Unix/Linux/BSD 系列操作系统的标准文件共享方式。除非你需要以这种方式共享数据，否则关闭它。
+43. ntpd => 该服务通过互联网自动更新系统时间。如果你能永久保持互联网连接，建议开启它，但不是必须的。
+44. network => 在系统启动时激活所有的网络接口。
+45. nscd => 
+46. oddjobd => 
+47. pcscd => 该服务提供智能卡（和嵌入在信用卡，识别卡里的小芯片一样大小）和智能卡读卡器支持。如果你没有读卡器设备，就关闭它。
+48. portmap => 该服务是 NFS（文件共享）和 NIS（验证）的补充。除非你使用 NFS 或 NIS 服务，否则关闭它。
+49. psacct => 
+50. rawdevices => 
+51. rdisc => 
+52. readahead_early, readahead_later => 该服务通过预先加载特定的应用程序到内存中以提供性能。如果你想程序启动更快，就开启它。
+53. restorecond => 用于给 SELinux 监测和重新加载正确的文件上下文（file contexts）。它不是必须的，但如果你使用 SELinux 的话强烈建议开启它。
+
+54. rpcgssd, rpcidmapd, rpcsvcgssd => 用于 NFS v4。除非你需要或使用 NFS v4，否则关闭它。
+55. saslauthd => 
+56. sendmail => 除非你管理一个邮件服务器或你想在局域网内传递或支持一个共享的 IMAP 或 POP3 服务。大多数人不需要一个邮件传输代理。如果你通过网页（hotmail/yahoo/gmail）或使用邮件收发程序（比如：Thunderbird，Kmail，Evolution 等等）收发邮件。你应该关闭它。
+
+57. smartd => SMART Disk Monitoring 服务用于监测并预测磁盘失败或磁盘问题（前提：磁盘必须支持 SMART）。大多数的桌面用户不需要该服务，但建议开启它，特别是服务器。
+
+58. smb => SAMBA 服务是在 Linux 和 Windows 之间共享文件必须的服务。如果有 Windows 用户需要访问 Linux 上的文件，就启用它。查看如何在 Fedora Core 6 下配置 Samba。
+
+59. spamassassin => 
+60. squid => 
+61. sshd => SSH 允许其他用户登录到你的系统并执行程序，该用户可以和你同一网络，也可以是远程用户。开启它存在潜在的安全隐患。如果你不需要从其它机器或不需要从远程登录，就应该关闭它。
+
+62. syslog => 
+63. tcsd => 
+64. tux => 
+65. vsftpd => 
+66. winbind => 
+67. wpa_supplicant => 
+68. xfs => 预设端口：TCP 7100
+说明：x font server，X Window字型服务器，为本地和远程X服务器提供字型集。
+是否需要启动：如果使用run-level为5的图形界面，那么就需要启动。
+
+69. ypbind => 
+70. yum-updatesd => 
+71. xinetd => （该服务默认可能不被安装）它是一个特殊的服务。它可以根据特定端口收到的请求启动多个服务。比如：典型的 telnet 程序连接到 23 号端口。如果有 telent 请求在 23 号端口被 xinetd 探测到，那 xinetd 将启动 telnetd 服务来响应该请求。为了使用方便，可以开启它。运行 chkconfig --list， 通过检查 xinetd 相关的输出可以知道有哪些服务被 xinetd 管理。
+
+
+2011/03/25 => Linux实际安装问题
+=============================================================
+1. (已完成)解决了用USB-DVD光驱安装的问题；需要用一个U盘来强迫CentOS加载USB驱动，安装程序才能在USB的引导下识别到USB-DVD光驱，才能进行光盘的数据读取；
+2. (已完成)只安装Server模块，不安装任何界面，不安装任何扩展库，增加MySQL/Apache服务，增加开发工具(gcc/perl/python)；
+3. (已完成)必须将BIOS里面的Storage Features Setup参数进行调整，否则Linux会不断出现hda的ide错误；
+    Configure SATA as [IDE] (这种模式下硬盘格式化时非常慢至少半小时以上，需要调整成AHCI高速模式)
+    SATA Run Mode Configuration [Enhanced] (不能用Compatible模式)
+    Hard Disk Write Protect [Disabled]
+    IDE Detect Time Out [35]
+    ATA(PI) 80Pin Cable Detect [Host & Device]
+4. (已完成)如果BIOS中硬盘设置成IDE模式在安装过程中格式化非常慢，需要将Storage Features Setup参数进行调整；
+    Configure SATA as [AHCI] (格式化只需要2分钟不到)
+    Hard Disk Write Protect [Disabled]
+    IDE Detect Time Out [35]
+    ATA(PI) 80Pin Cable Detect [Host & Device]
+5. (已完成)如果使用SATA硬盘的IDE模式安装完毕，然后又在BIOS中将SATA设置成AHCI模式，Linux无法启动；
+
+2011/03/04 => Linux软件包管理
+=======================================
+1. 流媒体网站在Linux下需要修改的目录写入权限，网站会产生临时文件：
+   chmod 777 /var/www/html/admin/templates_c
+   chmod 777 /var/www/html/admin/upload
+   chmod 777 /var/www/html/root/templates_c
+   chmod 777 /var/www/html/libs/_Cache
+2. 某些文件的文件名大小写受到限制；
+
+2011/03/02 => Linux软件包管理
+=======================================
+1. RPM/YUM，适用于RedHat软件包管理
+2. rpm -e --nodeps sudo  => 强制卸载
+   rpm -ivh sudo         => 安装，使用 TAB 来进行命令补全，很重要；
+
+2011/02/28 => Linux下载地址
+=======================================
+http://mirrors.sohu.com/centos/
+选用5.4版本，i386/x64都有；不要使用VMWare的EasyInstall，直接使用光盘引导模式；
+
+yum安装方法
+http://hi.baidu.com/yifan1018/blog/item/4388f6f83faa011dd8f9fda1.html
+
+
+2011/02/25 => Linux下的apache管理
+=======================================
+1. apache的安装，以源码包或rpm包进行安装；
+   rpm -q httpd
+   rpm -ql httpd
+
+2. vim /etc/httpd/conf/httpd.conf  -- 配置解释
+   <IfModule prefork.c>   => 性能配置
+   StartServers        8  => 启动的进程数
+   MinSpareServers     5  => 最小的服务进程数
+   MaxSpareServers    20  => 最大的服务进程数
+   ServerLimit       256  => ???
+   MaxClients        256  => ???
+   MaxRequestsPerChild 4000 => ???
+   </IfModule>
+
+Include conf.d/*.conf  -- 扩展配置文件
+
+能够进行文件读写操作的用户及组，需要给apache用户或组赋予相关目录的权限
+User apache
+Group apache
+
+ServerAdmin  -- Apache管理者的电邮
+DocumentRoot -- 实际文件存放位置
+
+---------- 以上为Apache的全局参数设置 -----------
+
+UserDir diabled  -- 禁止使用用户目录
+UserDir public_html  -- 每个用户在自己的宿主目录建立一个public_html目录，chomp 711
+                     -- http://127.0.1./~username/xx.html，进行个人主页的访问
+Options Indexs  -- 表示默认的index文件不存在时，可以列目录
+    FollowSymLinks -- 是否允许使用外部链接？？
+AllowOverride None -- 是否允许用户使用.htaccess文件进行权限管理，替换主文件的设置
+
+Order allow,deny  -- 访问控制，先允许再拒绝
+Allow from all    -- 允许所有主机访问
+Deny from 192.168.1.99 -- 拒绝192.168.1.99主机访问
+
+----------- 访问目录时弹出输入框(未验证) ---------------
+<Directory "/var/www/html/private">
+    AuthName "Hello World!!"
+    AuthType Basic
+    Auth..File "/var/www/.htpw"
+    register valid-user
+</Directory>
+进入到 /var/www/html/private 目录下，创建 .htpw 验证文件
+htpasswd -c .htpw zhangsan -- 创建一个验证文件，需要输入口令
+重启apache，再次访问！！
+
+----------- 绑定虚拟主机的方法 ---------------------
+通过一个ip地址绑定多个虚拟主机；
+首先解决域名解析的问题，vim /etc/hosts，完成地址映射；
+192.168.1.98 www.sina.com
+192.168.1.98 www.kuihua.net
+
+
+2011/02/25 => Linux下的php环境安装
+=======================================
+LAMP => Linux+Apache+MySql+PHP
+Linux企业版5，可以直接下载 rpm -ivh包，直接在Linux下安装
+xmapp，可以进行集成安装；
+
+WAMP => Windows+Apache+MySql+PHP
+PHPStudy/AppServ
+
+2011/02/25 => LAMP概述
+=======================================
+LAMP => Linux+Apache+MySql+PHP
+PHP可以作为命令行脚本，相当于Shell，只能用于Linux或Unix环境；
+PHP还可以编写桌面应用程序；PHP-GTK
+PHP可以自动生成PDF/Flash/Image/xml等等；
+PHP可以支持大多数主流数据库，MySQL/DB2/Oracle/Infomix/Cybase/SQLServer
+PHP加速的方式：网页静态化或用Zend加速器进行；
+
+2011/02/24 => Linux外设情况
+=======================================
+/dev/cdrom  -- IDE光盘
+/dev/hd1    -- 第一个IDE光盘
+/dev/hd2    -- 第二个IDE光盘
+/dev/scd1   -- 第一个SCSI光驱
+/dev/scd2   -- 第二个SCSI光驱
+/dev/fd1    -- 第一个软盘
+/dev/fd2    -- 第二个软盘
+
+/dev/sdx(abc)-- U盘，看成SCSI硬盘，编号会递增
+
+/dev/hda    -- 第一块IDE硬盘   /dev/hda1   /dev/hda2
+/dev/hdb    -- 第二块IDE硬盘   /dev/hdb1   /dev/hdb2
+/dev/hdc    -- 第三块IDE硬盘   /dev/hdc1   /dev/hdc2
+
+/dev/sda    -- 第一块SCSI硬盘  /dev/sda1   /dev/sda2
+/dev/sdb    -- 第二块SCSI硬盘  /dev/sdb1   /dev/sdb2
+/dev/sdc    -- 第三块SCSI硬盘  /dev/sdc1   /dev/sdc2
+
+第三个IDE硬盘的第5个分区  -- /dev/hdc5
+第三个SCSI硬盘的第5个分区 -- /dev/sdc5
+
+一种：主分区   只能有4个分区
+二种：扩张分区 可以将某个分区拿出来作为扩展分区
+三种：逻辑分区 在扩展分区中得到的分区叫逻辑分区，命名同样遵循数字累加的方式/dev/hda5
+主分区表：在MBR（主引导记录，位于一个磁盘的0柱面0扇区0磁道）446字节，就是磁盘最开始的地方
+          分区表只有64字节，记录一个分区需要16字节，因此，只能有4个主分区，其它分区都是扩张分区；
+扩展分区表：与主分区表类似，可以不受4个分区限制
+
+SCSI是可以热插拔的硬盘，U盘就属于SCSI硬盘；
+分区完毕之后需要格式化，windows是FAT32/NTFS，Linux使用ext3
+
+第三步进行挂载，第四步才能使用；
+
+fdisk -l -- 查看系统中已连接的外部设备
+df -T -- 查看已经挂载上的分区，显示文件类型
+
+2011/02/24 => Linux查看进程状态
+=======================================
+1. 进程和进程控制的概念
+1.1 查看进程状态
+      w [用户名] -- 查看个别用户进程 -- from/IDLE/JCPU/PCPU/WHAT(正在执行操作)
+      ps -aux -- 查看进程状态模式1
+         -a   -- 显示所有用户进程
+         -u   -- 显示用户名和启动时间
+         -x   -- 显示没有控制终端的进程(系统自己开启的进程)
+      ps -el  -- 查看进程状态模式2
+         -e   -- 显示所有进程包括没有控制终端的进程
+         -l   -- 以长格式显示进程
+      PID：进程号，唯一不重复
+     PPID：父进程的进程号
+      TTY：进程启动的终端，? 表示没有控制终端
+     STAT：进程当前状态，S(休眠) D(不可中断休眠) R(正在运行) Z(僵死状态) T(停止状态)
+       NI：进程优先级(-20,19)
+     TIME：总时间
+      CMD：正在运行的命令名称
+     ps -aux --sort pid -- 按照 PID 排序
+     ps -aux --sort uid -- 按照 UID 排序
+     ps -aux|grep [命令] -- 命令过滤，通过管道来过滤
+
+1.2 进程的挂起和恢复
+  kill [pid] -- 结束进程
+  kill -l    -- 罗列信号
+  kill -s 信号 进程号 -- 结束进程
+  killall 进程名 -- 结束所有进程
+  xkill -- 图像界面挂起命令 -- Ctrl + Alt + 退格 -- 重启图形界面
+  nice -n cmd &  -- 改变进程的优先级(-20,19) -- & 表示后台运行
+  renice n pid   -- 改变一个正在运行进程的优先级 
+  top -d 3 -c -- 实时显示服务器运行状态和进程控制 -- -c 显示整个命令
+  top: h -- 帮助 u -- 用户状态 k -- 杀死进程 r -- 重新设置优先级 s -- 重新设置刷新间隔
+  & -- 转移到后台 -- ctrl+z -- 转移到后台 -- ctrl+c -- 中断进程
+  jobs -- 查看后台进程
+  fg   -- 恢复后台进程
+   
+2011/02/24 => Linux安排一次性计划任务
+=======================================
+3. 一次性安排进程任务 -- 到某个时间点执行什么
+  at    -- 安排作业在某个时刻执行一次
+  batch -- 安排作业在系统负载不重时执行一次
+  service atd start -- 开启atd
+  at 时间
+  >/bin/cp -r /root/* /home -- 需要使用命令的全路径
+  >/bin/echo "1111111111" > /root/one.txt
+  ctrl + d -- 退出作业安排
+  at -l 或 atq  -- 查看计划任务
+  at -d 或 atrm -- 删除计划任务
+  绝对计时法 -- midnight noon teatime HH:MM[today] HH:MM[tomorrow] HH:MM 星期几 HH:MM mn/dd/yyyy
+  相对计时法 -- now + n minute 或 now + n hours 或 now + n day
+  指定在今天下午5:30执行某个命令（假设现在时间为中午12:30,2009/9/16）
+  at 5:30pm 或 at 17:30 或 at 17:30 today
+  at now + 5 hours 或 at now + 300 minutes
+  at 17:30 16.9.2009 或 at 17:30 9/16/2009
+
+  at -f 命令文件 时间点 -- 文件里面指定要执行的命令内容
+  at <  命令文件 时间点 -- 导入文件里的执行命令内容
+  at的执行结果会通过邮件寄给提交这个命令的用户
+  at的配置文件，用来限制哪些用户可以使用at命令
+    /etc/at.allow -- 这个文件存在，只有列在此文件中的用户才能使用at命令
+    /etc/at.deny  -- at.allow不存在时，检查这个文件，列在此文件中的用户不能使用at命令
+    如果两个文件都不存在，只有root能执行at命令；如果两个文件都存在且为空，则所有用户都可以执行at命令；
+
+2011/02/24 => Linux周期性安排计划任务
+=======================================
+4. 周期性安排进程任务 -- 特定时间反复执行
+   crond  -- 周期性计划任务
+   service crond start -- 启动周期性服务进程
+   crond 搜索crontab文件载入内存，执行计划任务
+   /var/spool/cron/目录下以用户名命名的文件
+   crond进程启动后，它将首先检查是否有用户设置了crontab文件，如果没有转入“休眠”状态；
+   crond进程每分钟醒来一次，查看crontab文件，决定当前是否有需要执行的命令，
+   命令执行结束后，任何输出都将作为邮件发送给crontab的所有者；
+   crontab -e -u root  -- (创建)编辑周期性任务文件，编辑结束后，自动安装在/var/spool/cron/目录下
+   crontab -l  -- (查看)在屏幕终端中直接显示计划任务内容
+   crontab -r  -- (删除)删除当前的计划任务
+
+   周期性文件由6部分组成，由空格隔开
+   minute : 一小时的哪一分钟(0 ~ 59)
+   hour   : 一天中的哪个小时(0 ~ 23)
+   day-of-month: 一个月的哪一天(1 ~ 31)
+   month-of-year: 一年中的哪个月(1 ~ 12)
+   day-of-week: 一周中的哪一天(0 ~ 6)
+   commands: 执行的命令，使用全路径 /bin/cp
+   这些项都不能为空，如果不指定，可以使用通配符 * 表示任何时间
+   每个时间段可以指定多个值，用逗号间隔开，用 - 指定一段范围，5-8
+   用户必须具有运行所对应命令或程序的权限
+   15 3 * * 1-5 /bin/find $HOME -name core 2 > /dev/null|rm -f
+    0 5 * * * /sbin/update/updatedb
+   30 6 * * * /bin/cp ...
+   30 21 * * wen /bin/cp ...
+   * */2 * * * /bin/cp ...    -- 每隔2小时执行
+   * 8-17 * * * /bin/cp ...   -- 8点到17点
+
+   cron的配置文件，用来限制哪些用户可以使用cron命令
+     /etc/cron.allow -- 这个文件存在，只有列在此文件中的用户才能使用cron命令
+     /etc/cron.deny  -- cron.allow不存在时，检查这个文件，列在此文件中的用户不能使用cron命令
+   如果两个文件都不存在，只有root能执行at命令；如果两个文件都存在且为空，则所有用户都可以执行cron命令；
+
+2011/02/23 => Linux文件权限管理
+=======================================
+1. su -- 不重新登录的情况下变换用户身份 -- root转到普通不用密码 -- 普通转到其它普通或root必须给出密码
+   只是登录的身份转变，但文件之类的环境变量仍然是原登录的用户，即权限保持不变
+2. su - -- 完全转换用户身份 -- exit 退出
+3. 只允许root登录：在/etc/目录下建立一个名为nologin的文件 -- 在管理员在维护系统时使用
+4. chmod -- 权限管理命令
+   -a(所有) -u(用户) -g(组) -o(其它用户) 
+   + - =
+   r w x
+5. 八进制的数字代表权限 -- 0 1 2 3 4 5 6 7
+   0 --  什么也没有
+   1 -- x 执行权限
+   2 -- w 写的权限
+   3 -- 1+2 x+w xw
+   4 -- r 读的权限
+   5 -- 4+1 r+x rx
+   6 -- 4+2 r+w rw
+   7 -- 4+2+1 r+w+x rwx
+   chmod 755 [file]    -- 改变文件权限
+   chmod 755 -R [DIR]  -- 改变目录及子目录下文件的权限
+6. chown [用户] [文件] -- 改变文件的所属用户
+   chown -R [用户] [目录] -- 改变目录及子目录下的文件的所属用户
+   chgrp [组] [文件]  -- 改变文件或目录的所属组
+   chgrp -R [组] [目录] -- 改变目录及子目录下的文件的所属组
+   chown [用户.组名]  -- 一起改变文件
+   chown -R [用户.组名] -- 一起改变目录及子目录
+7. umask -- 设置文件的默认生成掩码的 -- 目录默认755 -- 文件默认644
+   目录：755 + 022 = 777
+   文件：644 + 022 + 111 = 777  
+
+2011/02/23 => Linux用户组管理
+=======================================
+1. 私有用户组 -- 新用户创建时，没有指定所属组，Linux建立一个和该用户同名的私有组
+2. 标准用户组 -- 可以容纳多个用户，在创建新用户时需要指定该用户所属的组
+3. /etc/group -- 组用户管理文件 -- 分为4个部分
+   组名称：用户登陆时所在组名
+   组口令：一般不使用
+   组ID号：GID，组的标识号
+   组内成员：属于该组的所有用户名表，用逗号隔开
+4. 添加用户组
+   useradd [用户名]  -- 会创建一个同名的私有组
+   groupadd [组名称] -- 该组账号标识必须大于500
+   groupmod -n [新组名] [原组名] -- 修改组名称
+   groupdel [组名称] -- 删除组账号 -- 删除账号必须存在，不能删除私有组
+   useradd -g [组名] [用户名] -- 添加指定用户到指定组
+   gpasswd -a [用户名] [组名] -- 添加用户到指定用户组
+   groups [用户] -- 查看用户所属的组名
+   gpasswd -d [用户] [组名] -- 将用户从组中删除
+5. id [用户] -- 查看用户的UID/GID的内容
+6. finger [用户] -- 查看用户相关信息 -- 主目录 启动shell 简介
+
+2011/02/23 => Linux用户管理
+=======================================
+1. 超级用户 -- root具有操作系统的一切权限，UID 值为 0
+2. 普通用户 -- 具有操作系统有限的权限，UID 值 500 ~ 6000
+3. 伪用户   -- 是了方便软件进行系统操作，不能登录系统，UID 值 1 ~ 499，如：apache/php/mysql/ftp 用户
+4. /etc/passwd -- 只定义账号不定义口令 -- 一行定义一条记录 -- 分7个部分
+   账号名称：root
+   用户密码：x -- 空 表示没有密码
+   用户标识：就是用户ID，操作系统通过用户编号进行辨别用户类型，0表示超级用户
+   组标识码：就是用户组ID，0表示超级组
+   用户相关信息：表示用户全名或者注释
+   用户家目录：/root
+   用户环境：指该用户的shell环境，分为bin shell、sh shell等等，每种shell都可以进行编程，Linux系统核心就是shell；
+5. /etc/shadow -- 存放用户口令 -- 只有root可以读写 -- 分9个部分
+   用户名：root
+   口令：存放加密后的口令，口令第一个字符是 ! ，则该用户不能登录
+   最后一次修改时间：时间邮戳，从1970/01/01开始的秒数；
+   最大时间间隔：密码再过几天被更改，0 表示随时可以更改
+   最小时间间隔：多少天之内密码必须被更改，99999 表示永不过期
+   警告时间：密码过期前几天提示用户，默认是7天；
+   不活动时间：延期几天之后禁用账号
+   失效时间：时间邮戳，多长时间用户失效；
+6. 创建账号 -- 用户账号管理
+   1. 在/etc/passwd中增加一条记录
+   2. 创建用户主目录
+   3. 在用户主目录中设置默认的配置文件
+   4. 设置用户初始口令
+   5. useradd 或 adduser 创建用户的命令 -- 处于禁用状态
+      -u  -- 指定UID -- 500 ~ 6000
+      -g  -- 指定用户组 -- 必须存在
+      -G  -- 指定附加组
+      -d  -- 指定家目录
+      -s  -- 指定shell
+      -c  -- 指定全名
+7. passwd  -- 设置用户密码
+   -S  -- 查看密码状态
+   -l  -- 密码锁定
+   -u  -- 密码解锁
+8. userdel -- 删除用户 -- 保留家目录 -- -r 删除家目录以及所有信息
+9. usermod -l [新用户] [旧用户] -- 修改用户名 -- 家目录不变
+10. usermod -L [用户名] -- 锁定用户 -- 加入 ! -- -U -- 解锁用户，去掉 !
+11. /etc/passwd 在账号前使用 # 注释之，直接禁止用户
+12. /etc/skel -- 每个新用户创建时默认创建的类容
+
+
+2011/02/22 => Linux文本编辑器
+=======================================
+1. vim -- 文本编辑器 -- VI -- 建立显示编辑文本文件 -- 只有菜单没有命令 -- 不能锁定文件，以最后一个用户保存为准
+2. VI的工作模式：只是一个文件编辑器，类似于记事本，命令模式，插入模式，编辑模式
+3. vi [文件名] -- 命令模式 -- 所有在键盘上键入的都有可能是命令
+   vi -- 创建空文件
+   i/I a/A o/O -- 任意一个命令都可以进入插入模式
+   i -- 光标前插入文本
+   I -- 在光标所在行的开始插入
+   a -- 在光标后附加文本
+   A -- 在光标所在行的末尾插入
+   o -- 在光标下插入新行
+   O -- 在光标上插入新行
+   ESC -- 回到命令模式
+   : [命令] 回车 -- 进入编辑模式执行命令
+   ZZ -- 从命令模式退出VI   
+4. vi 的命令行模式的定位命令
+   h -- 左移一个字符
+   j -- 下移一个字符
+   k -- 上移一个字符
+   l -- 右移一个字符
+   $ -- 直接移至行尾
+   0 -- 直接移至行首
+   Enter -- 移至下行行首
+   H -- 移至屏幕上端
+   M -- 移至屏幕中间
+   L -- 移至屏幕底端
+   G -- 移至文件末行
+   nG  -- 移至文件第n行
+   :20 -- 移至文件第20行
+   :set nu -- 设置行号
+   :set nonu -- 取消行号
+   在"家"目录下编辑 .vimrc 进行用户的vi默认设置
+5. vi 命令行模式的删除(剪切)命令
+   x   -- 删除后面字符
+   X   -- 删除前面字符
+   dd  -- 删除光标所在行
+   dG  -- 删除光标所在行到末尾
+   D   -- 删除光标所在处到结尾
+   :n1,n2d -- 删除n1到n2行的内容
+6. 命令模式复制命令
+   yy Y -- 复制当前行
+  nyy nY -- 复制当前行以下n行
+  p      -- 粘贴
+7. 命令模式替换和取消的命令
+  r  -- 取代光标所在处的字符
+  R  -- 从光标所在处开始直到ESC结束
+  s  -- 替换光标所在处字符，并进入稳步输入方式
+  S  -- 替换光标全行，ESC结束
+  u  -- 取消上一步的操作，取消到文件打开那个时刻
+  Ctrl+r -- 取消取消的操作
+  U  -- 取消当前行的所有操作
+8. 命令模式保存和退出命令
+  :w  -- 保存 
+  :w [file] -- 另存为 
+  :wq -- 保存退出
+  ZZ  -- 保存退出
+  :q  -- 不保存退出 
+  :q! -- 强制退出（文件不可写时，通常用强制退出)
+  :wq! -- 强制保存退出
+  :x  -- 
+  :x! -- 
+9. 搜索和替换命令
+  /string  -- 搜索
+  ?string  -- 搜索
+  n  -- 向下搜索
+  N  -- 向上搜索
+  :%s/old/new/g
+  :%s/old//g
+10. 其它命令说明
+  :r [file] -- 导入文件
+  :!ifconfig -- 查看ip地址
+  :! -- 执行系统命令
+  vi -O file1 file2 -- 同时打开多个文件(垂直)
+  vi -o file1 file2 -- 同时打开多个文件(横向)
+  Ctrl + ww -- 多个文件之间进行切换
+
+2011/02/22 => Linux命令格式
+=======================================
+1. gzip -- GUN zip -- .gz -- 不能压缩目录，只能压缩单个文件
+   gzip -1 表示快速压缩
+   gzip -9 表示最佳压缩(nice nine)
+   gzip -d 表示解压缩
+   gunzip  表示解压缩
+2. tar -- 打包命令 -- 目录打包然后压缩 -- 可以不加选项的减号 -- tar zcvf
+   -c  -- 创建一个压缩文件
+   -z  -- 直接压缩打包文件
+   -x  -- 将打包文件打开
+   -v  -- 查看压缩过程
+   -f  -- 指定压缩文件名
+   tar zcvf [文件名.tar.gz] [目录名称]
+   tar zxvf [文件名.tar.gz]
+3. zip -- 压缩命令 -- .zip
+   -r  -- 压缩目录*
+-
+   -f  -- 更新压缩
+   -F  -- 修理文件
+4. unzip -- 解压命令
+5. write [用户名] -- 发送及时消息 -- Ctrl + D 退出消息模式
+6. wall [消息内容] -- 向所有用户发送及时消息
+7. mesg n -- 屏蔽消息接收
+8. mail [用户名]
+9. ifconfig
+   
+10. ping -c  -- 指定发出消息次数
+    ping -i  -- 等待多少秒发送下一条
+    ping -r  -- 显示路由表的信息
+    ping -t  -- 隔多长时间发送
+11. shutdown -h now -- 立即关机
+12. reboot  -- 重启
+13. init 6  -- 重启
+14. init 0  -- 关机
+
+2011/02/21 => Linux命令格式
+=======================================
+1. ln -- link  -- 产生链接文件(快捷方式) -- /bin/ln -- 改变源文件目标文件跟着改变
+   ln -s [源文件] [目标文件]
+   源文件与目标文件一定要使用绝对路径
+   ln    file1 file2  --  硬链接 -- 不能跨设备 -- 相当于拷贝
+   ln -s file1 file2  --  软连接
+2. mkdir -- make dir -- 创建空目录
+   mkdir -p -- 依次创建批量目录
+3. rmdir -- remove dir -- 删除空目录
+4. whereis -- 显示系统和帮助手册所在的目录
+5. whatis  -- 显示文件的简短说明
+6. find    -- 查找文件或目录(搜索功能) -- 速度比较慢
+   find [搜索路径] [搜索关键字] [文件或目录]
+   find /etc/ -name f*
+7. locate  -- 速度比较快的搜索命令 -- 通过系统索性查找文件
+8. updatedb -- 将系统目录和文件重新更新数据库
+9. grep -- 在文件中查找指定内容
+   grep [搜索内容] [指定文件]
+10. man -- manual -- 获取命令、函数、配置的帮助信息
+11. info -- 命令详细信息
+12. ls --help
+
+2011/02/18 => Linux命令格式
+=======================================
+1. 文件后缀，只是简单区分文件类型，可执行文件与后缀没有关系；系统文件.conf *.rpm 程序与脚步*.c *.php，格式文件.jpg，压缩存档文件.tar .gz
+2. 文件命名规则：
+   1. 大小写敏感；
+   2. 除了 / 之外，所有的字符都合法；
+   3. 有些字符最好不用，如空格、制表符、退格符和字符@#&$()；特殊字符需要加双引号；
+   4. 避免使用加减或.作为普通文件的名第一个字符；以点开始的文件的是隐藏文件；
+3. Linux命令格式：
+   命令 -选项 参数
+   命令
+   命令 -选项
+   命令  参数
+   绝对路径：以跟目录为参照点进入的目录；
+   相对路径：以当前目录为参照点进入的目录；
+4. 通配符：
+   *  一个或多个任意字符；
+   ?  匹配任意单字符；
+   [] 匹配任意包含在括号内的单字符；
+5. ls -- list 显示目录和文件 -- /bin/ls  -- 所有用户都可以使用 /sbin 是超级用户才能使用
+   ls  -a   -- 显示所有文件
+   ls  -l   -- 长格式显示   -- ll
+   ls  -F   -- 附件文件类型
+   文件类型  用户拥有权限  用户组其他成员拥有的权限   除了该用户和该用户所在组，其他用户拥有的权限
+   dlbc       rwx             rwx                         rwx
+   d -- 表示目录
+   l -- 表示连接
+   - -- 表示文件
+   b -- 表示块文件
+   c -- 表示字符设备
+   r -- 表示读权限
+   w -- 表示写权限
+   x -- 表示执行权限
+6. touch -- 生成空文件 -- /bin/touch  -- 所有用户都可以执行
+   touch [选项] 文件名
+7. cd -- change directory -- 切换目录 -- shell内部指令
+   cd [目录]
+   cd    => 转到家目录
+   cd ~  => 转到家目录
+   cd /  => 转到跟目录
+   cd -  => 转到上次访问目录
+   cd !$ => 转到上次命令涉及到的目录
+8. pwd -- print work directory -- 显示目前所在的工作目录 -- /bin/pwd -- pwd
+9. cp  -- copy  -- 复制文件  -- /bin/cp
+   cp -afp [源文件] [目的文件]
+   -a 拷贝目录
+   -f 强制拷贝
+   -p 保留源文件日期
+10. rm -- remove -- 删除文件 -- /bin/rm
+    rm -irf [文件或目录]
+    -f 强制删除
+    -r 删除目录
+    -i 删除确认
+11. mv -- move -- 移动文件或为文件重命名 -- /bin/mv
+    mv -f [源文件或目录] [目的文件或目录]
+12. cat  -- 不管文件多长全部读取出来，小文件查看命令；重定向使用；
+    more -- 可以分屏幕显示文件类容；按空格翻屏幕，回车显示下一行，q/Q退出；只能往下看；
+    less -- 按空格分页显示，上下键滚动，q/Q退出；PageUp/PageDown；
+    head -- 查看文件前几行，默认为10行；
+    tail -- 查看文件后几行，默认为10行；
+    tail -f -- 是是查看文件内容；
+
+2011/02/17 => Linux工作环境
+=======================================
+1. /boot => 保存系统引导文件、内核文件、grub内核引导文件；最多128M空间；不要去修改；
+2. /etc  => 系统常用的配置文件；管理员经常修改，决定系统运行行为的配置文件；
+3. /bin  => 用户常用的命令，文件和目录的操作命令，所有用户都可以使用；可执行文件.o
+4. /sbin => 保存系统维护的命令文件；fdisk mkfs，很多命令普通用户都不能使用，大部分只有root能够使用；
+5. /lib  => 系统运行所需要的库文件；c语言静态库.a，c语言动态库.so；安装文件自动拷贝到这里；
+6. /dev  => 系统设备文件，/dev/cdroom, /dev/hda, /dev/sdb
+7. /var  => 保存变化的数据，日志文件，脱机文件；
+8. /mnt  => 系统用来安装文件系统设备目录，mnt/cdroom, mnt/sdb2
+9. /proc => 系统内存/CPU的映射；
+10. /tmp => 保存系统运行时产生的临时文件；
+11. /usr => 保存系统中与用户相关的信息；比如安装的apache/php/mysql都装在这里；
+12. /home=> 系统中普通用户的主目录
+13. /root=> 系统中超级用户的主目录；
+
+2011/01/27
+=======================================
+1. http://news.netcraft.com，可以查看网站的统计信息；
+2. nslookup 是DOS命令；
+3. Linux可以实现负载均衡和集群；
+4. Linux可以实现防火墙及代理服务器，默认netipfilter；
+5. http://www.top500.org，最高端500台机器的统计信息；
+6. CAD/CAM都是使用Linux进行后期制作；
+7. Linux在嵌入式方面也是应用广泛；生物特征识别系统、只能卡系统、掌上电脑、手机、信息家电、路由器、机顶盒、数码相机、MP4；
+8. Linux可以做到20K以内？
+
+2011.01.24
+=================================================
+1. Linux的应用与发展，Unix诞生于60年代，Windows诞生于80年代，Linux诞生于90年代；
+2. Unix的发展过程：1969年贝尔的肯汤普森开发了UNIX(小而精巧)，1971年汤普森的同事丹尼斯里奇发明了C语言，1973年，C语言重写了UNIX；UNIX+TCP/IP+C语言，捆绑发送到美国各个大学；汤普森与丹尼斯在1983年获得计算机最高奖：图灵奖；贝尔(AT&T)版本System V，伯克利分校的版本BSD；
+3. Linux来自于Minix；由芬兰人Linus Torvalds编写，第一个版本为0.01版本，只有90多个K；
+
+2011.01.21
+=================================================
+1. Windows下使用的远程管理工具：Putty、SecureCRT
+2. 文件共享工具：SSH Secure Shell Client
+
+2011.01.20
+=================================================
+1. 安装学习视频地址：http://v.youku.com/v_show/id_XMTYwMDY0MzYw.html 与 http://v.youku.com/v_show/id_XMTYwMDYzNzI4.html
+2. 现在目前普遍使用的都是RedHat(红帽)Linux；
+3. RedHat的版本早期很混乱，现在最新版本的是Rea Hat Enterprise6.0 64 bit，是官方维护版本；Fedora 64 bit是非官方的免费版本；目前对外发行都是64位的版本，i386 32位版本似乎不流行；每一个发行版本都会带上桌面版、个人版、服务器版、开发版，所以会显得非常大，通常都在3G左右，Linux的内核与界面是分离的，纯服务器版本安装完毕之后只有一个命令提示行，占用系统资源很低，桌面版通常都是GNOME；目前使用的服务器版本为：[红帽企业Linux.6.0.桌面版].rhel-server-6.0-x86_64-dvd.iso；使用的桌面版本为：[Fedora.13.正式版].Fedora-13-x86_64-DVD.iso，两个版本都在虚拟机中安装成功；
+4. 由于虚拟机做系统试验非常方便，目前使用的是VMware Workstation7.1汉化版，功能强大，网络用网桥模式，可以完全模拟一台真实的电脑进行任何系统的安装、调试、试验，等等，非常方便；
+5. 在Fedora系统下，学会了如何通过界面来配置网络，并能通过自带的Firefox进行互联网连接；下面需要学习，如何让Linux虚拟机跟本机的Windows联网，如何在Fedora桌面系统下进行搭建Web服务器，并能运行PHP程序，访问Mysql数据库；然后，把我们的流媒体系统安装在Fedora系统下，然后通过微软的网站压力测试工具进行压力测试，并能监控Fedora服务器的压力承受状况；
+6. ifconfig => 查看网卡设置信息(interface config)，eth0/eth1(ethernet)，表示第一块以太网卡信息；lo (local loopback)

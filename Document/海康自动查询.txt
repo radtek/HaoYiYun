@@ -1,0 +1,135 @@
+﻿
+地址：239.255.255.250
+端口：37020
+
+发送查询命令 - UDP组播命令
+==========================================
+<?xml version="1.0" encoding="utf-8"?>
+<Probe>
+  <Uuid>B16E4B1E-7EA2-4B2E-9813-32C45C9E6F2B</Uuid>
+  <Types>inquiry</Types>
+</Probe>
+
+摄像机返回的查询结果 - UDP组播命令
+==========================================
+<?xml version="1.0" encoding="UTF-8"?>
+<ProbeMatch>
+  <Uuid>B16E4B1E-7EA2-4B2E-9813-32C45C9E6F2B</Uuid>
+  <Types>inquiry</Types>
+  <DeviceType>10145</DeviceType>
+  <DeviceDescription>DS-2DE2106IW-D3</DeviceDescription>
+  <DeviceSN>DS-2DE2106IW-D320160328CCCH586724421</DeviceSN>
+  <CommandPort>8000</CommandPort>
+  <HttpPort>80</HttpPort>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <IPv4Address>192.168.1.65</IPv4Address>
+  <IPv4SubnetMask>255.255.255.0</IPv4SubnetMask>
+  <IPv4Gateway>192.168.1.1</IPv4Gateway>
+  <IPv6Address>::</IPv6Address>
+  <IPv6Gateway>::</IPv6Gateway>
+  <IPv6MaskLen>64</IPv6MaskLen>
+  <DHCP>false</DHCP>
+  <AnalogChannelNum>0</AnalogChannelNum>
+  <DigitalChannelNum>1</DigitalChannelNum>
+  <SoftwareVersion>V5.3.11build 151216</SoftwareVersion>
+  <DSPVersion>V7.2 build 151216</DSPVersion>
+  <BootTime>2017-01-14 12:08:10</BootTime>
+  <ResetAbility>false</ResetAbility>
+  <DiskNumber>0</DiskNumber>
+  <Activated>true</Activated>
+  <PasswordResetAbility>true</PasswordResetAbility>
+</ProbeMatch>
+
+发送修改命令 - UDP组播命令
+==========================================
+<?xml version="1.0" encoding="utf-8"?>
+<Probe>
+  <Uuid>F5052B77-B133-46DE-9F50-FF23F287FA95</Uuid>
+  <Types>update</Types>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <Password>AZICOnu9cyUFFvBp3xi1AA==</Password>
+  <IPv4Address>192.168.1.65</IPv4Address>
+  <CommandPort>8000</CommandPort>
+  <HttpPort>80</HttpPort>
+  <IPv4SubnetMask>255.255.255.0</IPv4SubnetMask>
+  <IPv4Gateway>192.168.1.1</IPv4Gateway>
+  <IPv6Address>::</IPv6Address>
+  <IPv6Gateway>::</IPv6Gateway>
+  <IPv6MaskLen>0</IPv6MaskLen>
+  <DHCP>false</DHCP>
+</Probe>
+
+摄像机返回的修改结果 - UDP组播命令
+==========================================
+<?xml version="1.0" encoding="UTF-8"?>
+<ProbeMatch>
+  <Uuid>F5052B77-B133-46DE-9F50-FF23F287FA95</Uuid>
+  <Types>update</Types>
+  <Result>success</Result>
+  <DeviceType>10145</DeviceType>
+  <DeviceDescription>DS-2DE2106IW-D3</DeviceDescription>
+  <DeviceSN>DS-2DE2106IW-D320160328CCCH586724421</DeviceSN>
+  <CommandPort>8000</CommandPort>
+  <HttpPort>80</HttpPort>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <IPv4Address>192.168.1.65</IPv4Address>
+  <IPv4SubnetMask>255.255.255.0</IPv4SubnetMask>
+  <IPv4Gateway>192.168.1.1</IPv4Gateway>
+  <IPv6Address>::</IPv6Address>
+  <IPv6Gateway>::</IPv6Gateway>
+  <IPv6MaskLen>64</IPv6MaskLen>
+  <DHCP>false</DHCP>
+  <AnalogChannelNum>0</AnalogChannelNum>
+  <DigitalChannelNum>1</DigitalChannelNum>
+  <SoftwareVersion>V5.3.11build 151216</SoftwareVersion>
+  <DSPVersion>V7.2 build 151216</DSPVersion>
+  <BootTime>2017-01-14 12:08:10</BootTime>
+  <ResetAbility>false</ResetAbility>
+  <DiskNumber>0</DiskNumber>
+  <Activated>true</Activated>
+  <PasswordResetAbility>true</PasswordResetAbility>
+</ProbeMatch>
+
+
+忘记密码，重置密码功能没有设置成功。
+========================================
+<?xml version="1.0" encoding="utf-8"?>
+<Probe>
+  <Uuid>0D2F1A9B-F83F-4A2F-93EA-8B01A73F1D3A</Uuid>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <Types>exchangecode</Types>
+  <Code>MIGJAoGBAKHFI5SNu2dDemyz1W1jpE8gqTWFOIqCEhkKYcrJNNxBFGIi+gIU5p8RZbFGEwszMP2wafgwsLI2MkYvJRNCQGAdGRHWGaE7kuoLuSi7EMyLp4KbTKXiTsClNBjm/Z624jHD2ympdnmroanGKWisU6QdHQi8OWGcSHQIEpsbgzbdAgMBAAE=</Code>
+</Probe>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<ProbeMatch>
+  <Uuid>0D2F1A9B-F83F-4A2F-93EA-8B01A73F1D3A</Uuid>
+  <Types>exchangecode</Types>
+  <Result>success</Result>
+  <Code>aFEXfx+wbDJz7b9kCoDatVZZ7vc0AdS6oLzVF5JVj8TcgChNxJvgNjq3SdTTcbUXijU73xhd8LhamPmxrLgiC74NvI6budvuHbK6DA4aj4Llv1EmqxjZvZJ/4fmvGITyTmwInQx322y+wMOHFX1TAvLtzKfnUJLeJgtDErmvw9w=</Code>
+</ProbeMatch>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<ProbeMatch>
+  <Uuid>0D2F1A9B-F83F-4A2F-93EA-8B01A73F1D3A</Uuid>
+  <Types>exchangecode</Types>
+  <Result>success</Result>
+  <Code>GZolFn/DAor0M6oK2VFt55+WLEoO/amxbaWCb8lz7Kd4P823RX84tWZLMKRP12WeZ9oqOe6xoxy+2p77IYLKtIIRY/JnUameF7G2zcnZEultEzGXJcCVNcb3fz8VBOBHhyFEfo70yXh7xDEAwzqujAwd0LExYqMhfuoUxqu1la8=</Code>
+</ProbeMatch>
+
+<?xml version="1.0" encoding="utf-8"?>
+<Probe>
+  <Uuid>D5DC92CA-9882-41CF-88A5-84EAB08E40A8</Uuid>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <Types>reset</Types>
+  <Code>AwAAADU4NjcyNDQyMZsb9Ag=</Code>
+  <Password>TEo+/xdRpFcAphu8Q22eLlTG0ItTdeEBELcY/QNCzkY=</Password>
+</Probe>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<ProbeMatch>
+  <Uuid>D5DC92CA-9882-41CF-88A5-84EAB08E40A8</Uuid>
+  <MAC>bc-ad-28-11-3b-72</MAC>
+  <Types>reset</Types>
+  <Result>failed</Result>
+</ProbeMatch>

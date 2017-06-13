@@ -1,0 +1,51 @@
+http://www.cnblogs.com/Seapeak/archive/2010/12/17/1908772.html
+
+http://www.cnblogs.com/Seapeak/category/246072.html
+
+流程：当用户上传文件时，首先客户端提交图片到Web服务器，然后Web服务器通过socket链接的方式链接tracker，取得接纳上传文件的storage服务器ip和port，然后再链接storage服务器上传文件，最后storage服务器返回文件路径，Web程序将其保存到数据库；当用户访问图片时，首先需要从数据库中取得这个文件的路径，然后通过http的方式直接访问图片即可。
+
+========================================================================
+LZ有些混乱。需要整理一下做法。
+FDFS集群要么全部对外（公网IP），要么全部走内网。不可混用。
+========================================================================
+
+netstat -anp | grep -w 23000  看下被谁占用了。
+
+Q1、fastDFS是分组管理的，每个组存贮的数据一样，一个或者多个服务器组成的Tracker server可以控制多个组，组与组之间存贮的数据是不一样的。但是这个操作应该如何配置呢？我现在的Traker server 下面有控制了几台的Storage server 它配置是这样的：store_group=group2，如果我想把这个Tracker server 可控制多个组那么应该如何配置呢？是不是简单的store_group=group1就可以了？
+
+A1: 在storage server上配置它要连接的tracker server，可以配置1个或多个。
+
+组名在storage server上配置的。由storage server主动向tracker server报告其组名和存储空间等信息。
+
+Q2、一些实际的问题：由于fastDFS的存贮特点，它组内的Store server 存贮的数据是一样的。那么如果我同组内的Store server 贮放的地方不一样，比如一台放在上海、一台放在广州、一台在深圳。我在存贮跟数据的时候它必须是要同步的，然后我存贮很大的数据或者并发有很多用户同时上传数据，那么各地方的数据同步肯定也就很大量了，如果机房是共享网络的时候，管理员看到你数据传输量那么大，把它的带宽都吃完了，那么肯定对我的服务器做限制或者什么的。我想问一下，如果是这种情况下，楼主有没有一些好的建议呢？或者能不能做得到每个Store server之间的同步能不能我设定一个时间来做呢？比如是深夜之类的？
+
+A2: FastDFS早就支持同步时间段设置了。在storage.conf中设置参数sync_start_time和sync_end_time。
+
+Q3、我想问一下，我怎看一台Store server 的硬盘存贮的大少呢？这样我才知道什么时候要加硬件了。还有一个问题，我看到一些DFS它的存贮是把一个数据来拆开存贮的，用户要下载的时候再把它结合在一起成了一个完整的文件下载，这样硬盘的利用就很高了，而且数据访问量也相对少很多。
+
+A3: 直接使用FastDFS带的monitor程序：fdfs_monitor来查看storage状态。
+
+文件分块存储会增加系统的复杂性。出于简洁考虑，FastDFS不支持文件分块存储。
+
+FastDFS注意事项
+
+>>1.除了在storage.conf里的tracker_server增加tracker的ip和端口，其他地方要注意什么？
+
+恩，tracker server ip和端口，肯定是要正确设置的。支持多tracker server，每行设置一个tracker。
+
+另外，base_path也要正确设置。
+
+其余参数，通常采用缺省配置即可。你可以看一下配置说明那个帖子。
+
+>>每台tracker和storage的启动有没有先后关系？
+
+正常情况下，应该先启动tracker。
+
+FastDFS不会有这样的要求，你要启动storage也是没有任何问题的。
+
+>>2.想要把fastDFS产生的记录清空，再重新搭建一次，应该
+
+删除哪些文件？
+
+停止storage server和tracker server，删除base_path下的data子目录即可。
+
