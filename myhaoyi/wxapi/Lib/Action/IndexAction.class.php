@@ -1,35 +1,36 @@
 <?php
 /*************************************************************
-    HaoYi (C)2017 - 2020 myhaoyi.com
-
+    Wan (C)2015 - 2016 happyhope.net
+    备注：专门处理微信事件分发的代码
 *************************************************************/
 
 class IndexAction extends Action
 {
   public function _initialize() {
-    // 创建一个新的移动检测对象...
-    $this->m_detect = new Mobile_Detect();
-    //////////////////////////////////////////////
-    // 直接对页面进行跳转...
-    // 电脑终端 => Home/index
-    // 移动设备 => Mobile/index
-    //////////////////////////////////////////////
-    if( $this->m_detect->isMobile() ) {
-      header("location:".__APP__.'/Mobile/index');
-    } else {
-      header("location:".__APP__.'/Home/index');
-    }
+    //$this->m_detect = new Mobile_Detect();
   }
   /**
   +----------------------------------------------------------
-  * 默认操作，进行页面分发...
+  * 默认操作 - 处理全部非微信端的访问...
   +----------------------------------------------------------
   */
   public function index()
   {
-    //print $this->m_detect->getUserAgent();
-    //print_r($this->m_detect->getHttpHeaders());
+    // 处理第三方网站扫码登录的授权回调过程 => 其它网站的登录，state != 32...
+    if( isset($_GET['code']) && isset($_GET['state']) && strlen($_GET['state']) != 32 ) {
+      A('Login')->doWechatAuth($_GET['code'], $_GET['state']);
+      return;
+    }
+    ///////////////////////////////////////////////////
+    // 以后，这里还可以对移动设备进行界面优化...
+    ///////////////////////////////////////////////////
+    // $this->detect->isMobile();
+    // print $this->detect->getUserAgent();
+    // print_r($this->detect->getHttpHeaders());
+
     //print_r($_COOKIE); exit;
+    
+    echo 'Hello';
   }
 }
 ?>

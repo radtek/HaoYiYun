@@ -5,18 +5,23 @@
   
   //设定项目配置
   $array = array(
-
+    // 微信登录网站应用需要的参数配置 => 微信开放平台
+    'WECHAT_LOGIN' => array(
+      'scope'=>'snsapi_login', //用户授权的作用域,使用逗号(,)分隔
+      'appid'=>'wxc1d8a43197ccc500', //网站登录应用的appid
+      'appsecret'=>'c5a1eb36e79cc710f1f73a6ee88e469a', //网站登录应用的appsecret
+      'redirect_uri'=>'http://www.myhaoyi.com/', //回调地址
+    ),
+    
     // 每页显示记录数
     'PAGE_PER' => 10,
     
     // 关闭自动Session
     'SESSION_AUTO_START'=>false,
     'SHOW_PAGE_TRACE'=>false,
-
+    
     //'URL_MODEL'=>3,
     'URL_ROUTER_ON'=>true,
-    
-    //'SITE_URL' =>	'http://www.myhaoyi.com',
     
     'TMPL_TEMPLATE_SUFFIX'=>'.htm',
     'TMPL_CACHE_TIME'=>0,
