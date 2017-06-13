@@ -64,13 +64,59 @@ BOOL CRightView::OnEraseBkgnd(CDC* pDC)
 	CRect rcRect;
 	this->GetClientRect(rcRect);
 	pDC->FillSolidRect(&rcRect, WND_BK_COLOR);
-
+	
+	// 如果不是设备流，直接隐藏按钮，绘制基础文字信息...
+	if( lpCamera != NULL && !lpCamera->IsCameraDevice() ) {
+		this->ShowButton(false);
+		this->DrawStreamText(pDC);
+		return TRUE;
+	}
 	// 显示或隐藏按钮对象...
 	this->ShowButton((nFocusCameraID <= 0) ? false : true);
 	// 显示相关的文字信息...
 	this->ShowText(pDC, (nFocusCameraID <= 0) ? false : true, strLogStatus);
 
 	return TRUE;
+}
+//
+// 显示流转发时的文字信息...
+void CRightView::DrawStreamText(CDC * pDC)
+{
+	// 获取矩形区数据...
+	CRect rcRect;
+	CSize rcPos, rcSize;
+	this->GetClientRect(rcRect);
+
+	// 准备文字信息...
+	CFont * lpFont = this->GetFont();
+	CFont * hOldFont = pDC->SelectObject(lpFont);
+
+	// 设置文字模式...
+	pDC->SetTextColor(RGB(255, 255, 255));
+	pDC->SetBkMode(TRANSPARENT);
+
+	// 登录 - 标题背景色...
+	//COLORREF clrValue = RGB( 96, 123, 189);
+	//rcRect.bottom = rcRect.top + kGroundHigh;
+	//rcRect.DeflateRect(1,1);
+	//pDC->FillSolidRect(rcRect, clrValue);
+	// 登录 - 标题名称...
+	//rcSize = pDC->GetOutputTextExtent(inLogStatus);
+	//rcPos.cx = (rcRect.Width() - rcSize.cx) / 2;
+	//rcPos.cy = (rcRect.Height() - rcSize.cy) / 2;
+	//pDC->TextOut(kLeftMargin - 5, rcPos.cy+1, inLogStatus);
+
+	// 绘制流转发信息...
+	this->GetClientRect(rcRect);
+	CString strNotice = "摄像头设备操作区";
+	rcSize = pDC->GetOutputTextExtent(strNotice);
+	rcPos.cx = (rcRect.Width() - rcSize.cx) / 2;
+	rcPos.cy = (rcRect.Height() - rcSize.cy) / 2;
+	pDC->SetTextColor(RGB(255, 255, 0));
+	pDC->TextOut(rcPos.cx, rcPos.cy - 50, strNotice);
+
+	// 恢复字体格式...
+	pDC->SelectObject(hOldFont);
 }
 //
 // 显示文字信息...
@@ -193,6 +239,11 @@ void CRightView::doFocusCamera(int nCameraID)
 	if( lpCamera == NULL )
 		return;
 	ASSERT( lpCamera != NULL );
+	// 如果不是摄像头设备，直接重绘客户区...
+	if( !lpCamera->IsCameraDevice() ) {
+		this->Invalidate(true);
+		return;
+	}
 	// 从配置文件中获取原始标题栏...
 	ASSERT( m_lpParentDlg != NULL );
 	GM_MapData theMapLoc;
@@ -200,14 +251,14 @@ void CRightView::doFocusCamera(int nCameraID)
 	theConfig.GetCamera(nCameraID, theMapLoc);
 	string & strName = theMapLoc["Name"];
 	// 重新组合标题栏名称...
-	CString & strLogStatus = lpCamera->GetLogStatus();
 	m_strYunTitle.Format("云台 - %s", strName.c_str());
 	m_strSetTitle.Format("设置 - %s", strName.c_str());
 	// 重绘背景的文字和按钮...
-	CDC * pDC = this->GetDC();
+	/*CDC * pDC = this->GetDC();
+	CString & strLogStatus = lpCamera->GetLogStatus();
 	this->ShowText(pDC, true, strLogStatus);
 	this->ShowButton(true);
-	this->ReleaseDC(pDC);
+	this->ReleaseDC(pDC);*/
 	// 如果已经登录，对登录区和按钮进行处理...
 	this->StateButton(lpCamera->IsLogin());
 	// 把IP地址/端口/用户名/密码，显示在Edit框中...
@@ -222,10 +273,12 @@ void CRightView::doFocusCamera(int nCameraID)
 	m_editUserName.SetWindowText(strLoginUser.c_str());
 	m_editPassWord.SetWindowText(szDecodePass);
 	// 通知重绘非客户区...
-	m_editIPAddr.SendMessage(WM_NCPAINT, 0, 0);
-	m_editIPPort.SendMessage(WM_NCPAINT, 0, 0);
-	m_editUserName.SendMessage(WM_NCPAINT, 0, 0);
-	m_editPassWord.SendMessage(WM_NCPAINT, 0, 0);
+	//m_editIPAddr.SendMessage(WM_NCPAINT, 0, 0);
+	//m_editIPPort.SendMessage(WM_NCPAINT, 0, 0);
+	//m_editUserName.SendMessage(WM_NCPAINT, 0, 0);
+	//m_editPassWord.SendMessage(WM_NCPAINT, 0, 0);
+	// 通知重绘整个背景区域...
+	this->Invalidate(true);
 }
 //
 // 根据登录状态来设置按钮状态...
@@ -468,9 +521,7 @@ LRESULT	CRightView::OnMsgDVRLoginResult(WPARAM wParam, LPARAM lParam)
 			this->StateButton(lpCamera->IsLogin());
 			this->Invalidate(true);
 		}
-		// 根据错误码来调整自动连接的状态....
-		DWORD dwErrCode = lpCamera->GetHKErrCode();
-		m_lpParentDlg->doChangeAutoDVR(dwErrCode);
+		// 不用关闭自动连接时钟，会根据错误码自动检测...
 		return S_OK;
 	}
 	// 通知DVR：异步登录成功...
@@ -511,38 +562,55 @@ void CRightView::doAutoCheckDVR()
 		if( lpCamera == NULL || lpCamera->IsLogin() )
 			break;
 		ASSERT( !lpCamera->IsLogin() );
-		GM_MapData theMapLoc;
-		CXmlConfig & theConfig = CXmlConfig::GMInstance();
-		theConfig.GetCamera(nCameraID, theMapLoc);
-		TCHAR szDecodePass[MAX_PATH] = {0};
-		string & strIPAddr = theMapLoc["IPv4Address"];
-		string & strCmdPort = theMapLoc["CommandPort"];
-		string & strLoginUser = theMapLoc["LoginUser"];
-		string & strLoginPass = theMapLoc["LoginPass"];
-		int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
-		int nCmdPort = ((strCmdPort.size() <= 0) ? 0 : atoi(strCmdPort.c_str()));
-		// 焦点窗口 => 将所有的登录区按钮置为只读或灰色...
-		if( bIsFocusCamera ) {
-			m_editIPAddr.SetReadOnly(true);
-			m_editIPPort.SetReadOnly(true);
-			m_editUserName.SetReadOnly(true);
-			m_editPassWord.SetReadOnly(true);
-			m_btnLogin.EnableWindow(false);
-		}
-		// 开始进行登录操作...
-		DWORD dwReturn = lpCamera->doLogin(this->m_hWnd, strIPAddr.c_str(), nCmdPort, strLoginUser.c_str(), szDecodePass);
-		if( dwReturn != GM_NoErr ) {
-			// 焦点窗口 => 登录失败的处理过程...
+		// 需要对不同类型的窗口进行不同的处理...
+		if( lpCamera->IsCameraDevice() ) {
+			// 如果是摄像机的密码错误或已经被锁定，直接跳过...
+			DWORD dwErrCode = lpCamera->GetHKErrCode();
+			if( dwErrCode == NET_DVR_PASSWORD_ERROR || dwErrCode == NET_DVR_USER_LOCKED )
+				break;
+			// 进行摄像机连接数据的准备工作...
+			GM_MapData theMapLoc;
+			CXmlConfig & theConfig = CXmlConfig::GMInstance();
+			theConfig.GetCamera(nCameraID, theMapLoc);
+			TCHAR szDecodePass[MAX_PATH] = {0};
+			string & strIPAddr = theMapLoc["IPv4Address"];
+			string & strCmdPort = theMapLoc["CommandPort"];
+			string & strLoginUser = theMapLoc["LoginUser"];
+			string & strLoginPass = theMapLoc["LoginPass"];
+			int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
+			int nCmdPort = ((strCmdPort.size() <= 0) ? 0 : atoi(strCmdPort.c_str()));
+			// 焦点窗口 => 将所有的登录区按钮置为只读或灰色...
 			if( bIsFocusCamera ) {
-				m_editIPAddr.SetReadOnly(false);
-				m_editIPPort.SetReadOnly(false);
-				m_editUserName.SetReadOnly(false);
-				m_editPassWord.SetReadOnly(false);
-				m_btnLogin.EnableWindow(true);
+				m_editIPAddr.SetReadOnly(true);
+				m_editIPPort.SetReadOnly(true);
+				m_editUserName.SetReadOnly(true);
+				m_editPassWord.SetReadOnly(true);
+				m_btnLogin.EnableWindow(false);
 			}
-			// 记录错误编号...
-			MsgLogGM(dwReturn);
-			break;
+			// 开始进行登录操作...
+			DWORD dwReturn = lpCamera->doLogin(this->m_hWnd, strIPAddr.c_str(), nCmdPort, strLoginUser.c_str(), szDecodePass);
+			if( dwReturn != GM_NoErr ) {
+				// 焦点窗口 => 登录失败的处理过程...
+				if( bIsFocusCamera ) {
+					m_editIPAddr.SetReadOnly(false);
+					m_editIPPort.SetReadOnly(false);
+					m_editUserName.SetReadOnly(false);
+					m_editPassWord.SetReadOnly(false);
+					m_btnLogin.EnableWindow(true);
+				}
+				// 记录错误编号...
+				MsgLogGM(dwReturn);
+				break;
+			}
+		} else {
+			// 处理流转发模式的自动连接操作...
+			GM_Error theErr = GM_NoErr;
+			ASSERT( !lpCamera->IsCameraDevice() );
+			theErr = lpCamera->doStreamLogin();
+			// 连接失败，只是打印信息...
+			if( theErr != GM_NoErr ) {
+				MsgLogGM(theErr);
+			}
 		}
 		// 焦点窗口 => 登录成功的处理过程，显示功能按钮，重新刷新背景区域...
 		if( bIsFocusCamera ) {
@@ -551,11 +619,7 @@ void CRightView::doAutoCheckDVR()
 		}
 	}while( false );
 	// 自动累加DVR编号，注意编号回滚...
-	if( m_lpParentDlg->FindCameraByID(nCameraID + 1) == NULL ) {
-		m_nCurAutoID = DEF_CAMERA_START_ID;
-	} else {
-		++m_nCurAutoID;
-	}
+	m_nCurAutoID = m_lpParentDlg->GetNextAutoID(nCameraID);
 }
 //
 // 点击登录事件...

@@ -72,8 +72,87 @@ BEGIN_MESSAGE_MAP(CVideoWnd, CWnd)
 	ON_MESSAGE(WM_ERR_TASK_MSG, &CVideoWnd::OnMsgTaskErr)
 	ON_MESSAGE(WM_ERR_PUSH_MSG, &CVideoWnd::OnMsgPushErr)
 	ON_MESSAGE(WM_REC_SLICE_MSG, &CVideoWnd::OnMsgRecSlice)
+	ON_MESSAGE(WM_STOP_STREAM_MSG, &CVideoWnd::OnMsgStopStream)
 	ON_COMMAND_RANGE(ID_RENDER_WND_BEGIN, ID_RENDER_WND_BEGIN + kBitNum, &CVideoWnd::OnClickItemWnd)
 END_MESSAGE_MAP()
+//
+// 是否是摄像头设备模式...
+BOOL CVideoWnd::IsCameraDevice()
+{
+	if( m_lpCamera == NULL )
+		return false;
+	return m_lpCamera->IsCameraDevice();
+}
+//
+// 是否是流转发模式正在播放中...
+BOOL CVideoWnd::IsStreamPlaying()
+{
+	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+		return false;
+	ASSERT( !m_lpCamera->IsCameraDevice() );
+	return m_lpCamera->IsPlaying();
+}
+//
+// 是否是流数据在发布中...
+BOOL CVideoWnd::IsStreamPublish()
+{
+	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+		return false;
+	ASSERT( !m_lpCamera->IsCameraDevice() );
+	return m_lpCamera->IsPublishing();
+}
+//
+// 是否是流数据已经连接成功...
+BOOL CVideoWnd::IsStreamLogin()
+{
+	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+		return false;
+	ASSERT( !m_lpCamera->IsCameraDevice() );
+	return m_lpCamera->IsLogin();
+}
+
+int CVideoWnd::GetRecvPullKbps()
+{
+	if( m_lpCamera == NULL )
+		return 0;
+	ASSERT( m_lpCamera != NULL );
+	// 获取拉流数据的码流信息...
+	int nRecvKbps = m_lpCamera->GetRecvPullKbps();
+	// 发生超时，直接调用接口停止，将整个通道退出...
+	if( nRecvKbps < 0 ) {
+		m_lpCamera->doStreamLogout();
+		return 0;
+	}
+	// 如果拉流数据有效，直接返回...
+	ASSERT( nRecvKbps >= 0 );
+	return nRecvKbps;
+}
+
+int	CVideoWnd::GetSendPushKbps()
+{
+	return ((m_lpCamera == NULL) ? 0 : m_lpCamera->GetSendPushKbps());
+}
+
+LPCTSTR	CVideoWnd::GetStreamPushUrl()
+{
+	return ((m_lpCamera == NULL) ? NULL : m_lpCamera->GetStreamPushUrl());
+}
+
+void CVideoWnd::GetStreamPullUrl(CString & outPullUrl)
+{
+	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+		return;
+	GM_MapData theMapLoc;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(this->GetCameraID(), theMapLoc);
+	string & strStreamMP4 = theMapLoc["StreamMP4"];
+	string & strStreamUrl = theMapLoc["StreamUrl"];
+	if( m_lpCamera->GetStreamProp() == kStreamMP4File ) {
+		outPullUrl = strStreamMP4.c_str();
+	} else {
+		outPullUrl = strStreamUrl.c_str();
+	}
+}
 //
 // 录像切片通知...
 LRESULT	CVideoWnd::OnMsgRecSlice(WPARAM wParam, LPARAM lParam)
@@ -103,8 +182,18 @@ LRESULT CVideoWnd::OnMsgPushErr(WPARAM wParam, LPARAM lParam)
 	}
 	return S_OK;
 }
+//
+// 响应停止推送上传消息...
+LRESULT CVideoWnd::OnMsgStopStream(WPARAM wParam, LPARAM lParam)
+{
+	// 直接调用停止上传接口...
+	if( m_lpCamera != NULL ) {
+		m_lpCamera->doStreamStopLivePush();
+	}
+	return S_OK;
+}
 
-void CVideoWnd::OnTimer(UINT nIDEvent) 
+void CVideoWnd::OnTimer(UINT_PTR nIDEvent) 
 {
 	// 处理截图时钟事件...
 	/*if( nIDEvent == kSnapTimerID ) {
@@ -136,7 +225,7 @@ void CVideoWnd::doDrawLiveStatus()
 	CFont * pOldFont = NULL;
 	CString strText = "LIVE";
 	// 创建字体，获取矩形显示区域...
-	fontLogo.CreateFont(16, 0, 0, 0, FW_HEAVY, false, false,0,0,0,0,0,0, "黑体");
+	fontLogo.CreateFont(16, 0, 0, 0, FW_BOLD, false, false,0,0,0,0,0,0, "黑体");
 	this->GetClientRect(&rcRect);
 	rcRect.DeflateRect(1, 1);
 	rcRect.bottom = rcRect.top + 20;

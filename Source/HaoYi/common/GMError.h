@@ -30,6 +30,7 @@ enum
 	GM_ProtocolErr			= 50006,		// 无法支持的协议
 	GM_URIErr				= 50007,		// 解析URL时错误
 	GM_NotImplement			= 50008,		// 没有实现的接口
+	GM_Snap_Jpg_Err			= 50009,		// 截图失败
 	GM_File_Del_Err			= 50012,		// 删除文件失败
 	GM_File_Not_Open		= 50013,		// 打开文件失败
 	GM_File_Read_Err		= 50014,		// 读取文件失败

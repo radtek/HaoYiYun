@@ -1,0 +1,70 @@
+
+<div class="layui-field-box" style="margin-top: 10px;">
+  <form class="layui-form layui-form-pane" action="">
+    <div class="layui-form-item">
+      <label class="layui-form-label">所在年级</label>
+      <div class="layui-input-block">
+        <select name="myCameraGrade" lay-verify="required" lay-search="">
+          <volist name="my_list_grade" id="vo">
+          <option value="{{$vo.grade_id}}">{{$vo.grade_type}} {{$vo.grade_name}}</option>
+          </volist>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">所在班级</label>
+      <div class="layui-input-block">
+        <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_live.camera_name}}">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">运行状态</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        <switch name="my_live.status">
+          <case value="0"><i class="fa fa-power-off fa-wait">&nbsp;等待中</i></case>
+          <case value="1"><i class="fa fa-tv fa-run">&nbsp;运行中</i></case>
+          <case value="2"><i class="fa fa-play-circle-o fa-rec">&nbsp;录像中</i></case>
+        </switch>
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">数据源</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        <switch name="my_live.stream_prop">
+          <case value="0">{{$my_live.device_ip}}</case>
+          <case value="1">{{$my_live.stream_mp4}}</case>
+          <case value="2">{{$my_live.stream_url}}</case>
+        </switch>
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">通道标识</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_live.device_sn}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">更新时间</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_live.updated}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item" style="margin-bottom:10px;margin-top:20px;text-align:center;">
+      <button class="layui-btn" lay-submit lay-filter="formCamera">立即保存</button>&nbsp;
+      <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('myCameraGrade')[0].value = {{$my_live.grade_id}};
+</script>

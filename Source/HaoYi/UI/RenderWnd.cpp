@@ -14,6 +14,8 @@ CRenderWnd::CRenderWnd()
 	m_lpTextFont(NULL),
 	m_nRendState(ST_WAIT)
 {
+	m_PosRecvKbps.cx = m_PosRecvKbps.cy = 0;
+	m_PosSendKbps.cx = m_PosSendKbps.cy = 0;
 }
 
 CRenderWnd::~CRenderWnd()
@@ -63,6 +65,9 @@ int CRenderWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_lpParent		= (CVideoWnd *)GetParent();
 	m_lpTextFont	= m_lpParent->GetTitleFont();
 	m_szTxt.Format("未登录 - %s", m_lpParent->GetTitleText());
+	m_strStreamStatus = "未连接...";
+
+	this->SetTimer(kFlowTimerID, 1000, NULL);
 
 	return 0;
 }
@@ -87,10 +92,84 @@ void CRenderWnd::DrawBackText(CDC * pDC)
 	rcPos.cx = (rcRect.Width() - rcSize.cx) / 2;
 	rcPos.cy = (rcRect.Height() - rcSize.cy) / 2;
 
-	// 如果是其他模式，则正常显示信息...
-	pDC->SetTextColor(RGB(0, 255, 0));
-	pDC->TextOut(rcPos.cx, rcPos.cy, m_szTxt);
+	if( m_lpParent->IsCameraDevice() ) {
+		// 如果是摄像头设备模式，只显示标题...
+		pDC->SetTextColor(RGB(0, 255, 0));
+		pDC->TextOut(rcPos.cx, rcPos.cy, m_szTxt);
+		pDC->SelectObject(pOld);
+	} else {
+		// 如果是流转发模式，显示更多信息...
+		CRect rcPull;
+		CString strPushUrl, strPushKbps, strPullKbps;
+		CString strPullUrl, strStatus, outPullUrl;
+		LPCTSTR lpszPush = m_lpParent->GetStreamPushUrl();
+		m_lpParent->GetStreamPullUrl(outPullUrl);
+		strStatus.Format("通道状态：%s", m_strStreamStatus);
+		strPushUrl.Format("推流地址：%s", ((lpszPush != NULL) ? lpszPush : "无"));
+		strPullKbps.Format("接收码率：%d Kbps", m_lpParent->GetRecvPullKbps());
+		strPushKbps.Format("发送码率：%d Kbps", m_lpParent->GetSendPushKbps());
+		pDC->SetTextColor(RGB(20, 220, 20));
+		pDC->TextOut(rcRect.left + 50, rcPos.cy - 60, strStatus);
+
+		strPullUrl = "拉流地址：";
+		rcSize = pDC->GetOutputTextExtent(strPullUrl);
+		pDC->TextOut(rcRect.left + 50, rcPos.cy - 36, strPullUrl);
+
+		rcPull.left = rcRect.left + 50 + rcSize.cx;
+		rcPull.top  = rcPos.cy - 36;
+		rcPull.right = rcRect.Width() - 30;
+		rcPull.bottom = rcPull.top + 20 + 20;
+		pDC->DrawText(outPullUrl, rcPull, DT_LEFT | DT_WORDBREAK | DT_EDITCONTROL | DT_EXTERNALLEADING);
+
+		m_PosRecvKbps.cy = rcPos.cy + 0;
+		m_PosRecvKbps.cx = rcRect.left + 50;
+		pDC->TextOut(m_PosRecvKbps.cx, m_PosRecvKbps.cy, strPullKbps);
+
+		pDC->TextOut(rcRect.left + 50, rcPos.cy + 20, strPushUrl);
+
+		m_PosSendKbps.cy = rcPos.cy + 40;
+		m_PosSendKbps.cx = rcRect.left + 50;
+		pDC->TextOut(m_PosSendKbps.cx, m_PosSendKbps.cy, strPushKbps);
+
+		pDC->SelectObject(pOld);
+	}
+}
+
+void CRenderWnd::DrawFlowKbps()
+{
+	// 只要连接成功就可以，为了触发超时...
+	if( !m_lpParent->IsStreamLogin() )
+		return;
+	ASSERT( m_lpParent->IsStreamLogin() );
+	// 分别获取接收和发送的码流信息 => 触发超时...
+	int nRecvKbps = m_lpParent->GetRecvPullKbps();
+	int nSendKbps = m_lpParent->GetSendPushKbps();
+	// 如果是摄像头设备，只检测，不显示，但可以触发超时...
+	if( m_lpParent->IsCameraDevice() )
+		return;
+	// 专门处理流转发模式下的情况...
+	ASSERT( !m_lpParent->IsCameraDevice() );
+
+	CRect	rcRect;
+	CFont *	pOld = NULL;
+	CDC	* pDC = this->GetDC();
+	CString strPushKbps, strPullKbps;
+	strPullKbps.Format("接收码率：%d Kbps", nRecvKbps);
+	strPushKbps.Format("发送码率：%d Kbps", nSendKbps);
+
+	this->GetClientRect(rcRect);
+	pDC->SetBkMode(TRANSPARENT);
+	pDC->SetTextColor(RGB(20, 220, 20));
+	pOld = pDC->SelectObject(m_lpTextFont);
+
+	pDC->FillSolidRect(rcRect.left, m_PosRecvKbps.cy, rcRect.Width(), 20, _COLOR_KEY);
+	pDC->TextOut(m_PosRecvKbps.cx, m_PosRecvKbps.cy, strPullKbps);
+
+	pDC->FillSolidRect(rcRect.left, m_PosSendKbps.cy, rcRect.Width(), 20, _COLOR_KEY);
+	pDC->TextOut(m_PosSendKbps.cx, m_PosSendKbps.cy, strPushKbps);
+
 	pDC->SelectObject(pOld);
+	this->ReleaseDC(pDC);
 }
 
 /*void CRenderWnd::DrawMyKbps()
@@ -238,8 +317,17 @@ void CRenderWnd::SetRenderText(CString & strText)
 	this->Invalidate();
 }
 
-void CRenderWnd::OnTimer(UINT nIDEvent) 
+void CRenderWnd::SetStreamStatus(CString & strStatus)
 {
+	m_strStreamStatus = strStatus;
+	this->Invalidate();
+}
+
+void CRenderWnd::OnTimer(UINT_PTR nIDEvent) 
+{
+	if( nIDEvent == kFlowTimerID ) {
+		this->DrawFlowKbps();
+	}
 	CWnd::OnTimer(nIDEvent);
 }
 

@@ -1,0 +1,128 @@
+
+<include file = "Common:admin_header" />
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-user-circle">&nbsp;</i>用户管理</legend>
+        </fieldset>
+        <div style="margin-top:10px;width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="60">
+              <col width="60">
+              <col width="60">
+              <col width="100">
+              <col width="100">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>头 像</th>
+                <th>性 别</th>
+                <th>类 型</th>
+                <th>所在地区</th>
+                <th>最近登录</th>
+              </tr> 
+            </thead>
+            <tbody class="js_user"></tbody>
+          </table>
+          <div style="float:left;" id="myPage"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl = "{{:__APP__}}";
+var mySelTr = null;
+//
+// 处理头像无法加载的问题...
+function doErrHead() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/man.jpg"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+//
+// 子窗口反馈回来的调用...
+function doModUser(inTickerName)
+{
+  if( mySelTr != null ) {
+    mySelTr.children('td').eq(2).text(inTickerName);
+  }
+}
+//
+// 点击某一行事件...
+function doTrClick(inUserID, objTr) {
+  // 向服务器发送直播状态查看命令...
+  var $ = layui.jquery;
+  // 先将背景色进行修改...
+  mySelTr = $(objTr);
+  $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
+  // 先弹框后获取数据...
+  layer.open({
+    type: 2, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+    closeBtn: 1,
+    fixed: true,
+    shadeClose: false,
+    area: ['450px', '380px'],
+    content:  "{{:__APP__}}/Admin/getUser/user_id/"+inUserID,
+    title: "<i class='fa fa-film'>&nbsp;&nbsp;</i>编辑 - 用户记录"
+  });
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var nPerPage = {{$my_per_page}};
+  var laypage = layui.laypage;
+  var $ = layui.jquery;
+  layer.load(2);
+  // 获取用户总数接口...
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/getUserCount",
+    success: function(ajaxData) {
+      // 关闭等待框，计算用户页码...
+      layer.closeAll('loading');
+      var nTotalNum = ajaxData;
+      var nMaxPages = Math.ceil(nTotalNum/nPerPage);
+      laypage({
+        pages: nMaxPages,     // 总页数...
+        cont: 'myPage',       // 分页对象...
+        groups: 5,            // 连续显示分页数
+        jump: function(obj, first) {
+          // 向服务器发送分页命令...
+          layer.load(2);
+          $.ajax({
+            type: "get",
+            async: true,
+            url: siteurl+"/Admin/pageUser/p/"+obj.curr,
+            success: function(ajaxData) {
+              layer.closeAll('loading');
+              $('.js_user').html(ajaxData);
+              $('tbody tr').css('cursor','pointer');
+            },
+            error: function(e) {
+              layer.closeAll('loading');
+              layer.alert(e, {icon: 2});
+            }
+          });
+        }
+      });
+    },
+    error: function(e) {
+      layer.closeAll('loading');
+      layer.alert(e, {icon: 2});
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

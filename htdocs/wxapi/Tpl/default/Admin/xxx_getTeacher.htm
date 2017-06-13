@@ -1,0 +1,103 @@
+
+<include file = "Common:admin_header" />
+
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-address-book-o">&nbsp;&nbsp;</i>教师管理</legend>
+        </fieldset>
+        <fieldset class="layui-elem-field" style="padding:10px 10px 0px 10px;width:50%;">
+          <legend>{{$my_new_title}}</legend>
+          <div class="layui-field-box">
+            <form class="layui-form layui-form-pane" action="">
+              <div class="layui-form-item">
+                <label class="layui-form-label">姓名</label>
+                <div class="layui-input-block">
+                  <input type="text" name="myName" lay-verify="required" placeholder="请输入姓名" autocomplete="off" class="layui-input" value="{{$my_teacher.teacher_name}}">
+                </div>
+              </div>
+              <div class="layui-form-item" pane>
+                <label class="layui-form-label">性别</label>
+                <div class="layui-input-block">
+                  <input type="radio" name="mySex" value="男" title="男" <eq name='my_teacher.sex_name' value='男'>checked</eq> >
+                  <input type="radio" name="mySex" value="女" title="女" <eq name='my_teacher.sex_name' value='女'>checked</eq> >
+                </div>
+              </div>
+              <div class="layui-form-item">
+                <label class="layui-form-label">职称</label>
+                <div class="layui-input-block">
+                  <select name="myTitle" lay-verify="required">
+                    <option value="0" <eq name='my_teacher.title_id' value='0'>selected</eq> >正高级教师</option>
+                    <option value="1" <eq name='my_teacher.title_id' value='1'>selected</eq> >高级教师</option>
+                    <option value="2" <eq name='my_teacher.title_id' value='2'>selected</eq> >一级教师</option>
+                    <option value="3" <eq name='my_teacher.title_id' value='3'>selected</eq> >二级教师</option>
+                    <option value="4" <eq name='my_teacher.title_id' value='4'>selected</eq> >三级教师</option>
+                  </select>
+                </div>
+              </div>
+              <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">简介信息</label>
+                <div class="layui-input-block">
+                  <textarea name="myDetail" placeholder="请输入内容" class="layui-textarea">{{$my_teacher.detail_info}}</textarea>
+                </div>
+              </div>
+              <div class="layui-form-item" style="margin-bottom:10px;margin-top:20px;margin-left:110px;">
+                <button class="layui-btn" lay-submit lay-filter="formTeacher">立即提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+              </div>
+            </form>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 处理 layui 过程...
+layui.use(['layer','form'], function(){
+  var $ = layui.jquery;
+  var form = layui.form();
+  $("input[name='myName']").focus();
+  form.on('submit(formTeacher)', function(data) {
+    var theName = data.field.myName;
+    if( theName.length >= 20 ) {
+      $("input[name='myName']").focus();
+      $("input[name='myName']").addClass('layui-form-danger');
+      layer.msg('【姓名】超过20字符，请重新输入！', {icon: 2});
+      return false;
+    }
+    // 获取职称名称，通过ajax异步发送存盘命令...
+    var theID = {{$my_teacher.teacher_id}};
+    var theTitle = $("select[name='myTitle']").find("option:selected").text();
+    // 加载动画层，异步发送...
+    var index = layer.load(2);
+    $.ajax({
+      type: "post",
+      async: true,
+      url: siteurl+"/Admin/saveTeacher",
+      data: {teacher_id: theID, teacher_name: theName, sex_name: data.field.mySex, title_name: theTitle, title_id: data.field.myTitle, detail_info: data.field.myDetail},
+      success: function(ajaxData) {
+        layer.closeAll('loading');
+        layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
+          location.href = siteurl+"/Admin/teacher";
+        });
+      },
+      error: function(e) {
+        layer.closeAll('loading');
+        layer.alert(e, {icon: 2});
+      }
+    });
+    return false;
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

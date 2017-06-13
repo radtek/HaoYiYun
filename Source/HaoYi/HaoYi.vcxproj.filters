@@ -293,6 +293,15 @@
     <ClInclude Include="fastdfs\transmit.h">
       <Filter>fastdfs</Filter>
     </ClInclude>
+    <ClInclude Include="DlgPushDVR.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="librtmp\BitWritter.h">
+      <Filter>librtmp</Filter>
+    </ClInclude>
+    <ClInclude Include="librtmp\srs_librtmp.h">
+      <Filter>librtmp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -987,6 +996,12 @@
     </ClCompile>
     <ClCompile Include="common\md5.cpp">
       <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgPushDVR.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="librtmp\srs_librtmp.cpp">
+      <Filter>librtmp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

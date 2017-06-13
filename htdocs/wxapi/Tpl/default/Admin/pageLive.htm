@@ -1,0 +1,20 @@
+
+<volist name="my_live" id="vo">
+<tr height="50px" onclick="doTrClick({{$vo.camera_id}},{{$vo.gather_id}},this);">
+  <td><i class="fa fa-video-camera fa-normal">&nbsp;</i>{{$vo.school_name|msubstr=0,10}}</td>
+  <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
+  <td>{{$vo.camera_name}}</td>
+  <td title="<switch name='vo.stream_prop'>
+              <case value='0'>{{$vo.device_ip}}</case>
+              <case value='1'>{{$vo.stream_mp4}}</case>
+              <case value='2'>{{$vo.stream_url}}</case>
+            </switch>">
+      <switch name="vo.stream_prop">
+        <case value="0">{{$vo.device_ip}}</case>
+        <case value="1">{{$vo.stream_mp4|msubstr=0,20}}</case>
+        <case value="2">{{$vo.stream_url|msubstr=0,20}}</case>
+      </switch>
+  </td>
+  <td>{{$vo.device_sn}}</td>
+</tr>
+</volist>

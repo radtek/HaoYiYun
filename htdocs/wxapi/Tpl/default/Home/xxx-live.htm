@@ -1,0 +1,123 @@
+
+<include file = "Common:home_header" />
+
+<include file = "Common:home_nav" />
+
+<section class="content-wrap">
+  <div class="container">
+    <div class="row">
+      <main class="col-md-12">
+        <article class="post" style="padding:20px 0px 5px 20px;">
+          <h4 class="title">语文</h4>
+          <ul class="thumb_view">
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg online"></span>
+                  <span class="itg">直播中</span>
+                </span>
+                <img src="/wxapi/public/images/live.png" onerror="doErrHead();"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg offline"></span>
+                  <span class="itg">看录像</span>
+                </span>
+                <img src="/wxapi/public/images/live.png"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg online"></span>
+                  <span class="itg">直播中</span>
+                </span>
+                <img src="/wxapi/public/images/live.png"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg online"></span>
+                  <span class="itg">直播中</span>
+                </span>
+                <img src="/wxapi/public/images/live.png"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+          </ul>
+        </article>
+        <article class="post">
+          <h4 class="title">数学</h4>
+          <ul class="thumb_view">
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg offline"></span>
+                  <span class="itg">看录像</span>
+                </span>
+                <img src="/wxapi/public/images/live.png"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+          </ul>
+        </article>
+        <article class="post">
+          <h4 class="title">英语</h4>
+          <ul class="thumb_view">
+            <li class="live">
+              <a href="#" class="thumb">
+                <span class="p-time">
+                  <span class="ibg online"></span>
+                  <span class="itg">直播中</span>
+                </span>
+                <img src="/wxapi/public/images/live.png"></img>
+              </a>
+              <div class="thumb_title"><a href="#">萧山地价冲上三万多了面粉又比面包贵了？九点半 170324</a></div>
+              <div class="thumb_date">2017-03-17 21:33:45</div>
+            </li>
+          </ul>
+        </article>
+      </main>
+    </div>
+  </div>
+</section>
+
+<script>
+
+// 处理头像无法加载的问题...
+function doErrHead() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+$(document).ready( function () {
+  // 注册窗口的滚动条函数...
+	$(window).scroll(function() {
+		if( $(this).scrollTop() > 100 ) {
+			$('#back-to-top').fadeIn();
+		} else {
+			$('#back-to-top').fadeOut();
+		}
+	});
+  // 设置点击back-to-top事件...
+	$('#back-to-top').on('click', function(e){
+		e.preventDefault();
+		$('html, body').animate({scrollTop : 0},1000);
+		return false;
+	});
+});
+</script>
+
+<include file = "Common:home_footer" />

@@ -1,0 +1,65 @@
+
+<style>
+.layui-form-item { margin-bottom: 5px; }
+.vod-back {
+  background-image:url(/wxapi/public/images/default-300.png);
+  background-repeat:no-repeat;
+  background-position:center;
+  text-align:center;
+  height:250px;
+}
+</style>
+
+<div class="layui-field-box">
+  <form class="layui-form layui-form-pane" action="">
+    <div class="layui-form-item">
+      <label class="layui-form-label">科目</label>
+      <div class="layui-input-block">
+        <select name="mySubject" lay-verify="required" lay-search="">
+          <volist name="my_list_subject" id="itemSubject">
+          <option value="{{$itemSubject.subject_id}}">{{$itemSubject.subject_name}}</option>
+          </volist>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">教师</label>
+      <div class="layui-input-block">
+        <select name="myTeacher" lay-verify="required" lay-search="">
+          <volist name="my_list_teacher" id="itemTeacher">
+          <option value="{{$itemTeacher.teacher_id}}">{{$itemTeacher.teacher_name}} {{$itemTeacher.title_name}}</option>
+          </volist>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">所在班级</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_vod.grade_type}}&nbsp;{{$my_vod.grade_name}}&nbsp;{{$my_vod.camera_name}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">文件标识</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_vod.file_src}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item vod-back">
+      <img src="{{$my_vod.image_url}}" onerror="doErrHead();"></img>
+    </div>
+    <div class="layui-form-item" style="margin-bottom:5px;margin-top:15px;text-align:center;">
+      <button class="layui-btn" lay-submit lay-filter="formVod">立即保存</button>
+      <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('mySubject')[0].value = {{$my_vod.subject_id|default=0}};
+document.getElementsByName('myTeacher')[0].value = {{$my_vod.teacher_id|default=0}};
+</script>

@@ -23,6 +23,7 @@ END_MESSAGE_MAP()
 
 CMidView::CMidView(CHaoYiView * lpParent)
   : m_bIsFullScreen(false)
+  , m_eState(kAuthExpired)
   , m_rcOrigin(0, 0, 0, 0)
   , m_lpParentDlg(lpParent)
 {
@@ -50,6 +51,8 @@ void CMidView::BuildResource()
 	m_BitArray[CVideoWnd::kZoomOut] = new CBitItem(IDB_VIDEO_MAX, 18, 18);
 	m_BitArray[CVideoWnd::kZoomIn]	= new CBitItem(IDB_VIDEO_MIN, 18, 18);
 	m_BitArray[CVideoWnd::kClose]   = new CBitItem(IDB_VIDEO_CLOSE, 18, 18);
+	// 设置默认的提示信息...
+	m_strNotice = "正在验证网站授权...";
 }
 //
 // 销毁资源...
@@ -169,6 +172,12 @@ GM_Error CMidView::doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType)
 	CCamera * lpCamera = this->FindCameraBySN(strDeviceSN);
 	// 找到对应的摄像头，更新配置信息...
 	if( lpCamera != NULL ) {
+		if( inType == kCameraNO ) {
+			MsgLogGM(theErr);
+			return theErr;
+		}
+		// 必须是摄像头类型...
+		ASSERT( inType != kCameraNO );
 		return lpCamera->ForUDPData(inNetData);
 	}
 	// 如果摄像头对象为空，判断是否超过了设备支持上限...
@@ -179,43 +188,104 @@ GM_Error CMidView::doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType)
 	return this->AddNewCamera(inNetData, inType);
 }
 //
+// 删除指定摄像头...
+void CMidView::doDelDVR(int nCameraID)
+{
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(nCameraID);
+	if( itorItem == m_MapVideo.end() )
+		return;
+	// 删除对应的视频窗口对象...
+	CVideoWnd * lpVideo = itorItem->second;
+	delete lpVideo; lpVideo = NULL;
+	m_MapVideo.erase(itorItem);
+	// 对子窗口进行布局重绘操作...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	if( rcRect.Width() > 0 && rcRect.Height() > 0 ) {
+		this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+		this->Invalidate(true);
+	}
+	// 找到当前第一个窗口进行焦点事件操作...
+	if( m_MapVideo.size() <= 0 )
+		return;
+	itorItem = m_MapVideo.begin();
+	lpVideo = itorItem->second;
+	lpVideo->doFocusAction();
+}
+//
+// 得到下一个窗口编号...
+int CMidView::GetNextAutoID(int nCurCameraID)
+{
+	GM_MapVideo::iterator itorFirst = m_MapVideo.begin();
+	// 如果没有节点，直接返回开始编号...
+	if( itorFirst == m_MapVideo.end() ) {
+		return DEF_CAMERA_START_ID;
+	}
+	ASSERT( itorFirst != m_MapVideo.end() );
+	// 如果输入的节点是无效的，返回第一个有效节点...
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(nCurCameraID);
+	if( itorItem == m_MapVideo.end() ) {
+		return itorFirst->first;
+	}
+	// 如果下一个节点是无效的，回滚到第一个节点...
+	if((++itorItem) == m_MapVideo.end() ) {
+		return itorFirst->first;
+	}
+	// 下一个节点有效，返回对应的编号...
+	ASSERT( itorItem != m_MapVideo.end() );
+	return itorItem->first;
+}
+//
 // 添加一个视频窗口...
 GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType)
 {
-	// 提取有用的字段组合成需要的配置信息...
-	GM_MapData theMapLoc;
-	theMapLoc["DeviceType"] = inNetData["DeviceType"];
-	theMapLoc["DeviceDescription"] = inNetData["DeviceDescription"];
-	theMapLoc["DeviceSN"] = inNetData["DeviceSN"];
-	theMapLoc["CommandPort"] = inNetData["CommandPort"];
-	theMapLoc["HttpPort"] = inNetData["HttpPort"];
-	theMapLoc["MAC"] = inNetData["MAC"];
-	theMapLoc["IPv4Address"] = inNetData["IPv4Address"];
-	theMapLoc["BootTime"] = inNetData["BootTime"];
-	theMapLoc["DigitalChannelNum"] = inNetData["DigitalChannelNum"];
-	theMapLoc["DiskNumber"] = inNetData["DiskNumber"];
 	// 先从已有集合中查找最大编号的窗口...
 	int nCameraID = DEF_CAMERA_START_ID;
 	GM_MapVideo::reverse_iterator itorEnd = m_MapVideo.rbegin();
 	if( itorEnd != m_MapVideo.rend() ) {
 		nCameraID = itorEnd->first + 1;
 	}
+	GM_MapData theMapLoc;
 	// 设置标题信息栏，摄像头类型，在存盘是才转换成UTF8...
-	CString strTitle, strID, strType;
+	CString strTitle, strID, strType, strStreamProp;
 	strID.Format("%d", nCameraID);
 	theMapLoc["ID"] = strID;
 	strTitle.Format("%s - %d", DEF_CAMERA_NAME, nCameraID);
 	theMapLoc["Name"] = strTitle.GetString();
 	strType.Format("%d", inType);
 	theMapLoc["CameraType"] = strType;
-	// 设置默认的用户名和密码(base64)...
-	TCHAR szEncode[MAX_PATH] = {0};
-	int nEncLen = Base64encode(szEncode, DEF_LOGIN_PASS_HK, strlen(DEF_LOGIN_PASS_HK));
-	theMapLoc["LoginUser"] = DEF_LOGIN_USER_HK;
-	theMapLoc["LoginPass"] = szEncode;
-	// 设置开启OSD和开启镜像...
-	theMapLoc["OpenOSD"] = "1";
-	theMapLoc["OpenMirror"] = "0";
+	if( inType == kCameraNO ) {
+		// 如果是流转发数据，提取需要的字段组起来...
+		theMapLoc["StreamProp"] = inNetData["StreamProp"];
+		theMapLoc["StreamUrl"] = inNetData["StreamUrl"];
+		theMapLoc["StreamMP4"] = inNetData["StreamMP4"];
+		theMapLoc["StreamLoop"] = inNetData["StreamLoop"];
+		theMapLoc["StreamAuto"] = inNetData["StreamAuto"];
+		theMapLoc["DeviceSN"] = inNetData["DeviceSN"];
+	} else {
+		// 如果是摄像头类型，提取有用的字段组合成需要的配置信息...
+		ASSERT( inType == kCameraHK || inType == kCameraDH );
+		strStreamProp.Format("%d", kStreamDevice);
+		theMapLoc["StreamProp"] = strStreamProp;
+		theMapLoc["DeviceType"] = inNetData["DeviceType"];
+		theMapLoc["DeviceDescription"] = inNetData["DeviceDescription"];
+		theMapLoc["DeviceSN"] = inNetData["DeviceSN"];
+		theMapLoc["CommandPort"] = inNetData["CommandPort"];
+		theMapLoc["HttpPort"] = inNetData["HttpPort"];
+		theMapLoc["MAC"] = inNetData["MAC"];
+		theMapLoc["IPv4Address"] = inNetData["IPv4Address"];
+		theMapLoc["BootTime"] = inNetData["BootTime"];
+		theMapLoc["DigitalChannelNum"] = inNetData["DigitalChannelNum"];
+		theMapLoc["DiskNumber"] = inNetData["DiskNumber"];
+		// 设置默认的用户名和密码(base64)...
+		TCHAR szEncode[MAX_PATH] = {0};
+		int nEncLen = Base64encode(szEncode, DEF_LOGIN_PASS_HK, strlen(DEF_LOGIN_PASS_HK));
+		theMapLoc["LoginUser"] = DEF_LOGIN_USER_HK;
+		theMapLoc["LoginPass"] = szEncode;
+		// 设置开启OSD和开启镜像...
+		theMapLoc["OpenOSD"] = "1";
+		theMapLoc["OpenMirror"] = "0";
+	}
 	// 向网站注册摄像头，注册成功才能创建...
 	ASSERT( m_lpParentDlg != NULL );
 	GM_Error  theErr = GM_NotImplement;
@@ -229,7 +299,15 @@ GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType)
 		MsgLogGM(theErr);
 		return theErr;
 	}
+	// 如果是流转发模式，直接存盘返回...
+	if( inType == kCameraNO ) {
+		CXmlConfig & theConfig = CXmlConfig::GMInstance();
+		theConfig.SetCamera(nCameraID, theMapLoc);
+		theConfig.GMSaveConfig();
+		return GM_NoErr;
+	}
 	// 更新监控通道的网络配置...
+	ASSERT( inType == kCameraHK || inType == kCameraDH );
 	return lpCamera->ForUDPData(inNetData);
 }
 //
@@ -272,6 +350,21 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 	return lpVideo->GetCamera();
 }
 //
+// 网站授权验证结果处理...
+void CMidView::SetAuthExpired(BOOL bAuthOK)
+{
+	// 如果授权成功，转入下一个状态...
+	if( bAuthOK ) {
+		m_strNotice = "没有发现网络摄像机...";
+		m_eState = kAuthRegiter;
+	} else {
+		// 如果授权失败，只更新文字信息...
+		m_strNotice = "网站授权过期，验证失败...";
+	}
+	// 重新更新窗口背景...
+	this->Invalidate(true);
+}
+//
 // 处理背景更新事件...
 BOOL CMidView::OnEraseBkgnd(CDC* pDC) 
 {
@@ -296,7 +389,6 @@ void CMidView::DrawNotice(CDC * pDC)
 	CRect   rcRect;
 	CFont   fontLogo;
 	CFont * pOldFont = NULL;
-	CString strText = "没有发现网络摄像机...";
 	if( m_MapVideo.size() > 0 )
 		return;
 	ASSERT( m_MapVideo.size() <= 0 );
@@ -306,7 +398,7 @@ void CMidView::DrawNotice(CDC * pDC)
 	// 绘制警告文字...
 	pOldFont = pDC->SelectObject(&fontLogo);
 	pDC->SetTextColor( RGB(255, 255, 0) );
-	pDC->DrawText( strText, rcRect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+	pDC->DrawText(m_strNotice, rcRect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 	// 销毁字体...
 	pDC->SelectObject(pOldFont);
 	fontLogo.DeleteObject();

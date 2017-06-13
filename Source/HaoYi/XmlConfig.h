@@ -20,6 +20,8 @@ public:
 	BOOL	 GMSaveConfig();
 	BOOL	 GMLoadConfig();
 
+	void	doDelDVR(int nCameraID);
+
 	string & GetCopyRight() { return m_strCopyRight; }
 	string & GetVersion() { return m_strVersion; }
 	string & GetPhone() { return m_strPhone; }
@@ -71,6 +73,11 @@ public:
 
 	void	SetDBCameraID(int nDBCameraID, int inLocalID) { m_MapDBCamera[nDBCameraID] = inLocalID; }
 	void	GetDBCameraID(int nDBCameraID, int & outLocalID);
+
+	BOOL	StreamSnapJpeg(const CString & inSrcMP4File, const CString & inDestJpgName, int nRecSec);
+private:
+	BOOL	GenerateJpegFromMediaFile(const CString & inMP4File, int nPosSec, int nFrames);
+	void	SendMPlayerCmd(const CString &cmdLine);
 private:
 	TiXmlElement		BuildXmlElem(const string & strNode, int inData);
 	TiXmlElement		BuildXmlElem(const string & strNode, const string & strData);
@@ -81,6 +88,7 @@ private:
 	string				m_strWebSite;					// 网站
 	string				m_strAddress;					// 地址
 
+	string				m_strMPlayer;					// 截图工具的全路径...
 	string				m_strXMLFile;					// XML配置文件
 	string				m_strMainName;					// 主窗口标题名称...
 	string				m_strSavePath;					// 录像或截图存放路径...

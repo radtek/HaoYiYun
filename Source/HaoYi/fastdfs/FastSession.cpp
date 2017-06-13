@@ -1074,7 +1074,8 @@ GM_Error CRemoteSession::doPHPSetCameraName(LPCTSTR lpData, int nSize)
 	theConfig.SetCamera(nLocalID, theMapLoc);
 	// 将获取的摄像头名称更新到摄像头窗口对象当中...
 	CString strTitleName = strDBCameraName.c_str();
-	lpCamera->UpdateWndTitle(strTitleName);
+	STREAM_PROP theProp = lpCamera->GetStreamProp();
+	lpCamera->UpdateWndTitle(theProp, strTitleName);
 	// 调用父窗口接口，更新右侧和左侧焦点窗口的摄像头名称...
 	m_lpHaoYiView->UpdateFocusTitle(nLocalID, strTitleName);
 	// 将获取的摄像头名称保存到系统配置文件当中...

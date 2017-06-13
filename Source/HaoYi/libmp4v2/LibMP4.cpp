@@ -9,6 +9,9 @@ LibMP4::LibMP4(void)
 	m_audioID = MP4_INVALID_TRACK_ID;
 	m_nVideoTimeScale = 0;
 	m_bFirstFrame = true;
+	m_dwFirstStamp = 0;
+	m_dwWriteRecMS = 0;
+	m_dwWriteSize = 0;
 	
 	m_VLastFrame.m_nTimeStamp = 0;
 	m_VLastFrame.m_strData.clear();
@@ -119,7 +122,12 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 				// 开始存储缓存的音频数据帧，使用固定的帧时间间隔...
 				for(itor = m_deqAudio.begin(); itor != m_deqAudio.end(); ++itor) {
 					RTMPFrame & myFrame = (*itor);
+					if( itor == m_deqAudio.begin() ) {
+						m_dwFirstStamp = myFrame.m_nTimeStamp;
+					}
 					MP4WriteSample(m_hFileHandle, m_audioID, (BYTE*)myFrame.m_strData.c_str(), myFrame.m_strData.size(), MP4_INVALID_DURATION, 0, myFrame.m_bKeyFrame);
+					m_dwWriteSize += myFrame.m_strData.size();
+					m_dwWriteRecMS = myFrame.m_nTimeStamp - m_dwFirstStamp;
 				}
 				// 存盘之后，释放音频缓存...
 				TRACE("[No Video] Audio-Deque = %d\n", m_deqAudio.size());
@@ -132,6 +140,7 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 			return true;
 		// 设置非第一帧标志...
 		m_bFirstFrame = false;
+		m_dwFirstStamp = inTimeStamp;
 		// 之前缓存的音频数据，直接丢弃，否则会出现音视频不同步...
 		TRACE("[Has Video] Audio-Deque = %d\n", m_deqAudio.size());
 		m_deqAudio.clear();
@@ -155,6 +164,9 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		
 		// 调用写入帧的接口函数，视频需要计算帧间隔...
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, (BYTE*)m_VLastFrame.m_strData.c_str(), m_VLastFrame.m_strData.size(), uDuration, 0, m_VLastFrame.m_bKeyFrame);
+		// 计算写盘量和总时间...
+		m_dwWriteSize += m_VLastFrame.m_strData.size();
+		m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
 		
 		// 保存这一帧的数据，下次使用...
 		m_VLastFrame.m_bKeyFrame = bIsKeyFrame;
@@ -163,6 +175,9 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 	} else {
 		// 音频数据，直接调用接口写盘，音频不用计算帧间隔时间，采用固定的帧间隔...
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, lpFrame, nSize, MP4_INVALID_DURATION, 0, bIsKeyFrame);
+		// 计算写盘量和总时间...
+		m_dwWriteSize += nSize;
+		m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
 	}
 	// 返回存盘结果...
 	return bWriteFlag;

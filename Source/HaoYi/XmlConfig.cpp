@@ -50,6 +50,12 @@ BOOL CXmlConfig::GMLoadConfig()
 	CUtilTool::GetFilePath(szPath, XML_CONFIG);
 	ASSERT( strlen(szPath) > 0 );
 	m_strXMLFile = szPath;
+
+	// 获取截图工具全路径...
+	CUtilTool::GetFilePath(szPath, SNAP_TOOL_NAME);
+	ASSERT( strlen(szPath) > 0 );
+	m_strMPlayer = szPath;
+
 	// 加载配置节点需要的变量...
 	BOOL			bLoadOK = true;
 	TiXmlDocument	theDoc;
@@ -323,3 +329,256 @@ void CXmlConfig::GetDBCameraID(int nDBCameraID, int & outLocalID)
 		outLocalID = m_MapDBCamera[nDBCameraID];
 	}
 }
+//
+// 发起删除指定通道的操作...
+void CXmlConfig::doDelDVR(int nCameraID)
+{
+	// 删除对应的录像课程记录...
+	OSMutexLocker theLock(&m_MutexCourse);
+	m_MapNodeCourse.erase(nCameraID);
+	// 先找到对应的 DBCameraID，然后删除记录...
+	GM_MapData & theData = m_MapNodeCamera[nCameraID];
+	if( theData.find("DBCameraID") != theData.end() ) {
+		int nDBCameraID = atoi(theData["DBCameraID"].c_str());
+		m_MapDBCamera.erase(nDBCameraID);
+	}
+	// 删除对应的配置文件记录...
+	m_MapNodeCamera.erase(nCameraID);
+	// 最后，将结果存盘到xml配置当中...
+	this->GMSaveConfig();
+}
+
+#define DEF_PER_WAIT_MS		10	// 每次等待毫秒数
+#define DEF_MAX_WAIT_COUNT  50	// COUNT * MS = 总毫秒
+#define DEF_SNAP_JPG_NAME   TEXT("00000001.jpg")
+#define SafeCloseHandle(handle)	do{ if( handle ) { CloseHandle(handle); handle = 0L; } }while(0)
+
+//
+// 对外的流转发模式的截图接口函数...
+BOOL CXmlConfig::StreamSnapJpeg(const CString & inSrcMP4File, const CString & inDestJpgName, int nRecSec)
+{
+	// 只截取 2 分钟以内的数据...
+	int nSnapSize = ((nRecSec >= 120) ? 120 : nRecSec);
+	int nSnapPoint = 0;
+	if( nSnapSize > 5 ) {
+		// 随机截取总时间的一半...
+		srand((unsigned)time(NULL));
+		nSnapPoint = (rand() % (nSnapSize/2))+3;
+		// 永远不要操作总时间的一半，否则，截图工具会截取不到数据...
+		nSnapPoint = min(nSnapPoint, (nSnapSize/2));
+	}
+	// 准备截图存放位置...
+	CString strSrcJpgName;
+	TCHAR szCurDir[MAX_PATH] = {0};
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	if( ::GetCurrentDirectory(MAX_PATH, szCurDir) ) {
+		strSrcJpgName.Format("%s\\%s", szCurDir, DEF_SNAP_JPG_NAME);
+	} else {
+		strSrcJpgName = DEF_SNAP_JPG_NAME;
+	}
+	// 只能用 ANSI 字符格式截图...
+	this->GenerateJpegFromMediaFile(inSrcMP4File, nSnapPoint, 1);
+	do {
+		// 如果截图已经存在，直接跳出...
+		if( _access(strSrcJpgName, 0) >= 0 )
+			break;
+		// 截图失败，如果截图时间点是0点，直接跳出...
+		if( nSnapPoint <= 0 )
+			break;
+		// 尝试使用 0 点进行截图...
+		this->GenerateJpegFromMediaFile(inSrcMP4File, 0, 1);
+	}while( false );
+	// 再次判断截图文件是否存在，不存在直接返回...
+	if( _access(strSrcJpgName, 0) < 0 )
+		return false;
+	// 将截图文件拷贝到上传目录当中 => 覆盖模式...
+	::CopyFile(strSrcJpgName, inDestJpgName, false);
+	// 截图完成，删除原始截图文件...
+	::DeleteFile(strSrcJpgName);
+	return true;
+}
+
+BOOL CXmlConfig::GenerateJpegFromMediaFile(const CString & inMP4File, int nPosSec, int nFrames)
+{
+	if( m_strMPlayer.size() <= 0 || inMP4File.GetLength() <= 0 )
+		return false;
+    CString strCmdLine;
+    strCmdLine.Format(TEXT("-ss %d -nosound -vo jpeg -frames %d \"%s\""), nPosSec, nFrames, inMP4File);
+    TRACE("%s %s\n", m_strMPlayer.c_str(), strCmdLine);
+
+	this->SendMPlayerCmd(strCmdLine);
+	
+	return true;
+}
+
+void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
+{
+	ASSERT( m_strMPlayer.size() > 0 );
+
+	SECURITY_ATTRIBUTES lsa = { 0 };
+	PROCESS_INFORMATION pi = { 0 };
+	STARTUPINFO si = { 0 };
+
+	HANDLE dupIn = 0L, dupOut = 0L;
+	HANDLE stdChildIn = 0L, stdChildOut = 0L, stdChildErr = 0L;
+	HANDLE stdoldIn = 0L, stdoldOut = 0L, stdoldErr = 0L;
+	HANDLE stddupIn = 0L, stddupOut = 0L, stddupErr = 0L;
+	
+	HANDLE my_read = NULL;						/*!< Application read file descriptor */
+	HANDLE my_write = NULL;						/*!< Application write file descriptor */
+
+	HANDLE his_read = NULL;						/*!< Process read file descriptor */
+	HANDLE his_write = NULL;					/*!< Process write file descriptor */
+
+	HANDLE pstdin = NULL;						/*!< stdin descriptor used by the child */
+	HANDLE pstdout = NULL;						/*!< stdout descriptor used by the child */
+	HANDLE pstderr = NULL;						/*!< stderr descriptor used by the child */
+	
+	lsa.nLength = sizeof(SECURITY_ATTRIBUTES);
+	lsa.lpSecurityDescriptor = NULL;
+	lsa.bInheritHandle = TRUE;
+
+	do {
+		// Create the pipes used for the cvsgui protocol
+		if( !CreatePipe(&his_read, &dupIn, &lsa, 0) ) break;
+		if( !CreatePipe(&dupOut, &his_write, &lsa, 0) ) break;
+
+		// Duplicate the application side handles so they lose the inheritance
+		if( !DuplicateHandle(GetCurrentProcess(), dupIn,
+			GetCurrentProcess(), &my_write, 0,
+			FALSE, DUPLICATE_SAME_ACCESS) ) break;
+		SafeCloseHandle(dupIn);
+		
+		if( !DuplicateHandle(GetCurrentProcess(), dupOut,
+			GetCurrentProcess(), &my_read, 0,
+			FALSE, DUPLICATE_SAME_ACCESS) ) break;
+		SafeCloseHandle(dupOut);
+
+		// Redirect stdout, stderr, stdin
+		if( !CreatePipe(&stdChildIn, &stddupIn, &lsa, 0) ) break;
+		if( !CreatePipe(&stddupOut, &stdChildOut, &lsa, 0) ) break;
+		if( !CreatePipe(&stddupErr, &stdChildErr, &lsa, 0) ) break;
+
+		// Same thing as above
+		if( !DuplicateHandle(GetCurrentProcess(), stddupIn,
+			GetCurrentProcess(), &pstdin, 0,
+			FALSE, DUPLICATE_SAME_ACCESS) ) break;
+		SafeCloseHandle(stddupIn);
+
+		if( !DuplicateHandle(GetCurrentProcess(), stddupOut,
+			GetCurrentProcess(), &pstdout, 0,
+			FALSE, DUPLICATE_SAME_ACCESS) ) break;
+		SafeCloseHandle(stddupOut);
+
+		if( !DuplicateHandle(GetCurrentProcess(), stddupErr,
+			GetCurrentProcess(), &pstderr, 0,
+			FALSE, DUPLICATE_SAME_ACCESS) ) break;
+		SafeCloseHandle(stddupErr);
+		
+		si.cb = sizeof(STARTUPINFO);
+		si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE;
+		si.hStdInput = stdChildIn;
+		si.hStdOutput = stdChildOut;
+		si.hStdError = stdChildErr;
+
+		stdoldIn  = GetStdHandle(STD_INPUT_HANDLE);
+		stdoldOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		stdoldErr = GetStdHandle(STD_ERROR_HANDLE);
+
+		SetStdHandle(STD_INPUT_HANDLE,  stdChildIn);
+		SetStdHandle(STD_OUTPUT_HANDLE, stdChildOut);
+		SetStdHandle(STD_ERROR_HANDLE,  stdChildErr);
+
+		// 构造命令行...
+        CString strCmdLine;
+        strCmdLine.Format(TEXT("\"%s\" %s"), m_strMPlayer.c_str(), cmdLine);
+        LPSTR lpszScript = (LPSTR)strCmdLine.GetString();
+		//LPSTR	lpszScript = "d:\\mplayer2008.02.06\\mplayer.exe -identify d:\\film\\3.rmvb -nosound -vc dummy -vo null";
+		if( !CreateProcess(
+			NULL,
+			lpszScript,
+			NULL,
+			NULL,
+			TRUE,
+			NORMAL_PRIORITY_CLASS | CREATE_SUSPENDED,
+			NULL,
+			NULL,
+			&si,
+			&pi) ) break;
+		SetStdHandle(STD_INPUT_HANDLE,  stdoldIn);
+		SetStdHandle(STD_OUTPUT_HANDLE, stdoldOut);
+		SetStdHandle(STD_ERROR_HANDLE,  stdoldErr);
+
+		SafeCloseHandle(my_read);
+		SafeCloseHandle(my_write);
+		SafeCloseHandle(his_read);
+		SafeCloseHandle(his_write);
+		SafeCloseHandle(stdChildIn);
+		SafeCloseHandle(stdChildOut);
+		SafeCloseHandle(stdChildErr);
+		
+		if(((DWORD)-1) != ResumeThread(pi.hThread))
+        {
+            BOOL bRet = false;
+            DWORD dwCode = 0;
+			int  nCount = 0;
+			while( true ) {
+	            bRet = GetExitCodeProcess(pi.hProcess, &dwCode);
+				if( dwCode != STILL_ACTIVE )
+					break;
+				// 如果在X秒之后，仍然没有截图成功，中断进程...
+				if( ++nCount >= DEF_MAX_WAIT_COUNT ) {
+					TerminateProcess(pi.hProcess, 0);
+					break;
+				}
+				// 休整 X 毫秒之后，继续等待...
+				::Sleep(DEF_PER_WAIT_MS);
+			}
+        }
+		// 开始读取截图输出数据...
+		//outString.clear();
+		//this->ReadHolePipe(pstdout, outString);
+		SafeCloseHandle(pi.hThread);  
+		SafeCloseHandle(pi.hProcess);
+	} while( FALSE );
+	
+	SafeCloseHandle(dupIn);
+	SafeCloseHandle(dupOut);
+
+	SafeCloseHandle(stdChildIn);
+	SafeCloseHandle(stdChildOut);
+	SafeCloseHandle(stdChildErr);
+
+	SafeCloseHandle(stddupIn);
+	SafeCloseHandle(stddupOut);
+	SafeCloseHandle(stddupErr);
+	
+	SafeCloseHandle(my_read);
+	SafeCloseHandle(my_write);
+	SafeCloseHandle(his_read);
+	SafeCloseHandle(his_write);
+	SafeCloseHandle(pstdin);
+	SafeCloseHandle(pstdout);
+	SafeCloseHandle(pstderr);
+}
+
+/*void CXmlConfig::ReadHolePipe(HANDLE hStdOut, string & strPipe)
+{
+    const   int MAX_SIZE = 4096;
+
+	BOOL	bRet = FALSE;
+	DWORD	dwRead = 0;
+	TCHAR	szBuf[MAX_SIZE + 1] = {0};
+	bRet = PeekNamedPipe(hStdOut, NULL, 0, NULL, &dwRead, NULL);
+	while( bRet && dwRead > 0 )
+	{
+		ASSERT( hStdOut != NULL );
+		memset(szBuf, 0, MAX_SIZE);
+		if( !ReadFile(hStdOut, szBuf, MAX_SIZE, &dwRead, NULL) || dwRead == 0 )
+			break;
+		ASSERT( MAX_SIZE >= dwRead );
+		strPipe.append(szBuf); ::Sleep(5);
+		bRet = PeekNamedPipe(hStdOut, NULL, 0, NULL, &dwRead, NULL);
+	}
+}*/

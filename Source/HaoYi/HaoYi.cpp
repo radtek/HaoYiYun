@@ -10,6 +10,7 @@
 #include "HCNetSDK.h"
 #include "OSThread.h"
 #include "SocketUtils.h"
+#include "PushThread.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -111,6 +112,7 @@ BOOL CHaoYiApp::InitInstance()
 	(void)::WSAStartup(wsVersion, &wsData);
 	OSThread::Initialize();
 	SocketUtils::Initialize();
+	CPushThread::Initialize();
 
 	//EnableTaskbarInteraction(FALSE);
 
@@ -182,6 +184,7 @@ int CHaoYiApp::ExitInstance()
 	NET_DVR_Cleanup();
 
 	// 释放分配的系统资源...
+	CPushThread::UnInitialize();
 	SocketUtils::UnInitialize();
 	OSThread::UnInitialize();
 	//::WSACleanup();

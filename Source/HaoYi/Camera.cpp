@@ -15,6 +15,7 @@
 
 CCamera::CCamera(CVideoWnd * lpWndParent)
   : m_lpWndParent(lpWndParent)
+  , m_nStreamProp(kStreamDevice)
   , m_nCameraType(kCameraHK)
   , m_lpHaoYiView(NULL)
   , m_nRtspPort(554)
@@ -23,6 +24,7 @@ CCamera::CCamera(CVideoWnd * lpWndParent)
   , m_hWndNotify(NULL)
   , m_lpPushThread(NULL)
   , m_lpRecThread(NULL)
+  , m_bStreamLogin(false)
   , m_bIsExiting(false)
   , m_HKLoginIng(false)
   , m_dwHKErrCode(0)
@@ -55,6 +57,12 @@ void CCamera::WaitForExit()
 // DVR是否已经成功登陆...
 BOOL CCamera::IsLogin()
 {
+	// 如果是流转发模式 => 返回流转发登录标志...
+	if( m_nStreamProp != kStreamDevice ) {
+		return m_bStreamLogin;
+	}
+	// 如果是摄像头设备模式...
+	ASSERT( m_nStreamProp == kStreamDevice );
 	if( m_nCameraType == kCameraHK ) {
 		if( m_HKLoginID >= 0 ) {
 			return true;
@@ -72,6 +80,14 @@ BOOL CCamera::IsLogin()
 // DVR是否正在实时预览...
 BOOL CCamera::IsPlaying()
 {
+	// 如果是流转发模式...
+	if( m_nStreamProp != kStreamDevice ) {
+		if( m_lpPushThread == NULL )
+			return false;
+		return m_lpPushThread->IsStreamPlaying();
+	}
+	// 如果是摄像头设备模式...
+	ASSERT( m_nStreamProp == kStreamDevice );
 	switch( m_nCameraType )
 	{
 	case kCameraHK: return ((m_HKPlayID < 0) ? false : true);
@@ -79,6 +95,30 @@ BOOL CCamera::IsPlaying()
 	}
 	return false;
 }
+//
+// 通道是否正处在发布中...
+BOOL CCamera::IsPublishing()
+{
+	if( m_lpPushThread == NULL )
+		return false;
+	ASSERT( m_lpPushThread != NULL );
+	return m_lpPushThread->IsPublishing();
+}
+//
+// 返回是否正在录像状态标志...
+BOOL CCamera::IsRecording()
+{
+	// 如果是流转发模式...
+	if( m_nStreamProp != kStreamDevice ) {
+		if( m_lpPushThread == NULL )
+			return false;
+		return m_lpPushThread->IsRecording();
+	}
+	// 如果是摄像头设备模式 => 录像线程是否有效...
+	ASSERT( m_nStreamProp == kStreamDevice );
+	return ((m_lpRecThread != NULL) ? true : false);
+}
+
 //
 // 释放建立资源...
 void CCamera::ClearResource()
@@ -103,15 +143,40 @@ void CCamera::ClearResource()
 	this->doStopLivePush();
 	// 设置录像任务为无效...
 	m_nRecCourseID = -1;
+	// 设置异步登录标志...
+	m_bStreamLogin = false;
 }
 //
-// 处理截图事件...
-DWORD CCamera::doSnapJPG(string & inUniqidName)
+// 处理录像后的截图事件...
+void CCamera::doStreamSnapJPG(int nRecSecond)
+{
+	// 更换录像文件的扩展名...
+	CString strMP4Temp, strMP4File;
+	strMP4Temp.Format("%s.tmp", m_strMP4Name);
+	strMP4File.Format("%s_%d.mp4", m_strMP4Name, nRecSecond);
+	// 如果文件不存在，直接返回...
+	if( _access(strMP4Temp, 0) < 0 )
+		return;
+	// 调用接口进行截图操作，截图失败，错误记录...
+	ASSERT( m_strJpgName.GetLength() > 0 );
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	if( !theConfig.StreamSnapJpeg(strMP4Temp, m_strJpgName, nRecSecond) ) {
+		MsgLogGM(GM_Snap_Jpg_Err);
+	}
+	// 直接对文件进行更改操作，并记录失败的日志...
+	if( !MoveFile(strMP4Temp, strMP4File) ) {
+		MsgLogGM(::GetLastError());
+	}
+}
+//
+// 处理录像前的截图事件...
+DWORD CCamera::doDeviceSnapJPG(CString & inJpgName)
 {
 	// 为了保险起见，一定要用播放状态判断，登录状态由于是异步操作，会不精确...
 	if( !this->IsPlaying() )
 		return GM_NoErr;
 	ASSERT( m_HKLoginID >= 0 );
+	ASSERT( inJpgName.GetLength() > 0 );
 	// DVR的第一个通道，一个DVR可能有多个通道...
 	DWORD dwReturn = 0;
 	DWORD dwErr = GM_NoErr;
@@ -121,18 +186,8 @@ DWORD CCamera::doSnapJPG(string & inUniqidName)
 	NET_DVR_JPEGPARA dvrJpg = {0};
 	dvrJpg.wPicSize = 2;		// D1
 	dvrJpg.wPicQuality = 0;		// 0-最好 1-较好 2-一般
-	// 获取当前时间...
-	CString strJPGName;
-	GM_MapData theMapLoc;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapLoc["DBCameraID"];
-	//strCurTime = CTime::GetCurrentTime().Format("%Y%m%d%H%M%S");
-	//strJPGName.Format("%s\\%s_%d.jpg", strSavePath.c_str(), strCurTime, m_nCameraID);
-	strJPGName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), inUniqidName.c_str(), strDBCameraID.c_str());
 	// 直接用硬件抓图，不依赖是否开启了预览...
-	if( !NET_DVR_CaptureJPEGPicture(m_HKLoginID, nDvrStartChan, &dvrJpg, (LPSTR)strJPGName.GetString()) ) {
+	if( !NET_DVR_CaptureJPEGPicture(m_HKLoginID, nDvrStartChan, &dvrJpg, (LPSTR)inJpgName.GetString()) ) {
 		dwErr = NET_DVR_GetLastError();
 		MsgLogGM(dwErr);
 		return dwErr;
@@ -159,6 +214,21 @@ DWORD CCamera::doPTZCmd(DWORD dwPTZCmd, BOOL bStop)
 	return GM_NoErr;
 }
 //
+// 设置流数据转发状态...
+void CCamera::doStreamStatus(LPCTSTR lpszStatus)
+{
+	GM_MapData theMapLoc;
+	CString strStatus = lpszStatus;
+	CRenderWnd * lpRenderWnd = m_lpWndParent->GetRenderWnd();
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	
+	theConfig.GetCamera(m_nCameraID, theMapLoc);
+	m_strLogStatus.Format("%s - %s", strStatus, theMapLoc["Name"].c_str());
+
+	lpRenderWnd->SetStreamStatus(strStatus);
+	lpRenderWnd->SetRenderText(m_strLogStatus);
+}
+//
 // 执行DVR注销操作...
 void CCamera::doLogout()
 {
@@ -171,9 +241,11 @@ void CCamera::doLogout()
 	m_strLogStatus.Format("未登录 - %s", theMapLoc["Name"].c_str());
 	// 设置渲染窗口状态...
 	ASSERT( m_lpWndParent != NULL );
+	CString strStatus = "未连接...";
 	CRenderWnd * lpRenderWnd = m_lpWndParent->GetRenderWnd();
 	lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
 	lpRenderWnd->SetRenderText(m_strLogStatus);
+	lpRenderWnd->SetStreamStatus(strStatus);
 }
 //
 // 登录回调函数接口...
@@ -487,11 +559,6 @@ void CCamera::doRecStartCourse(int nCourseID)
 	if( m_nRecCourseID == nCourseID )
 		return;
 	ASSERT( m_nRecCourseID != nCourseID );
-	// 删除之前正在录像的对象...
-	if( m_lpRecThread != NULL ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}
 	// 获取唯一的文件名...
 	MD5	    md5;
 	string  strUniqid;
@@ -501,26 +568,48 @@ void CCamera::doRecStartCourse(int nCourseID)
 	strTimeMicro.Format("%I64d", llTimCountCur.QuadPart);
 	md5.update(strTimeMicro, strTimeMicro.GetLength());
 	strUniqid = md5.toString();
-	// 生成一个截图文件 => 如果截图失败，直接返回...
-	GM_Error theErr = GM_NoErr;
-	theErr = this->doSnapJPG(strUniqid);
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
-		return;
-	}
 	// 准备录像需要的信息...
 	GM_MapData theMapLoc;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	// 准备rtsp链接地址和MP4录像名称 => PATH + Uniqid + DBCameraID + CourseID
-	CString  strRtspUrl, strMP4Path;
+	CString  strMP4Path;
 	string & strSavePath = theConfig.GetSavePath();
 	string & strDBCameraID = theMapLoc["DBCameraID"];
+	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
+	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
+	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CourseID
 	m_strMP4Name.Format("%s\\%s_%s_%d", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str(), nCourseID);
+	// 录像时使用.tmp，避免没有录像完就被上传...
 	strMP4Path.Format("%s.tmp", m_strMP4Name);
+	// 如果是流转发模式 => 直接用转发线程录像...
+	if( !this->IsCameraDevice() ) {
+		// 推流线程一定有效 => IsPlaying() 可以保证...
+		ASSERT( m_lpPushThread != NULL );
+		// 调用推流线程的录像接口...
+		m_lpPushThread->StreamBeginRecord(strMP4Path);
+		// 开启录像全部完成，保存当前课程编号...
+		m_nRecCourseID = nCourseID;
+		return;
+	}
+	// 如果是摄像头设备 => 启动专门的 rtsp 录像线程...
+	ASSERT( this->IsCameraDevice() );
+	// 删除之前正在录像的对象...
+	if( m_lpRecThread != NULL ) {
+		delete m_lpRecThread;
+		m_lpRecThread = NULL;
+	}
+	// 生成一个截图文件 => 如果截图失败，直接返回...
+	CString  strRtspUrl;
+	GM_Error theErr = GM_NoErr;
+	theErr = this->doDeviceSnapJPG(m_strJpgName);
+	if( theErr != GM_NoErr ) {
+		MsgLogGM(theErr);
+		return;
+	}
+	// 如果是摄像头设备 => 使用 rtsp 链接单独录像...
 	// 准备rtsp链接地址 => 主码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/101
 	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
-	// 创建录像线程对象...
+	// 创建 rtsp 录像线程对象...
 	ASSERT( m_lpWndParent != NULL && m_lpWndParent->m_hWnd != NULL );
 	m_lpRecThread = new CRtspRecThread(m_lpWndParent->m_hWnd, this, 0);
 	// 创建成功，直接初始化录像线程 => 一定会启动成功...
@@ -543,7 +632,16 @@ void CCamera::doRecStopCourse(int nCourseID)
 	if( m_nRecCourseID != nCourseID )
 		return;
 	ASSERT( m_nRecCourseID == nCourseID );
-	// 直接删除正在录像的线程对象...
+	// 如果是流转发模式 => 调用接口停止录像...
+	if( !this->IsCameraDevice() ) {
+		ASSERT( m_lpPushThread != NULL );
+		m_lpPushThread->StreamEndRecord();
+		// 将正在运行的记录编号复位...
+		m_nRecCourseID = -1;
+		return;
+	}
+	// 如果是摄像头设备 => 直接删除正在录像的线程对象...
+	ASSERT( this->IsCameraDevice() );
 	if( m_lpRecThread != NULL ) {
 		delete m_lpRecThread;
 		m_lpRecThread = NULL;
@@ -555,6 +653,8 @@ void CCamera::doRecStopCourse(int nCourseID)
 // 执行DVR登录操作...
 DWORD CCamera::doLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LPCTSTR lpUser, LPCTSTR lpPass)
 {
+	// 将摄像机的错误标志复位...
+	m_dwHKErrCode = NET_DVR_NOERROR;
 	// 登录之前，先释放资源，保存通知窗口...
 	DWORD dwErr = GM_NoErr;
 	ASSERT( hWndNotify != NULL );
@@ -609,6 +709,10 @@ BOOL CCamera::InitCamera(GM_MapData & inMapLoc)
 	string & strType = inMapLoc["CameraType"];
 	if( strType.size() > 0 ) {
 		m_nCameraType = (CAMERA_TYPE)atoi(strType.c_str());
+	}
+	string & strStream = inMapLoc["StreamProp"];
+	if( strStream.size() > 0 ) {
+		m_nStreamProp = (STREAM_PROP)atoi(strStream.c_str());
 	}
 	// 保存设备序列号，保存登录状态...
 	m_strDeviceSN = inMapLoc["DeviceSN"];
@@ -667,17 +771,19 @@ GM_Error CCamera::ForUDPData(GM_MapData & inNetData)
 }
 //
 // 更新窗口标题名称...
-void CCamera::UpdateWndTitle(CString & strTitle)
+void CCamera::UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle)
 {
 	if( m_lpWndParent == NULL )
 		return;
+	// 保存修改后的流属性 => 很重要...
+	m_nStreamProp = inPropType;
 	// 设置状态信息供右侧窗口使用，然后更新窗口标题信息...
 	m_strLogStatus.Format("%s - %s", (this->IsLogin() ? "已登录" : "未登录"), strTitle);
 	m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
 	m_lpWndParent->SetTitleText(strTitle);
 }
 //
-// 停止上传，删除上传线程...
+// 停止上传，删除上传线程 => 录像线程不能删...
 void CCamera::doStopLivePush()
 {
 	// 删除上传推送线程...
@@ -691,12 +797,23 @@ void CCamera::doStopLivePush()
 	m_nPlayerSock = -1;
 }
 //
-// 通过消息事件删除上传直播...
+// 处理来自播放器退出引发的删除上传直播通知...
 void CCamera::doStopLiveMessage()
 {
+	// 摄像头设备模式 => 删除整个数据处理线程..
+	// 流数据转发模式 => 只停止rtmp上传对象...
+	WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
 	if( m_lpWndParent != NULL && m_lpWndParent->m_hWnd != NULL ) {
-		::PostMessage(m_lpWndParent->m_hWnd, WM_ERR_PUSH_MSG, NULL, NULL);
+		::PostMessage(m_lpWndParent->m_hWnd, wMsgID, NULL, NULL);
 	}
+}
+
+void CCamera::doStreamStopLivePush()
+{
+	if( m_nStreamProp == kStreamDevice || m_lpPushThread == NULL )
+		return;
+	ASSERT( m_nStreamProp != kStreamDevice && m_lpPushThread != NULL );
+	m_lpPushThread->StreamStopLivePush(this);
 }
 //
 // 启动直播上传...
@@ -708,7 +825,22 @@ int CCamera::doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string &
 	// 如果当前通道还没有播放，直接返回...
 	if( !this->IsPlaying() )
 		return -1;
+	// 如果是流数据转发的模式...
+	if( m_nStreamProp != kStreamDevice ) {
+		// 如果通道已经上传直播服务器成功，直接返回...
+		if( m_lpPushThread->IsPublishing() )
+			return 0;
+		ASSERT( !m_lpPushThread->IsPublishing() );
+		// 如果通道还没有上传成功，调用上传接口...
+		m_lpPushThread->StreamStartLivePush(this, strRtmpUrl);
+		// 保存数据，延时反馈时需要用到...
+		m_lpHaoYiView = lpHaoYiView;
+		m_nPlayerSock = nPlayerSock;
+		m_strRtmpUrl = strRtmpUrl;
+		return 1;
+	}
 	// 如果上传通道正在上传，将rtmp链接反馈给播放端...
+	ASSERT( m_nStreamProp == kStreamDevice );
 	if( m_lpPushThread != NULL )
 		return 0;
 	ASSERT( m_lpPushThread == NULL );
@@ -720,7 +852,7 @@ int CCamera::doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string &
 	// 准备rtsp直播链接地址 => 子码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/102
 	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/102", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
 	m_lpPushThread = new CPushThread(m_lpWndParent->m_hWnd);
-	m_lpPushThread->InitThread(this, strRtspUrl, strRtmpUrl);
+	m_lpPushThread->DeviceInitThread(this, strRtspUrl, strRtmpUrl);
 	// 如果是第一次上传，需要延时反馈...
 	m_lpHaoYiView = lpHaoYiView;
 	m_nPlayerSock = nPlayerSock;
@@ -737,4 +869,67 @@ void CCamera::doDelayTransmit(GM_Error inErr)
 	// 延时转发命令，然后将请求置空，复位...
 	m_lpHaoYiView->doTransmitPlayer(m_nPlayerSock, m_strRtmpUrl, inErr);
 	m_nPlayerSock = -1;
+}
+//
+// 进行流转发模式的登录操作...
+GM_Error CCamera::doStreamLogin()
+{
+	// 首先判断正在运行的资源...
+	if( m_lpPushThread != NULL )
+		return GM_NoErr;
+	ASSERT( m_lpPushThread == NULL );
+	// 设置异步登录标志...
+	m_bStreamLogin = true;
+	// 获取当前摄像头存放的配置...
+	GM_MapData theMapLoc;
+	ASSERT( m_lpWndParent != NULL );
+	int nCameraID = m_lpWndParent->GetCameraID();
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(nCameraID, theMapLoc);
+	ASSERT( theMapLoc.size() > 0 );
+	// 获取需要的流转发参数信息...
+	string & strStreamMP4 = theMapLoc["StreamMP4"];
+	string & strStreamUrl = theMapLoc["StreamUrl"];
+	//BOOL bStreamAuto = atoi(theMapLoc["StreamAuto"].c_str());
+	//BOOL bStreamLoop = atoi(theMapLoc["StreamLoop"].c_str());
+	BOOL bFileMode = ((m_nStreamProp == kStreamMP4File) ? true : false);
+	// 只启动数据流部分，不进行rtmp处理...
+	m_lpPushThread = new CPushThread(m_lpWndParent->m_hWnd);
+	m_lpPushThread->StreamInitThread(this, bFileMode, strStreamUrl, strStreamMP4);
+	// 更新登录状态...
+	CString strStatus = "正在链接";
+	m_strLogStatus.Format("%s - %s", strStatus, theMapLoc["Name"].c_str());
+	m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
+	m_lpWndParent->GetRenderWnd()->SetStreamStatus(strStatus);
+	return GM_NoErr;
+}
+//
+// 进行流转发模式的退出操作...
+GM_Error CCamera::doStreamLogout()
+{
+	// 直接调用退出接口...
+	this->doLogout();
+	return GM_NoErr;
+}
+
+int CCamera::GetRecvPullKbps()
+{
+	// 2017.06.12 - by jackey => 这里返回-1很重要，表示通道已经关闭了...
+	// 推流线程已经关闭，但是，通道状态还是处于登录当中，需要返回-1，彻底关闭...
+	if( m_lpPushThread == NULL && this->IsLogin() )
+		return - 1;
+	// 通道正在的处理状态...
+	return ((m_lpPushThread == NULL) ? 0 : m_lpPushThread->GetRecvKbps());
+}
+
+int	CCamera::GetSendPushKbps()
+{
+	return ((m_lpPushThread == NULL) ? 0 : m_lpPushThread->GetSendKbps());
+}
+
+LPCTSTR	CCamera::GetStreamPushUrl()
+{
+	if( m_lpPushThread == NULL )
+		return NULL;
+	return m_lpPushThread->m_strRtmpUrl.c_str();
 }

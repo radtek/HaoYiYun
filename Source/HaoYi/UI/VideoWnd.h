@@ -23,7 +23,7 @@ public:
 	CVideoWnd(CBitItem ** lppBit, UINT inVideoWndID);
 	virtual ~CVideoWnd();
 public:
-	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
@@ -36,6 +36,7 @@ public:
 	afx_msg LRESULT	OnMsgRecSlice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgTaskErr(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgPushErr(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgStopStream(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -75,6 +76,15 @@ public:
 	
 	BOOL			Create(UINT wStyle, const CRect & rect, CWnd * pParentWnd);
 	BOOL			BuildCamera(GM_MapData & inMapLoc);
+
+	int				GetRecvPullKbps();
+	int				GetSendPushKbps();
+	BOOL			IsCameraDevice();
+	BOOL			IsStreamLogin();
+	BOOL			IsStreamPlaying();
+	BOOL			IsStreamPublish();
+	LPCTSTR			GetStreamPushUrl();
+	void			GetStreamPullUrl(CString & outPullUrl);
 private:
 	void			doFocusAction();
 	void			doEarseRecStatus();

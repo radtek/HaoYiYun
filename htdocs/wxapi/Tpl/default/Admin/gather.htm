@@ -1,0 +1,159 @@
+
+<include file = "Common:admin_header" />
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理</legend>
+        </fieldset>
+        <div style="width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="50">
+              <col width="80">
+              <col width="80">
+              <col width="80">
+              <col width="100">
+              <col width="100">
+              <col width="100">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>状态</th>
+                <th>IP地址</th>
+                <th>机器名</th>
+                <th>MAC地址</th>
+                <th>最大摄像头数</th>
+                <th>所在学校</th>
+                <th>操作</th>
+              </tr> 
+            </thead>
+            <tbody class="js_gather">
+            </tbody>
+          </table>
+          <div id="myPage"></div>
+        </div>        
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 执行修改操作...
+function doModify(inGatherID, objTr)
+{
+  // 向服务器发送直播状态查看命令...
+  var index = layer.load(2);
+  var $ = layui.jquery;
+  // 先将背景色进行修改...
+  $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
+  // 异步获取通道信息...
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/getGather/gather_id/"+inGatherID,
+    success: function(ajaxData) {
+      layer.closeAll('loading');
+      layer.open({
+        type: 1, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+        closeBtn: 1,
+        fixed: true,
+        shadeClose: false,
+        area: ['450px', '400px'],
+        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;</i>编辑 - 采集端",
+        content: ajaxData,
+        success: function() {
+          var form = layui.form();
+          form.render();
+          // 这里必须调用render才能显示select...
+          form.on('submit(formGather)', function(data) {
+            var theSchoolID = data.field.mySchool;
+            var theSchoolName = $("select[name='mySchool']").find("option:selected").text();
+            // 判断输入数据的有效性...
+            if( theSchoolID <= 0 ) {
+              layer.msg('【所在学校】不能为空，请更正！', {icon: 2});
+              return false;
+            }
+            // 通过ajax异步发送存盘命令...
+            layer.load(2);
+            $.ajax({
+              type: "post",
+              async: true,
+              url: siteurl+"/Admin/saveGather",
+              data: {gather_id: inGatherID, school_id: theSchoolID},
+              success: function(ajaxData) {
+                layer.closeAll('loading');
+                layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
+                  //location.href = siteurl+"/Admin/gather";
+                  $(objTr).children('td').eq(5).text(theSchoolName);
+                  layer.closeAll('page');
+                });
+              },
+              error: function(e) {
+                layer.closeAll('loading');
+                layer.alert(e, {icon: 2});
+              }
+            });
+            // 否则，form会自动跳转...
+            return false;
+          });
+          // 点击取消操作...
+          $('.js_form_close').unbind("click").click( function() {
+            layer.closeAll('page');
+          });
+        }
+      });
+    },
+    error: function(e) {
+      layer.closeAll('loading');
+      layer.alert(e, {icon: 2});
+    }
+  });
+}
+//
+// 打开摄像头页面...
+function doCamera(inGatherID)
+{
+  event.stopPropagation();
+  location.href = siteurl+"/Admin/camera/gather_id/"+inGatherID;
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var laypage = layui.laypage;
+  var $ = layui.jquery;
+  laypage({
+    pages: {{$max_page}},   // 总页数...
+    cont: 'myPage',         // 分页对象...
+    groups: 5,              // 连续显示分页数
+    jump: function(obj, first) {
+      // 向服务器发送分页命令...
+      var index = layer.load(2);
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Admin/pageGather/p/"+obj.curr,
+        success: function(ajaxData) {
+          layer.closeAll('loading');
+          $('.js_gather').html(ajaxData);
+          $('tbody tr').css('cursor','pointer');
+        },
+        error: function(e) {
+          layer.closeAll('loading');
+          layer.alert(e, {icon: 2});
+        }
+      });    
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

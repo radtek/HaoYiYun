@@ -1,16 +1,13 @@
 
 #pragma once
 
-#include "rtmp.h"
-#include "log.h"
-
+typedef void* srs_rtmp_t;
 class CRtmpRecThread;
 class CRtmpThread;
 class LibRtmp
 {
 public:
     LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread, CRtmpRecThread * lpRecThread);
-
     ~LibRtmp();
 
     bool Open(const char* url);
@@ -19,26 +16,19 @@ public:
     void Close();
 
 	bool Read();
-    bool Send(const char* buf, int bufLen, int type, unsigned int timestamp);
-
-    void SendSetChunkSize(unsigned int chunkSize);
-
-    void CreateSharedObject();
-
-    void SetSharedObject(const std::string& objName, bool isSet);
-
-    void SendSharedObject(const std::string& objName, int val);
+    bool Send(const char* data, int size, int type, unsigned int timestamp);
 private:
-	bool doAudio(RTMPPacket *packet);
-	bool doVideo(RTMPPacket *packet);
-	bool doInvoke(RTMPPacket *packet);
+	bool doAudio(DWORD dwTimeStamp, char * lpData, int nSize);
+	bool doVideo(DWORD dwTimeStamp, char * lpData, int nSize);
+	bool doScript(DWORD dwTimeStamp, char * lpData, int nSize);
+	bool doInvoke(DWORD dwTimeStamp, char * lpData, int nSize);
+
 	void ParseAACSequence(char * inBuf, int nSize);
 	void ParseAVCSequence(char * inBuf, int nSize);
 private:
-    RTMP	*	m_rtmp_;				// rtmp对象
-    char	*	m_streming_url_;		// 流地址
-    FILE	*	m_flog_;				// 日志句柄
+	srs_rtmp_t	m_lpSRSRtmp;			// SRS的rtmp对象...
     bool		m_is_need_push_;		// 是否推送
+    string		m_streming_url_;		// 流地址
     string		m_stream_name_;			// 流名称
 
 	string		m_strAAC;				// for audio

@@ -99,15 +99,13 @@ CSPSReader::Do_Read_SPS( bs_t *s, int *width, int *height)
 			for(int i = 0; i < 8; i++ ) 
 			{ 
 				seq_scaling_list_present_flag[i] = _bs_read( s, 1 );
-				if( seq_scaling_list_present_flag[i] ) 
-					if (i<6)
-					{
+				if( seq_scaling_list_present_flag[i] ) {
+					if (i<6) {
 						_scaling_list(s,0,16,0);
-					}
-					else
-					{
+					} else {
 						_scaling_list(s,0,64,0);
 					}
+				}
 			}
 		}
 

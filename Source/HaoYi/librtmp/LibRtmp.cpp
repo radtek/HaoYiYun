@@ -1,11 +1,15 @@
 
 #include "stdafx.h"
 #include "LibRtmp.h"
-
+#include "srs_librtmp.h"
 #include "AmfByteStream.h"
 #include "..\ReadSPS.h"
 #include "..\PushThread.h"
 #include "..\libmp4v2\RecThread.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#endif
 
 uint32_t _bs_read( bs_t *s, int i_count )
 {
@@ -62,172 +66,148 @@ LibRtmp::LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread, CR
 	m_lpRecThread = lpRecThread;
 	m_lpRtmpThread = lpPullThread;
 	m_bPushStartOK = false;
+	m_lpSRSRtmp = NULL;
 
-    if (isNeedLog)
-    {
-        m_flog_ = fopen("c:\\librtmp.log", "w+");
-        RTMP_LogSetLevel(RTMP_LOGDEBUG2);
-        RTMP_LogSetOutput(m_flog_);
-    }
-    else
-    {
-        m_flog_ = NULL;
-    }
-
-    m_rtmp_ = RTMP_Alloc();
-	RTMP_Init(m_rtmp_);
-
-    //RTMP_SetBufferMS(m_rtmp_, 300);
-
-    m_streming_url_ = NULL;
-    m_is_need_push_ = isNeedPush;
+	// 初始化常规变量...
+	m_stream_name_.clear();
+    m_streming_url_.clear();
+	m_is_need_push_ = isNeedPush;
+	TRACE("SRS-Version: %d.%d.%d\n", srs_version_major(), srs_version_minor(), srs_version_revision());
 }
 
 LibRtmp::~LibRtmp()
 {
     this->Close();
-    RTMP_Free(m_rtmp_);
-
-    if (m_streming_url_)
-    {
-        free(m_streming_url_);
-        m_streming_url_ = NULL;
-    }
-
-    if (m_flog_) fclose(m_flog_);
 }
 
 bool LibRtmp::Open(const char* url)
 {
-    m_streming_url_ = (char*)calloc(strlen(url)+1, sizeof(char));
-    strcpy(m_streming_url_, url);
+	if( url == NULL || strlen(url) <= 0 )
+		return false;
+    m_streming_url_.assign(url, strlen(url));
+	m_stream_name_ = m_streming_url_.substr(m_streming_url_.rfind("/")+1);
 
-    std::string tmp(url);
-    m_stream_name_ = tmp.substr(tmp.rfind("/")+1);
-
-    //AVal flashver = AVC("flashver");
-    //AVal flashver_arg = AVC("WIN 9,0,115,0");
-    AVal swfUrl = AVC("swfUrl");
-    AVal swfUrl_arg = AVC("http://localhost/librtmp.swf");
-    AVal pageUrl = AVC("pageUrl");
-    AVal pageUrl_arg = AVC("http://localhost/librtmp.html");
-    //RTMP_SetOpt(rtmp_, &flashver, &flashver_arg);
-    RTMP_SetOpt(m_rtmp_, &swfUrl, &swfUrl_arg);
-    RTMP_SetOpt(m_rtmp_, &pageUrl, &pageUrl_arg);
-
-    /*if (m_is_need_record_)
-    {
-        AVal record = AVC("record");
-        AVal record_arg = AVC("on");
-        RTMP_SetOpt(m_rtmp_, &record, &record_arg);
-    }*/
-
-    int err = RTMP_SetupURL(m_rtmp_, m_streming_url_);
-    if (err <= 0) return false;
-
-	// 播放时不能加这个参数，否则会卡死...
-	// 推送发布时，必须加，否则，无法写入...
-	if( m_is_need_push_ ) {
-	    RTMP_EnableWrite(m_rtmp_);
+	// 拉流和推流都使用SRS提供的接口...
+	BOOL bError = false;
+	do {
+		// 创建SRS的rtmp拉流对象...
+		ASSERT( m_lpSRSRtmp == NULL );
+		m_lpSRSRtmp = srs_rtmp_create(m_streming_url_.c_str());
+		if( m_lpSRSRtmp == NULL ) {
+			bError = true; break;
+		}
+		// 简单握手协议...
+		if (srs_rtmp_handshake(m_lpSRSRtmp) != 0) {
+			bError = true; break;
+		}
+		// 连接直播服务器...
+		if (srs_rtmp_connect_app(m_lpSRSRtmp) != 0) {
+			bError = true; break;
+		}
+		// 推流和拉流调用的接口不同...
+		if( m_is_need_push_ ) {
+			// 推流调用发布接口...
+			if (srs_rtmp_publish_stream(m_lpSRSRtmp) != 0) {
+				bError = true; break;
+			}
+		} else {
+			// 拉流调用播放接口...
+			if (srs_rtmp_play_stream(m_lpSRSRtmp) != 0) {
+				bError = true; break;
+			}
+		}
+	}while( false );
+	// 连接服务器失败，销毁对象...
+	if( bError ) {
+		srs_rtmp_destroy(m_lpSRSRtmp);
+		m_lpSRSRtmp = NULL;
+		return false;
 	}
-    
-    err = RTMP_Connect(m_rtmp_, NULL);
-    if (err <= 0) return false;
-
-    err = RTMP_ConnectStream(m_rtmp_, 0);
-    if (err <= 0) return false;
-
-    m_rtmp_->m_outChunkSize = 2*1024*1024;
-    SendSetChunkSize(m_rtmp_->m_outChunkSize);
-
-    return true;
+	// 连接成功，开始读取数据...
+	return true;
 }
 
 void LibRtmp::Close()
 {
-    RTMP_Close(m_rtmp_);
+	// 释放拉流对象...
+	srs_rtmp_destroy(m_lpSRSRtmp);
+	m_lpSRSRtmp = NULL;
 }
 
 bool LibRtmp::IsClosed()
 {
-	if( !RTMP_IsConnected(m_rtmp_) )
-		return true;
-	if( RTMP_IsTimedout(m_rtmp_) )
-		return true;
-	return false;
+	return ((m_lpSRSRtmp == NULL) ? true : false);
 }
 
 bool LibRtmp::Read()
 {
-	RTMPPacket rtmp_pakt = {0};
-    RTMPPacket_Reset(&rtmp_pakt);
-
-	int retval = RTMP_ReadPacket(m_rtmp_, &rtmp_pakt);
-	if( rtmp_pakt.m_nBodySize <= 0 )
-		return FALSE;
-	// 数据没有读完，返回继续读取...
-	if( rtmp_pakt.m_nBytesRead != rtmp_pakt.m_nBodySize )
-		return TRUE;
-	ASSERT( rtmp_pakt.m_nBytesRead == rtmp_pakt.m_nBodySize );
-	// 打印完整数据信息...
-	/*if((rtmp_pakt.m_body != NULL) && (rtmp_pakt.m_nBytesRead > 0) && (rtmp_pakt.m_nBytesRead == rtmp_pakt.m_nBodySize)) {
-		TRACE("HeadType = %d, Size = %d, PackType = %d, Time = %lu, absTime = %lu\r\n", 
-				rtmp_pakt.m_headerType, rtmp_pakt.m_nBodySize, rtmp_pakt.m_packetType, 
-				rtmp_pakt.m_nTimeStamp, rtmp_pakt.m_hasAbsTimestamp);
-	}*/
-	//readCallback(rtmp_pakt.m_body, rtmp_pakt.m_nBodySize, rtmp_pakt.m_packetType, rtmp_pakt.m_nTimeStamp);
-	//RTMP_ClientPacket(&rtmp_pakt);
-
-	bool is_ok = false;
-	switch( rtmp_pakt.m_packetType )
-	{
-	case RTMP_PACKET_TYPE_AUDIO: is_ok = this->doAudio(&rtmp_pakt);  break;
-	case RTMP_PACKET_TYPE_VIDEO: is_ok = this->doVideo(&rtmp_pakt);  break;
-	default:					 is_ok = this->doInvoke(&rtmp_pakt); break;
+	// 准备读取数据需要的变量...
+	int ret = ERROR_SUCCESS;
+    int size = 0; char type = 0;
+    char* data = NULL; u_int32_t timestamp = 0;
+	// 拉取数据失败，直接返回...
+	ret = srs_rtmp_read_packet(m_lpSRSRtmp, &type, &timestamp, &data, &size);
+	if( ret != 0 ) {
+		if( data != NULL ) {
+			free(data);
+		}
+		return false;
 	}
-	RTMPPacket_Free(&rtmp_pakt);
-
+	// 判断读取数据的有效性...
+	if( size <= 0 ) {
+		if( data != NULL ) {
+			free(data);
+		}
+		return false;
+	}
+	// 对收到的数据包进行分发处理...
+	bool is_ok = false;
+	switch( type )
+	{
+	case SRS_RTMP_TYPE_VIDEO:  is_ok = this->doVideo(timestamp, data, size); break;
+	case SRS_RTMP_TYPE_AUDIO:  is_ok = this->doAudio(timestamp, data, size); break;
+	case SRS_RTMP_TYPE_SCRIPT: is_ok = this->doScript(timestamp, data, size); break;
+	default:				   is_ok = this->doInvoke(timestamp, data, size); break;
+	}
+	// 释放读取到的数据区...
+	if( data != NULL ) {
+		free(data);
+	}
+	// 返回上面的执行结果...
 	return is_ok;
 }
 //
-// 处理其它数据包...
-bool LibRtmp::doInvoke(RTMPPacket *packet)
+// 处理音频数据...
+bool LibRtmp::doAudio(DWORD dwTimeStamp, char * lpData, int nSize)
 {
-	RTMP_ClientPacket(m_rtmp_, packet);
-
-	return true;
-}
-//
-// 处理音频帧...
-bool LibRtmp::doAudio(RTMPPacket *packet)
-{
-	// 首先需要处理非完整数据包...
-	if((packet->m_body == NULL) || (packet->m_nBytesRead <= 0) || (packet->m_nBytesRead != packet->m_nBodySize))
-		return true;
-	ASSERT( packet->m_nBytesRead == packet->m_nBodySize );
-
+	// 获取数据包的类型 => < 0(错误), = 0(序列头), > 0(帧数据)
+	char thePackType = srs_utils_flv_audio_aac_packet_type(lpData, nSize);
+	if( thePackType < 0 )
+		return false;
 	// 处理音频序列头，会发送多次...
-	if( packet->m_headerType == 0 ) {
+	if( thePackType == 0 ) {
 		if( m_strAAC.size() <= 0 ) {
-			m_strAAC.assign(packet->m_body, packet->m_nBodySize);
-			this->ParseAACSequence(packet->m_body, packet->m_nBodySize);
+			m_strAAC.assign(lpData, nSize);
+			this->ParseAACSequence(lpData, nSize);
 		}
 		ASSERT( m_strAAC.size() > 0 );
 		return true;
 	}
+	// 处理音频帧数据内容...
+	ASSERT( thePackType > 0 );
 
 	// 如果外部录像线程有效，则组帧向外通知...
 	if( m_lpRecThread != NULL ) {
 		// 先去掉外层的数据壳...
 		BOOL   bWriteFlag = false;
-		BYTE * lpFrame = (BYTE*)packet->m_body + 2;
-		int    nSize = packet->m_nBodySize - 2;
+		BYTE * lpFrame = (BYTE*)lpData + 2;
+		int    nDataSize = nSize - 2;
 
 		// 存储音频数据帧...
-		bWriteFlag = m_lpRecThread->WriteSample(false, lpFrame, nSize, packet->m_nTimeStamp, true);
+		bWriteFlag = m_lpRecThread->WriteSample(false, lpFrame, nDataSize, dwTimeStamp, true);
 
 		// 打印调试信息...
-		//TRACE("Audio = %d, Size = %d, Time = %d\r\n", packet->m_packetType, packet->m_nBodySize, packet->m_nTimeStamp);
+		//TRACE("Audio, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
 	}
 	
 	// 如果外部拉流线程有效，则组帧向外通知...
@@ -235,11 +215,67 @@ bool LibRtmp::doAudio(RTMPPacket *packet)
 		// 组合一个音频帧，通知上层...
 		FMS_FRAME	theFrame;
 		theFrame.typeFlvTag = FLV_TAG_TYPE_AUDIO;
-		theFrame.dwSendTime = packet->m_nTimeStamp;
+		theFrame.dwSendTime = dwTimeStamp;
 		theFrame.is_keyframe = true;
 
 		// 这里需要去掉一个2字节外壳...
-		theFrame.strData.assign(packet->m_body+2, packet->m_nBodySize-2);
+		theFrame.strData.assign(lpData+2, nSize-2);
+
+		// 推送数据帧给rtmp线程...
+		int nFrameCount = m_lpRtmpThread->PushFrame(theFrame);
+		// 缓存了一部分数据之后，才能启动线程...
+		if( !m_bPushStartOK && nFrameCount >= 100 ) {
+			m_lpRtmpThread->StartPushThread();
+			m_bPushStartOK = true;
+		}
+	}
+	return true;
+}
+//
+// 处理视频数据...
+bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
+{
+	// 获取数据包的类型 => < 0(错误), = 0(序列头), > 0(帧数据)
+	char thePackType = srs_utils_flv_video_avc_packet_type(lpData, nSize);
+	if( thePackType < 0 )
+		return false;
+	// 处理视频序列头，会发送多次...
+	if( thePackType == 0 ) {
+		if( m_strAVC.size() <= 0 ) {
+			m_strAVC.assign(lpData, nSize);
+			this->ParseAVCSequence(lpData, nSize);
+		}
+		ASSERT( m_strAVC.size() > 0 );
+		return true;
+	}
+	// 处理视频帧数据内容...
+	ASSERT( thePackType > 0 );
+
+	// 如果外部录像线程有效，则组帧向外通知...
+	if( m_lpRecThread != NULL ) {
+		// 先去掉外层的数据壳...
+		BOOL   bWriteFlag = false;
+		BYTE * lpFrame = (BYTE*)lpData + 5;
+		int    nDataSize = nSize - 5;
+		BOOL   bKeyFrame = ((lpData[0] == 0x17) ? true : false);
+
+		// 存储视频数据帧...
+		bWriteFlag = m_lpRecThread->WriteSample(true, lpFrame, nDataSize, dwTimeStamp, bKeyFrame);
+
+		// 打印调试信息...
+		//TRACE("Video, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
+	}
+
+	// 如果外部拉流线程有效，则组帧向外通知...
+	if( m_lpRtmpThread != NULL ) {
+		// 组合一个视频帧，通知上层... FLV_TAG_TYPE_VIDEO
+		FMS_FRAME	theFrame;
+		theFrame.typeFlvTag = FLV_TAG_TYPE_VIDEO;
+		theFrame.dwSendTime = dwTimeStamp;
+		theFrame.is_keyframe = ((lpData[0] == 0x17) ? true : false);
+
+		// 这里需要去掉一个5字节外壳...
+		theFrame.strData.assign(lpData+5, nSize-5);
 
 		// 推送数据帧给rtmp线程...
 		int nFrameCount = m_lpRtmpThread->PushFrame(theFrame);
@@ -253,59 +289,15 @@ bool LibRtmp::doAudio(RTMPPacket *packet)
 	return true;
 }
 //
-// 处理视频帧...
-bool LibRtmp::doVideo(RTMPPacket *packet)
+// 处理脚本数据...
+bool LibRtmp::doScript(DWORD dwTimeStamp, char * lpData, int nSize)
 {
-	// 首先需要处理非完整数据包...
-	if((packet->m_body == NULL) || (packet->m_nBytesRead <= 0) || (packet->m_nBytesRead != packet->m_nBodySize))
-		return true;
-	ASSERT( packet->m_nBytesRead == packet->m_nBodySize );
-
-	// 处理视频序列头，会发送多次...
-	if( packet->m_headerType == 0 ) {
-		if( m_strAVC.size() <= 0 ) {
-			m_strAVC.assign(packet->m_body, packet->m_nBodySize);
-			this->ParseAVCSequence(packet->m_body, packet->m_nBodySize);
-		}
-		ASSERT( m_strAVC.size() > 0 );
-		return true;
-	}
-
-	// 如果外部录像线程有效，则组帧向外通知...
-	if( m_lpRecThread != NULL ) {
-		// 先去掉外层的数据壳...
-		BOOL   bWriteFlag = false;
-		BYTE * lpFrame = (BYTE*)packet->m_body + 5;
-		int    nSize = packet->m_nBodySize - 5;
-		BOOL   bKeyFrame = ((packet->m_body[0] == 0x17) ? true : false);
-
-		// 存储视频数据帧...
-		bWriteFlag = m_lpRecThread->WriteSample(true, lpFrame, nSize, packet->m_nTimeStamp, bKeyFrame);
-
-		// 打印调试信息...
-		//TRACE("Video = %d, Size = %d, Time = %d\r\n", packet->m_packetType, packet->m_nBodySize, packet->m_nTimeStamp);
-	}
-
-	// 如果外部拉流线程有效，则组帧向外通知...
-	if( m_lpRtmpThread != NULL ) {
-		// 组合一个视频帧，通知上层... FLV_TAG_TYPE_VIDEO
-		FMS_FRAME	theFrame;
-		theFrame.typeFlvTag = FLV_TAG_TYPE_VIDEO;
-		theFrame.dwSendTime = packet->m_nTimeStamp;
-		theFrame.is_keyframe = ((packet->m_body[0] == 0x17) ? true : false);
-
-		// 这里需要去掉一个5字节外壳...
-		theFrame.strData.assign(packet->m_body+5, packet->m_nBodySize-5);
-
-		// 推送数据帧给rtmp线程...
-		int nFrameCount = m_lpRtmpThread->PushFrame(theFrame);
-		// 缓存了一部分数据之后，才能启动线程...
-		if( !m_bPushStartOK && nFrameCount >= 100 ) {
-			m_lpRtmpThread->StartPushThread();
-			m_bPushStartOK = true;
-		}
-	}
-
+	return true;
+}
+//
+// 处理其它数据...
+bool LibRtmp::doInvoke(DWORD dwTimeStamp, char * lpData, int nSize)
+{
 	return true;
 }
 //
@@ -404,115 +396,18 @@ void LibRtmp::ParseAVCSequence(char * inBuf, int nSize)
 		m_lpRtmpThread->WriteAVCSequenceHeader(m_strSPS, m_strPPS);
 	}
 }
-
-bool LibRtmp::Send(const char* buf, int bufLen, int type, unsigned int timestamp)
+//
+// 直接调用SRS提供的接口...
+bool LibRtmp::Send(const char* data, int size, int type, unsigned int timestamp)
 {
-    RTMPPacket rtmp_pakt;
-    RTMPPacket_Reset(&rtmp_pakt);
-    RTMPPacket_Alloc(&rtmp_pakt, bufLen);
-
-    rtmp_pakt.m_packetType = type;
-    rtmp_pakt.m_nBodySize = bufLen;
-    rtmp_pakt.m_nTimeStamp = timestamp;
-    rtmp_pakt.m_nChannel = 4;
-    rtmp_pakt.m_headerType = RTMP_PACKET_SIZE_LARGE;
-    rtmp_pakt.m_nInfoField2 = m_rtmp_->m_stream_id;
-    memcpy(rtmp_pakt.m_body, buf, bufLen);
-
-    int retval = RTMP_SendPacket(m_rtmp_, &rtmp_pakt, 0);
-    RTMPPacket_Free(&rtmp_pakt);
-
-    return !!retval;
-}
-
-void LibRtmp::SendSetChunkSize(unsigned int chunkSize)
-{
-    RTMPPacket rtmp_pakt;
-    RTMPPacket_Reset(&rtmp_pakt);
-    RTMPPacket_Alloc(&rtmp_pakt, 4);
-
-    rtmp_pakt.m_packetType = 0x01;
-    rtmp_pakt.m_nChannel = 0x02;    // control channel
-    rtmp_pakt.m_headerType = RTMP_PACKET_SIZE_LARGE;
-    rtmp_pakt.m_nInfoField2 = 0;
-
-
-    rtmp_pakt.m_nBodySize = 4;
-    UI32ToBytes(rtmp_pakt.m_body, chunkSize);
-
-    RTMP_SendPacket(m_rtmp_, &rtmp_pakt, 0);
-    RTMPPacket_Free(&rtmp_pakt);
-}
-
-void LibRtmp::CreateSharedObject()
-{
-    char data_buf[4096];
-    char* pbuf = data_buf;
-
-    pbuf = AmfStringToBytes(pbuf, m_stream_name_.c_str());
-
-    pbuf = UI32ToBytes(pbuf, 0);    // version
-    pbuf = UI32ToBytes(pbuf, 0);    // persistent
-    pbuf += 4;
-
-    pbuf = UI08ToBytes(pbuf, RTMP_SHARED_OBJECT_DATATYPE_CONNECT);
-
-    char* pbuf_datalen = pbuf;
-    pbuf += 4;
-
-    UI32ToBytes(pbuf_datalen, (int)(pbuf - pbuf_datalen - 4));
-
-    int buflen = (int)(pbuf - data_buf);
-
-    LibRtmp::Send(data_buf, buflen, TAG_TYPE_SHARED_OBJECT, 0);
-}
-
-void LibRtmp::SetSharedObject(const std::string& objName, bool isSet)
-{
-    char data_buf[4096];
-    char* pbuf = data_buf;
-
-    pbuf = AmfStringToBytes(pbuf, m_stream_name_.c_str());
-
-    pbuf = UI32ToBytes(pbuf, 0);    // version
-    pbuf = UI32ToBytes(pbuf, 0);    // persistent
-    pbuf += 4;
-
-    pbuf = UI08ToBytes(pbuf, RTMP_SHARED_OBJECT_DATATYPE_SET_ATTRIBUTE);
-
-    char* pbuf_datalen = pbuf;
-    pbuf += 4;
-
-    pbuf = AmfStringToBytes(pbuf, objName.c_str());
-    pbuf = AmfBoolToBytes(pbuf, isSet);
-    UI32ToBytes(pbuf_datalen, (int)(pbuf - pbuf_datalen - 4));
-
-    int buflen = (int)(pbuf - data_buf);
-
-    LibRtmp::Send(data_buf, buflen, TAG_TYPE_SHARED_OBJECT, 0);
-}
-
-void LibRtmp::SendSharedObject(const std::string& objName, int val)
-{
-    char data_buf[4096];
-    char* pbuf = data_buf;
-
-    pbuf = AmfStringToBytes(pbuf, m_stream_name_.c_str());
-
-    pbuf = UI32ToBytes(pbuf, 0);    // version
-    pbuf = UI32ToBytes(pbuf, 0);    // persistent
-    pbuf += 4;
-
-    pbuf = UI08ToBytes(pbuf, RTMP_SHARED_OBJECT_DATATYPE_SET_ATTRIBUTE);
-
-    char* pbuf_datalen = pbuf;
-    pbuf += 4;
-
-    pbuf = AmfStringToBytes(pbuf, objName.c_str());
-    pbuf = AmfDoubleToBytes(pbuf, val);
-    UI32ToBytes(pbuf_datalen, (int)(pbuf - pbuf_datalen - 4));
-
-    int buflen = (int)(pbuf - data_buf);
-
-    LibRtmp::Send(data_buf, buflen, TAG_TYPE_SHARED_OBJECT, 0);
+	// 判断输入数据的有效性...
+	int nResult = ERROR_SUCCESS;
+	if( m_lpSRSRtmp == NULL || data == NULL || size <= 0 )
+		return false;
+	// SRS底层会自动释放内存，因此，这里需要重新new或malloc内存出来...
+	char * lpPacket = (char*)malloc(size);
+	memcpy(lpPacket, data, size);
+	// 直接调用 SRS 的发送接口...
+	nResult = srs_rtmp_write_packet(m_lpSRSRtmp, type, timestamp, lpPacket, size);
+	return ((nResult != 0) ? false : true);
 }

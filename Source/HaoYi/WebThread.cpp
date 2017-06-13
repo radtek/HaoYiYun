@@ -10,11 +10,12 @@
 #include <curl.h>
 
 CWebThread::CWebThread(CHaoYiView * lpView)
-  : m_eRegState(kRegGather)
+  : m_eRegState(kRegHaoYi)
   , m_lpHaoYiView(lpView)
   , m_strDBCameraName("")
   , m_nDBCameraID(-1)
   , m_nDBGatherID(-1)
+  , m_nMyHaoYiID(-1)
   , m_nRemotePort(0)
   , m_nTrackerPort(0)
   , m_strRemoteAddr("")
@@ -69,7 +70,15 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 		return;
 	}
 	// 获取有效的反馈数据信息...
-	if( m_eRegState == kRegGather ) {
+	if( m_eRegState == kRegHaoYi ) {
+		// 正在处理验证许可过程...
+		Json::Value & theID = value["gather_id"];
+		if( theID.isInt() ) {
+			m_nMyHaoYiID = theID.asInt();
+		} else if( theID.isString() ) {
+			m_nMyHaoYiID = atoi(theID.asString().c_str());
+		}
+	} else if( m_eRegState == kRegGather ) {
 		// 正在处理注册采集端过程...
 		Json::Value & theID = value["gather_id"];
 		if( theID.isInt() ) {
@@ -146,7 +155,64 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 				m_dbMapCourse[nCourseID] = theMapData;
 			}
 		}
+	} else if( m_eRegState == kDelCamera ) {
+		// 获取返回的已删除的摄像头在数据库中的编号...
+		Json::Value & theID = value["camera_id"];
+		if( theID.isInt() ) {
+			m_nDBCameraID = theID.asInt();
+		} else if( theID.isString() ) {
+			m_nDBCameraID = atoi(theID.asString().c_str());
+		}
 	}
+}
+//
+// 验证许可证...
+BOOL CWebThread::RegisterHaoYi()
+{
+	// 先设置当前状态信息...
+	m_eRegState = kRegHaoYi;
+	// 判断数据是否有效...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
+	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
+	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
+		return false;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	TCHAR	szDNS[MAX_PATH] = {0};
+	// 先对频道名称进行UTF8转换，再进行URI编码...
+	string  strDNSName = CUtilTool::GetServerDNSName();
+	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
+	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s", 
+					strMacAddr, strIPAddr, theConfig.GetMaxCamera(),
+					szDNS, _T(SZ_VERSION_NAME));
+	strUrl.Format("http://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
+	// 调用Curl接口，汇报采集端信息...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 通知主窗口授权验证结果...
+	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_EXPIRED, ((m_nMyHaoYiID > 0) ? true : false));
+	// 返回授权验证结果...
+	return ((m_nMyHaoYiID > 0) ? true : false);
 }
 //
 // 在网站上注册采集端...
@@ -236,11 +302,13 @@ BOOL CWebThread::RegisterCamera()
 BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 {
 	// 输入数据中必须包含ID字段...
-	GM_MapData::iterator itorID;
+	GM_MapData::iterator itorID, itorProp;
+	itorProp = inData.find("StreamProp");
 	itorID = inData.find("ID");
-	if( itorID == inData.end() )
+	if( itorID == inData.end() || itorProp == inData.end() )
 		return false;
 	// 获取摄像头编号，用于存放和定位课表内容...
+	int nStreamProp = atoi(itorProp->second.c_str());
 	int nCameraID = atoi(itorID->second.c_str());
 	if( nCameraID <= 0 )
 		return false;
@@ -266,9 +334,25 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 	// 先对频道名称进行UTF8转换，再进行URI编码...
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(inData["Name"].c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szEncName, MAX_PATH);
-	strPost.Format("gather_id=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s",
-					m_nDBGatherID, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), 
-					inData["IPv4Address"].c_str(), inData["MAC"].c_str(), inData["DeviceType"].c_str());
+	if( nStreamProp == kStreamDevice ) {
+		// 处理通道是摄像头的情况...
+		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s",
+			m_nDBGatherID, nStreamProp, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), 
+			inData["IPv4Address"].c_str(), inData["MAC"].c_str(), inData["DeviceType"].c_str());
+	} else {
+		// 对需要的数据进行编码处理 => 这里需要注意文件名过长时的内存溢出问题...
+		TCHAR  szMP4File[MAX_PATH * 3] = {0};
+		TCHAR  szUrlLink[MAX_PATH * 2] = {0};
+		string strUTF8MP4 = CUtilTool::ANSI_UTF8(inData["StreamMP4"].c_str());
+		string strUTF8Url = CUtilTool::ANSI_UTF8(inData["StreamUrl"].c_str());
+		StringParser::EncodeURI(strUTF8MP4.c_str(), strUTF8MP4.size(), szMP4File, MAX_PATH * 3);
+		StringParser::EncodeURI(strUTF8Url.c_str(), strUTF8Url.size(), szUrlLink, MAX_PATH * 2);
+		// 处理通道是流转发的情况...
+		ASSERT( nStreamProp == kStreamMP4File || nStreamProp == kStreamUrlLink );
+		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&stream_mp4=%s&stream_url=%s",
+			m_nDBGatherID, nStreamProp, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), szMP4File, szUrlLink);
+	}
+	// 组合访问链接地址...
 	strUrl.Format("http://%s:%d/wxapi.php/Gather/camera", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
@@ -310,6 +394,53 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 	theConfig.SetCourse(nCameraID, m_dbMapCourse);
 	// 注册摄像头成功，摄像头累加计数...
 	++m_nCurCameraCount;
+	return true;
+}
+//
+// 向网站删除摄像头...
+BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+		return false;
+	// 先设置当前状态信息...
+	m_nDBCameraID = -1;
+	m_eRegState = kDelCamera;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	strPost.Format("device_sn=%s", inDeviceSN.c_str());
+	// 组合访问链接地址...
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/delCamera", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 判断摄像头是否删除成功...
+	if( m_nDBCameraID <= 0 )
+		return false;
+	ASSERT( m_nDBCameraID > 0 );
+	// 摄像头计数器减少...
+	m_nCurCameraCount -= 1;
 	return true;
 }
 //
@@ -359,6 +490,11 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 
 void CWebThread::Entry()
 {
+	// 首先，需要验证授权是否已经过期...
+	if( !this->RegisterHaoYi() ) {
+		return;
+	}
+	// 授权成功之后，进行下面的操作...
 	while( !this->IsStopRequested() ) {
 		// 在网站上注册采集端信息，失败继续注册...
 		if( !this->RegisterGather() ) {

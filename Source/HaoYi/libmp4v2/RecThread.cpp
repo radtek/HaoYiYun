@@ -8,8 +8,6 @@
 #include "..\ReadSPS.h"
 #include "..\librtmp\BitWritter.h"
 
-#define VIDEO_TIME_SCALE	90000	// 视频时间刻度，刻度越大好像越精确???
-
 CRecThread::CRecThread()
 {
 	m_nTaskID = -1;
@@ -124,8 +122,8 @@ bool CRecThread::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inT
 	if( !m_lpLibMP4->WriteSample(bIsVideo, lpFrame, nSize, inTimeStamp, bIsKeyFrame) )
 		return false;
 	// 累加存盘长度，记录已经写入的时间戳...
-	m_dwWriteRecMS = inTimeStamp;
-	m_dwWriteSize += nSize;
+	m_dwWriteSize = m_lpLibMP4->GetWriteSize();
+	m_dwWriteRecMS = m_lpLibMP4->GetWriteRecMS();
 	// 打印调试信息...
 	//TRACE("IsVideo = %d, IsKeyFrame = %d, TimeStamp = %lu \n", bIsVideo, bIsKeyFrame, inTimeStamp);
 	// 不需要切片操作，直接返回...

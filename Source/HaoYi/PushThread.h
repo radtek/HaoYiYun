@@ -20,6 +20,65 @@ typedef	multimap<uint32_t, FMS_FRAME>	KH_MapFrame;
 class LibRtmp;
 class CCamera;
 class CPushThread;
+class CMP4Thread : public OSThread
+{
+public:
+	CMP4Thread();
+	~CMP4Thread();
+public:
+	BOOL			InitMP4(CPushThread * inPushThread, string & strMP4File);
+	int				GetVideoWidth(){ return m_nVideoWidth; }
+	int				GetVideoHeight() { return m_nVideoHeight; }
+	string	 &		GetAVCHeader() { return m_strAVCHeader; }
+	string	 &		GetAACHeader() { return m_strAACHeader; }
+	bool			IsFinished()   { return m_bFinished; }
+
+	string   &		GetVideoSPS() { return m_strSPS; }
+	string   &      GetVideoPPS() { return m_strPPS; }
+	int				GetAudioType(){ return m_audio_type; }
+	int				GetAudioRateIndex() { return m_audio_rate_index; }
+	int				GetAudioChannelNum() { return m_audio_channel_num; }
+private:
+	virtual void	Entry();
+	bool			doPrepareMP4();
+	bool			doMP4ParseAV(MP4FileHandle inFile);
+	void			WriteAACSequenceHeader();
+	void			WriteAVCSequenceHeader();
+	bool			ReadOneFrameFromMP4(MP4TrackId tid, uint32_t sid, bool bIsVideo, uint32_t & outSendTime);
+private:
+	OSMutex			m_Mutex;
+	bool			m_bFileLoop;			// 是否循环
+	int				m_nLoopCount;			// 已循环次数
+	string			m_strMP4File;			// 文件路径
+	CPushThread *	m_lpPushThread;			// 父线程对象
+
+	bool			m_bFinished;			// 文件是否读取完毕
+	uint32_t		m_dwMP4Duration;		// 文件的持续时间(毫秒)
+
+	MP4FileHandle	m_hMP4Handle;			// MP4文件句柄
+	uint32_t		m_iASampleInx;			// 音频帧当前索引
+	uint32_t		m_iVSampleInx;			// 视频帧当前索引
+	MP4TrackId		m_tidVideo;				// 视频轨道编号
+	MP4TrackId		m_tidAudio;				// 音频轨道编号
+	bool			m_bAudioComplete;		// 音频完成标志
+	bool			m_bVideoComplete;		// 视频完成标志
+
+	int				m_audio_type;
+	int				m_audio_rate_index;
+	int				m_audio_channel_num;
+
+	int				m_nVideoWidth;
+	int				m_nVideoHeight;
+
+	string			m_strSPS;				// SPS
+	string			m_strPPS;				// PPS
+	string			m_strAES;				// AES
+	string			m_strAACHeader;			// AAC
+	string			m_strAVCHeader;			// AVC
+
+	DWORD			m_dwStartMS;			// 启动记录时间点
+};
+
 class CRtspThread : public OSThread
 {
 public:
@@ -28,13 +87,20 @@ public:
 public:
 	void			StartPushThread();
 	void			PushFrame(FMS_FRAME & inFrame);
-	BOOL			InitRtsp(CPushThread * inPushTread, CString & strRtspUrl);
+	BOOL			InitRtsp(CPushThread * inPushTread, string & strRtspUrl);
+	int				GetVideoWidth(){ return m_nVideoWidth; }
+	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }
 	string	 &		GetAACHeader() { return m_strAACHeader; }
 	bool			IsFinished()   { return m_bFinished; }
 	void			WriteAVCSequenceHeader(string & inSPS, string & inPPS);
 	void			WriteAACSequenceHeader(int inAudioRate, int inAudioChannel);
 	void			ResetEventLoop() { m_rtspEventLoopWatchVariable = 1; }
+
+	string   &		GetVideoSPS() { return m_strSPS; }
+	string   &      GetVideoPPS() { return m_strPPS; }
+	int				GetAudioRateIndex() { return m_audio_rate_index; }
+	int				GetAudioChannelNum() { return m_audio_channel_num; }
 private:
 	virtual void	Entry();
 private:
@@ -46,6 +112,9 @@ private:
 
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
+
+	int				m_nVideoWidth;
+	int				m_nVideoHeight;
 
 	string			m_strSPS;				// SPS
 	string			m_strPPS;				// PPS
@@ -66,23 +135,33 @@ public:
 public:
 	void			StartPushThread();
 	int				PushFrame(FMS_FRAME & inFrame);
-	BOOL			InitRtmp(CPushThread * inPushTread);
+	BOOL			InitRtmp(CPushThread * inPushTread, string & strRtmpUrl);
+	int				GetVideoWidth(){ return m_nVideoWidth; }
+	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }
 	string	 &		GetAACHeader() { return m_strAACHeader; }
 	bool			IsFinished()   { return m_bFinished; }
 	void			WriteAVCSequenceHeader(string & inSPS, string & inPPS);
 	void			WriteAACSequenceHeader(int inAudioRate, int inAudioChannel);
+
+	string   &		GetVideoSPS() { return m_strSPS; }
+	string   &      GetVideoPPS() { return m_strPPS; }
+	int				GetAudioRateIndex() { return m_audio_rate_index; }
+	int				GetAudioChannelNum() { return m_audio_channel_num; }
 private:
 	virtual void	Entry();
 private:
 	OSMutex			m_Mutex;
 	string			m_strRtmpUrl;
 	CPushThread *	m_lpPushThread;
-	
+
 	bool			m_bFinished;			// 网络流是否结束了
 
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
+
+	int				m_nVideoWidth;
+	int				m_nVideoHeight;
 
 	string			m_strSPS;				// SPS
 	string			m_strPPS;				// PPS
@@ -92,16 +171,37 @@ private:
 	LibRtmp	  *		m_lpRtmp;				// rtmp拉流对象...
 };
 
+class LibMP4;
 class CPushThread : public OSThread
 {
 public:
 	CPushThread(HWND hWndParent);
 	~CPushThread();
 public:
-	BOOL			InitThread(CCamera * lpCamera, CString & strRtspUrl, string & strRtmpUrl);
-	int				PushFrame(FMS_FRAME & inFrame);
+	static void Initialize();
+	static void UnInitialize();
+public:
+	BOOL			StreamInitThread(CCamera * lpCamera, BOOL bFileMode, string & strStreamUrl, string & strStreamMP4);
+	BOOL			StreamStartLivePush(CCamera * lpCamera, string & strRtmpUrl);
+	BOOL			StreamStopLivePush(CCamera * lpCamera);
+	void			SetStreamPlaying(BOOL bFlag);
+	void			SetStreamPublish(BOOL bFlag);
+	BOOL			StreamBeginRecord(LPCTSTR lpszPathMP4);
+	BOOL			StreamWriteRecord(FMS_FRAME & inFrame);
+	BOOL			StreamEndRecord();
+
+	BOOL			DeviceInitThread(CCamera * lpCamera, CString & strRtspUrl, string & strRtmpUrl);
+
+	DWORD			GetStreamRecSize() { return m_dwWriteSize; }
+	DWORD			GetStreamRecMS() { return m_dwWriteRecMS; }
+	BOOL			IsStreamPlaying() { return m_bStreamPlaying; }
+	BOOL			IsCameraDevice() { return ((m_nStreamProp == kStreamDevice) ? true : false); }
+	BOOL			IsPublishing() { return m_bIsPublishing; }
 	int				GetSendKbps() { return m_nSendKbps; }
-	void			doErrNotify();
+	int				GetRecvKbps();
+	BOOL			IsRecording();
+
+	int				PushFrame(FMS_FRAME & inFrame);
 private:
 	virtual	void	Entry();
 
@@ -116,22 +216,45 @@ private:
 
 	bool			IsDataFinished();
 	BOOL			IsFrameTimeout();
+	void			BeginSendPacket();
+	void			EndSendPacket();
+	void			dropToKeyFrame();
+	void			doErrNotify();
+
+	BOOL			MP4CreateVideoTrack();
+	BOOL			MP4CreateAudioTrack();
 private:
-	OSMutex			m_Mutex;
-	bool			m_bFileMode;
-	string			m_strRtmpUrl;
-	uint32_t		m_nSendKbps;		// 发送码流
-	uint32_t		m_nCurSendByte;		// 当前已发送字节数
+	STREAM_PROP		m_nStreamProp;		// 通道流类型...
+	OSMutex			m_Mutex;			// 互斥对象
+	string			m_strRtmpUrl;		// 推流地址
 	DWORD			m_dwTimeOutMS;		// 超时计时点
 	HWND			m_hWndParent;		// 父窗口对象
 	bool			m_bDeleteFlag;		// 已删除标志
+
+	BOOL			m_bIsPublishing;	// 是否处于直播发布状态...
+	BOOL			m_bStreamPlaying;	// 是否处于流数据正常状态...
+
+	DWORD			m_dwRecvTimeMS;		// 接收计时时间
+	uint32_t		m_nRecvKbps;		// 接收码流
+	uint32_t		m_nCurRecvByte;		// 当前已接收字节数
+	uint32_t		m_nSendKbps;		// 发送码流
+	uint32_t		m_nCurSendByte;		// 当前已发送字节数
 	
 	CCamera		*	m_lpCamera;			// 摄像头对象...
 	CRtmpThread	*	m_lpRtmpThread;		// rtmp线程...
 	CRtspThread	*	m_lpRtspThread;		// rtsp线程...
+	CMP4Thread  *   m_lpMP4Thread;		// mp4线程...
 
-	LibRtmp		*	m_lpRtmp;			// rtmp发送对象...
+	LibMP4		*	m_lpRecMP4;			// mp4录像对象...
+	string			m_strUTF8MP4;		// mp4存盘路径(UTF-8)
+	DWORD			m_dwWriteSize;		// 写入文件长度...
+	DWORD			m_dwWriteRecMS;		// 已经写入的毫秒数...
+
+	LibRtmp		*	m_lpRtmpPush;		// rtmp发送对象...
 	KH_MapFrame		m_MapFrame;			// 按时间排序的帧数据队列
+	KH_MapFrame		m_MapStream;		// 流转发模式缓存数据区
+	int				m_nKeyFrame;		// 已经缓存的关键帧计数器
+	DWORD			m_dwFirstSendTime;	// 第一个数据包的时间戳
 
 	friend class CCamera;
 };

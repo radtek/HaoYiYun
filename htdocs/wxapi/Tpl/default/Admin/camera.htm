@@ -1,0 +1,163 @@
+
+<include file = "Common:admin_header" />
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理 - <i class="fa fa-video-camera">&nbsp;</i>摄像头</legend>
+        </fieldset>
+        <span class="layui-breadcrumb">
+          <a href="{{:__APP__}}/Admin/gather">采集端</a>
+          <a><cite>摄像头</cite></a>
+        </span>
+        <div style="margin-top:10px;width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="60">
+              <col width="80">
+              <col width="80">
+              <col width="100">
+              <col width="100">
+              <col width="80">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>状态</th>
+                <th>年级</th>
+                <th>班级</th>
+                <th>数据源</th>
+                <th>设备型号</th>
+                <th>操作</th>
+              </tr> 
+            </thead>
+            <tbody class="js_camera"></tbody>
+          </table>
+          <div style="float:left;" id="myPage"></div>
+        </div>        
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 点击某一行事件...
+function doTrClick(inCameraID,inGatherID,objTr) {
+  // 向服务器发送直播状态查看命令...
+  var index = layer.load(2);
+  var $ = layui.jquery;
+  // 先将背景色进行修改...
+  $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
+  // 异步获取通道信息...
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/getCamera/camera_id/"+inCameraID,
+    success: function(ajaxData) {
+      layer.closeAll('loading');
+      layer.open({
+        type: 1, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+        closeBtn: 1,
+        fixed: true,
+        shadeClose: false,
+        area: ['500px', '400px'],
+        title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 摄像头",
+        content: ajaxData,
+        success: function() {
+          var form = layui.form();
+          form.render();
+          // 这里必须调用render才能显示select...
+          form.on('submit(formCamera)', function(data) {
+            var theCameraName = data.field.myCameraName;
+            var theCameraGrade = data.field.myCameraGrade;
+            var theGradeName = $("select[name='myCameraGrade']").find("option:selected").text();
+            // 判断输入数据的有效性...
+            if( theCameraGrade <= 0 ) {
+              layer.msg('【所在年级】不能为空，请更正！', {icon: 2});
+              return false;
+            }
+            // 发送摄像头数据，通过ajax异步发送存盘命令...
+            // 传递 gather_id 和 grade_name 的目的是为了转发摄像头名称给采集端...
+            layer.load(2);
+            $.ajax({
+              type: "post",
+              async: true,
+              url: siteurl+"/Admin/saveCamera",
+              data: {camera_id: inCameraID, gather_id: inGatherID, grade_id: theCameraGrade, grade_name: theGradeName, camera_name: theCameraName},
+              success: function(ajaxData) {
+                layer.closeAll('loading');
+                layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
+                  //location.href = siteurl+"/Admin/live";
+                  $(objTr).children('td').eq(1).text(theGradeName);
+                  $(objTr).children('td').eq(2).text(theCameraName);
+                  layer.closeAll('page');
+                });
+              },
+              error: function(e) {
+                layer.closeAll('loading');
+                layer.alert(e, {icon: 2});
+              }
+            });
+            // 避免form自动跳转...
+            return false;
+          });
+          // 点击取消操作...
+          $('.js_form_close').unbind("click").click( function() {
+            layer.closeAll('page');
+          });
+        }
+      });
+    },
+    error: function(e) {
+      layer.closeAll('loading');
+      layer.alert(e, {icon: 2});
+    }
+  });
+}
+//
+// 配置录像课程表...
+function doCourse(inCameraID, inGatherID)
+{
+  event.stopPropagation();
+  location.href = siteurl+"/Admin/course/camera_id/"+inCameraID+"/gather_id/"+inGatherID;  
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var theGatherID = {{$my_gather_id}};
+  var laypage = layui.laypage;
+  var $ = layui.jquery;
+  laypage({
+    pages: {{$max_page}},   // 总页数...
+    cont: 'myPage',         // 分页对象...
+    groups: 5,              // 连续显示分页数
+    jump: function(obj, first) {
+      // 向服务器发送分页命令...
+      var index = layer.load(2);
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Admin/pageCamera/p/"+obj.curr+"/gather_id/"+theGatherID,
+        success: function(ajaxData) {
+          layer.closeAll('loading');
+          $('.js_camera').html(ajaxData);
+          $('tbody tr').css('cursor','pointer');
+        },
+        error: function(e) {
+          layer.closeAll('loading');
+          layer.alert(e, {icon: 2});
+        }
+      });    
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

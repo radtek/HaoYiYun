@@ -50,6 +50,8 @@ BOOL CDlgSetDVR::OnInitDialog()
 {
 	//CDialogEx::OnInitDialog();
 
+	SetIcon(AfxGetApp()->LoadIcon(IDR_MAINFRAME), FALSE);
+
 	ASSERT( m_nDVRID > 0 );
 	GM_MapData theDataLoc;
 	TCHAR szDecodePass[MAX_PATH] = {0};

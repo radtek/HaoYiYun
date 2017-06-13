@@ -1,6 +1,10 @@
 #ifndef MP4V2_GENERAL_H
 #define MP4V2_GENERAL_H
 
+#if defined(__WIN32__) || defined(_WIN32) || defined(_QNX4)
+#define strcasecmp  _stricmp
+#endif
+
 /**************************************************************************//**
  *
  *  @defgroup mp4_general MP4v2 General

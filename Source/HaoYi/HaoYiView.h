@@ -39,16 +39,20 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 protected:
+	afx_msg void OnAddDVR();
+	afx_msg void OnModDVR();
+	afx_msg void OnDelDVR();
 	afx_msg void OnVKFull();
 	afx_msg void OnVKEscape();
-	afx_msg void OnDVRSet();
 	afx_msg void OnSysSet();
 	afx_msg void OnLoginDVR();
 	afx_msg void OnLogoutDVR();
 	afx_msg void OnDestroy();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnCmdUpdateSetDVR(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateAddDVR(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateModDVR(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateDelDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateLoginDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
@@ -62,6 +66,7 @@ protected:
 	afx_msg LRESULT	OnMsgFocusVideo(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnMsgEventSession(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgWebAuthExpired(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -97,8 +102,9 @@ public:
 	void			OnCreateCamera(int nCameraID, CString & strTitle);
 	void			doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType);
 	BOOL			doWebRegCamera(GM_MapData & inData);// 向网站注册摄像头...
+	BOOL			doWebDelCamera(string & inDeviceSN);// 向网站删除摄像头...
 
-	void			doChangeAutoDVR(DWORD dwErrCode);
+	int				GetNextAutoID(int nCurCameraID);	// 得到下一个窗口编号...
 	int				GetCameraStatusByDBID(int nDBCameraID);
 	void			UpdateFocusTitle(int nLocalID, CString & strTitle);
 	void			doCourseChanged(int nOperateID, int nLocalID, GM_MapData & inData);
@@ -119,6 +125,7 @@ private:
 	GM_Error		DelByEventThread(CFastSession * lpSession);
 	GM_Error		AddToEventThread(CFastSession * lpSession);
 	void			OnOptDelSession(ULONG inUniqueID);
+	void			doDelTreeFocus(int nCameraID);
 
 	void			doRecStartCourse(int nCameraID, int nCourseID);
 	void			doRecStopCourse(int nCameraID, int nCourseID);

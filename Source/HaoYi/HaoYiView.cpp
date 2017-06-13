@@ -12,6 +12,7 @@
 #include "XmlConfig.h"
 #include "DlgSetSys.h"
 #include "DlgSetDVR.h"
+#include "DlgPushDVR.h"
 #include "WebThread.h"
 #include "SocketUtils.h"
 #include "Camera.h"
@@ -36,20 +37,25 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_COMMAND(ID_VK_FULL, &CHaoYiView::OnVKFull)
 	ON_COMMAND(ID_VIEW_FULL, &CHaoYiView::OnVKFull)
 	ON_COMMAND(ID_VK_ESCAPE, &CHaoYiView::OnVKEscape)
-	ON_UPDATE_COMMAND_UI(ID_DVR_SET, &CHaoYiView::OnCmdUpdateSetDVR)
+	ON_UPDATE_COMMAND_UI(ID_ADD_DVR, &CHaoYiView::OnCmdUpdateAddDVR)
+	ON_UPDATE_COMMAND_UI(ID_MOD_DVR, &CHaoYiView::OnCmdUpdateModDVR)
+	ON_UPDATE_COMMAND_UI(ID_DEL_DVR, &CHaoYiView::OnCmdUpdateDelDVR)
 	ON_UPDATE_COMMAND_UI(ID_LOGIN_DVR, &CHaoYiView::OnCmdUpdateLoginDVR)
 	ON_UPDATE_COMMAND_UI(ID_LOGOUT_DVR, &CHaoYiView::OnCmdUpdateLogoutDVR)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE_DEVICE, &CHaoYiView::OnSelchangedTreeDevice)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
 	ON_MESSAGE(WM_WEB_LOAD_RESOURCE,&CHaoYiView::OnMsgWebLoadResource)
+	ON_MESSAGE(WM_WEB_AUTH_EXPIRED,&CHaoYiView::OnMsgWebAuthExpired)
 	ON_MESSAGE(WM_EVENT_SESSION_MSG, &CHaoYiView::OnMsgEventSession)
 	ON_MESSAGE(WM_FIND_HK_CAMERA, &CHaoYiView::OnMsgFindHKCamera)
 	ON_MESSAGE(WM_FOCUS_VIDEO, &CHaoYiView::OnMsgFocusVideo)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
-	ON_COMMAND(ID_DVR_SET, &CHaoYiView::OnDVRSet)
 	ON_COMMAND(ID_SYS_SET, &CHaoYiView::OnSysSet)
+	ON_COMMAND(ID_ADD_DVR, &CHaoYiView::OnAddDVR)
+	ON_COMMAND(ID_MOD_DVR, &CHaoYiView::OnModDVR)
+	ON_COMMAND(ID_DEL_DVR, &CHaoYiView::OnDelDVR)
 END_MESSAGE_MAP()
 
 CHaoYiView::CHaoYiView()
@@ -230,7 +236,7 @@ void CHaoYiView::OnCreateCamera(int nCameraID, CString & strTitle)
 	m_DeviceTree.Expand(m_hRootItem,TVE_EXPAND);
 	// 选中节点，保存焦点编号, 通知中间视图、右侧视图焦点变化...
 	// 必须先保存焦点，否则右侧窗口状态显示混乱...
-	if( nCameraID == 1 && m_lpMidView != NULL ) {
+	if( m_nFocusCamera <= 0 && m_lpMidView != NULL ) {
 		m_nFocusCamera = nCameraID;
 		m_DeviceTree.SelectItem(hItemTree);
 		m_lpMidView->doLeftFocus(nCameraID);
@@ -239,7 +245,7 @@ void CHaoYiView::OnCreateCamera(int nCameraID, CString & strTitle)
 }
 //
 // 响应监控通道窗口的焦点事件...
-HRESULT CHaoYiView::OnMsgFocusVideo(WPARAM wParam, LPARAM lParam)
+LRESULT CHaoYiView::OnMsgFocusVideo(WPARAM wParam, LPARAM lParam)
 {
 	// 通知左侧树状控件焦点变化...
 	int nFocusID = wParam;
@@ -263,17 +269,30 @@ HRESULT CHaoYiView::OnMsgFocusVideo(WPARAM wParam, LPARAM lParam)
 
 BOOL CHaoYiView::GetMacIPAddr()
 {
-	IP_ADAPTER_INFO adapter[5] = {0}; //Maximum 5 adapters
-	DWORD buflen = sizeof(adapter);
-	DWORD status = GetAdaptersInfo(adapter, &buflen);
-	BYTE sBuf[8] = {0};
-	if( status != ERROR_SUCCESS )
+	// 这里分配空间很重要，需要多分配一些...
+	DWORD buflen = sizeof(IP_ADAPTER_INFO) * 3;
+	IP_ADAPTER_INFO * lpAdapter = new IP_ADAPTER_INFO[3];
+	DWORD status = GetAdaptersInfo(lpAdapter, &buflen);
+	if( status != ERROR_SUCCESS ) {
+		delete [] lpAdapter;
 		return false;
-	// 获取MAC地址和IP地址，地址是相互关联的...
-	PIP_ADAPTER_INFO painfo = adapter;
-	memcpy(sBuf, painfo->Address, 6);
-	m_strMacAddr.Format("%02X-%02X-%02X-%02X-%02X-%02X", sBuf[0], sBuf[1], sBuf[2], sBuf[3], sBuf[4], sBuf[5]);
-	m_strIPAddr.Format("%s", painfo->IpAddressList.IpAddress.String);
+	}
+	// 开始循环遍历网卡节点...
+	IP_ADAPTER_INFO * lpInfo = lpAdapter;
+	while( lpInfo != NULL ) {
+		// 必须是以太网卡，必须是IPV4的网卡，必须是有效的网卡...
+		if( lpInfo->Type != MIB_IF_TYPE_ETHERNET || lpInfo->AddressLength != 6 || strcmp(lpInfo->IpAddressList.IpAddress.String, "0.0.0.0") == 0 ) {
+			lpInfo = lpInfo->Next;
+			continue;
+		}
+		// 获取MAC地址和IP地址，地址是相互关联的...
+		m_strMacAddr.Format("%02X-%02X-%02X-%02X-%02X-%02X", lpInfo->Address[0], lpInfo->Address[1], lpInfo->Address[2], lpInfo->Address[3], lpInfo->Address[4], lpInfo->Address[5]);
+		m_strIPAddr.Format("%s", lpInfo->IpAddressList.IpAddress.String);
+		lpInfo = lpInfo->Next;
+	}
+	// 释放分配的缓冲区...
+	delete [] lpAdapter;
+	lpAdapter = NULL;
 	// 另一种获取IP地址的方法 => MAC地址与IP地址不一定相互关联...
 	/*if( SocketUtils::GetNumIPAddrs() > 1 ) {
 		StrPtrLen * lpAddr = SocketUtils::GetIPAddrStr(0);
@@ -337,6 +356,14 @@ void CHaoYiView::BuildResource()
 		return;
 	}
 	// 不能直接启动其它资源，必须通过网络交互线程来启动...
+}
+//
+// 网站授权验证结果...
+LRESULT CHaoYiView::OnMsgWebAuthExpired(WPARAM wParam, LPARAM lParam)
+{
+	ASSERT( m_lpMidView != NULL );
+	m_lpMidView->SetAuthExpired(wParam);
+	return S_OK;
 }
 //
 // 网站线程加载的资源...
@@ -758,8 +785,14 @@ void CHaoYiView::doCheckDVR()
 	}
 }
 //
+// 得到下一个窗口编号...
+int CHaoYiView::GetNextAutoID(int nCurCameraID)
+{
+	return ((m_lpMidView != NULL) ? m_lpMidView->GetNextAutoID(nCurCameraID) : DEF_CAMERA_START_ID);
+}
+//
 // 改变自动连接DVR的时间周期...
-void CHaoYiView::doChangeAutoDVR(DWORD dwErrCode)
+/*void CHaoYiView::doChangeAutoDVR(DWORD dwErrCode)
 {
 	// 检查是否允许自动连接DVR服务器...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -772,7 +805,7 @@ void CHaoYiView::doChangeAutoDVR(DWORD dwErrCode)
 		return;
 	// 其它错误，增大自动连接周期...
 	this->SetTimer(kTimerCheckDVR, 2 * 10 * 1000, NULL);
-}
+}*/
 
 void CHaoYiView::DestroyResource()
 {
@@ -1138,6 +1171,14 @@ BOOL CHaoYiView::doWebRegCamera(GM_MapData & inData)
 	return m_lpWebThread->doWebRegCamera(inData);
 }
 //
+// 向网站删除摄像头...
+BOOL CHaoYiView::doWebDelCamera(string & inDeviceSN)
+{
+	if( m_lpWebThread == NULL )
+		return false;
+	return m_lpWebThread->doWebDelCamera(inDeviceSN);
+}
+//
 // 响应 VK_Escape 系统快捷键...
 void CHaoYiView::OnVKEscape()
 {
@@ -1152,6 +1193,40 @@ void CHaoYiView::OnVKFull()
 	if( m_lpMidView != NULL ) {
 		m_lpMidView->ChangeFullScreen(!m_lpMidView->IsFullScreen());
 	}
+}
+//
+// 更新 添加通道 菜单状态...
+void CHaoYiView::OnCmdUpdateAddDVR(CCmdUI *pCmdUI)
+{
+	// 已经在网站注册成功之后才有效...
+	pCmdUI->Enable(m_lpFastThread != NULL ? true : false);
+}
+//
+// 更新 修改通道 菜单状态...
+void CHaoYiView::OnCmdUpdateModDVR(CCmdUI *pCmdUI)
+{
+	// 通过当前焦点编号查找DVR对象...
+	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
+	if( lpCamera == NULL ) {
+		pCmdUI->Enable(false);
+		return;
+	}
+	// 设置菜单状态...
+	pCmdUI->Enable(true);
+}
+//
+// 更新 删除通道 菜单状态...
+void CHaoYiView::OnCmdUpdateDelDVR(CCmdUI *pCmdUI)
+{
+	// 通过当前焦点编号查找DVR对象...
+	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
+	if( lpCamera == NULL || lpCamera->IsCameraDevice() ) {
+		pCmdUI->Enable(false);
+		return;
+	}
+	// 设置菜单状态 => 一定是流转发类型...
+	ASSERT( !lpCamera->IsCameraDevice() );
+	pCmdUI->Enable(true);
 }
 //
 // 更新 登录通道 菜单状态...
@@ -1180,22 +1255,21 @@ void CHaoYiView::OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI)
 	pCmdUI->Enable(lpCamera->IsLogin());
 }
 //
-// 更新 设置通道 菜单状态...
-void CHaoYiView::OnCmdUpdateSetDVR(CCmdUI *pCmdUI)
-{
-	// 通过当前焦点编号查找DVR对象...
-	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
-	if( lpCamera == NULL ) {
-		pCmdUI->Enable(false);
-		return;
-	}
-	// 设置菜单状态...
-	pCmdUI->Enable(true);
-}
-//
 // 点击菜单 => 登录通道...
 void CHaoYiView::OnLoginDVR()
 {
+	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
+	if( lpCamera == NULL || lpCamera->IsLogin() )
+		return;
+	GM_Error theErr = GM_NoErr;
+	if( !lpCamera->IsCameraDevice() ) {
+		theErr = lpCamera->doStreamLogin();
+		if( theErr != GM_NoErr ) {
+			MsgLogGM(theErr);
+		}
+		return;
+	}
+	ASSERT( lpCamera->IsCameraDevice() );
 	if( m_RightView.m_hWnd != NULL ) {
 		m_RightView.doClickBtnLogin();
 	}
@@ -1204,28 +1278,113 @@ void CHaoYiView::OnLoginDVR()
 // 点击菜单 => 注销通道...
 void CHaoYiView::OnLogoutDVR()
 {
+	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
+	if( lpCamera == NULL )
+		return;
+	STREAM_PROP theProp = lpCamera->GetStreamProp();
+	GM_Error theErr = GM_NoErr;
+	if( !lpCamera->IsCameraDevice() ) {
+		theErr = lpCamera->doStreamLogout();
+		if( theErr != GM_NoErr ) {
+			MsgLogGM(theErr);
+		}
+		return;
+	}
+	ASSERT( lpCamera->IsCameraDevice() );
 	if( m_RightView.m_hWnd != NULL ) {
 		m_RightView.doClickBtnLogout();
 	}
 }
 //
-// 点击菜单 => 通道设置...
-void CHaoYiView::OnDVRSet()
+// 点击菜单 => 添加通道...
+void CHaoYiView::OnAddDVR()
+{
+	CDlgPushDVR	dlg(false, -1, false, this);
+	if( IDOK != dlg.DoModal() )
+		return;
+	// 添加操作成功，开始创建新的通道...
+	GM_Error theErr = GM_NoErr;
+	GM_MapData & theData = dlg.GetPushData();
+	theErr = m_lpMidView->doCameraUDPData(theData, kCameraNO);
+	if( theErr != GM_NoErr ) {
+		MsgLogGM(theErr);
+		return;
+	}
+	// 手动添加通道成功...
+}
+//
+// 点击菜单 => 删除通道...
+void CHaoYiView::OnDelDVR()
+{
+	// 判断当前通道是否有效，如果是摄像头设备，直接返回...
+	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
+	if( lpCamera == NULL || lpCamera->IsCameraDevice() )
+		return;
+	// 得到要删除窗口的序列号，通知网站时使用，不能用引用，因为会被删除...
+	int nCameraID = m_nFocusCamera;
+	string strDeviceSN = lpCamera->GetDeviceSN();
+	// 删除之前的询问...
+	if( ::MessageBox(this->m_hWnd, "确实要删除当前选中的通道吗？", "确认", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL )
+		return;
+	// 左侧窗口发起删除操作...
+	this->doDelTreeFocus(nCameraID);
+	// 中间窗口发起删除操作...
+	m_lpMidView->doDelDVR(nCameraID);
+	// 通知网站发起删除操作...
+	this->doWebDelCamera(strDeviceSN);
+	// 配置文件发起删除操作...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.doDelDVR(nCameraID);
+}
+//
+// 删除左侧树形焦点节点...
+void CHaoYiView::doDelTreeFocus(int nCameraID)
+{
+	HTREEITEM hChildItem = m_DeviceTree.GetChildItem(m_hRootItem);
+	while( hChildItem != NULL ) {
+		// 如果编号一致，直接删除这个节点...
+		if( nCameraID == m_DeviceTree.GetItemData(hChildItem) ) {
+			m_DeviceTree.DeleteItem(hChildItem);
+			break;
+		}
+		// 如果不是，继续寻找下一个节点...
+		hChildItem = m_DeviceTree.GetNextSiblingItem(hChildItem);
+	}
+}
+//
+// 点击菜单 => 修改通道...
+void CHaoYiView::OnModDVR()
 {
 	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
 	if( m_nFocusCamera <= 0 || lpCamera == NULL )
 		return;
+	CString strDVRName;
 	ASSERT( m_nFocusCamera > 0 && lpCamera != NULL );
-	CDlgSetDVR dlg(m_nFocusCamera, lpCamera->IsLogin(), this);
-	if( IDOK != dlg.DoModal() )
-		return;
+	STREAM_PROP theProp = lpCamera->GetStreamProp();
+	if( lpCamera->IsCameraDevice() ) {
+		// 针对设备通道的修改操作...
+		CDlgSetDVR dlg(m_nFocusCamera, lpCamera->IsLogin(), this);
+		if( IDOK != dlg.DoModal() )
+			return;
+		// 对话框返回之前，修改信息已经存盘...
+		strDVRName = dlg.m_strDVRName;
+	} else {
+		// 针对流转发通道的修改操作...
+		CDlgPushDVR dlg(true, m_nFocusCamera, lpCamera->IsLogin(), this);
+		if( IDOK != dlg.DoModal() )
+			return;
+		// 对话框返回之前，修改信息已经存盘...
+		strDVRName = dlg.m_strDVRName;
+		theProp = (dlg.m_bFileMode ? kStreamMP4File : kStreamUrlLink);
+		// 这里需要将修改信息，通知网站更新数据库...
+		this->doWebRegCamera(dlg.GetPushData());
+	}
 	// 如果通道名称发生变化，通知网站更新数据库...
 	//if( m_lpWebThread != NULL && dlg.m_bNameChanged && dlg.m_strDBCameraID.size() > 0 ) {
 	//	m_lpWebThread->doSaveCameraName(dlg.m_strDBCameraID, dlg.m_strDVRName);
 	//}
 	// 将设置的通道信息应用到中间界面当中...
-	CString & strDVRName = dlg.m_strDVRName;
-	lpCamera->UpdateWndTitle(strDVRName);
+	lpCamera->UpdateWndTitle(theProp, strDVRName);
 	// 将设置的通道信息应用到右侧界面当中...
 	m_RightView.doFocusCamera(m_nFocusCamera);
 	// 获取左侧选中的节点...

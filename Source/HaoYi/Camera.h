@@ -18,22 +18,35 @@ public:
 public:
 	BOOL		IsLogin();		// 这个状态只能用于显示，不能用于状态判断...
 	BOOL		IsPlaying();	// 这个可以用于状态的精确判断...
-	BOOL		IsRecording() { return ((m_lpRecThread != NULL) ? true : false); }
-	BOOL		IsPublishing() { return ((m_lpPushThread != NULL) ? true : false); }
+	BOOL		IsRecording();	// 通道是否正处在录像中...
+	BOOL		IsPublishing(); // 通道是否正处在发布中...
+	BOOL		IsCameraDevice() { return ((m_nStreamProp == kStreamDevice) ? true : false); }
 	int			GetRecCourseID() { return m_nRecCourseID; }
 	DWORD		GetHKErrCode() { return m_dwHKErrCode; }
+	STREAM_PROP	GetStreamProp() { return m_nStreamProp; }
+
+	int			GetRecvPullKbps();
+	int			GetSendPushKbps();
+	LPCTSTR		GetStreamPushUrl();
+
+	GM_Error	doStreamLogin();
+	GM_Error	doStreamLogout();
+	void		doStreamStopLivePush();
+	void		doStreamStatus(LPCTSTR lpszStatus);
 
 	BOOL		InitCamera(GM_MapData & inMapLoc);
 	GM_Error	ForUDPData(GM_MapData & inNetData);
 
 	void		doRecEnd(int nRecSecond);
 
-	DWORD		doSnapJPG(string & inUniqidName);
+	void		doStreamSnapJPG(int nRecSecond);
+	DWORD		doDeviceSnapJPG(CString & inJpgName);
+
 	DWORD		doPTZCmd(DWORD dwPTZCmd, BOOL bStop);
 	DWORD		doLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LPCTSTR lpUser, LPCTSTR lpPass);
 	void		doLogout();
 
-	void		UpdateWndTitle(CString & strTitle);
+	void		UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle);
 	void		ForLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo);
 	DWORD		onLoginSuccess();
 
@@ -53,6 +66,8 @@ private:
 //	void		StartRecSlice();					// 启动一个录像切片...
 //	void		doRecSlice();
 private:
+	BOOL					m_bStreamLogin;			// 流转发模式下正在异步登录标志...
+	STREAM_PROP				m_nStreamProp;			// 通道流类型...
 	int						m_nCameraID;			// 摄像头本地编号...
 	HWND					m_hWndNotify;			// 消息通知窗口...
 	string					m_strDeviceSN;			// 本地摄像头序列号...
@@ -63,6 +78,7 @@ private:
 
 	CRecThread		*		m_lpRecThread;			// 录像线程对象...
 	CString					m_strMP4Name;			// MP4文件名(不带扩展名)...
+	CString					m_strJpgName;			// JPG文件名(全路径)...
 	int						m_nRecCourseID;			// 正在录像的课程编号...
 
 	CHaoYiView		*		m_lpHaoYiView;			// 反馈视图对象...
