@@ -123,8 +123,6 @@ public:
 public:
 	virtual GM_Error ForConnect();
 	virtual GM_Error ForRead();
-public:
-	GM_Error	doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr);
 private:
 	GM_Error    doCmdPlayLogin(string & inData);
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);

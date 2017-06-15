@@ -1235,9 +1235,12 @@ bool CPushThread::IsDataFinished()
 
 void CPushThread::SetStreamPlaying(BOOL bFlag)
 {
+	// 注意：这里需要通知网站，通道正在运行了...
+	// 注意：这里是专门处理流转发模式的运行通知...
 	m_bStreamPlaying = bFlag;
 	if( m_lpCamera != NULL ) {
 		m_lpCamera->doStreamStatus(bFlag ? "已连接" : "未连接");
+		m_lpCamera->doWebStatCamera(kCameraRun);
 	}
 }
 
@@ -1256,10 +1259,11 @@ void CPushThread::SetStreamPublish(BOOL bFlag)
 // 这里只需要处理推流失败的情况，拉流失败会全部通过超时机制自动处理...
 void CPushThread::doErrNotify()
 {
+	// 2017.06.15 - by jackey => 取消了这种延时反馈机制 => 避免php阻塞...
 	// 这里需要通知正在等待的播放器退出...
-	if( m_lpCamera != NULL ) {
-		m_lpCamera->doDelayTransmit(GM_Push_Fail);
-	}
+	//if( m_lpCamera != NULL ) {
+	//	m_lpCamera->doDelayTransmit(GM_Push_Fail);
+	//}
 	// 如果线程已经被主动删除了，直接退出...
 	if( m_bDeleteFlag )
 		return;
@@ -1299,10 +1303,11 @@ void CPushThread::Entry()
 	this->SetStreamPublish(true);
 	// 保存需要的第一帧时间戳...
 	this->BeginSendPacket();
+	// 2017.06.15 - by jackey => 取消了这种延时反馈机制...
 	// 上传准备完毕，通知 RemoteSession 可以反馈消息给直播播放器了...
-	if( m_lpCamera != NULL ) {
-		m_lpCamera->doDelayTransmit(GM_NoErr);
-	}
+	//if( m_lpCamera != NULL ) {
+	//	m_lpCamera->doDelayTransmit(GM_NoErr);
+	//}
 	// 开始线程循环...
 	int nRetValue = 0;
 	uint32_t dwStartTimeMS = ::GetTickCount();

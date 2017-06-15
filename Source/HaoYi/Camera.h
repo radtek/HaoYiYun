@@ -3,7 +3,6 @@
 
 #include "HCNetSDK.h"
 
-class CHaoYiView;
 class CPushThread;
 class CRecThread;
 class CVideoWnd;
@@ -53,10 +52,11 @@ public:
 	void		doRecStartCourse(int nCourseID);
 	void		doRecStopCourse(int nCourseID);
 
-	int			doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string & strRtmpUrl);
-	void		doDelayTransmit(GM_Error inErr);
+	int			doStartLivePush(string & strRtmpUrl);
 	void		doStopLiveMessage();
 	void		doStopLivePush();
+
+	void		doWebStatCamera(int nStatus);
 private:
 	static void CALLBACK LoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
 private:
@@ -81,10 +81,8 @@ private:
 	CString					m_strJpgName;			// JPG文件名(全路径)...
 	int						m_nRecCourseID;			// 正在录像的课程编号...
 
-	CHaoYiView		*		m_lpHaoYiView;			// 反馈视图对象...
 	CPushThread     *		m_lpPushThread;			// 直播上传线程...
 	string					m_strRtmpUrl;			// 直播上传地址...
-	int						m_nPlayerSock;			// 反馈的播放器...
 
 	CString					m_strLoginUser;			// 记录登录用户名称...
 	CString					m_strLoginPass;			// 记录登陆用户密码...

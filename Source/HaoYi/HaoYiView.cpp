@@ -88,8 +88,19 @@ CHaoYiView::~CHaoYiView()
 {
 }
 
+BOOL CHaoYiView::doWebStatCamera(int nDBCamera, int nStatus)
+{
+	if( m_lpWebThread == NULL )
+		return false;
+	return m_lpWebThread->doWebStatCamera(nDBCamera, nStatus);
+}
+
 void CHaoYiView::OnDestroy()
 {
+	// 通知网站采集端退出...
+	if( m_lpWebThread != NULL ) {
+		m_lpWebThread->doWebGatherLogout();
+	}
 	// 在窗口关闭之前，释放资源...
 	this->DestroyResource();
 	// 释放窗口句柄等资源...
@@ -623,12 +634,12 @@ void CHaoYiView::doCheckTransmit()
 }
 //
 // 转发延时命令到指定的直播播放器链接...
-GM_Error CHaoYiView::doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr)
+/*GM_Error CHaoYiView::doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr)
 {
 	if( m_lpRemoteSession == NULL )
 		return GM_NoErr;
 	return m_lpRemoteSession->doTransmitPlayer(nPlayerSock, strRtmpUrl, inErr);
-}
+}*/
 //
 // 自动检测并创建TrackerSession...
 void CHaoYiView::doCheckTracker()

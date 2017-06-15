@@ -56,6 +56,20 @@ class GatherAction extends Action
   }
   /**
   +----------------------------------------------------------
+  * 处理采集端退出 => 将所有采集端下面的通知状态设置为0...
+  +----------------------------------------------------------
+  */
+  public function logout()
+  {
+    // 判断输入的采集端编号是否有效...
+    if( !isset($_POST['gather_id']) )
+      return;
+    // 将所有该采集端下面的通道状态设置为0...
+    $map['gather_id'] = $_POST['gather_id'];
+    D('camera')->where($map)->setField('status', 0);
+  }
+  /**
+  +----------------------------------------------------------
   * 处理摄像头注册事件 => 添加或修改camera记录...
   +----------------------------------------------------------
   */
@@ -144,30 +158,35 @@ class GatherAction extends Action
   }
   /**
   +----------------------------------------------------------
-  * 处理保存摄像头名称过程 => 放弃这个操作...
+  * 处理保存摄像头信息 => 参数 camera_id | status ...
   +----------------------------------------------------------
   */
-  /*public function saveCameraName()
+  public function saveCamera()
   {
-    // 准备返回数据结构...
+    /*// 准备返回数据结构...
     $arrErr['err_code'] = false;
     $arrErr['err_msg'] = "OK";
     // 将获得的数据进行判断和处理...
-    $arrData = $_POST;
+    $dbData = $_POST;
     do {
       // 判断输入数据是否有效...
-      if( !isset($arrData['camera_id']) || !isset($arrData['camera_name']) ) {
+      if( !isset($dbData['camera_id']) || !isset($dbData['status']) ) {
         $arrErr['err_code'] = true;
-        $arrErr['err_msg'] = "摄像头编号或摄像头名称不能为空！";
+        $arrErr['err_msg'] = "摄像头编号不能为空！";
         break;
       }
       // 直接保存摄像头数据...
-      $arrData['updated'] = date('Y-m-d H:i:s');
-      D('camera')->save($arrData);
+      $arrErr['camera_id'] = $dbData['camera_id'];
+      $dbData['updated'] = date('Y-m-d H:i:s');
+      D('camera')->save($dbData);
     }while( false );
     // 直接返回运行结果 => json...
-    echo json_encode($arrErr);
-  }*/
+    echo json_encode($arrErr);*/
+
+    // 直接保存，不返回结果...
+    $_POST['updated'] = date('Y-m-d H:i:s');
+    D('camera')->save($_POST);
+  }
   /**
   +----------------------------------------------------------
   * 处理保存录像记录过程...

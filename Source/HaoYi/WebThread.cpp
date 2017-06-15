@@ -50,6 +50,7 @@ size_t procPostCurl(void *ptr, size_t size, size_t nmemb, void *stream)
 // 返回一个json数据包...
 void CWebThread::doPostCurl(char * pData, size_t nSize)
 {
+	// 准备解析需要的变量...
 	string strUTF8Data;
 	string strANSIData;
 	Json::Reader reader;
@@ -282,6 +283,48 @@ BOOL CWebThread::RegisterGather()
 	return true;
 }
 //
+// 采集端退出汇报...
+BOOL CWebThread::doWebGatherLogout()
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( m_nDBGatherID <= 0 || nWebPort <= 0 || strWebAddr.size() <= 0 )
+		return false;
+	// 先设置当前状态信息...
+	m_eRegState = kGatherLogout;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	strPost.Format("gather_id=%d", m_nDBGatherID);
+	// 组合访问链接地址...
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/logout", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		// 这里不需要网站返回的数据...
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	return true;
+}
+//
 // 在网站上注册摄像头...
 BOOL CWebThread::RegisterCamera()
 {
@@ -339,8 +382,8 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(inData["Name"].c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szEncName, MAX_PATH);
 	if( nStreamProp == kStreamDevice ) {
-		// 处理通道是摄像头的情况...
-		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s",
+		// 处理通道是摄像头的情况，设置默认的状态为0(离线)...
+		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s&status=0",
 			m_nDBGatherID, nStreamProp, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), 
 			inData["IPv4Address"].c_str(), inData["MAC"].c_str(), inData["DeviceType"].c_str());
 	} else {
@@ -353,7 +396,7 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		StringParser::EncodeURI(strUTF8Url.c_str(), strUTF8Url.size(), szUrlLink, MAX_PATH * 2);
 		// 处理通道是流转发的情况...
 		ASSERT( nStreamProp == kStreamMP4File || nStreamProp == kStreamUrlLink );
-		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&stream_mp4=%s&stream_url=%s",
+		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&stream_mp4=%s&stream_url=%s&status=0",
 			m_nDBGatherID, nStreamProp, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), szMP4File, szUrlLink);
 	}
 	// 组合访问链接地址...
@@ -447,6 +490,48 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 	ASSERT( m_nDBCameraID > 0 );
 	// 摄像头计数器减少...
 	m_nCurCameraCount -= 1;
+	return true;
+}
+//
+// 向网站汇报通道的运行状态 => 0(等待) 1(运行) 2(录像)...
+BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+		return false;
+	// 先设置当前状态信息...
+	m_eRegState = kStatCamera;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	strPost.Format("camera_id=%d&status=%d", nDBCamera, nStatus);
+	// 组合访问链接地址...
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/saveCamera", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		// 这里不需要网站返回的数据...
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
 	return true;
 }
 //

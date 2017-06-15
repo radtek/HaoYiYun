@@ -581,3 +581,10 @@ BOOL CMidView::ChangeFullScreen( BOOL bFullScreen )
 	}
 	return TRUE;
 }
+
+BOOL CMidView::doWebStatCamera(int nDBCamera, int nStatus)
+{
+	if( m_lpParentDlg == NULL ) 
+		return false;
+	return m_lpParentDlg->doWebStatCamera(nDBCamera, nStatus);
+}

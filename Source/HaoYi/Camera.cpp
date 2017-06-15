@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "UtilTool.h"
 #include "VideoWnd.h"
+#include "MidView.h"
 #include "XmlConfig.h"
 #include "RecThread.h"
 #include "PushThread.h"
@@ -17,9 +18,7 @@ CCamera::CCamera(CVideoWnd * lpWndParent)
   : m_lpWndParent(lpWndParent)
   , m_nStreamProp(kStreamDevice)
   , m_nCameraType(kCameraHK)
-  , m_lpHaoYiView(NULL)
   , m_nRtspPort(554)
-  , m_nPlayerSock(-1)
   , m_nRecCourseID(-1)
   , m_hWndNotify(NULL)
   , m_lpPushThread(NULL)
@@ -214,6 +213,27 @@ DWORD CCamera::doPTZCmd(DWORD dwPTZCmd, BOOL bStop)
 	return GM_NoErr;
 }
 //
+// 通知网站通道状态...
+void CCamera::doWebStatCamera(int nStatus)
+{
+	// 判断 VideoWnd 是否为空...
+	if( m_lpWndParent == NULL )
+		return;
+	ASSERT( m_lpWndParent != NULL );
+	// 获取 MidView 窗口对象...
+	CMidView * lpMidView = (CMidView*)m_lpWndParent->GetRealParent();
+	if( lpMidView == NULL )
+		return;
+	ASSERT( lpMidView != NULL );
+	// 通过本地编号获取数据库编号...
+	GM_MapData theMapLoc;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(m_nCameraID, theMapLoc);
+	string & strDBCameraID = theMapLoc["DBCameraID"];
+	int nDBCameraID = atoi(strDBCameraID.c_str());
+	lpMidView->doWebStatCamera(nDBCameraID, nStatus);
+}
+//
 // 设置流数据转发状态...
 void CCamera::doStreamStatus(LPCTSTR lpszStatus)
 {
@@ -246,6 +266,8 @@ void CCamera::doLogout()
 	lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
 	lpRenderWnd->SetRenderText(m_strLogStatus);
 	lpRenderWnd->SetStreamStatus(strStatus);
+	// 通知网站将通道设置为等待状态 => 硬件设备 和 流转发 都会走这条路...
+	this->doWebStatCamera(kCameraWait);
 }
 //
 // 登录回调函数接口...
@@ -271,6 +293,9 @@ void CCamera::ForLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V
 		m_strLogStatus.Format("登录失败，错误：%s", NET_DVR_GetErrorMsg(&m_dwHKErrCode));
 		m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
 		::PostMessage(m_hWndNotify, WM_DVR_LOGIN_RESULT, m_nCameraID, false);
+		// 通知网站将通道设置为等待状态 => 只有硬件设备会走这条路...
+		this->doWebStatCamera(kCameraWait);
+		// 释放该通道上的资源数据...
 		this->ClearResource();
 		MsgLogGM(m_dwHKErrCode);
 		return;
@@ -288,6 +313,7 @@ void CCamera::ForLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V
 	// 更新主窗口状态，通知主窗口，处理异步登录结果...
 	ASSERT( m_hWndNotify != NULL && m_nCameraID > 0 );
 	::PostMessage(m_hWndNotify, WM_DVR_LOGIN_RESULT, m_nCameraID, true);
+	// 这里先不通知网站通道状态，因为，后面还有操作，也可能发生错误...
 }
 //
 // 执行DVR异步登录成功的消息事件...
@@ -462,11 +488,15 @@ DWORD CCamera::onLoginSuccess()
 		m_strLogStatus.Format("登录失败，错误号：%lu", dwErr);
 		m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
 		this->ClearResource();
+		// 通知网站将通道设置为等待状态 => 只有硬件设备走这条路...
+		this->doWebStatCamera(kCameraWait);
 		return dwErr;
 	}
 	// 记录登陆状态，返回正确结果...
 	m_strLogStatus.Format("已登录 - %s", theMapLoc["Name"].c_str());
 	m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
+	// 通知网站将通道设置为运行状态 => 只有硬件设备走这条路...
+	this->doWebStatCamera(kCameraRun);
 	// 发起一个录像切片操作...
 	//this->StartRecSlice();
 	return GM_NoErr;
@@ -794,7 +824,6 @@ void CCamera::doStopLivePush()
 	}
 	// 将延时转发信息复位...
 	m_strRtmpUrl.clear();
-	m_nPlayerSock = -1;
 }
 //
 // 处理来自播放器退出引发的删除上传直播通知...
@@ -818,9 +847,9 @@ void CCamera::doStreamStopLivePush()
 //
 // 启动直播上传...
 // -1 => 启动失败，设置 err_code ...
-//  0 => 已经启动，直接反馈给播放器...
-//  1 => 首次启动，需要延时反馈给播放器...
-int CCamera::doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string & strRtmpUrl)
+//  0 => 已经启动，不用反馈给播放器...
+//  1 => 首次启动，不用延时反馈给播放器...
+int CCamera::doStartLivePush(string & strRtmpUrl)
 {
 	// 如果当前通道还没有播放，直接返回...
 	if( !this->IsPlaying() )
@@ -833,13 +862,9 @@ int CCamera::doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string &
 		ASSERT( !m_lpPushThread->IsPublishing() );
 		// 如果通道还没有上传成功，调用上传接口...
 		m_lpPushThread->StreamStartLivePush(this, strRtmpUrl);
-		// 保存数据，延时反馈时需要用到...
-		m_lpHaoYiView = lpHaoYiView;
-		m_nPlayerSock = nPlayerSock;
-		m_strRtmpUrl = strRtmpUrl;
 		return 1;
 	}
-	// 如果上传通道正在上传，将rtmp链接反馈给播放端...
+	// 如果上传通道正在上传，不用将rtmp链接反馈给播放端...
 	ASSERT( m_nStreamProp == kStreamDevice );
 	if( m_lpPushThread != NULL )
 		return 0;
@@ -853,15 +878,12 @@ int CCamera::doStartLivePush(CHaoYiView * lpHaoYiView, int nPlayerSock, string &
 	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/102", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
 	m_lpPushThread = new CPushThread(m_lpWndParent->m_hWnd);
 	m_lpPushThread->DeviceInitThread(this, strRtspUrl, strRtmpUrl);
-	// 如果是第一次上传，需要延时反馈...
-	m_lpHaoYiView = lpHaoYiView;
-	m_nPlayerSock = nPlayerSock;
-	m_strRtmpUrl = strRtmpUrl;
 	return 1;
 }
 //
+// 2017.06.15 - by jackey => 放弃这个接口...
 // 延时通知直播播放器，上传结果...
-void CCamera::doDelayTransmit(GM_Error inErr)
+/*void CCamera::doDelayTransmit(GM_Error inErr)
 {
 	if( m_lpHaoYiView == NULL || m_nPlayerSock <= 0 )
 		return;
@@ -869,7 +891,7 @@ void CCamera::doDelayTransmit(GM_Error inErr)
 	// 延时转发命令，然后将请求置空，复位...
 	m_lpHaoYiView->doTransmitPlayer(m_nPlayerSock, m_strRtmpUrl, inErr);
 	m_nPlayerSock = -1;
-}
+}*/
 //
 // 进行流转发模式的登录操作...
 GM_Error CCamera::doStreamLogin()

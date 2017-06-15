@@ -132,16 +132,23 @@ typedef enum LOG_LEVEL			// 日志层次信息
 	kLogGM			= 2,		// 内部逻辑错误日志
 };
 
-typedef enum CAMERA_TYPE		// 网络摄像机类型
-{
-	kCameraNO		= 0,		// 没有摄像机
-	kCameraHK		= 1,		// 海康摄像机
-	kCameraDH		= 2,		// 大华摄像机
-};
-
 typedef enum STREAM_PROP
 {
 	kStreamDevice	= 0,		// 摄像头设备流类型 => camera
 	kStreamMP4File	= 1,		// MP4文件流类型    => .mp4
 	kStreamUrlLink	= 2,		// URL链接流类型    => rtsp/rtmp
+};
+
+typedef enum CAMERA_TYPE		// 网络摄像机类型
+{
+	kCameraNO	= 0,			// 没有摄像机
+	kCameraHK	= 1,			// 海康摄像机
+	kCameraDH	= 2,			// 大华摄像机
+};
+
+typedef enum CAMERA_STATE
+{
+  kCameraWait   = 0,			// 未连接
+  kCameraRun    = 1,			// 运行中
+  kCameraRec    = 2,			// 录像中
 };

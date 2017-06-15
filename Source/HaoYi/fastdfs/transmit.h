@@ -13,13 +13,6 @@
 #define ERR_PUSH_FAIL	10008
 
 //
-// define camera status...
-enum {
-  kCameraWait   = 0,
-  kCameraRun    = 1,
-  kCameraRec    = 2,
-};
-//
 // define client type...
 enum {
   kClientPHP     = 1,

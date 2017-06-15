@@ -905,7 +905,7 @@ GM_Error CRemoteSession::doCmdLiveVary(LPCTSTR lpData, int nSize)
 	return GM_NoErr;
 }
 //
-// 处理直播播放器的中转命令 => 需要回应...
+// 处理直播播放器的中转命令 => 无需回应 => 2017.06.15 - by jackey...
 GM_Error CRemoteSession::doCmdPlayLogin(string & inData)
 {
 	// 从传递过来的数据中解析出JSON内容，有效性前面已经判断了...
@@ -962,27 +962,16 @@ GM_Error CRemoteSession::doCmdPlayLogin(string & inData)
 			break;
 		}
 		ASSERT( lpCamera != NULL );
-		// 启动直播上传通道...
-		// -1 => 启动失败，设置 err_code ...
-		//  0 => 已经启动，直接反馈给播放器...
-		//  1 => 首次启动，需要延时反馈给播放器...
-		int nResult = lpCamera->doStartLivePush(m_lpHaoYiView, lpCmdHeader->m_sock, strRtmpUrl);
-		if( nResult < 0 ) {
-			MsgLogGM(theErr);
-			break;
-		} else if( nResult == 0 ) {
-			theErr = GM_NoErr;
-			break;
-		} else if( nResult > 0 ) {
-			return GM_NoErr;
-		}
+		// 2017.06.15 - by jackey => 启动直播上传通道 => 无需延时，直接返回...
+		int nResult = lpCamera->doStartLivePush(strRtmpUrl);
+		(nResult < 0) ? MsgLogGM(theErr) : NULL;
 	}while( false );
-	// 一切正常，转发命令到直播播放器...
-	return this->doTransmitPlayer(lpCmdHeader->m_sock, strRtmpUrl, theErr);
+	// 2017.06.15 - by jackey => 无需回应，直接返回...
+	return GM_NoErr;
 }
 //
 // 转发命令到指定的直播播放器...
-GM_Error CRemoteSession::doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr)
+/*GM_Error CRemoteSession::doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr)
 {
 	// 准备好需要发送的缓存区...
 	string strJson;
@@ -1006,7 +995,7 @@ GM_Error CRemoteSession::doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, 
 	nSendSize += strJson.size();
 	// 调用统一的发送接口...
 	return this->SendData(szSendBuf, nSendSize);
-}
+}*/
 //
 // 处理PHP客服端发送的设置摄像头名称命令...
 // 数据格式 => Cmd_Header + JSON...
@@ -1151,6 +1140,7 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSi
 	return GM_NoErr;
 }
 //
+// 2017.06.14 - by jackey => 这个命令没用了，采集端主动汇报通道状态...
 // 处理PHP客服端需要的摄像头状态的命令 => 需要返回 JSON 数据...
 // 数据格式 => Cmd_Header + JSON...
 // JSON格式 => 8:7:6:5

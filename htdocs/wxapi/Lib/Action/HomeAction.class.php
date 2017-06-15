@@ -59,13 +59,15 @@ class HomeAction extends Action
       return;
     }
     // 如果找到了用户编号和用户头像，将这个编号解析出来，放入cookie当中...
-    if( isset($_GET['code']) && isset($_GET['wx_unionid']) && isset($_GET['wx_headurl']) && isset($_GET['wx_ticker']) ) {
-			// 验证时间戳是否在有效范围之内 => 超过30秒，弹出错误框...
+    if( isset($_GET['wx_unionid']) && isset($_GET['wx_headurl']) && isset($_GET['wx_ticker']) ) {
+			// 2017.06.15 - by jackey => 去掉了时间戳验证超时的功能...
+			/*// 验证时间戳是否在有效范围之内 => 超过30秒，弹出错误框...
+      isset($_GET['code']) && 
 			$theStamp = urlsafe_b64decode($_GET['code']);
 			if( (time() - $theStamp) > 30 ) {
 				$this->dispError('登录超时', '糟糕，登录失败了');
 				return;
-			}
+			}*/
 			// 获取服务器反馈的信息...
       $strUnionid = urlsafe_b64decode($_GET['wx_unionid']);
       $strHeadUrl = urlsafe_b64decode($_GET['wx_headurl']);
@@ -106,10 +108,13 @@ class HomeAction extends Action
     // 没有cookie，没有错误，没有unionid，说明是正常登录...
     ///////////////////////////////////////////////////////////
 
+		// 2017.06.15 - by jackey => 去掉了时间戳验证超时的功能...
+    //$state = sprintf("http://%s%s/Home/login/code/%s", $_SERVER['HTTP_HOST'], __APP__, urlsafe_b64encode(time()));
+
     // 获取登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 拼接当前访问页面的完整链接地址（增加时间戳标记） => 登录服务器会反向调用...
-    $state = sprintf("http://%s%s/Login/index/code/%s", $_SERVER['HTTP_HOST'], __APP__, urlsafe_b64encode(time()));
+    $state = sprintf("http://%s%s/Home/login", $_SERVER['HTTP_HOST'], __APP__);
     // 去掉最后一个字符，如果是反斜杠...
     $state = removeSlash($state);
     // 对链接地址进行base64加密...
@@ -269,6 +274,7 @@ class HomeAction extends Action
   }*/
   //
   // 获取摄像头在线状态标志...
+  // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
   private function getCameraStatusFromTransmit($arrGather, &$arrSchool)
   {
     // 尝试链接中转服务器...
@@ -372,7 +378,15 @@ class HomeAction extends Action
     // 对模板对象进行赋值...
     $this->assign('my_title', '云录播 - 直播');
     $this->assign('my_nav', $my_nav);
-    // 查找以学校为分类的摄像头列表...
+
+    // 2017.06.14 - by jackey => 直接从数据库中读取通道状态，避免从采集端读取造成的阻塞...
+    $arrSchool = D('school')->order('school_id ASC')->select();
+    foreach($arrSchool as &$dbSchool) {
+      $map['school_id'] = $dbSchool['school_id'];
+      $dbSchool['data'] = D('LiveView')->where($map)->order('camera_id ASC')->select();
+    }
+    
+    /*// 查找以学校为分类的摄像头列表...
     $arrGather = array();
     $arrSchool = D('school')->order('school_id ASC')->select();
     foreach($arrSchool as &$dbSchool) {
@@ -385,7 +399,8 @@ class HomeAction extends Action
       }
     }
     // 得到直播摄像头的状态信息...
-    $this->getCameraStatusFromTransmit($arrGather, $arrSchool);
+    $this->getCameraStatusFromTransmit($arrGather, $arrSchool);*/
+    
     // 设置模板参数...
     $this->assign('my_list', $arrSchool);
     $this->display('live');
@@ -518,6 +533,7 @@ class HomeAction extends Action
     $this->display('Common:error_page');
   }
   //
+  // 2017.06.15 - by jackey => 修改了中转服务器代码，转发命令给采集端之后，立即返回rtmp地址，无需等待采集端上传结果，避免阻塞，让播放器自己去等待...
   // 从中转服务器获取直播地址...
   // 成功 => array()
   // 失败 => false

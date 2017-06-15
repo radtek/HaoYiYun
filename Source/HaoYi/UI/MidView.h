@@ -36,6 +36,7 @@ public:
 	CCamera		*	FindCameraBySN(string & inDeviceSN);
 	GM_Error		AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType);
 	GM_Error		doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType);
+	BOOL			doWebStatCamera(int nDBCamera, int nStatus);
 private:
 	void			FixVideoWnd();						// 锁定窗口...
 	void			BuildResource();					// 创建资源...

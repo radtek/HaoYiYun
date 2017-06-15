@@ -103,12 +103,12 @@ public:
 	void			doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType);
 	BOOL			doWebRegCamera(GM_MapData & inData);// 向网站注册摄像头...
 	BOOL			doWebDelCamera(string & inDeviceSN);// 向网站删除摄像头...
+	BOOL			doWebStatCamera(int nDBCamera, int nStatus);
 
 	int				GetNextAutoID(int nCurCameraID);	// 得到下一个窗口编号...
 	int				GetCameraStatusByDBID(int nDBCameraID);
 	void			UpdateFocusTitle(int nLocalID, CString & strTitle);
 	void			doCourseChanged(int nOperateID, int nLocalID, GM_MapData & inData);
-	GM_Error		doTransmitPlayer(int nPlayerSock, string & strRtmpUrl, GM_Error inErr);
 public:
 	CMidView    *	GetMidView()     { return m_lpMidView; }
 	CTreeCtrl   &	GetTreeCtrl()	 { return m_DeviceTree; }
