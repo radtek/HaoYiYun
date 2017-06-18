@@ -36,7 +36,7 @@ var assil = { debgug: false };
                 start: 3, end: 9,
                 disabled: false,
                 css: {
-                    range: '',
+                    range: 'custom-range-green',
                     label: ''
                 },
                 allowDelete: true, //indicates if can ranges can be removed
@@ -149,6 +149,16 @@ var assil = { debgug: false };
                   .on('dblclick', range_dblclick);
             return $range;
         },
+        getRangeByID: function(rangeId) {
+            var $ranges = this.element.children('.range');
+            for(var i = 0; i < $ranges.length; ++i) {
+              var $range = $($ranges[i]);
+              var range = $range.data("range");
+              if( range.id == rangeId )
+                return $range;
+            }
+            return false;
+        },
         removeRange: function (rangeId) {
             var $ranges = this.element.children();
             $ranges.each(function () {
@@ -171,11 +181,19 @@ var assil = { debgug: false };
         },
         updateRangeUI: function ($range) {
             var options = this.options;
-            var _container = $(this.element);
-            var range = $($range).data("range");
+            var $bar = $(this.element);
+            var range = $range.data("range");
             var range_rect = this.getRelativeUIRectFromRange(range);
-            var range_left = range_rect.x + _container.offset().left;
-            var range_top  = range_rect.y + _container.offset().top;
+            var range_left = range_rect.x + $bar.offset().left;
+            var range_top  = range_rect.y + $bar.offset().top;
+
+            // update the float tips value....
+            if( $bar.data("float-options") ) {
+              var strStart = $bar.data("float-options").formatLabel(range.start);
+              var strEnd = $bar.data("float-options").formatLabel(range.end);
+              $range.children(".ui-resizable-w").find(".ui-slider-tip").html( strStart );
+              $range.children(".ui-resizable-e").find(".ui-slider-tip").html( strEnd );
+            }
             
             $range.offset({ left: range_left, top: range_top + 1 });
             $range.width(range_rect.w);
@@ -745,51 +763,6 @@ function isOverlapYRect(rect1, rect2) {
         .addClass("ui-slider-pips")
         .find(".ui-slider-pip")
         .remove();
-      // find closest handle item...
-      function getClosestHandle( val ) {
-        var h, k,
-            sliderVals,
-            comparedVals,
-            closestVal,
-            tempHandles = [],
-            closestHandle = 0;
-        /*if ( slider.values() && slider.values().length ) {
-            // get the current values of the slider handles
-            sliderVals = slider.values();
-            // find the offset value from the `val` for each
-            // handle, and store it in a new array
-            comparedVals = $.map( sliderVals, function(v) {
-                return Math.abs( v - val );
-            });
-            // figure out the closest handles to the value
-            closestVal = Math.min.apply( Math, comparedVals );
-            // if a comparedVal is the closestVal, then
-            // set the value accordingly, and set the closest handle.
-            for ( h = 0; h < comparedVals.length; h++ ) {
-                if ( comparedVals[h] === closestVal ) {
-                    tempHandles.push(h);
-                }
-            }
-            // set the closest handle to the first handle in array,
-            // just incase we have no _lastChangedValue to compare to.
-            closestHandle = tempHandles[0];
-            // now we want to find out if any of the closest handles were
-            // the last changed handle, if so we specify that handle to change
-            for ( k = 0; k < tempHandles.length; k++ ) {
-                if ( slider._lastChangedValue === tempHandles[k] ) {
-                    closestHandle = tempHandles[k];
-                }
-            }
-            if ( slider.options.range && tempHandles.length === 2 ) {
-                if ( val > sliderVals[1] ) {
-                    closestHandle = tempHandles[1];
-                } else if ( val < sliderVals[0] ) {
-                    closestHandle = tempHandles[0];
-                }
-            }
-        }
-        return closestHandle;*/
-      }
       // do destory...
       function destroy() {
         slider.element
@@ -900,6 +873,54 @@ function isOverlapYRect(rect1, rect2) {
         if ( mousedownHandlers[j].namespace === "rangebar" ) {
           slider.element.data("mousedown-original", mousedownHandlers[j].handler );
         }
+      }*/
+      
+      // set closest range item...
+      function setClosestRange( val ) {
+        if( !val ) {
+          console.log("val: " + val);
+          return false;
+        }
+        var $ranges = slider.element.children('.range');
+        var minDist = -1, minItem = 0, minRange = false;
+        for(var i = 0; i < $ranges.length; ++i) {
+          var $range = $($ranges[i]);
+          var range = $range.data("range");
+          if( minDist < 0 ) { 
+            minItem = range.start;
+            minDist = Math.abs(minItem - val);
+            minRange = $range;
+          }
+          if( Math.abs(range.start - val) <= minDist ) {
+            minItem = range.start;
+            minDist = Math.abs(minItem - val);
+            minRange = $range;
+          }
+          if( Math.abs(range.end - val) <= minDist ) {
+            minItem = range.end;
+            minDist = Math.abs(minItem - val);
+            minRange = $range;
+          }
+        }
+        if( minDist < 0 || !minRange )
+          return false;
+        // check the distance...
+        range = minRange.data("range");
+        if( minItem == range.start ) {
+          //console.log("min start: "+minItem+" Dist: "+minDist+" val: "+val);
+          range.start = val;
+          minRange.data("range", range);
+          slider.updateRangeUI(minRange);
+          return true;
+        }
+        if( minItem == range.end ) {
+          //console.log("min end: "+minItem+" Dist: "+minDist+" val: "+val);
+          range.end = val;
+          minRange.data("range", range);
+          slider.updateRangeUI(minRange);
+          return true;
+        }
+        return false;
       }
       // unbind the mousedown.slider event, because it interferes with
       // the labelClick() method (stops smooth animation), and decide
@@ -908,23 +929,15 @@ function isOverlapYRect(rect1, rect2) {
       slider.element
         .off("mousedown.slider")
         .on("mousedown.selectPip", function(e) {
-          var $target = $(e.target),
-              closest = getClosestHandle( $target.data("value") ),
-              $handle = $handles.eq( closest );
-          $handle.addClass("ui-state-active");
-          if ( $target.is(".ui-slider-label") ) {
-              labelClick( $target, e );
-              slider.element.one("mouseup.selectPip", function() {
-                  $handle.removeClass("ui-state-active").focus();
-              });
-          } else {
-              var originalMousedown = slider.element.data("mousedown-original");
-              originalMousedown(e);
+          var $target = $(e.target);
+          var value = $target.data("value");
+          if( $target && value ) {
+            setClosestRange(value);
           }
-        });*/
+        });
       
-      slider.element.on( "slide.selectPip slidechange.selectPip", function(e, ui) {
-          /*var $slider = $(this),
+      /*slider.element.on( "slide.selectPip slidechange.selectPip", function(e, ui) {
+          var $slider = $(this),
               value = $slider.slider("value"),
               values = $slider.slider("values");
           if ( ui ) {
@@ -935,8 +948,8 @@ function isOverlapYRect(rect1, rect2) {
               selectPip.range( values );
           } else {
               selectPip.single( value );
-          }*/
-      });
+          }
+      });*/
     },
     // floats
     float: function( settings ) {
