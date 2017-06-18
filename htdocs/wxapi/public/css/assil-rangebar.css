@@ -1,5 +1,121 @@
+
+/* https://github.com/alansferreira/assil-jquery-rangebar */
+
+.range-bar, 
+.range, 
+.range-label, 
+.range .ui-resizable-handle {
+    height: 25px;
+}
+.range-bar{
+    width: 100%;
+    background-color: lightgray;
+    margin: 0, 0, 0, 0;
+    padding: 0, 0, 0, 0;
+
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+}
+.range {
+    /*margin: 0, 0, 0, 0;
+    padding: 0, 0, 0, 0;
+    background-color: cadetblue;
+    overflow: hidden;*/
+    margin: 0;
+    position: absolute;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    border-radius: 2px;
+    outline: none;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: element;
+    -ms-user-select: element;
+    user-select: element;
+    
+    /*transition: all 0.1s ease 0s;
+    transition-property: all;
+    transition-duration: 0.1s;
+    transition-timing-function: ease;
+    transition-delay: 0s;*/
+
+}
+.range.selected{
+    background-color: orange;
+    transition: background-color 0.5s ease 0s;
+    transition-property: background-color;
+    transition-duration: 0.5s;
+    transition-timing-function: ease;
+    transition-delay: 0s;
+}
+
+.range.disabled{
+    background-color: darkgray;
+    cursor: default !important;
+}
+.range.delete-confirm{
+    background-color: firebrick !important; 
+    color: white;
+}
+.range-label {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: x-small;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+
+    background-color: transparent;
+    cursor: move;
+    overflow: hidden;
+    margin: 0, 0, 0, 0;
+    padding: 0, 0, 0, 0;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+.range.overlaped{
+    opacity: 0.7;
+    z-index: 999;
+}
+.range:hover .ui-resizable-handle{
+    opacity: 1;
+    
+    transition: opacity 0.5s ease 0.5s;
+    transition-property: opacity;
+    transition-duration: 0.5s;
+    transition-timing-function: ease;
+    transition-delay: 0s;
+}
+.range .ui-resizable-handle {
+    opacity: 1;
+    
+    transition: opacity 0.5s ease 0.5s;
+    transition-property: opacity;
+    transition-duration: 0.5s;
+    transition-timing-function: ease;
+    transition-delay: 0s;
+
+    width: 3px;
+    background-color: #000000;
+    /*border: 1px solid #000000;*/
+    position: absolute;
+    cursor: ew-resize;
+}
+.range .ui-resizable-e{
+   right:0px;
+     top:0px;    
+}
+.range .ui-resizable-w{
+     left:0px;
+     top:0px;
+}
+
+/*------------------------------------------------------------------------*/
 /*! jQuery-ui-Slider-Pips - v1.11.4 - 2016-09-04
-* Copyright (c) 2016 Simon Goellner <simey.me@gmail.com>; Licensed MIT */
+* Copyright (c) 2016 Simon Goellner <simey.me@gmail.com>; Licensed MIT    */
+/*------------------------------------------------------------------------*/
 
 /* HORIZONTAL */
 /* increase bottom margin to fit the pips */
@@ -120,10 +236,10 @@
 /* also has a nice transition */
 .ui-slider-float .ui-slider-tip,
 .ui-slider-float .ui-slider-tip-label {
+  /*visibility: hidden;*/
   position: absolute;
-  visibility: hidden;
+  display: none;
   top: -40px;
-  display: block;
   width: 34px;
   margin-left: -18px;
   left: 50%;
