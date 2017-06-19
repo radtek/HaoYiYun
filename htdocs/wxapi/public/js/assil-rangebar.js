@@ -65,7 +65,7 @@ var assil = { debgug: false };
         },
         _create: function () {
             var _component = this;
-            _component._mouseInit();
+            //_component._mouseInit();
             _component._detectOrientation();
             _component.setRanges(_component.options.ranges);
             _component.element.resize(function () {
@@ -80,6 +80,9 @@ var assil = { debgug: false };
             });
             _component.element.getRanges = _component.getRanges
             _component._addClass( "ui-slider ui-slider-" + this.orientation, "ui-widget ui-widget-content" );
+            
+            //$(_component.element).on('mousedown', _do_mouse_down);
+            //$(_component.element).on('mousemove', _do_mouse_move);
         },
         _destroy: function () {
             $.Widget.prototype.destroy.call(this);
@@ -116,13 +119,12 @@ var assil = { debgug: false };
                 $range.addClass(range.css.range);
                 $labelHandle.addClass(range.css.label);
             }
-
+            
             //syncRange({ target: $range });
             this.updateRangeUI($range);
             if (options.renderRange) options.renderRange($range, range);
 
             $range.on('mousedown', range_mouse_down);
-            $range.on('mouseup', range_mouse_up);
 
             if (range.disabled) {
                 $range.addClass("disabled");
@@ -142,11 +144,26 @@ var assil = { debgug: false };
                 .resizable({
                     containment: this.element,
                     handles: "e, w",
-                    resize: range_resize
+                    resize: range_resize_resize,
+                    start: range_resize_start,
+                    stop: range_resize_stop
                 });
 
             $range.on('keydown', range_keydown)
                   .on('dblclick', range_dblclick);
+            return $range;
+        },
+        addFloatRange: function(range) {
+            // create the range first...
+            var $range = this.addRange(range);
+            if( $.type($range) != "object" || $range.length <= 0 )
+              return false;
+            // create the float tips...
+            var floatOptions = $(this.element).data("float-options");
+            if( floatOptions ) {
+              $range.children(".ui-resizable-e").append( $("<span class=\"ui-slider-tip\">"+floatOptions.formatLabel(range.end)+"</span>") );
+              $range.children(".ui-resizable-w").append( $("<span class=\"ui-slider-tip\">"+floatOptions.formatLabel(range.start)+"</span>") );
+            }
             return $range;
         },
         getRangeByID: function(rangeId) {
@@ -221,277 +238,139 @@ var assil = { debgug: false };
             return rect;
         }
     });
+    
+    /*function _do_mouse_down(ev) {
+    };
+    function _do_mouse_move(ev) {
+    };*/
 
     function preventCollision_onResize(event, ui) {
-        
         var getRect = getRectUsing$Position;//ui.size ? getRectUsing$Offset : getRectUsing$Position;
-
         var $range = $(event.target);
         var range = $range.data("range");
         var $bar = $(event.target).parent();
-        var bar_rect = getRect($bar);
-
         var range_rect = { x: ui.position.left, y: ui.position.top, w: ui.size.width, h: ui.size.height };
+        //var range_rect = { x: $range.position().left, y: $range.position().top, w: $range.width(), h: $range.height() };
+        //var bar_rect = getRect($bar);
+        
+        // must be range object...
+        if( !range ) return;
 
-        var last_range_rect = $range.data('last-range-rect') || range_rect;
+        //console.log("input ui.position:" + JSON.stringify(ui.position));
+        //console.log("input ui.size:" + JSON.stringify(ui.size));
+        //console.log("range rect:" + JSON.stringify(range_rect));
+        //if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
+        //if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
+        //if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
 
-        var range_rect_offset = {
-            x: ui.position.left - ui.originalPosition.left,
-            y: ui.position.top - ui.originalPosition.top,
-            w: ui.size.width - ui.originalSize.width,
-            h: ui.size.height - ui.originalSize.height,
-        };
-
-        if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
-        if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
-        if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
-
+        // 2017.06.19 - by jackey => check only for sibiling range except self...
         var siblings_rects = [];
-        $range.siblings().each(function () {
-            this_rect = getRect(this);
-            this_rect.$el = this;
-            siblings_rects.push(this_rect);
+        $range.siblings('.range').each(function () {
+          siblings_rects.push(getRect(this));
         });
-
+        
         var overlaps = $(range_rect).overlapsX(siblings_rects);
-        if (overlaps.length > 1 && range.canOverlap) {
-            $range.addClass("overlaped");
-        } else if (overlaps.length == 1 && range.canOverlap) {
-            $range.removeClass("overlaped");
+        if( overlaps.length > 0 ) {
+          var lapObj = overlaps[0];
+          if( lapObj.overlap.isOverlapLeft ) {
+            // process left overlap => must minus exceed number...
+            ui.size.width -= lapObj.obstacle.x + lapObj.obstacle.w - ui.position.left;
+            ui.position.left = lapObj.obstacle.x + lapObj.obstacle.w;
+          } else if( lapObj.overlap.isOverlapRight ) {
+            ui.size.width = lapObj.obstacle.x - ui.position.left;
+          }
+        } else {
+          ui.position.left = (ui.position.left < 0 ? 0 : ui.position.left);
+          ui.position.left = ((ui.position.left + range_rect.w > $bar.width()) ? $bar.width() - range_rect.w : ui.position.left);
         }
-
-        if (overlaps.length > 0 && !range.canOverlap) {
-            var overlaped = null;
-            $.each(overlaps, function () {
-                //var hint = overlaps[0];
-                var hint = this;
-                var $obstacle = $(hint.obstacle.$el);
-                var obstacle_range = $obstacle.data("range");
-                if (!obstacle_range) return true;
-                if (obstacle_range.canOverlap) {
-                    $obstacle.addClass("overlaped");
-                    return true;
-                }
-                overlaped = hint;
-                return false;
-            });
-
-            if (overlaped) {
-                $bar.trigger("overlap", [event, ui, overlaped, $bar, $range, overlaped.obstacle]);
-                if (assil.debgug) console.log("    obstacle rect:" + JSON.stringify(getRect(overlaped.obstacle)));
-                ui.revert = true;
-            }
-            $bar.trigger("change", [event, ui, $bar, $range]);
-            if (assil.debgug) console.log("      source rect:" + JSON.stringify(range_rect));
-
-            //range_rect = {
-            //    x: ui.position.left - (range_rect_offset.x + 2),
-            //    y: ui.position.top - (range_rect_offset.y + 2),
-            //    w: ui.size.width - (range_rect_offset.x + 2),
-            //    h: ui.size.height - (range_rect_offset.x + 2)
-            //};
-            overlaps = $(range_rect).overlapsX(siblings_rects);
-            $.each(overlaps, function () {
-                //var hint = overlaps[0];
-                var hint = this;
-                var $obstacle = $(hint.obstacle.$el);
-                var obstacle_range = $obstacle.data("range");
-                if (!obstacle_range) return true;
-                if (obstacle_range.canOverlap) return true;
-
-                ui.revert = true;
-                return false;
-            });
-        }
-
-        if (!ui.revert) {
-            ui.position.left = (ui.position.left < 0 ? 0 : ui.position.left);
-            ui.position.left = ((ui.position.left + range_rect.w > $bar.width()) ? $bar.width() - range_rect.w : ui.position.left);
-        }
-
-        if (ui.revert) {
-            ui.position.left = last_range_rect.x;
-            ui.position.top = last_range_rect.y;
-            ui.size.width = last_range_rect.w;
-            ui.size.height = last_range_rect.h;
-        }
-
-        last_range_rect = { x: ui.position.left, y: ui.position.top, x: ui.position.left, w: ui.size.width, h: ui.size.height };
-        $range.data('last-range-rect', last_range_rect);
-        if (assil.debgug) console.log("result          :" + JSON.stringify(last_range_rect));
+        $bar.trigger("change", [event, ui, $bar, $range]);
     };
 
     function preventCollision_onDrag(event, ui) {
-
         var getRect = getRectUsing$Position;//ui.size ? getRectUsing$Offset : getRectUsing$Position;
-
         var $range = $(event.target);
         var range = $range.data("range");
         var $bar = $(event.target).parent();
-        var bar_rect = getRect($bar);
         var range_rect = { x: ui.position.left, y: ui.position.top, w: $range.width(), h: $range.height() };
+        //var bar_rect = getRect($bar);
 
-        var last_range_rect = $range.data('last-range-rect') || range_rect;
+        // must be range object...
+        if( !range ) return;
 
-        var range_rect_offset = {
-            x: ui.position.left - last_range_rect.x,
-            y: ui.position.top - last_range_rect.y,
-            w: range_rect.w - last_range_rect.w,
-            h: range_rect.h - last_range_rect.h,
+        //if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
+        //if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
+        //if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
 
-        };
-
-        if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
-        if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
-        if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
-
+        // 2017.06.19 - by jackey => check only for sibiling range except self...
         var siblings_rects = [];
-        $range.siblings().each(function () {
-            this_rect = getRect(this);
-            this_rect.$el = this;
-            siblings_rects.push(this_rect);
+        $range.siblings('.range').each(function () {
+          siblings_rects.push(getRect(this));
         });
 
         var overlaps = $(range_rect).overlapsX(siblings_rects);
-
-        if (overlaps.length > 1 && range.canOverlap) {
-            $range.addClass("overlaped");
-        } else if (overlaps.length == 1 && range.canOverlap) {
-            $range.removeClass("overlaped");
+        if( overlaps.length > 0 ) {
+          var lapObj = overlaps[0];
+          if( lapObj.overlap.isOverlapLeft ) {
+            ui.position.left = lapObj.obstacle.x + lapObj.obstacle.w;
+          } else if( lapObj.overlap.isOverlapRight ) {
+            ui.position.left = lapObj.obstacle.x - range_rect.w;
+          }
+        } else {
+          ui.position.left = (ui.position.left < 0 ? 0 : ui.position.left);
+          ui.position.left = ((ui.position.left + range_rect.w > $bar.width()) ? $bar.width() - range_rect.w : ui.position.left);
         }
-
-        if (overlaps.length > 0 && !range.canOverlap) {
-            $.each(overlaps, function () {
-                //var hint = overlaps[0];
-                var hint = this;
-                var $obstacle = $(hint.obstacle.$el);
-                var obstacle_range = $obstacle.data("range");
-                if (!obstacle_range) return true;
-                if (obstacle_range.canOverlap) {
-                    $obstacle.addClass("overlaped");
-                    return true;
-                }
-
-                $bar.trigger("overlap", [event, ui, hint, $bar, $range, hint.obstacle]);
-
-                var obstacleRect = getRect(hint.obstacle);
-                if (assil.debgug) console.log("    obstacle rect:" + JSON.stringify(obstacleRect));
-
-                ui.revert = true;
-
-                //if (hint.overlap.isOverlapLeft) {
-                //    ui.position.left = obstacleRect.x + obstacleRect.w;
-                //} else if (hint.overlap.isOverlapRight) {
-                //    ui.position.left = obstacleRect.x - (range_rect.w );
-                //}
-
-            });
-
-            if (assil.debgug) console.log("      source rect:" + JSON.stringify(range_rect));
-
-            overlaps = $(range_rect).overlapsX(siblings_rects);
-            $.each(overlaps, function () {
-                //var hint = overlaps[0];
-                var hint = this;
-                var $obstacle = $(hint.obstacle.$el);
-                var obstacle_range = $obstacle.data("range");
-                if (!obstacle_range) return true;
-                if (obstacle_range.canOverlap) return true;
-
-                ui.revert = true;
-                return false;
-            });
-
-        }
-
-        if (!ui.revert) {
-            ui.position.left = (ui.position.left < 0 ? 0 : ui.position.left);
-            ui.position.left = ((ui.position.left + range_rect.w > $bar.width()) ? $bar.width() - range_rect.w : ui.position.left);
-        }
-
-        if (ui.revert) {
-            ui.position.left = last_range_rect.x;
-            ui.position.top = last_range_rect.y;
-        }
-
         $bar.trigger("change", [event, ui, $bar, $range]);
-        last_range_rect = { x: ui.position.left, y: ui.position.top, x: ui.position.left, w: range_rect.w, h: range_rect.h };
-        $range.data('last-range-rect', last_range_rect);
-        if (assil.debgug) console.log("result          :" + JSON.stringify(last_range_rect));
-
     };
-    function range_resize(event, ui) {
+    
+    function range_resize_resize(event, ui) {
         preventCollision_onResize(event, ui);
         syncRange(event, ui);
     };
-    function range_drag_start(event, ui) {
-        syncRange(event, ui);
-        $(event.target).addClass("dragging");
+    
+    function range_resize_start(event, ui) {
+      // display all the float tips...
+      $(this).find(".ui-slider-tip").each(function() {
+        //$(this).css('visibility', 'visible');
+        $(this).show();
+      });
     };
+    
+    function range_resize_stop(event, ui) {
+      // hide all the float tips...
+      $(this).find(".ui-slider-tip").each(function() {
+        //$(this).css('visibility', 'hidden');
+        $(this).hide();
+      });
+    };
+    
+    function range_drag_start(event, ui) {
+      // display all the float tips...
+      $(this).find(".ui-slider-tip").each(function() {
+        //$(this).css('visibility', 'visible');
+        $(this).show();
+      });
+      // sync range...
+      syncRange(event, ui);
+      $(event.target).addClass("dragging");
+    };
+    
     function range_drag_drag( event, ui ){
         preventCollision_onDrag(event, ui);
         syncRange(event, ui);
     };
+    
     function range_drag_stop( event, ui ){
-        syncRange(event, ui);
-        $(event.target).removeClass("dragging");
+      // hide all the float tips...
+      $(this).find(".ui-slider-tip").each(function() {
+        //$(this).css('visibility', 'hidden');
+        $(this).hide();
+      });
+      // sync range...
+      syncRange(event, ui);
+      $(event.target).removeClass("dragging");
     };
 
     function range_keydown(ev) {
-        //var $range = $(ev.target);
-        //var range_rect = getRectUsing$Position($range);
-        //var ui = {
-        //    originalPosition: { left: range_rect.x, top: 0 },
-        //    position: { left: range_rect.x, top: 0 }
-        //};
-        //if (ev.shiftKey) {
-        //    ui.size = { width: range_rect.w, height: range_rect.h};
-        //}
-        //switch (ev.which) {
-        //    case 35:  //END
-        //        break;
-        //    case 36:  //HOME
-        //        break;
-        //    case 37:  //LEFT
-        //        if (ev.shiftKey && ev.ctrlKey) {
-        //            ui.size.width -= 2
-        //        } else if (ev.shiftKey) {
-        //            ui.size.width -= 1
-        //        } else if (ev.ctrlKey) {
-        //            ui.position.left -= 2;
-        //        } else {
-        //            ui.position.left -= 1;
-        //        }
-        //        break;
-        //    case 39:  //RIGHT
-        //        if (ev.shiftKey && ev.ctrlKey) {
-        //            ui.size.width += 2
-        //        } else if (ev.shiftKey) {
-        //            ui.size.width += 1
-        //        } else if (ev.ctrlKey) {
-        //            ui.position.left += 2;
-        //        } else {
-        //            ui.position.left += 1;
-        //        }
-        //        break;
-        //    case 37:  //LEFT
-        //        break;
-        //    default:
-        //        return;
-        //}
-
-        //console.log(ev);
-        //console.log(JSON.stringify(ui));
-        ////var map = []
-        ////if (ev.which)
-
-        //preventCollision_onDragOrResize(ev, ui);
-        //$range.offset(ui.position);
-        //if (ui.size) {
-        //    $range.width(ui.size.width);
-        //    $range.height(ui.size.height);
-        //}
-        //syncRange(event, ui);
     };
 
     // fill range area...
@@ -505,14 +384,6 @@ var assil = { debgug: false };
         var ranges_siblings = $range.siblings().data("range");
     };
 
-    // hide float tips...
-    function range_mouse_up(ev) {
-      $(this).find(".ui-slider-tip").each(function() {
-        //$(this).css('visibility', 'hidden');
-        $(this).hide();
-      });
-    }
-
     function range_mouse_down(ev) {
         ev.stopPropagation();
         ev.preventDefault();
@@ -520,13 +391,7 @@ var assil = { debgug: false };
         var $range = $(this);
         var range = $range.data("range");
         if (!range) return;
-        
-        // display float tips...
-        $range.find(".ui-slider-tip").each(function() {
-          //$(this).css('visibility', 'visible');
-          $(this).show();
-        });
-        
+
         var $bar = $range.parent();
         var options = $bar.data("assil-rangebar").options;
 
@@ -684,6 +549,8 @@ function isOverlapYRect(rect1, rect2) {
                             obstacle: this_obstacle, 
                             overlap: overlap
                         });
+                        // 2017.06.19 - by jackey => find only one...
+                        return false;
                     }
                 });
             });
@@ -988,8 +855,8 @@ function isOverlapYRect(rect1, rect2) {
       slider.element.children('.range').each(function() {
         var nEnd = $(this).data("range").end;
         var nStart = $(this).data("range").start;
-        $(this).children(".ui-resizable-w").append( $("<span class=\"ui-slider-tip\">"+options.formatLabel(nEnd)+"</span>") );
-        $(this).children(".ui-resizable-e").append( $("<span class=\"ui-slider-tip\">"+options.formatLabel(nStart)+"</span>") );
+        $(this).children(".ui-resizable-e").append( $("<span class=\"ui-slider-tip\">"+options.formatLabel(nEnd)+"</span>") );
+        $(this).children(".ui-resizable-w").append( $("<span class=\"ui-slider-tip\">"+options.formatLabel(nStart)+"</span>") );
       });
     }
   };
