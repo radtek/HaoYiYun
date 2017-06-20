@@ -49,6 +49,7 @@ function doTrClick(inLiveID, inGatherID,objTr) {
   // 先将背景色进行修改...
   $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
   // 异步获取通道信息...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,
@@ -126,6 +127,7 @@ layui.use(['element','laypage','layer','form'], function(){
     jump: function(obj, first) {
       // 向服务器发送分页命令...
       var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
       $.ajax({
         type: "get",
         async: true,

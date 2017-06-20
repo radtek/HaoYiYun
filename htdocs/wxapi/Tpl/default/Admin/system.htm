@@ -62,6 +62,7 @@ function doTestTracker() {
     var index = layer.load(2);
     var theAddr = $("input[name='myTrackerAddr']").val();
     var thePort = $("input[name='myTrackerPort']").val();
+    $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/testTracker",
@@ -104,6 +105,7 @@ function doFormTracker() {
       return false;
     }
     // 发送异步请求...
+    $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
@@ -133,6 +135,7 @@ function doTestTransmit() {
     var index = layer.load(2);
     var theAddr = $("input[name='myTransmitAddr']").val();
     var thePort = $("input[name='myTransmitPort']").val();
+    $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/testTransmit",
@@ -171,6 +174,7 @@ function doFormTransmit() {
       return false;
     }
     // 发送异步请求...
+    $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
@@ -206,6 +210,7 @@ function doTabChange(inTabItem) {
     case 3: strCommand = "getClient"; objCard = $('.js_client_pane'); break;
   }
   // 异步获取通道信息...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,

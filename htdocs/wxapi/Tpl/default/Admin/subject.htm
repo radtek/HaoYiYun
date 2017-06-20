@@ -61,6 +61,8 @@ function doAction(inID, inName, objTr) {
       layer.msg('【科目名称】太长，请重新输入！', {icon: 2});
       return;
     }
+    // 兼容 IE8 的ajax调用...
+    $.ajaxSetup({ cache:false });
     layer.close(index);
     // 加载动画层，获取jquery对象...
     layer.load(2);
@@ -93,15 +95,17 @@ function doAdd()
 }
 //
 // 执行修改操作...
-function doEdit(inID, inName, objTr)
+function doTrClick(inID, objTr)
 {
-  doAction(inID, inName, objTr);
+  var $ = layui.jquery;
+  var strName = $(objTr).children('td').eq(1).text();
+  doAction(inID, strName, objTr);
 }
 //
 // 执行删除操作...
 function doDelete(inID){
-  // 阻止继续冒泡...
-  event.stopPropagation();
+  // 阻止继续冒泡 => 需要兼容 IE8...
+  stopPropagation(event);
   // 确认删除询问...
   layer.confirm('确实要删除选中记录？', {title: '删除 - 科目', btn: ['确定','取消']}, function(index){
     layer.close(index);
@@ -109,6 +113,7 @@ function doDelete(inID){
     var index = layer.load(2);
     var $ = layui.jquery;
     // 向服务器发送保存命令...
+    $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/delSubject",
@@ -137,6 +142,7 @@ layui.use(['element','laypage','layer','form'], function(){
     jump: function(obj, first) {
       // 向服务器发送分页命令...
       var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
       $.ajax({
         type: "get",
         async: true,

@@ -46,6 +46,16 @@ function doErrUser() {
 function doReload() {
   location.href = "{{:__APP__}}/Admin/index";
 }
+// 兼容 IE8 的取消事件冒泡...
+function stopPropagation(e) {
+  if(e.stopPropagation) {
+    e.stopPropagation();
+    //e.preventDefault();
+  } else {
+    e.cancelBubble = true;
+    //e.returnValue = false;
+  }
+}
 </script>
 
 <body>

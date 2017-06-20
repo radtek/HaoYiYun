@@ -55,6 +55,7 @@ function doTrClick(inCameraID,inGatherID,objTr) {
   // 先将背景色进行修改...
   $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
   // 异步获取通道信息...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,
@@ -66,7 +67,7 @@ function doTrClick(inCameraID,inGatherID,objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['500px', '400px'],
+        area: ['500px', '450px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 摄像头",
         content: ajaxData,
         success: function() {
@@ -124,7 +125,8 @@ function doTrClick(inCameraID,inGatherID,objTr) {
 // 配置录像课程表...
 function doCourse(inCameraID, inGatherID)
 {
-  event.stopPropagation();
+  // 需要兼容IE8的访问...
+  stopPropagation(event);
   location.href = siteurl+"/Admin/course/camera_id/"+inCameraID+"/gather_id/"+inGatherID;  
 }
 //
@@ -140,6 +142,7 @@ layui.use(['element','laypage','layer','form'], function(){
     jump: function(obj, first) {
       // 向服务器发送分页命令...
       var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
       $.ajax({
         type: "get",
         async: true,

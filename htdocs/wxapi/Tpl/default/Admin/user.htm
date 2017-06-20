@@ -83,6 +83,7 @@ layui.use(['element','laypage','layer','form'], function(){
   var $ = layui.jquery;
   layer.load(2);
   // 获取用户总数接口...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,

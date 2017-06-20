@@ -55,6 +55,7 @@ function doModify(inGatherID, objTr)
   // 先将背景色进行修改...
   $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
   // 异步获取通道信息...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,
@@ -121,7 +122,8 @@ function doModify(inGatherID, objTr)
 // 打开摄像头页面...
 function doCamera(inGatherID)
 {
-  event.stopPropagation();
+  // 需要兼容IE8...
+  stopPropagation(event);
   location.href = siteurl+"/Admin/camera/gather_id/"+inGatherID;
 }
 //
@@ -136,6 +138,7 @@ layui.use(['element','laypage','layer','form'], function(){
     jump: function(obj, first) {
       // 向服务器发送分页命令...
       var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
       $.ajax({
         type: "get",
         async: true,

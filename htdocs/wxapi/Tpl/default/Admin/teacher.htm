@@ -61,6 +61,7 @@ function doTrClick(inTeacherID,objTr) {
     theTitle = "添加 - 教师";
   }
   // 异步获取教师信息...
+  $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
     async: true,
@@ -72,7 +73,7 @@ function doTrClick(inTeacherID,objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['500px', '450px'],
+        area: ['500px', '460px'],
         title: "<i class='fa fa-address-book-o'>&nbsp;&nbsp;</i>"+theTitle,
         content: ajaxData,
         success: function() {
@@ -140,8 +141,8 @@ function doAdd() {
 //
 // 执行删除操作...
 function doDelete(inID) {
-  // 阻止继续冒泡...
-  event.stopPropagation();
+  // 阻止继续冒泡 => 兼容IE8...
+  stopPropagation(event);
   // 确认删除询问...
   layer.confirm('确实要删除选中记录？', {title: '删除 - 教师', btn: ['确定','取消']}, function(index){
     layer.close(index);
@@ -149,6 +150,7 @@ function doDelete(inID) {
     var index = layer.load(2);
     var $ = layui.jquery;
     // 向服务器发送保存命令...
+    $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/delTeacher",
@@ -177,6 +179,7 @@ layui.use(['element','laypage','layer','form'], function(){
     jump: function(obj, first) {
       // 向服务器发送分页命令...
       var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
       $.ajax({
         type: "get",
         async: true,
