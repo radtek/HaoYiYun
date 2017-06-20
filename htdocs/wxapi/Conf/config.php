@@ -10,6 +10,7 @@
       'scope'=>'snsapi_login', //用户授权的作用域,使用逗号(,)分隔
       'appid'=>'wxc1d8a43197ccc500', //网站登录应用的appid
       'redirect_uri'=>'http://www.myhaoyi.com/', //回调地址
+      'href'=>'https://www.myhaoyi.com/wxapi/public/css/wxlogin.css', //登录样式地址
     ),
     
     // 每页显示记录数
