@@ -744,8 +744,7 @@ function isOverlapYRect(rect1, rect2) {
       
       // set closest range item...
       function setClosestRange( val ) {
-        if( !val ) {
-          console.log("val: " + val);
+        if( $.type(val) != "number" ) {
           return false;
         }
         var $ranges = slider.element.children('.range');
@@ -798,7 +797,7 @@ function isOverlapYRect(rect1, rect2) {
         .on("mousedown.selectPip", function(e) {
           var $target = $(e.target);
           var value = $target.data("value");
-          if( $target && value ) {
+          if( $target && $.type(value) == "number" ) {
             setClosestRange(value);
           }
         });
