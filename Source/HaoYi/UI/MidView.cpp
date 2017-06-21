@@ -51,7 +51,7 @@ void CMidView::BuildResource()
 	m_BitArray[CVideoWnd::kZoomIn]	= new CBitItem(IDB_VIDEO_MIN, 18, 18);
 	m_BitArray[CVideoWnd::kClose]   = new CBitItem(IDB_VIDEO_CLOSE, 18, 18);
 	// 设置默认的提示信息...
-	m_strNotice = "正在验证网站授权...";
+	m_strNotice = "正在注册采集端...";
 }
 //
 // 销毁资源...
@@ -353,10 +353,10 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 void CMidView::OnAuthResult(int nType, BOOL bAuthOK)
 {
 	// 根据不同状态，显示不同的信息...
-	if( nType == kAuthExpired ) {
-		m_strNotice = bAuthOK ? "正在注册采集端..." : "网站授权过期，验证失败...";
-	} else if( nType == kAuthRegiter ) {
-		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "网站注册失败，请检查网站链接...";
+	if( nType == kAuthRegiter ) {
+		m_strNotice = bAuthOK ? "正在验证网站授权..." : "网站注册失败，请检查网站链接...";
+	} else if( nType == kAuthExpired ) {
+		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "网站授权过期，验证失败...";
 	}
 	// 重新更新窗口背景...
 	this->Invalidate(true);

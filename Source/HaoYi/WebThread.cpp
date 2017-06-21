@@ -13,9 +13,10 @@ CWebThread::CWebThread(CHaoYiView * lpView)
   : m_eRegState(kRegHaoYi)
   , m_lpHaoYiView(lpView)
   , m_strDBCameraName("")
+  , m_HaoYiGatherID(-1)
   , m_nDBCameraID(-1)
   , m_nDBGatherID(-1)
-  , m_nMyHaoYiID(-1)
+  , m_strWebTag("")
   , m_nRemotePort(0)
   , m_nTrackerPort(0)
   , m_strRemoteAddr("")
@@ -73,11 +74,11 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 	// 获取有效的反馈数据信息...
 	if( m_eRegState == kRegHaoYi ) {
 		// 正在处理验证许可过程...
-		Json::Value & theID = value["gather_id"];
-		if( theID.isInt() ) {
-			m_nMyHaoYiID = theID.asInt();
-		} else if( theID.isString() ) {
-			m_nMyHaoYiID = atoi(theID.asString().c_str());
+		Json::Value & theGatherID = value["gather_id"];
+		if( theGatherID.isInt() ) {
+			m_HaoYiGatherID = theGatherID.asInt();
+		} else if( theGatherID.isString() ) {
+			m_HaoYiGatherID = atoi(theGatherID.asString().c_str());
 		}
 	} else if( m_eRegState == kRegGather ) {
 		// 正在处理注册采集端过程...
@@ -88,11 +89,15 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 			m_nDBGatherID = atoi(theID.asString().c_str());
 		}
 		// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
+		Json::Value & theWebTag = value["web_tag"];
 		Json::Value & theRemoteAddr = value["transmit_addr"];
 		Json::Value & theRemotePort = value["transmit_port"];
 		Json::Value & theTrackerAddr = value["tracker_addr"];
 		Json::Value & theTrackerPort = value["tracker_port"];
 		Json::Value & theLocalTime   = value["local_time"];
+		if( theWebTag.isString() ) {
+			m_strWebTag = theWebTag.asString();
+		}
 		if( theTrackerAddr.isString() ) {
 			m_strTrackerAddr = theTrackerAddr.asString();
 		}
@@ -111,9 +116,9 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 			SYSTEMTIME   theST = {0};
 			string strLocalTime = theLocalTime.asString();
 			// 解析正确，并且得到系统时间正确，才进行设置...
-			if( theDate.ParseDateTime(strLocalTime.c_str()) && theDate.GetAsSystemTime(theST) ) {
-				::SetLocalTime(&theST);
-			}
+			//if( theDate.ParseDateTime(strLocalTime.c_str()) && theDate.GetAsSystemTime(theST) ) {
+			//	::SetLocalTime(&theST);
+			//}
 		}
 	} else if( m_eRegState == kRegCamera ) {
 		// 正在处理注册摄像头过程...
@@ -178,6 +183,9 @@ BOOL CWebThread::RegisterHaoYi()
 	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
 	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
 		return false;
+	// 网站节点标记不能为空...
+	if( m_strWebTag.size() <= 0 )
+		return false;
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
 	TCHAR	szDNS[MAX_PATH] = {0};
@@ -185,9 +193,9 @@ BOOL CWebThread::RegisterHaoYi()
 	string  strDNSName = CUtilTool::GetServerDNSName();
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s", 
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s", 
 					strMacAddr, strIPAddr, theConfig.GetMaxCamera(),
-					szDNS, _T(SZ_VERSION_NAME));
+					szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str());
 	strUrl.Format("http://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;
@@ -212,9 +220,9 @@ BOOL CWebThread::RegisterHaoYi()
 		curl_easy_cleanup(curl);
 	}
 	// 通知主窗口授权过期验证结果...
-	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((m_nMyHaoYiID > 0) ? true : false));
+	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((m_HaoYiGatherID > 0) ? true : false));
 	// 返回授权验证结果...
-	return ((m_nMyHaoYiID > 0) ? true : false);
+	return ((m_HaoYiGatherID > 0) ? true : false);
 }
 //
 // 在网站上注册采集端...
@@ -267,9 +275,9 @@ BOOL CWebThread::RegisterGather()
 	// 通知主窗口授权网站注册结果...
 	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthRegiter, ((m_nDBGatherID > 0) ? true : false));
 	// 判断采集端是否注册成功...
-	if( m_nDBGatherID <= 0 )
+	if( m_nDBGatherID <= 0 || m_strWebTag.size() <= 0 )
 		return false;
-	ASSERT( m_nDBGatherID > 0 );
+	ASSERT( m_nDBGatherID > 0 && m_strWebTag.size() > 0 );
 	// 判断Tracker地址是否已经正确获取得到...
 	if( m_strTrackerAddr.size() <= 0 || m_nTrackerPort <= 0 )
 		return false;
@@ -582,7 +590,21 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
 
 void CWebThread::Entry()
 {
-	// 首先，需要验证授权是否已经过期...
+	// 首先，在网站上注册采集端信息...
+	if( !this->RegisterGather() ) {
+		return;
+	}
+	// 然后，需要验证授权是否已经过期...
+	if( !this->RegisterHaoYi() ) {
+		return;
+	}
+	// 开始注册摄像头，这里只能注册已知的，新建的不能注册，因此，需要在新扫描出来的地方增加注册功能...
+	if( !this->RegisterCamera() ) {
+		return;
+	}
+	// 主视图启动组播频道自动搜索线程，启动Tracker自动连接，中间视图创建等等...
+	m_lpHaoYiView->PostMessage(WM_WEB_LOAD_RESOURCE);
+	/*// 首先，需要验证授权是否已经过期...
 	if( !this->RegisterHaoYi() ) {
 		return;
 	}
@@ -601,5 +623,5 @@ void CWebThread::Entry()
 		// 主视图启动组播频道自动搜索线程，启动Tracker自动连接，中间视图创建等等...
 		m_lpHaoYiView->PostMessage(WM_WEB_LOAD_RESOURCE);
 		break;
-	}
+	}*/
 }

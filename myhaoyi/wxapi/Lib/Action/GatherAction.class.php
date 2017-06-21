@@ -37,8 +37,34 @@ class GatherAction extends Action
         $arrErr['err_msg'] = "MAC地址或版本号为空！";
         break;
       }
+      // 判断输入的网站节点标记是否有效...
+      if( !isset($arrData['node_tag']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "网站节点标记不能为空！";
+        break;
+      }
+      // 根据节点标记获取或创建一条新记录...
+      $map['node_tag'] = $arrData['node_tag'];
+      $dbNode = D('node')->where($map)->find();
+      if( count($dbNode) <= 0 ) {
+        // 创建一条新纪录...
+        $dbNode['node_name'] = "新建节点";
+        $dbNode['node_tag'] = $arrData['node_tag'];
+        $dbNode['created'] = date('Y-m-d H:i:s');
+        $dbNode['updated'] = date('Y-m-d H:i:s');
+        $dbNode['node_id'] = D('node')->add($dbNode);
+      }
+      // 判断获取的节点记录是否有效...
+      if( $dbNode['node_id'] <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "网站节点编号无效！";
+        break;
+      }
+      // 设定采集端所在的节点编号...
+      $arrData['node_id'] = $dbNode['node_id'];
       // 根据MAC地址获取Gather记录信息...
-      $dbGather = D('gather')->where('mac_addr="'.$arrData['mac_addr'].'"')->find();
+      $where['mac_addr'] = $arrData['mac_addr'];
+      $dbGather = D('gather')->where($where)->find();
       if( count($dbGather) <= 0 ) {
         // 没有找到记录，直接创建一个新记录 => 默认授权30天...
         $dbGather = $arrData;

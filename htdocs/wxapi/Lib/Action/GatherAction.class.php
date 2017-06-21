@@ -44,7 +44,15 @@ class GatherAction extends Action
         D('gather')->save($arrData);
       }
       // 读取系统配置表，返回给采集端...
-      $dbSys = D('system')->field('tracker_addr,tracker_port,transmit_addr,transmit_port')->find();
+      $dbSys = D('system')->find();
+      // 如果节点网站的标记为空，生成一个新的，并存盘...
+      if( !$dbSys['web_tag'] ) {
+        $dbSys['web_tag'] = uniqid();
+        $dbSave['system_id'] = $dbSys['system_id'];
+        $dbSave['web_tag'] = $dbSys['web_tag'];
+        D('system')->save($dbSave);
+      }
+      $arrErr['web_tag'] = $dbSys['web_tag'];
       $arrErr['tracker_addr'] = $dbSys['tracker_addr'];
       $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
       $arrErr['transmit_addr'] = $dbSys['transmit_addr'];

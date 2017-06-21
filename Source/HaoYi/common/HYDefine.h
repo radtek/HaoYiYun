@@ -112,8 +112,8 @@ using namespace std;
 #define WM_EVENT_SESSION_MSG		(WM_USER + 505)			// 事件会话通知消息
 
 typedef	enum AUTH_STATE {
-	kAuthExpired	= 1,		// 授权过期验证
-	kAuthRegiter	= 2,		// 网站注册授权
+	kAuthRegiter	= 1,		// 网站注册授权
+	kAuthExpired	= 2,		// 授权过期验证
 };
 
 typedef enum OPT_PARAM {		// WPARAM参数定义

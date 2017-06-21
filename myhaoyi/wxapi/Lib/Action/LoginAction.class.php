@@ -20,6 +20,33 @@ class LoginAction extends Action
     $strError = ""; $strUnionid = "";
     $strLocation = ""; $strHeadUrl = "";
     do {
+      // 从state当中解析回调函数 => 需要进一步的深入解析...
+      $strBackUrl = urlsafe_b64decode($strState);
+      $pieces = explode('/node_tag/', $strBackUrl);
+      // 判断节点标记不能为空...
+      if( count($pieces) != 2 || strlen($pieces[0]) <= 0 || strlen($pieces[1]) <= 0 ) {
+        $strError = 'error: node_tag is null';
+        break;
+      }
+      // 保存截取之后的数据...
+      $strBackUrl = $pieces[0];
+      $strNodeTag = $pieces[1];
+      // 根据节点标记获取或创建一条新记录...
+      $map['node_tag'] = $strNodeTag;
+      $dbNode = D('node')->where($map)->find();
+      if( count($dbNode) <= 0 ) {
+        // 创建一条新纪录...
+        $dbNode['node_name'] = "新建节点";
+        $dbNode['node_tag'] = $strNodeTag;
+        $dbNode['created'] = date('Y-m-d H:i:s');
+        $dbNode['updated'] = date('Y-m-d H:i:s');
+        $dbNode['node_id'] = D('node')->add($dbNode);
+      }
+      // 判断获取的节点记录是否有效...
+      if( $dbNode['node_id'] <= 0 ) {
+        $strError = 'error: node_id is null';
+        break;
+      }
       // 通过code获取access_token...
       $result = http_get('https://api.weixin.qq.com/sns/oauth2/access_token?appid='.$this->m_weLogin['appid'].'&secret='.$this->m_weLogin['appsecret'].'&code='.$strCode.'&grant_type=authorization_code');
       if( !$result ) {
@@ -48,6 +75,9 @@ class LoginAction extends Action
       $arrUser['nickname'] = trimEmo($arrUser['nickname']);
       // 将获取到的用户关键帧查找数据库内容...
       $dbUser = D('user')->where('wx_unionid="'.$arrUser['unionid'].'"')->find();
+      
+      // 给获取到的用户设置对应的网站节点编号...
+      $dbUser['node_id'] = $dbNode['node_id'];
       
       // 从微信获取的信息更新到数据库当中...
       // 这里是网站应用，不能得到是否关注公众号...
@@ -85,8 +115,6 @@ class LoginAction extends Action
       $strHeadUrl = $arrUser['headimgurl'];
       $strUnionid = $arrUser['unionid'];
     }while( false );
-    // 从state当中解析回调函数...
-    $strBackUrl = urlsafe_b64decode($strState);
     // 将需要返回的参数进行base64编码处理...
     if( strlen($strError) > 0 ) {
       $strError = urlsafe_b64encode($strError);
@@ -145,19 +173,21 @@ class LoginAction extends Action
     echo json_encode($dbUser);
   }
   //
-  // 获取用户记录总数...
+  // 获取用户记录总数 => node_tag 筛选...
   // 返回：number
   public function getUserCount()
   {
-    echo D('user')->count();
+    $map['node_tag'] = $_GET['node_tag'];
+    echo D('UserView')->where($map)->count();
   }
   //
-  // 获取用户分页数据...
+  // 获取用户分页数据 => node_tag 筛选...
   // 返回：string(json)
   public function getPageUser()
   {
+    $map['node_tag'] = $_GET['node_tag'];
     $strLimit = urlsafe_b64decode($_GET['limit']);
-    $arrUser = D('user')->limit($strLimit)->order('user_id DESC')->select();
+    $arrUser = D('UserView')->where($map)->limit($strLimit)->order('user_id DESC')->select();
     echo json_encode($arrUser);
   }
 }
