@@ -60,7 +60,26 @@ class AdminAction extends Action
   // 点击查看用户登录信息...
   public function userInfo()
   {
-    // 获取用户登录信息 => 返回统一格式 => err_code | err_msg | data
+    // cookie失效，通知父窗口页面跳转刷新...
+    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_ticker') ) {
+      echo "<script>window.parent.doReload();</script>";
+      return;
+    }
+    // 通过cookie得到unionid，再用unionid查找用户信息...
+    $map['wx_unionid'] = Cookie::get('wx_unionid');
+    $dbLogin = D('user')->where($map)->find();
+    // 无法查找到需要的用户信息，反馈错误...
+    if( (count($dbLogin) <= 0) || !isset($dbLogin['user_id']) ) {
+      $this->assign('my_msg_title', '无法找到用户信息');
+      $this->assign('my_msg_desc', '糟糕，出错了');
+      $this->display('Common:error_page');
+      return;
+    }
+    // 进行模板设置，让模版去替换头像...
+    $this->assign('my_login', $dbLogin);
+    $this->display('Admin:userInfo');
+    
+    /*// 获取用户登录信息 => 返回统一格式 => err_code | err_msg | data
     $dbLogin = A('Login')->getWxUser();
     // err_code < 0 => cookie失效，通知父窗口页面跳转刷新...
     if( $dbLogin['err_code'] < 0 ) {
@@ -76,7 +95,7 @@ class AdminAction extends Action
     }
     // err_code = 0 => 进行模板设置，让模版去替换头像...
     $this->assign('my_login', $dbLogin['data']);
-    $this->display('Admin:userInfo');
+    $this->display('Admin:userInfo');*/
   }
   /**
   +----------------------------------------------------------
@@ -1306,13 +1325,19 @@ class AdminAction extends Action
   {
     $this->assign('my_title', "云录播 - 用户管理");
     $this->assign('my_command', 'user');
-    // 设置每页显示的条目数量...
-    $this->assign('my_per_page', C('PAGE_PER'));
+    // 得到每页条数，总记录数，计算总页数...
+    $pagePer = C('PAGE_PER');
+    $totalNum = D('user')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 设置最大页数，设置模板参数...
+    $this->assign('max_page', $max_page);
     $this->display();
   }
   //
   // 获取用户总数...
-  public function getUserCount()
+  /*public function getUserCount()
   {
     // 获取节点服务器的标记符号...
     $dbSys = D('system')->field('web_tag')->find();
@@ -1322,13 +1347,24 @@ class AdminAction extends Action
     // 准备请求链接地址，调用接口，返回数据...
     $strCountUrl = sprintf("%s/wxapi.php/Login/getUserCount/node_tag/%s", $strServer, $dbSys['web_tag']);
     echo http_get($strCountUrl);
-  }
+  }*/
   //
   // 获取用户分页数据...
   public function pageUser()
   {
+    // 准备需要的分页参数...
+    $pagePer = C('PAGE_PER'); // 每页显示的条数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 设置查询条件，查询分页数据，设置模板...
+    $arrUser = D('user')->limit($pageLimit)->order('user_id DESC')->select();
+    // 设置模板参数，返回模板数据...
+    $this->assign('my_admin_tick', USER_ADMIN_TICK);
+    $this->assign('my_user', $arrUser);
+    echo $this->fetch('pageUser');
+    
     // 获取节点服务器的标记符号...
-    $dbSys = D('system')->field('web_tag')->find();
+    /*$dbSys = D('system')->field('web_tag')->find();
     // 准备需要的分页参数...
     $pagePer = C('PAGE_PER'); // 每页显示的条数...
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
@@ -1344,13 +1380,22 @@ class AdminAction extends Action
     // 设置模板参数，返回模板数据...
     $this->assign('my_admin_tick', USER_ADMIN_TICK);
     $this->assign('my_user', $arrUser);
-    echo $this->fetch('pageUser');
+    echo $this->fetch('pageUser');*/
   }
   //
   // 获取单个用户信息...
   public function getUser()
   {
-    $nUserID = $_GET['user_id'];
+    // 获取用户数据通过用户编号...
+    $map['user_id'] = $_GET['user_id'];
+    $dbUser = D('user')->where($map)->find();
+    // 获取模板数据...
+    $this->assign('my_normal_tick', USER_NORMAL_TICK);
+    $this->assign('my_admin_tick', USER_ADMIN_TICK);
+    $this->assign('my_user', $dbUser);
+    echo $this->fetch('getUser');
+    
+    /*$nUserID = $_GET['user_id'];
     // 准备服务器链接地址，去掉最后的反斜杠...
     $strServer = $this->m_weLogin['redirect_uri'];
     $strServer = removeSlash($strServer);
@@ -1362,19 +1407,23 @@ class AdminAction extends Action
     $this->assign('my_normal_tick', USER_NORMAL_TICK);
     $this->assign('my_admin_tick', USER_ADMIN_TICK);
     $this->assign('my_user', $dbUser);
-    echo $this->fetch('getUser');
+    echo $this->fetch('getUser');*/
   }
   //
   // 保存用户修改后信息...
   public function saveUser()
   {
+    // 更新用户时间之后，直接保存数据库...
     $_POST['updated'] = date('Y-m-d H:i:s');
+    D('user')->save($_POST);
+
+    /*$_POST['updated'] = date('Y-m-d H:i:s');
     // 准备服务器链接地址，去掉最后的反斜杠...
     $strServer = $this->m_weLogin['redirect_uri'];
     $strServer = removeSlash($strServer);
     // 准备请求链接地址，调用接口，返回数据...
     $strUrl = sprintf("%s/wxapi.php/Login/saveUser", $strServer);
-    echo http_post($strUrl, $_POST);
+    echo http_post($strUrl, $_POST);*/
   }
 }
 ?>

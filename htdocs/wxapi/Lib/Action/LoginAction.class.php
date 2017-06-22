@@ -27,12 +27,49 @@ class LoginAction extends Action
       $this->dispError($bIsAdmin, $strErr, '糟糕，登录失败了');
       return;
     }
-    // 如果找到了用户编号和用户头像，将这个编号解析出来，放入cookie当中...
-    if( isset($_GET['wx_unionid']) && isset($_GET['wx_headurl']) && isset($_GET['wx_ticker']) ) {
+    // 登录成功，解析数据，放入cookie当中...
+    if( isset($_GET['wx_json']) ) {
 			// 获取服务器反馈的信息...
-      $strUnionid = urlsafe_b64decode($_GET['wx_unionid']);
-      $strHeadUrl = urlsafe_b64decode($_GET['wx_headurl']);
-      $strTicker = urlsafe_b64decode($_GET['wx_ticker']);
+      $strWxJSON = urlsafe_b64decode($_GET['wx_json']);
+      $arrUser = json_decode($strWxJSON, true);
+      // 判断获取数据的有效性...
+      if( !isset($arrUser['unionid']) || !isset($arrUser['headimgurl']) ) {
+        $this->dispError($bIsAdmin, '获取微信数据失败', '糟糕，登录失败了');
+        return;
+      }
+      // 从当前已有的数据库中查找这个用户的信息...
+      $map['wx_unionid'] = $arrUser['unionid'];
+      $dbUser = D('user')->where($map)->find();
+      $nUserCount = D('user')->count();
+      // 将从微信获取到的信息更新到数据库当中...
+      // 这里是网站应用，不能得到是否关注公众号...
+      $dbUser['wx_unionid'] = $arrUser['unionid'];    // 全局唯一ID
+      $dbUser['wx_openid_web'] = $arrUser['openid'];  // 本应用的openid
+      $dbUser['wx_nickname'] = $arrUser['nickname'];  // 微信昵称
+      $dbUser['wx_language'] = $arrUser['language'];  // 语言
+      $dbUser['wx_headurl'] = $arrUser['headimgurl']; // 0,46,64,96,132
+      $dbUser['wx_country'] = $arrUser['country'];    // 国家
+      $dbUser['wx_province'] = $arrUser['province'];  // 省份
+      $dbUser['wx_city'] = $arrUser['city'];          // 城市
+      $dbUser['wx_sex'] = $arrUser['sex'];            // 性别
+      // 根据id字段判断是否有记录...
+      if( isset($dbUser['user_id']) ) {
+        // 更新已有的用户记录...
+        $dbUser['update_time'] = date('Y-m-d H:i:s');
+        $where['user_id'] = $dbUser['user_id'];
+        D('user')->where($where)->save($dbUser);
+      } else {
+        // 新建一条用户记录 => 如果是第一个用户，设置成管理员...
+        $dbUser['user_tick'] = (($nUserCount <= 0) ? USER_ADMIN_TICK : USER_NORMAL_TICK);
+        $dbUser['create_time'] = date('Y-m-d H:i:s');
+        $dbUser['update_time'] = date('Y-m-d H:i:s');
+        $insertid = D('user')->add($dbUser);
+        $dbUser['user_id'] = $insertid;
+      }
+      // 将有用的数据存放到cookie当中...
+      $strUnionid = $dbUser['wx_unionid'];
+      $strHeadUrl = $dbUser['wx_headurl'];
+      $strTicker = $dbUser['user_tick'];
       // 把unionid存入cookie当中，有效期设置一整天，必须用Cookie类...
       Cookie::set('wx_unionid', $strUnionid, 3600*24);
       Cookie::set('wx_headurl', $strHeadUrl, 3600*24);
@@ -107,9 +144,19 @@ class LoginAction extends Action
     $this->display($bIsAdmin ? "Login:login" : "Home:login");
   }
   //
+  // 显示错误模板信息...
+  private function dispError($bIsAdmin, $inMsgTitle, $inMsgDesc)
+  {
+    $this->assign('my_admin', $bIsAdmin);
+    $this->assign('my_title', '糟糕，出错了');
+    $this->assign('my_msg_title', $inMsgTitle);
+    $this->assign('my_msg_desc', $inMsgDesc);
+    $this->display('Common:error_page');
+  }
+  //
   // 根据cookie从数据库中获取当前登录用户信息 => 这里是接口调用，不能进行页面跳转...
   // 返回统一的结构：err_code | err_msg | data
-  public function getWxUser()
+  /*public function getWxUser()
   {
     // 设置默认的返回数组...
     $arrErr['err_code'] = false;
@@ -145,16 +192,6 @@ class LoginAction extends Action
     }
     // 返回最终的调用结果 => err_code | err_msg | data
     return $arrResult;
-  }
-  //
-  // 显示错误模板信息...
-  private function dispError($bIsAdmin, $inMsgTitle, $inMsgDesc)
-  {
-    $this->assign('my_admin', $bIsAdmin);
-    $this->assign('my_title', '糟糕，出错了');
-    $this->assign('my_msg_title', $inMsgTitle);
-    $this->assign('my_msg_desc', $inMsgDesc);
-    $this->display('Common:error_page');
-  }
+  }*/
 }
 ?>

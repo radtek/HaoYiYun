@@ -1,7 +1,7 @@
 <?php
 /*************************************************************
     Wan (C)2015 - 2016 happyhope.net
-    备注：专门处理测试代码...
+    备注：用户登录接口...
 *************************************************************/
 
 class LoginAction extends Action
@@ -75,10 +75,8 @@ class LoginAction extends Action
       $arrUser['nickname'] = trimEmo($arrUser['nickname']);
       // 将获取到的用户关键帧查找数据库内容...
       $dbUser = D('user')->where('wx_unionid="'.$arrUser['unionid'].'"')->find();
-      
       // 给获取到的用户设置对应的网站节点编号...
       $dbUser['node_id'] = $dbNode['node_id'];
-      
       // 从微信获取的信息更新到数据库当中...
       // 这里是网站应用，不能得到是否关注公众号...
       $dbUser['wx_unionid'] = $arrUser['unionid'];    // 全局唯一ID
@@ -97,33 +95,22 @@ class LoginAction extends Action
         $dbUser['update_time'] = date('Y-m-d H:i:s');
         D('user')->where('user_id='.$dbUser['user_id'])->save($dbUser);
       } else {
-        // 新建一条用户记录，保存为普通用户...
-        $dbUser['user_tick'] = USER_NORMAL_TICK;
+        // 新建一条用户记录...
         $dbUser['create_time'] = date('Y-m-d H:i:s');
         $dbUser['update_time'] = date('Y-m-d H:i:s');
         $insertid = D('user')->add($dbUser);
         $dbUser['user_id'] = $insertid;
       }
-      // 操作成功，记录用户网站登录行为...
-      //$dbAction['user_id'] = $dbUser['user_id'];
-      //$dbAction['action_id'] = ACTION_WEB_LOGIN;
-      //$dbAction['action_time'] = date('Y-m-d H:i:s');
-      //$insertid = D('action')->add($dbAction);
-      
-      // 保存需要返回的用户唯一编号、用户头像地址、用户标记...
-      $strUserTick = $dbUser['user_tick'];
-      $strHeadUrl = $arrUser['headimgurl'];
-      $strUnionid = $arrUser['unionid'];
+      // 保存需要返回的用户信息 => 全部转换成JSON...
+      $strWxJSON = json_encode($arrUser);
     }while( false );
     // 将需要返回的参数进行base64编码处理...
     if( strlen($strError) > 0 ) {
       $strError = urlsafe_b64encode($strError);
       $strLocation = sprintf("location:%s/wx_error/%s", $strBackUrl, $strError);
     } else {
-      $strUnionid = urlsafe_b64encode($strUnionid);
-      $strHeadUrl = urlsafe_b64encode($strHeadUrl);
-      $strUserTick = urlsafe_b64encode($strUserTick);
-      $strLocation = sprintf("location:%s/wx_unionid/%s/wx_headurl/%s/wx_ticker/%s", $strBackUrl, $strUnionid, $strHeadUrl, $strUserTick);
+      $strWxJSON = urlsafe_b64encode($strWxJSON);
+      $strLocation = sprintf("location:%s/wx_json/%s", $strBackUrl, $strWxJSON);
     }
     // 跳转页面到第三方回调地址...
     header($strLocation);
@@ -131,7 +118,7 @@ class LoginAction extends Action
   //
   // 通过wx_unionid获取微信用户信息...
   // 返回：json => err_code | err_msg | data
-  public function getWxUser()
+  /*public function getWxUser()
   {
     // 准备返回的对象...
     $arrErr['err_code'] = false;
@@ -189,6 +176,6 @@ class LoginAction extends Action
     $strLimit = urlsafe_b64decode($_GET['limit']);
     $arrUser = D('UserView')->where($map)->limit($strLimit)->order('user_id DESC')->select();
     echo json_encode($arrUser);
-  }
+  }*/
 }
 ?>

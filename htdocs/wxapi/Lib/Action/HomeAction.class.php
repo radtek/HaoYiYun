@@ -199,12 +199,12 @@ class HomeAction extends Action
     $this->assign('my_rec', $arrRec);
   }*/
   //
-  // 获取摄像头在线状态标志...
+  // 获取摄像头在线状态标志 => 这种访问方式效率太低，容易发生堵塞，已经不用了...
   // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
-  private function getCameraStatusFromTransmit($arrGather, &$arrSchool)
+  /*private function getCameraStatusFromTransmit($arrGather, &$arrSchool)
   {
     // 尝试链接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();*/
 
     /*// 按照采集端进行查询...
     foreach($arrGather as &$dbGather) {
@@ -247,7 +247,7 @@ class HomeAction extends Action
     }*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    /*$transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
     // 链接中转服务器失败，直接返回...
     if( !$transmit ) return;
     // 按照采集端进行查询...
@@ -291,7 +291,7 @@ class HomeAction extends Action
     }
     // 关闭中转服务器链接...
     transmit_disconnect_server($transmit);
-  }
+  }*/
   /**
   +----------------------------------------------------------
   * 直播页面...

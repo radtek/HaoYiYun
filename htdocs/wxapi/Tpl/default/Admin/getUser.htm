@@ -85,6 +85,7 @@ layui.use(['layer','form'], function(){
     var theTickerName = $("select[name='myTicker']").find("option:selected").text();
     var theTickerID = data.field.myTicker;
     var theUserID = {{$my_user.user_id}};
+    $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
