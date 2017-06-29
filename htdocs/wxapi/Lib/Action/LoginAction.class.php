@@ -140,6 +140,7 @@ class LoginAction extends Action
     $this->assign('my_state', $state);
     $this->assign('my_scope', $this->m_weLogin['scope']);
     $this->assign('my_appid', $this->m_weLogin['appid']);
+    //$this->assign('my_href', $this->m_weLogin['href']);
     $this->assign('my_redirect_uri', urlencode($this->m_weLogin['redirect_uri']));
     $this->display($bIsAdmin ? "Login:login" : "Home:login");
   }

@@ -23,9 +23,9 @@ CXmlConfig::CXmlConfig(void)
 	CString strVersion;
 	strVersion.Format("版 本：V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
 	m_strVersion = strVersion;
-	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2016-2017";
+	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2016-2020";
 	m_strPhone = "电 话：15010119735";
-	m_strWebSite = "网 站：http://www.myhaoyi.com";	
+	m_strWebSite = "网 站：https://www.myhaoyi.com";	
 	m_strAddress = "地 址：北京市海淀区北四环西路68号6层C16";
 }
 

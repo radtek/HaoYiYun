@@ -197,13 +197,15 @@ BOOL CWebThread::RegisterHaoYi()
 					strMacAddr, strIPAddr, theConfig.GetMaxCamera(),
 					szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str());
 	strUrl.Format("http://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
-	// 调用Curl接口，汇报采集端信息...
+	// 调用Curl接口，汇报采集端信息 => 这里本来需要用 https 模式，但是windows下的libcurl支持ssl没有成功...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
-		// 设定curl参数，采用post模式，设置5秒超时...
+		// 设定curl参数，采用post模式，设置5秒超时，忽略证书检查（放弃了对https的支持）
+		//res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+		//res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
