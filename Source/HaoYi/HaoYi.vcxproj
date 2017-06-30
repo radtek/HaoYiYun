@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;RTMPLIB_EXPORTS;MP4V2_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>common;json;curl;UI;HKNet;DHNet;fastdfs;librtmp;libmp4v2;librtsp\liveMedia\include;librtsp\groupsock\include;librtsp\UsageEnvironment\include;librtsp\BasicUsageEnvironment\include</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
