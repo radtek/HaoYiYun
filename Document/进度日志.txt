@@ -19,9 +19,10 @@
 15.（已完成）网站端：需要将myhaoyi改造成https，微信小程序也需要；
      A：（已完成）登录阿里云 => 控制台 => 证书服务 => 购买证书，参考 => https://ninghao.net/blog/4449，在下载栏有详细说明，配置需要添加对php的支持；
      B：（已完成）nginx，需要加入 --with-http_ssl_module 编译参数，让 nginx 能够支持 https，nginx.conf需要针对443端口进行配置；
-     B：（已完成）需要打开防火墙，对443端口开放，同时，为了全站使用 https，需要开启301重定向 => return 301 https://$host$request_uri;（目前80和443共存）
+     B：（已完成）需要打开防火墙，对443端口开放，同时，为了全站使用 https，需要开启301重定向 => return 301 https://$host$request_uri;
      C：（已完成）网站前后端，登录链接需要修改成 https 模式，浏览器内核天生就支持 https ，因此，不受影响，但是，网站最好强制使用https模式；
-     D：（已完成）采集端，注册连接myhaoyi.com时，需要修改成 https 模式，但是，windows下的libcurl支持https太费劲，放弃了，因此，301重定向也要关闭；
+     D：（已完成）采集端，注册连接myhaoyi.com时，需要修改成 https 模式；编译目录 => E:\GitHub\HaoYiYun\Document\WEB\curl
+     E：（已完成）windows下的libcurl支持https太费劲，参考 => http://blog.csdn.net/neverup_/article/details/21961017；
 16.（未完成）小程序：小程序的支持路径需要想清楚，所有的数据都必须通过 https://myhaoyi.com 中转，需要在 myhaoyi.com 上安装 wxsmit ，用于小程序命令中转；
 17.（未完成）网站端：可以设定微信登录时的界面参数，方便调试和管理，前提是把网站设置成 https 模式；
 18.（未完成）存储端：尝试把 tracker/storage 装在同一台机器上，关键点在 nginx 需要将 扩展模块 和 缓存模块同时编译，需要打包一个新的全功能 nginx

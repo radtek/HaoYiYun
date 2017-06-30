@@ -1010,7 +1010,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="curl\libcurl.lib">
+    <Library Include="curl\libcurl_imp.lib">
       <Filter>curl</Filter>
     </Library>
   </ItemGroup>
