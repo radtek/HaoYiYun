@@ -261,10 +261,11 @@ class GatherAction extends Action
           $arrData['disptime'] = sprintf("%02d:%02d", $theMinute, $theSecond);
         }
         // 如果course_id有效，则需要查找到subject_id和teacher_id...
+        // 如果course_id已经被删除了，设置默认的subject_id和teacher_id都为1，避免没有编号，造成前端无法显示的问题...
         if( $arrData['course_id'] > 0 ) {
           $dbCourse = D('course')->where('course_id='.$arrData['course_id'])->field('subject_id,teacher_id')->find();
-          $arrData['subject_id'] = (isset($dbCourse['subject_id']) ? $dbCourse['subject_id'] : 0);
-          $arrData['teacher_id'] = (isset($dbCourse['teacher_id']) ? $dbCourse['teacher_id'] : 0);
+          $arrData['subject_id'] = (isset($dbCourse['subject_id']) ? $dbCourse['subject_id'] : 1);
+          $arrData['teacher_id'] = (isset($dbCourse['teacher_id']) ? $dbCourse['teacher_id'] : 1);
         }
         // 在图片表中查找file_src，找到了，则新增image_id，截图匹配...
         $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->field('image_id,camera_id')->find();

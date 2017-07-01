@@ -824,7 +824,7 @@ GM_Error CRemoteSession::ForRead()
 		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Play_Login:			  theErr = this->doCmdPlayLogin(m_strRecv); break;
 		case kCmd_PHP_Get_Course_Record:  theErr = this->doPHPGetCourseRecord(m_strRecv); break;
-		case kCmd_PHP_Get_Camera_Status:  theErr = this->doPHPGetCameraStatus(m_strRecv); break;
+		//case kCmd_PHP_Get_Camera_Status:  theErr = this->doPHPGetCameraStatus(m_strRecv); break;
 		case kCmd_PHP_Set_Camera_Name:    theErr = this->doPHPSetCameraName(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Set_Course_Add:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kAddCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Set_Course_Mod:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kModCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
@@ -1144,7 +1144,7 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSi
 // 处理PHP客服端需要的摄像头状态的命令 => 需要返回 JSON 数据...
 // 数据格式 => Cmd_Header + JSON...
 // JSON格式 => 8:7:6:5
-GM_Error CRemoteSession::doPHPGetCameraStatus(string & inData)
+/*GM_Error CRemoteSession::doPHPGetCameraStatus(string & inData)
 {
 	// 从传递过来的数据中解析出JSON内容，有效性前面已经判断了...
 	Cmd_Header * lpCmdHeader = (Cmd_Header*)inData.c_str();
@@ -1189,8 +1189,9 @@ GM_Error CRemoteSession::doPHPGetCameraStatus(string & inData)
 	nSendSize += strJson.size();
 	// 调用统一的发送接口...
 	return this->SendData(m_lpSendBuf, nSendSize);
-}
+}*/
 //
+// 2017.07.01 - by jackey => 这个命令依然有效，需要转发给 php 客户端...
 // 处理PHP客服端需要的摄像头状态的命令 => 需要返回 JSON 数据...
 // 数据格式 => Cmd_Header + JSON...
 // JSON格式 => camera_id: xxx...

@@ -128,7 +128,7 @@ private:
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);
 	GM_Error	doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSize);
 	GM_Error	doPHPSetCameraName(LPCTSTR lpData, int nSize);
-	GM_Error	doPHPGetCameraStatus(string & inData);
+	//GM_Error	doPHPGetCameraStatus(string & inData);
 	GM_Error	doPHPGetCourseRecord(string & inData);
 	GM_Error	SendData(LPCTSTR lpDataPtr, int nDataSize);
 	GM_Error	SendLoginCmd();

@@ -425,6 +425,13 @@ class HomeAction extends Action
       // 中转服务器需要的参数...
       $dbParam['mac_addr'] = $_GET['mac_addr'];
       $dbParam['rtmp_live'] = $_GET['camera_id'];
+      // 首先，判断通道是否处于直播状态...
+      $map['camera_id'] = $_GET['camera_id'];
+      $dbCamera = D('camera')->where($map)->field('camera_id,clicks,status')->find();
+      if( $dbCamera['status'] <= 0 ) {
+        $this->dispError('当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。');
+        return;
+      }
       // 获取直播链接地址...
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...
@@ -436,8 +443,6 @@ class HomeAction extends Action
       $dbShow['url'] = $dbResult['rtmp_url'];
       $dbShow['type'] = "rtmp/flv";
       // 累加点播计数器，写入数据库...
-      $map['camera_id'] = $_GET['camera_id'];
-      $dbCamera = D('camera')->where($map)->field('camera_id,clicks')->find();
       $dbCamera['clicks'] = intval($dbCamera['clicks']) + 1;
       D('camera')->save($dbCamera);
     }

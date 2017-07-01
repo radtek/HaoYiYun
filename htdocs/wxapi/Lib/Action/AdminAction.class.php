@@ -617,8 +617,10 @@ class AdminAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 查询分页数据，准备中转查询数据，设置默认状态...
     $arrGather = D('GatherView')->limit($pageLimit)->order('gather_id DESC')->select();
-    // 获取采集端在线状态标志，设置模板参数...
-    $this->getGatherStatusFromTransmit($arrGather);
+    // 获取采集端在线状态标志，设置模板参数 => 有记录才查询...
+    if( count($arrGather) > 0 ) {
+      $this->getGatherStatusFromTransmit($arrGather);
+    }
     $this->assign('my_gather', $arrGather);
     echo $this->fetch('pageGather');
   }
@@ -675,10 +677,10 @@ class AdminAction extends Action
   //
   // 获取摄像头在线状态标志...
   // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
-  private function getCameraStatusFromTransmit($strMacAddr, &$arrCamera)
+  /*private function getCameraStatusFromTransmit($strMacAddr, &$arrCamera)
   {
     // 尝试链接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();*/
     
     /*// 先获取摄像头编号列表，并设置初始状态...
     foreach($arrCamera as &$dbItem) {
@@ -707,7 +709,7 @@ class AdminAction extends Action
     }*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    /*$transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
     // 先获取摄像头编号列表，并设置初始状态...
     foreach($arrCamera as &$dbItem) {
       $arrIDS[] = $dbItem['camera_id'];
@@ -739,7 +741,7 @@ class AdminAction extends Action
     if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
-  }
+  }*/
   //
   // 获取摄像头分页数据...
   public function pageCamera()
@@ -880,8 +882,10 @@ class AdminAction extends Action
     unset($map['gather_id']);
     $map['Course.camera_id'] = $theCameraID;
     $arrCourse = D('CourseView')->where($map)->limit($pageLimit)->order('course_id DESC')->select();
-    // 获取当前摄像头下正在录像的课表编号...
-    $this->getCourseRecordFromTransmit($dbGather['mac_addr'], $theCameraID, $arrCourse);
+    // 获取当前摄像头下正在录像的课表编号 => 有记录才查询...
+    if( count($arrCourse) > 0 ) {
+      $this->getCourseRecordFromTransmit($dbGather['mac_addr'], $theCameraID, $arrCourse);
+    }
     // 设置模板参数...
     $this->assign('my_course', $arrCourse);
     echo $this->fetch('pageCourse');

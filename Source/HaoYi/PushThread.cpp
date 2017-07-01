@@ -1014,6 +1014,9 @@ BOOL CPushThread::StreamStartLivePush(CCamera * lpCamera, string & strRtmpUrl)
 {
 	if( m_lpCamera != lpCamera )
 		return false;
+	// IE8会连续发送两遍播放命令，需要确保只启动一次...
+	if( m_lpRtmpPush != NULL )
+		return true;
 	// 保存需要的数据信息...
 	m_strRtmpUrl = strRtmpUrl;
 	ASSERT( strRtmpUrl.size() > 0 );
@@ -1259,18 +1262,18 @@ void CPushThread::SetStreamPublish(BOOL bFlag)
 // 这里只需要处理推流失败的情况，拉流失败会全部通过超时机制自动处理...
 void CPushThread::doErrNotify()
 {
-	// 2017.06.15 - by jackey => 取消了这种延时反馈机制 => 避免php阻塞...
-	// 这里需要通知正在等待的播放器退出...
-	//if( m_lpCamera != NULL ) {
-	//	m_lpCamera->doDelayTransmit(GM_Push_Fail);
-	//}
 	// 如果线程已经被主动删除了，直接退出...
 	if( m_bDeleteFlag )
 		return;
 	ASSERT( !m_bDeleteFlag );
-	// 这里只需要处理推流失败，会引发整个对象的删除...
+	// 窗口对象必须有效...
+	if( m_hWndParent == NULL )
+		return;
 	ASSERT( m_hWndParent != NULL );
-	::PostMessage(m_hWndParent, WM_ERR_PUSH_MSG, NULL, NULL);
+	// 摄像头设备模式 => 删除整个数据处理线程..
+	// 流数据转发模式 => 只停止rtmp上传对象...
+	WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
+	::PostMessage(m_hWndParent, wMsgID, NULL, NULL);
 }
 
 void CPushThread::Entry()
@@ -1366,13 +1369,15 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
 	// 如果是摄像头，不进行关键帧计数和丢帧处理...
-	if( this->IsCameraDevice() )
+	if( this->IsCameraDevice() ) {
 		return m_MapFrame.size();
+	}
 	// 如果是流转发模式，并且没有处于发布状态...
 	ASSERT( !this->IsCameraDevice() );
 	// 判断新数据是否是视频关键帧，不是视频关键帧，直接返回...
-	if( inFrame.typeFlvTag != FLV_TAG_TYPE_VIDEO || !inFrame.is_keyframe )
+	if( inFrame.typeFlvTag != FLV_TAG_TYPE_VIDEO || !inFrame.is_keyframe ) {
 		return m_MapFrame.size();
+	}
 	// 如果是视频关键帧，累加计数器...
 	ASSERT( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && inFrame.is_keyframe );
 	// 累加关键帧计数器...
@@ -1642,6 +1647,8 @@ BOOL CPushThread::SendAudioDataPacket(FMS_FRAME & inFrame)
 BOOL CPushThread::SendAVCSequenceHeaderPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
+	if( m_lpRtmpPush == NULL )
+		return false;
 
 	string strAVC;
 
@@ -1666,6 +1673,8 @@ BOOL CPushThread::SendAVCSequenceHeaderPacket()
 BOOL CPushThread::SendAACSequenceHeaderPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
+	if( m_lpRtmpPush == NULL )
+		return false;
 
 	string strAAC;
 
@@ -1688,6 +1697,8 @@ BOOL CPushThread::SendAACSequenceHeaderPacket()
 BOOL CPushThread::SendMetadataPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
+	if( m_lpRtmpPush == NULL )
+		return false;
 
 	char   metadata_buf[4096];
     char * pbuf = this->WriteMetadata(metadata_buf);

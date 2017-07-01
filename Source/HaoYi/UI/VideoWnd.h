@@ -25,6 +25,7 @@ public:
 public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnClickItemWnd(UINT nItem);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
@@ -32,7 +33,7 @@ public:
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnGetMinMaxInfo(MINMAXINFO FAR* lpMMI);
-	afx_msg void OnClickItemWnd(UINT nItem);
+	//afx_msg void OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp);
 	afx_msg LRESULT	OnMsgRecSlice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgTaskErr(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgPushErr(WPARAM wParam, LPARAM lParam);

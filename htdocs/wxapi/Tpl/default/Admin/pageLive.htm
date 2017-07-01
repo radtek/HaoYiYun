@@ -1,7 +1,13 @@
 
 <volist name="my_live" id="vo">
 <tr height="50px" onclick="doTrClick({{$vo.camera_id}},{{$vo.gather_id}},this);">
-  <td><i class="fa fa-video-camera fa-normal">&nbsp;</i>{{$vo.school_name|msubstr=0,10}}</td>
+  <td>
+    <switch name="vo.status">
+      <case value="0"><i class="fa fa-power-off fa-wait">&nbsp;等待中</i></case>
+      <case value="1"><i class="fa fa-tv fa-run">&nbsp;运行中</i></case>
+    </switch>
+  </td>
+  <td>{{$vo.school_name|msubstr=0,10}}</td>
   <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
   <td>{{$vo.camera_name}}</td>
   <td title="<switch name='vo.stream_prop'>

@@ -67,6 +67,7 @@ BEGIN_MESSAGE_MAP(CVideoWnd, CWnd)
 	ON_WM_MOUSEMOVE()
 	ON_WM_ERASEBKGND()
 	ON_WM_LBUTTONDOWN()
+	//ON_WM_NCCALCSIZE()
 	ON_WM_LBUTTONDBLCLK()
 	ON_WM_GETMINMAXINFO()
 	ON_MESSAGE(WM_ERR_TASK_MSG, &CVideoWnd::OnMsgTaskErr)
@@ -768,3 +769,12 @@ void CVideoWnd::OnGetMinMaxInfo(MINMAXINFO FAR* lpMMI)
 	lpMMI->ptMinTrackSize.y = KHSS_MIN_VIDEO_HEIGHT;
 	CWnd::OnGetMinMaxInfo(lpMMI);
 }
+
+/*void CVideoWnd::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp)
+{
+	if( bCalcValidRects ) {
+		lpncsp->rgrc[2] = lpncsp->rgrc[1];
+		lpncsp->rgrc[1] = lpncsp->rgrc[0];
+	}
+	//CWnd::OnNcCalcSize(bCalcValidRects, lpncsp);
+}*/
