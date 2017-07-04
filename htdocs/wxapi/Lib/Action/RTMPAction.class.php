@@ -59,5 +59,18 @@ class RTMPAction extends Action
     // 反馈转发结果...
     echo $json_data;
   }
+  //
+  // 处理 rtmp 服务器在发布时的用户信息验证...
+  public function publish()
+  {
+    // for nginx-rtmp...
+    //logdebug(json_encode($_POST));
+    //header('HTTP/1.0 404 Not Found');
+    //header('HTTP/1.0 200 OK');
+    
+    // for srs...
+    logdebug(file_get_contents("php://input"));
+    echo '0';
+  }
 }
 ?>
