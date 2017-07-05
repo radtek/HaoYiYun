@@ -32,6 +32,9 @@
      C：（已完成）网站前后端，登录链接需要修改成 https 模式，浏览器内核天生就支持 https ，因此，不受影响，但是，网站最好强制使用https模式；
      D：（已完成）采集端，注册连接myhaoyi.com时，需要修改成 https 模式；编译目录 => E:\GitHub\HaoYiYun\Document\WEB\curl
      E：（已完成）windows下的libcurl支持https太费劲，参考 => http://blog.csdn.net/neverup_/article/details/21961017；
+     F：（已完成）将myhaoyi.com和ihaoyi.cn都同时绑定到阿里云服务器上，可以提供两个域名的https访问，需要申请两个证书；两个域名都需要备案成功才能申请。
+     G：（已完成）编译参考 => http://www.jianshu.com/p/d40e249774ff
+
 17.（已完成）网站端：可以设定微信登录时的界面参数，方便调试和管理，前提是把网站设置成 https 模式；
 16.（未完成）小程序：小程序的支持路径需要想清楚，所有的数据都必须通过 https://myhaoyi.com 中转，需要在 myhaoyi.com 上安装 wxsmit ，用于小程序命令中转；
 19.（未完成）IPC：如果有多个支持 rtsp 的摄像头，可以通过 upnp 或 onvif 协议，自动获取，然后添加，代替组播自动搜索协议，应用更广泛；
