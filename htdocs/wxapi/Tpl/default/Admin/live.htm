@@ -91,8 +91,8 @@ function doTrClick(inLiveID, inGatherID,objTr) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
                   //location.href = siteurl+"/Admin/live";
-                  $(objTr).children('td').eq(1).text(theGradeName);
-                  $(objTr).children('td').eq(2).text(theCameraName);
+                  $(objTr).children('td').eq(2).text(theGradeName);
+                  $(objTr).children('td').eq(3).text(theCameraName);
                   layer.closeAll('page');
                 });
               },
