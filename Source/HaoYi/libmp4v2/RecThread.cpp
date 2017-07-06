@@ -112,14 +112,14 @@ bool CRecThread::CreateVideoTrack(string & strSPS, string & strPPS)
 	return true;
 }
 
-bool CRecThread::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inTimeStamp, bool bIsKeyFrame)
+bool CRecThread::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame)
 {
 	// 判断接口是否有效...
 	if( m_lpLibMP4 == NULL )
 		return false;
 	ASSERT( m_lpLibMP4 != NULL );
 	// 调用接口，直接写盘...
-	if( !m_lpLibMP4->WriteSample(bIsVideo, lpFrame, nSize, inTimeStamp, bIsKeyFrame) )
+	if( !m_lpLibMP4->WriteSample(bIsVideo, lpFrame, nSize, inTimeStamp, inRenderOffset, bIsKeyFrame) )
 		return false;
 	// 累加存盘长度，记录已经写入的时间戳...
 	m_dwWriteSize = m_lpLibMP4->GetWriteSize();

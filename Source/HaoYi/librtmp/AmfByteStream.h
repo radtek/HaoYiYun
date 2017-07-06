@@ -68,6 +68,24 @@ inline char* DoubleToBytes(char* buf, double val)
     return buf + 8;
 }
 
+inline unsigned char BytesToUI08(const char* buf)
+{
+    return ( (((unsigned char)buf[0]))	& 0xff );
+}
+
+inline unsigned short BytesToUI16(const char* buf)
+{
+    return ( (((unsigned short)buf[0]) << 8) & 0xff00 )
+        | ( (((unsigned short)buf[1]))		 & 0xff );
+}
+
+inline unsigned int BytesToUI24(const char* buf)
+{
+    return ( (((unsigned int)buf[0]) << 16)	& 0xff0000 )
+        | ( (((unsigned int)buf[1]) << 8)	& 0xff00 )
+        | ( (((unsigned int)buf[2]))		& 0xff );
+}
+
 inline unsigned int BytesToUI32(const char* buf)
 {
     return ( (((unsigned int)buf[0]) << 24)	& 0xff000000 )

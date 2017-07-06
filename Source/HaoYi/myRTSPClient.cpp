@@ -531,13 +531,14 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 	}
 	// 通知录像线程，保存一帧数据包...
 	if( fRecThread != NULL ) {
-		fRecThread->WriteSample(bIsVideo, (BYTE*)strFrame.c_str(), strFrame.size(), dwTimeStamp, bIsKeyFrame);
+		fRecThread->WriteSample(bIsVideo, (BYTE*)strFrame.c_str(), strFrame.size(), dwTimeStamp, 0, bIsKeyFrame);
 	}
 	// 构造音视频数据帧，推送给rtsp线程...
 	if( fRtspThread != NULL ) {
 		FMS_FRAME	theFrame;
 		theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
 		theFrame.dwSendTime = dwTimeStamp;
+		theFrame.dwRenderOffset = 0;
 		theFrame.is_keyframe = bIsKeyFrame;
 		theFrame.strData = strFrame;
 		// 推送数据帧给rtsp线程...

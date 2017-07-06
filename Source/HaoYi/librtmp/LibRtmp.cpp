@@ -204,7 +204,7 @@ bool LibRtmp::doAudio(DWORD dwTimeStamp, char * lpData, int nSize)
 		int    nDataSize = nSize - 2;
 
 		// 存储音频数据帧...
-		bWriteFlag = m_lpRecThread->WriteSample(false, lpFrame, nDataSize, dwTimeStamp, true);
+		bWriteFlag = m_lpRecThread->WriteSample(false, lpFrame, nDataSize, dwTimeStamp, 0, true);
 
 		// 打印调试信息...
 		//TRACE("Audio, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
@@ -216,6 +216,7 @@ bool LibRtmp::doAudio(DWORD dwTimeStamp, char * lpData, int nSize)
 		FMS_FRAME	theFrame;
 		theFrame.typeFlvTag = FLV_TAG_TYPE_AUDIO;
 		theFrame.dwSendTime = dwTimeStamp;
+		theFrame.dwRenderOffset = 0;
 		theFrame.is_keyframe = true;
 
 		// 这里需要去掉一个2字节外壳...
@@ -253,6 +254,10 @@ bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
 
 	// 如果外部录像线程有效，则组帧向外通知...
 	if( m_lpRecThread != NULL ) {
+		// 获取外层壳的数据...
+		BYTE nFlag = BytesToUI08(lpData);
+		BYTE nType = BytesToUI08(lpData+1);
+		int  nOffset = BytesToUI24(lpData+2);
 		// 先去掉外层的数据壳...
 		BOOL   bWriteFlag = false;
 		BYTE * lpFrame = (BYTE*)lpData + 5;
@@ -260,7 +265,7 @@ bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
 		BOOL   bKeyFrame = ((lpData[0] == 0x17) ? true : false);
 
 		// 存储视频数据帧...
-		bWriteFlag = m_lpRecThread->WriteSample(true, lpFrame, nDataSize, dwTimeStamp, bKeyFrame);
+		bWriteFlag = m_lpRecThread->WriteSample(true, lpFrame, nDataSize, dwTimeStamp, nOffset, bKeyFrame);
 
 		// 打印调试信息...
 		//TRACE("Video, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
@@ -268,10 +273,15 @@ bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
 
 	// 如果外部拉流线程有效，则组帧向外通知...
 	if( m_lpRtmpThread != NULL ) {
+		// 获取外层壳的数据...
+		BYTE nFlag = BytesToUI08(lpData);
+		BYTE nType = BytesToUI08(lpData+1);
+		int  nOffset = BytesToUI24(lpData+2);
 		// 组合一个视频帧，通知上层... FLV_TAG_TYPE_VIDEO
 		FMS_FRAME	theFrame;
 		theFrame.typeFlvTag = FLV_TAG_TYPE_VIDEO;
 		theFrame.dwSendTime = dwTimeStamp;
+		theFrame.dwRenderOffset = nOffset;
 		theFrame.is_keyframe = ((lpData[0] == 0x17) ? true : false);
 
 		// 这里需要去掉一个5字节外壳...

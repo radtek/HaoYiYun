@@ -99,6 +99,12 @@ void CDlgSetSys::OnBnClickedOK()
 	}
 	// 将输入的数据直接存盘...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	string & oldWebAddr = theConfig.GetWebAddr();
+	int oldWebPort = theConfig.GetWebPort();
+	// 设置Web地址是否发生变化...
+	if( m_strWebAddr.Compare(oldWebAddr.c_str()) != 0 || oldWebPort != m_nWebPort ) {
+		MessageBox("Web地址发生变化，重启采集端才能生效！", "提示", MB_ICONSTOP);
+	}
 	theConfig.SetMainName(m_strMainName.GetString());
 	theConfig.SetAutoLinkDVR(m_bAutoLinkDVR);
 	theConfig.SetAutoLinkFDFS(m_bAutoLinkFDFS);

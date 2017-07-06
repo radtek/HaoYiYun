@@ -96,7 +96,7 @@ bool LibMP4::CreateAudioTrack(const char* lpUTF8Name, int nAudioSampleRate, stri
 	return true;
 }
 
-bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTimeStamp, bool bIsKeyFrame)
+bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTimeStamp, uint32_t inRenderOffset, bool bIsKeyFrame)
 {
 	if( m_hFileHandle == MP4_INVALID_FILE_HANDLE || lpFrame == NULL || nSize <= 0 )
 		return false;
@@ -113,6 +113,7 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 			theFrame.m_bKeyFrame = bIsKeyFrame;
 			theFrame.m_strData.assign((char*)lpFrame, nSize);
 			theFrame.m_nTimeStamp = inTimeStamp;
+			theFrame.m_nRenderOffset = inRenderOffset;
 			m_deqAudio.push_back(theFrame);
 			// 如果缓存了500帧之后，还没有视频，则认为只有音频，直接存盘...
 			if( m_deqAudio.size() >= 500 ) {
@@ -154,16 +155,18 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 			m_VLastFrame.m_bKeyFrame = bIsKeyFrame;
 			m_VLastFrame.m_strData.assign((char*)lpFrame, nSize);
 			m_VLastFrame.m_nTimeStamp = inTimeStamp;
+			m_VLastFrame.m_nRenderOffset = inRenderOffset;
 			return true;
 		}
 		// 准备需要的数据内容...
 		int			uFrameMS = inTimeStamp - m_VLastFrame.m_nTimeStamp;
 		MP4Duration uDuration = uFrameMS * m_nVideoTimeScale / 1000;
+		MP4Duration uOffset = m_VLastFrame.m_nRenderOffset * m_nVideoTimeScale / 1000;
 		if( uFrameMS <= 0 ) uDuration = 1;
-		//TRACE("Video-Duration = %I64d, size = %lu, keyFrame = %d\n", uDuration, m_VLastFrame.m_strData.size(), m_VLastFrame.m_bKeyFrame);
+		//TRACE("Video-Duration = %I64d, offset = %I64d, size = %lu, keyFrame = %d\n", uDuration, uOffset, m_VLastFrame.m_strData.size(), m_VLastFrame.m_bKeyFrame);
 		
 		// 调用写入帧的接口函数，视频需要计算帧间隔...
-		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, (BYTE*)m_VLastFrame.m_strData.c_str(), m_VLastFrame.m_strData.size(), uDuration, 0, m_VLastFrame.m_bKeyFrame);
+		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, (BYTE*)m_VLastFrame.m_strData.c_str(), m_VLastFrame.m_strData.size(), uDuration, uOffset, m_VLastFrame.m_bKeyFrame);
 		// 计算写盘量和总时间...
 		m_dwWriteSize += m_VLastFrame.m_strData.size();
 		m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
@@ -172,6 +175,7 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		m_VLastFrame.m_bKeyFrame = bIsKeyFrame;
 		m_VLastFrame.m_strData.assign((char*)lpFrame, nSize);
 		m_VLastFrame.m_nTimeStamp = inTimeStamp;
+		m_VLastFrame.m_nRenderOffset = inRenderOffset;
 	} else {
 		// 音频数据，直接调用接口写盘，音频不用计算帧间隔时间，采用固定的帧间隔...
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, lpFrame, nSize, MP4_INVALID_DURATION, 0, bIsKeyFrame);

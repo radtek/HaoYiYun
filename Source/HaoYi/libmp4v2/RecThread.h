@@ -17,7 +17,7 @@ public:
 	virtual void	doErrNotify() = 0;
 	virtual	void	Entry() = 0;
 public:
-	bool			WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inTimeStamp, bool bIsKeyFrame);
+	bool			WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame);
 	bool			CreateAudioTrack(int nAudioSampleRate, int nAudioChannel);
 	bool			CreateVideoTrack(string & strSPS, string & strPPS);
 	float			GetRecSizeM();

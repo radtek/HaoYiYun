@@ -157,21 +157,31 @@ bool CMP4Thread::ReadOneFrameFromMP4(MP4TrackId tid, uint32_t sid, bool bIsVideo
 	uint32_t		nSampleSize = 0;		// 帧数据长度
 	MP4Timestamp	nStartTime = 0;			// 开始时间
 	MP4Duration		nDuration = 0;			// 持续时间
+	MP4Duration     nOffset = 0;			// 偏移时间
 	bool			bIsKeyFrame = false;	// 是否关键帧
 	uint32_t		timescale = 0;
 	uint64_t		msectime = 0;
 
 	timescale = MP4GetTrackTimeScale( m_hMP4Handle, tid );
 	msectime = MP4GetSampleTime( m_hMP4Handle, tid, sid );
+
+	if( false == MP4ReadSample(m_hMP4Handle, tid, sid, &pSampleData, &nSampleSize, &nStartTime, &nDuration, &nOffset, &bIsKeyFrame) )
+		return false;
+
+	// 计算发送时间 => PTS
 	msectime *= UINT64_C( 1000 );
 	msectime /= timescale;
-
-	if( false == MP4ReadSample(m_hMP4Handle, tid, sid, &pSampleData, &nSampleSize, &nStartTime, &nDuration, NULL, &bIsKeyFrame) )
-		return false;
+	// 计算开始时间 => DTS
+	nStartTime *= UINT64_C( 1000 );
+	nStartTime /= timescale;
+	// 计算偏差时间 => CTTS
+	nOffset *= UINT64_C( 1000 );
+	nOffset /= timescale;
 
 	FMS_FRAME	theFrame;
 	theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
 	theFrame.dwSendTime = (uint32_t)msectime + m_dwMP4Duration * m_nLoopCount;	// 这里非常重要，牵涉到循环播放
+	theFrame.dwRenderOffset = nOffset;  // 2017.07.06 - by jackey => 保存时间偏移值...
 	theFrame.is_keyframe = bIsKeyFrame;
 	theFrame.strData.assign((char*)pSampleData, nSampleSize);
 
@@ -186,7 +196,7 @@ bool CMP4Thread::ReadOneFrameFromMP4(MP4TrackId tid, uint32_t sid, bool bIsVideo
 	// 返回发送时间(毫秒)...
 	outSendTime = (uint32_t)msectime;
 	
-	//TRACE("[%s] duration = %I64d, KeyFrame = %d, SendTime = %lu, StartTime = %I64d, Size = %lu\n", bIsVideo ? "Video" : "Audio", nDuration, bIsKeyFrame, outSendTime, nStartTime, nSampleSize);
+	//TRACE("[%s] duration = %I64d, offset = %I64d, KeyFrame = %d, SendTime = %lu, StartTime = %I64d, Size = %lu\n", bIsVideo ? "Video" : "Audio", nDuration, nOffset, bIsKeyFrame, outSendTime, nStartTime, nSampleSize);
 
 	return true;
 }
@@ -255,6 +265,9 @@ bool CMP4Thread::doMP4ParseAV(MP4FileHandle inFile)
 		MP4TrackId  id = MP4FindTrackId( inFile, i );
 		const char* type = MP4GetTrackType( inFile, id );
 		if( MP4_IS_VIDEO_TRACK_TYPE( type ) ) {
+			// 视频已经有效，检测下一个...
+			if( m_tidVideo > 0 )
+				continue;
 			// 获取视频信息...
 			m_tidVideo = id;
 			m_bVideoComplete = false;
@@ -296,6 +309,9 @@ bool CMP4Thread::doMP4ParseAV(MP4FileHandle inFile)
 			this->WriteAVCSequenceHeader();
 		}
 		else if( MP4_IS_AUDIO_TRACK_TYPE( type ) ) {
+			// 音频已经有效，检测下一个...
+			if( m_tidAudio > 0 )
+				continue;
 			// 获取音频信息...
 			m_tidAudio = id;
 			m_bAudioComplete = false;
@@ -1191,7 +1207,7 @@ BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 	ASSERT( !this->IsCameraDevice() );
 	// 进行写盘操作...
 	BOOL bIsVideo = ((inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? true : false);
-	if( !m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)inFrame.strData.c_str(), inFrame.strData.size(), inFrame.dwSendTime, inFrame.is_keyframe) )
+	if( !m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)inFrame.strData.c_str(), inFrame.strData.size(), inFrame.dwSendTime, inFrame.dwRenderOffset, inFrame.is_keyframe) )
 		return false;
 	// 累加存盘长度，记录已经写入的时间戳...
 	m_dwWriteSize = m_lpRecMP4->GetWriteSize();
@@ -1599,8 +1615,8 @@ BOOL CPushThread::SendVideoDataPacket(FMS_FRAME & inFrame)
     flag = (inFrame.is_keyframe ? 0x17 : 0x27);
 
     pbuf = UI08ToBytes(pbuf, flag);
-    pbuf = UI08ToBytes(pbuf, 1);    // avc packet type (0, nalu)
-    pbuf = UI24ToBytes(pbuf, 0);    // composition time
+    pbuf = UI08ToBytes(pbuf, 1);						// avc packet type (0, nalu)
+	pbuf = UI24ToBytes(pbuf, inFrame.dwRenderOffset);   // composition time
 
     memcpy(pbuf, inFrame.strData.c_str(), inFrame.strData.size());
     pbuf += inFrame.strData.size();

@@ -7,6 +7,7 @@ typedef struct RTMPFrame {
 	string		m_strData;
 	bool		m_bKeyFrame;
 	uint32_t	m_nTimeStamp;
+	uint32_t	m_nRenderOffset;
 }RTMPFrame;
 
 typedef	deque<RTMPFrame>	KH_DeqFrame;
@@ -26,7 +27,7 @@ public:
 	bool CreateAudioTrack(const char* lpUTF8Name, int nAudioSampleRate, string & strAES);
 	bool CreateVideoTrack(const char* lpUTF8Name, int nVideoTimeScale, int width, int height, string & strSPS, string & strPPS);
 
-	bool WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTimeStamp, bool bIsKeyFrame);
+	bool WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTimeStamp, uint32_t inRenderOffset, bool bIsKeyFrame);
 
 	bool Close();
 private:
