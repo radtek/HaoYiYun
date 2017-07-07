@@ -10,7 +10,9 @@
 
 @font-face {
   font-family: VideoJS;
-  src: url("../font/2.0.0/VideoJS.eot?#iefix") format("eot"); }
+  src: url("../fonts/VideoJS.eot?#iefix") format("eot");
+  /*src: url('../fonts/VideoJS.eot?#iefix') format('embedded-opentype'), url('../fonts/VideoJS.woff') format('woff'), url('../fonts/VideoJS.ttf') format('truetype'), url('../fonts/VideoJS.svg') format('svg');*/
+}
 
 @font-face {
   font-family: VideoJS;
