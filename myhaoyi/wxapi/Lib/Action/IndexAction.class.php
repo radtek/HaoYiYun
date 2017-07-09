@@ -1,13 +1,12 @@
 <?php
 /*************************************************************
-    Wan (C)2015 - 2016 happyhope.net
+    Wan (C)2015 - 2016 myhaoyi.com
     备注：专门处理微信事件分发的代码
 *************************************************************/
 
 class IndexAction extends Action
 {
   public function _initialize() {
-    //$this->m_detect = new Mobile_Detect();
   }
   /**
   +----------------------------------------------------------
@@ -21,16 +20,18 @@ class IndexAction extends Action
       A('Login')->doWechatAuth($_GET['code'], $_GET['state']);
       return;
     }
-    ///////////////////////////////////////////////////
-    // 以后，这里还可以对移动设备进行界面优化...
-    ///////////////////////////////////////////////////
-    // $this->detect->isMobile();
-    // print $this->detect->getUserAgent();
-    // print_r($this->detect->getHttpHeaders());
-
-    //print_r($_COOKIE); exit;
-    
-    echo 'Hello';
+    //////////////////////////////////////////////
+    // 创建移动检测对象，判断是否是移动端访问...
+    // 电脑终端 => Index/index
+    // 移动设备 => Mobile/index
+    //////////////////////////////////////////////
+    /*$this->m_detect = new Mobile_Detect();
+    if( $this->m_detect->isMobile() ) {
+      header("location:".__APP__.'/Mobile/index');
+      return;
+    }*/
+    // 电脑终端页面显示...
+    $this->display('index');
   }
 }
 ?>
