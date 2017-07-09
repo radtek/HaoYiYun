@@ -1,7 +1,7 @@
 <?php
 /*************************************************************
-    Wan (C)2015 - 2016 myhaoyi.com
-    备注：专门处理微信事件分发的代码
+    Wan (C)2016- 2017 myhaoyi.com
+    备注：专门处理电脑端强求页面...
 *************************************************************/
 
 class IndexAction extends Action
@@ -25,11 +25,11 @@ class IndexAction extends Action
     // 电脑终端 => Index/index
     // 移动设备 => Mobile/index
     //////////////////////////////////////////////
-    /*$this->m_detect = new Mobile_Detect();
+    $this->m_detect = new Mobile_Detect();
     if( $this->m_detect->isMobile() ) {
       header("location:".__APP__.'/Mobile/index');
       return;
-    }*/
+    }
     // 电脑终端页面显示...
     $this->display('index');
   }
