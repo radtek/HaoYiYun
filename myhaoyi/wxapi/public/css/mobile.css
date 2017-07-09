@@ -1,0 +1,172 @@
+
+* { margin: 0; padding: 0; }
+ul { list-style-type: none; }
+img { border:none; }
+
+body, button, input, select, textarea {
+  font-family: 'PingFangSC','helvetica neue','hiragino sans gb','arial','microsoft yahei ui','microsoft yahei','simsun','微软雅黑', '宋体','sans-serif'!important;
+  font: 12px/1.5 "\5FAE\8F6F\96C5\9ED1", "Microsoft Yahei", "Hiragino Sans GB", "tahoma", "arial", "\5B8B\4F53";
+  -webkit-font-smoothing: antialiased;
+}
+
+.section {
+  text-align: center;
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: cover;
+  overflow: hidden;
+}
+.title1 {
+  opacity: 0.8;
+  font-size: 28px;
+  line-height: 63px;
+  background: url(/wxapi/public/images/titleline1.png) no-repeat center bottom;
+}
+.title2 {
+  opacity: 0.8;
+  font-size: 16px;
+  line-height: 50px;
+}
+.title3 { 
+  color: #666;
+  font-size: 16px;
+  line-height: 26px;
+  margin: 10px 5px 5px 5px;
+}
+.DemoBtn {
+  cursor: pointer;
+  margin: 25px auto 0;
+  width: 120px;
+  height: 36px;
+  line-height: 36px;
+  position: relative;
+  background: #5396FF;
+  font-size: 16px;
+  border: none;
+  color: #fff;
+  border-radius: 30px;
+}
+.DemoBtn a {
+  color: #fff;
+  width: 100%;
+  height: 100%; 
+  display: inline-block;
+  text-decoration: none;
+}
+.section .subject {
+  color: #000;
+  height: 35px;
+  overflow: hidden;
+  font-size: 22px;
+  line-height: 30px;
+  text-align: center;
+  margin-top: 10px;
+}
+.features {
+  margin: 0 auto;
+  padding-top: 10px;
+}
+.features .items {
+  overflow: hidden;
+  margin: 0 auto 10px;
+}
+.features .items .item {
+  /*width: 110px;*/
+  border: 2px solid #EDEDED;
+  margin-left: 5px;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  float: left;
+}
+.features .items .item .icon {
+  /*width: 110px;*/
+  height: 50px;
+  font-size: 50px;
+  color: #33BFFF;
+  display: block;
+  overflow: hidden;
+  margin: 5px 0px;
+}
+.features .items .first {
+  margin-left: 0;
+}
+.features .items .item .desc,
+.features .items .item .title {
+  /*width: 320px;*/
+  /*white-space: nowrap;*/
+  /*line-height: 30px;*/
+  margin: 2px 5px;
+  overflow: hidden;
+  text-align: center;
+}
+.features .items .item .title {
+  font-size: 16px;
+  color: #000;
+}
+.features .items .item .desc {
+  font-size: 12px;
+  color: #666;
+}
+.wraper {
+  /*width: 1170px;*/
+  margin: 5px 5px;
+  overflow: hidden;
+  padding-top: 20px;
+}
+.wraper .items {
+  /*width: 1030px;*/
+  margin: 0 auto;
+}
+.wraper .items .item {
+  /*width: 1030px;*/
+  /*height: 180px;*/
+  overflow: hidden;
+  margin-bottom: 20px;
+  clear: both;
+}
+.wraper .items .item .icon {
+  /*width: 200px;*/
+  color: #33BFFF;
+  width: 60px;
+  height: 60px;
+  font-size: 50px;
+  overflow: hidden;
+  float: left;
+  margin: 2px 2px;
+}
+.wraper .items .item .contents {
+  /*margin-top: 20px;*/
+  /*width: 800px;*/
+  float: left;
+  margin: 2px 2px;
+}
+.wraper .items .item .contents .desc,
+.wraper .items .item .contents .title {
+  /*width: 750px;*/
+  margin: 0 auto;
+  text-align: justify;
+}
+.wraper .items .item .contents .desc {
+  color: #888;
+  font-size: 16px;
+  margin-top: 5px;
+}
+.wraper .items .item .contents .title {
+  color: #000;
+  font-size: 18px;
+  /*line-height: 30px;*/
+}
+.wraper .items .right .icon {
+  float: right;
+}
+.foot_bot {
+  left: 0;
+  bottom: 5px;
+  width: 100%;
+  display: block;
+  font-size: 16px;
+  color: #666;
+  position: absolute;
+  text-align: center;
+  font-family: 'Microsoft Yahei','Tahoma','Arial','Helvetica','Simsun','STHeiti';
+}

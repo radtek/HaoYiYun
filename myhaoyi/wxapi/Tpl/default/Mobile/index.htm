@@ -10,7 +10,7 @@
 
 <link rel="stylesheet" href="/wxapi/public/css/jquery.fullpage.css">
 <link rel="stylesheet" href="/wxapi/public/css/font-awesome.css">
-<link rel="stylesheet" href="/wxapi/public/css/myhaoyi.css">
+<link rel="stylesheet" href="/wxapi/public/css/mobile.css">
 
 <script src="/wxapi/public/js/jquery-1.12.4.min.js"></script>
 <script src="/wxapi/public/js/jquery.fullpage.min.js"></script>
@@ -22,8 +22,18 @@ $(function(){
 	$('#haoyi').fullpage({
     anchors: ['page1', 'page2', 'page3', 'page4', 'page5', 'page6'],
     //continuousVertical: true, // 垂直方向循环
-    navigation: true, // 导航栏，默认在右侧
-    menu: '#menu' // 菜单ID
+    //navigation: true, // 导航栏，默认在右侧
+    menu: '#menu', // 菜单ID
+    afterRender: function(){
+      var width = $(window).width() - 5 * 2;
+      var itemW = (width - 2*2*3 - 5*2)/3;
+      var iconW = itemW - 30*2;
+      $('.features').css('width', width);
+      $('.features .items .item').css('width', itemW);
+      $('.features .items .item .icon').css('font-size', iconW);
+      $('.features .items .item .icon').css('height', iconW);
+      $('.wraper .items .item .contents').css('width', width -60-20);
+    }
 	});
 });
 </script>
@@ -32,30 +42,15 @@ $(function(){
 
 <body>
 
-<div class="top">
-  <div class="inner">
-    <div>
-    <h1 class="logo"><a href="https://www.myhaoyi.com"><img src="/wxapi/public/images/logo.png" width="32px" height="32px"></img></a></h1>
-    <h1 class="firm"><a href="https://www.myhaoyi.com">北京浩一科技有限公司</a></h1>
-    </div>
-    <ul id="menu" class="nav">
-      <li data-menuanchor="page1" class="active"><a href="#page1">首页</a></li>
-      <li data-menuanchor="page2"><a href="#page2">云录播</a></li>
-      <li data-menuanchor="page4"><a href="#page4">云监控</a></li>
-      <li data-menuanchor="page6"><a href="#page6">联系我们</a></li>
-    </ul>
-  </div>
-</div>
-
 <div id="haoyi">
   <div class="section section1">
     <div class="title1">我们提供的产品方案</div>
     <div class="title2">简单、快捷、高效，是我们的服务宗旨</div>
-    <div class="title3">教育行业常态化录播，一站式解决方案，让资源库建设从此变得简单快捷！</div>
-    <div class="title3">监控行业移动化管理，一站式解决方案，让商家、企业、工厂，低成本实现移动化监控！</div>
+    <div class="title3">云录播：教育行业常态化录播，一站式解决方案，让资源库建设从此变得简单快捷！</div>
+    <div class="title3">云监控：监控行业移动化管理，一站式解决方案，让商家、企业、工厂，低成本实现移动化监控！</div>
     <div>
-      <button class="DemoBtn"><a href="http://demo.myhaoyi.com/" target="_blank">云录播演示</a></button>
-      <button class="DemoBtn" style="margin-left: 15px"><a href="http://monitor.myhaoyi.com/" target="_blank">云监控演示</a></button>
+      <button class="DemoBtn"><a href="http://demo.myhaoyi.com/">云录播演示</a></button>
+      <button class="DemoBtn" style="margin-left: 15px"><a href="http://monitor.myhaoyi.com/">云监控演示</a></button>
     </div>
   </div>
   <div class="section section2">
@@ -69,7 +64,7 @@ $(function(){
         <li class="item first">
           <i class="fa fa-cloud icon" aria-hidden="true"></i>
           <p class="title">大规模</p>
-          <p class="desc">海量存储，动态扩容</p>
+          <p class="desc">支持海量存储，动态扩容</p>
         </li>
         <li class="item">
           <i class="fa fa-tasks icon" aria-hidden="true"></i>
@@ -126,27 +121,27 @@ $(function(){
           <i class="fa fa-university icon" aria-hidden="true"></i>
           <div class="contents">
             <p class="title">适用于单个学校精确到每个教室的常态化录播，快速建立校本资源库</p>
-            <p class="desc">实现高度自动化，无需上课老师干预，方便系统维护，大大降低了录播使用难度</p>
+            <!--<p class="desc">实现高度自动化，无需上课老师干预，方便系统维护，大大降低了录播使用难度</p>-->
           </div>
         </li>
-        <li class="item right">
+        <li class="item">
           <i class="fa fa-cubes icon" aria-hidden="true"></i>
           <div class="contents">
             <p class="title">适用于教委级别的大规模资源库建设，快速整合各个学校资源</p>
-            <p class="desc">系统支持海量存储，动态扩容；系统支持普通PC建集群，大大降低成本</p>
+            <!--<p class="desc">系统支持海量存储，动态扩容；系统支持普通PC建集群，大大降低成本</p>-->
           </div>
         </li>
         <li class="item">
           <i class="fa fa-play-circle-o icon" aria-hidden="true"></i>
           <div class="contents">
             <p class="title">适用于大规模公开课实时开讲，实现教育资源均衡分配</p>
-            <p class="desc">系统支持直播按需上传，动态扩容，有效支撑大规模公开课应用</p>
+            <!--<p class="desc">系统支持直播按需上传，动态扩容，有效支撑大规模公开课应用</p>-->
           </div>
         </li>
       </ul>
     </div>
     <div class="DemoBtn" style="margin-top: 10px; background: #FF5722;">
-      <a href="http://demo.myhaoyi.com/" target="_blank">云录播演示</a>
+      <a href="http://demo.myhaoyi.com/">云录播演示</a>
     </div>
   </div>
   <div class="section section4">
@@ -170,7 +165,7 @@ $(function(){
         <li class="item">
           <i class="fa fa-cloud icon" aria-hidden="true"></i>
           <p class="title">大规模</p>
-          <p class="desc">海量存储，动态扩容</p>
+          <p class="desc">支持海量存储，动态扩容</p>
         </li>
         <li class="item first">
           <i class="fa fa-tasks icon" aria-hidden="true"></i>
@@ -215,34 +210,34 @@ $(function(){
       <ul class="items">
         <li class="item">
           <i class="fa fa-video-camera icon" aria-hidden="true"></i>
-          <div class="contents" style="margin-top: 30px;">
+          <div class="contents">
             <p class="title">适用于大型场馆的全方位实时网络监控、存储、回放</p>
-            <p class="desc">系统支持标准格式、标准协议，让网络监控变得如此简单</p>
+            <!--<p class="desc">系统支持标准格式、标准协议，让网络监控变得如此简单</p>-->
           </div>
         </li>
-        <li class="item right">
+        <li class="item">
           <i class="fa fa-cogs icon" aria-hidden="true"></i>
           <div class="contents">
             <p class="title">适用于商超、物业、厂矿等等，密集摄像头场所的网络化监控</p>
-            <p class="desc">采用普通PC建集群，多级备份，让低成本大型监控成为可能</p>
+            <!--<p class="desc">采用普通PC建集群，多级备份，让低成本大型监控成为可能</p>-->
           </div>
         </li>
         <li class="item">
           <i class="fa fa-handshake-o icon" aria-hidden="true"></i>
           <div class="contents">
             <p class="title">适用于原有监控系统的快速网络化、移动化改造</p>
-            <p class="desc">系统易维护性强，自动化程度高，能够实现快速搭建</p>
+            <!--<p class="desc">系统易维护性强，自动化程度高，能够实现快速搭建</p>-->
           </div>
         </li>
       </ul>
     </div>
     <div class="DemoBtn" style="margin-top: 10px; background: #FF5722;">
-      <a href="http://monitor.myhaoyi.com/" target="_blank">云监控演示</a>
+      <a href="http://monitor.myhaoyi.com/">云监控演示</a>
     </div>
   </div>
   <div class="section section6">
     <div class="title1">联系我们</div>
-    <div style="margin-top: 40px;">
+    <div style="margin-top: 20px;">
       <img src="/wxapi/public/images/contact.png"></img>
     </div>
     <div class="title3">电话：15010119735</div>

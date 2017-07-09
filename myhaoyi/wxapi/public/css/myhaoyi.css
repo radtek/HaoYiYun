@@ -229,7 +229,7 @@ body, button, input, select, textarea {
 }
 .foot_bot {
   left: 0;
-  bottom: 20px;
+  bottom: 10px;
   width: 100%;
   display: block;
   font-size: 16px;
