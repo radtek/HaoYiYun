@@ -7,6 +7,12 @@
 class MobileAction extends Action
 {
   public function _initialize() {
+    $this->m_detect = new Mobile_Detect();
+    // 如果不是移动端访问，直接跳转到PC端...
+    if( !$this->m_detect->isMobile() ) {
+      header("location:".__APP__.'/Index/index');
+      return;
+    }
   }
   /**
   +----------------------------------------------------------

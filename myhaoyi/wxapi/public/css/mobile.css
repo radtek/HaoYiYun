@@ -62,6 +62,79 @@ body, button, input, select, textarea {
   text-align: center;
   margin-top: 10px;
 }
+
+.system {
+  margin: 0 auto;
+  padding-top: 10px;
+}
+.system .items {
+  overflow: hidden;
+  margin: 0 auto 0;
+}
+.system .items .item {
+  float: left;
+  margin-left: 5px;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+  border: 2px solid #EDEDED;
+}
+.system .items .cloud {
+  /*width: 640px;*/
+  margin-left: 0;
+}
+.system .items .first {
+  margin-left: 0;
+}
+.system .items .link {
+  /*width: 154px;*/
+  border: 0px;
+}
+.system .items .item .icon {
+  color: #33AAEE;
+  font-size: 20px;
+  height: 20px;
+  display: block;
+  overflow: hidden;
+  margin: 10px auto 5px;
+}
+.system .items .item .haoyi {
+  margin-top: 5px;
+}
+.system .items .item .desc,
+.system .items .item .title {
+  margin: 0px 5px 0px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 18px;
+  text-align: center;
+}
+.system .items .item .title {
+  color: #000;
+  font-size: 16px;
+}
+.system .items .item .desc {
+  color: #666;
+  font-size: 12px;
+  line-height: 18px;
+  margin-bottom: 5px;
+}
+.system .items .item .line {
+  width:4px;
+  height:30px;
+  background-color: #777;
+  border:1px solid #AFAFAF;
+  border-radius:1px;
+  margin: 0px 0px -1px 25px;
+  box-shadow: 1px 5px 5px #EFEFEF;
+}
+.system .items .item .arrow {
+  margin-left: 25px;
+}
+.system .items .item .ipad {
+  height: 40px;
+  margin: 10px auto 5px;
+}
+
 .features {
   margin: 0 auto;
   padding-top: 10px;

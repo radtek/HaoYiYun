@@ -195,7 +195,7 @@ body, button, input, select, textarea {
 .system .items .item .line {
   width:4px;
   height:50px;
-  background-color: #333;
+  background-color: #666;
   border:1px solid #AFAFAF;
   border-radius:1px;
   margin: 0px 0px -1px 75px;
