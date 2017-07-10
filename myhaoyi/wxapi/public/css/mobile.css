@@ -19,18 +19,18 @@ body, button, input, select, textarea {
 .title1 {
   opacity: 0.8;
   font-size: 28px;
-  line-height: 63px;
+  line-height: 40px;
   background: url(/wxapi/public/images/titleline1.png) no-repeat center bottom;
 }
 .title2 {
   opacity: 0.8;
   font-size: 16px;
-  line-height: 50px;
+  line-height: 30px;
 }
 .title3 { 
   color: #666;
   font-size: 16px;
-  line-height: 26px;
+  line-height: 20px;
   margin: 10px 5px 5px 5px;
 }
 .DemoBtn {
