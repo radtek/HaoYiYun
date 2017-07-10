@@ -131,6 +131,84 @@ body, button, input, select, textarea {
   text-align: center;
   margin-top: 20px;
 }
+
+.system {
+  width: 1170px;
+  margin: 0 auto;
+  padding-top: 20px;
+}
+.system .items {
+  width: 646px; /* 150*4 + 2*2*4 + 10*3 */
+  overflow: hidden;
+  margin: 0 auto 0;
+}
+.system .items .item {
+  float: left;
+  width: 150px;
+  margin-left: 10px;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+  border: 2px solid #EDEDED;
+}
+.system .items .cloud {
+  width: 640px;
+  margin-left: 0;
+}
+.system .items .first {
+  margin-left: 0;
+}
+.system .items .link {
+  border: 0px;
+  width: 154px;
+}
+.system .items .item .icon {
+  color: #33AAEE;
+  font-size: 60px;
+  height: 60px;
+  width: 110px;
+  display: block;
+  overflow: hidden;
+  margin: 10px auto 5px;
+}
+.system .items .item .haoyi {
+  font-size: 120px;
+  height: 110px;
+  width: 150px;
+}
+.system .items .item .desc,
+.system .items .item .title {
+  margin: 0px 5px 0px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 20px;
+  text-align: center;
+}
+.system .items .item .title {
+  font-size: 18px;
+  color: #000;
+}
+.system .items .item .desc {
+  margin-bottom: 10px;
+  line-height: 20px;
+  color: #666;
+}
+.system .items .item .line {
+  width:4px;
+  height:50px;
+  background-color: #333;
+  border:1px solid #AFAFAF;
+  border-radius:1px;
+  margin: 0px 0px -1px 75px;
+  box-shadow: 1px 5px 5px #EFEFEF;
+}
+.system .items .item .arrow {
+  margin-left: 71px;
+}
+.system .items .item .ipad {
+  height: 50px;
+  margin: 14px auto 5px;
+}
+
 .features {
   width: 1170px;
   margin: 0 auto;
