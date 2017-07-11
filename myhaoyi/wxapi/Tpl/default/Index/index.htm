@@ -19,15 +19,101 @@
 
 <script>
 $(function(){
+  // 绘制箭头...
+  $(".arrow").arrow({color:'#777',height:20,width:14,direction:'bottom'});
   // 处理滚动页面过程...
   $('#haoyi').fullpage({
     anchors: ['page1', 'page2', 'page3', 'page4', 'page5', 'page6', 'page7'],
     //continuousVertical: true, // 垂直方向循环
     navigation: true, // 导航栏，默认在右侧
-    menu: '#menu' // 菜单ID
+    menu: '#menu', // 菜单ID
+    afterLoad: function(anchorLink, index){
+      if( index == 1 ) {
+        $('.section1 .p1').fadeIn(1500);
+        $('.section1 .p2').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section1 .p3').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section1 .p4').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section1 .p5').animate({bottom: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 2 ) {
+        $('.section2 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section2 .p2').animate({top: '0', left: '0'}, 1500, 'easeOutExpo');
+        $('.section2 .p3').animate({top: '0', right: '0'}, 1500, 'easeOutExpo');
+        $('.section2 .p4').fadeIn(1500);
+        $('.section2 .p5').animate({bottom: '0', left: '0'}, 1500, 'easeOutExpo');
+        $('.section2 .p6').animate({bottom: '0', right: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 3 ) {
+        $('.section3 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section3 .p2').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section3 .p3').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section3 .p4').animate({bottom: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 4 ) {
+        $('.section4 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section4 .p2').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section4 .p3').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section4 .p4').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section4 .p5').animate({bottom: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 5 ) {
+        $('.section5 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section5 .p2').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section5 .p3').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section5 .p4').animate({bottom: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 6 ) {
+        $('.section6 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section6 .p2').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section6 .p3').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section6 .p4').animate({right: '0'}, 1500, 'easeOutExpo');
+        $('.section6 .p5').animate({bottom: '0'}, 1500, 'easeOutExpo');
+      } else if( index == 7 ) {
+        $('.section7 .p1').animate({top: '0'}, 1500, 'easeOutExpo');
+        $('.section7 .p2').fadeIn(1500);
+        $('.section7 .p3').animate({left: '0'}, 1500, 'easeOutExpo');
+        $('.section7 .p4').animate({right: '0'}, 1500, 'easeOutExpo');
+      }
+    },
+    onLeave: function(index, direction){
+      if( index == 1 ) {
+        $('.section1 .p1').fadeOut(1500);
+        $('.section1 .p2').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section1 .p3').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section1 .p4').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section1 .p5').animate({bottom: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 2 ) {
+        $('.section2 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section2 .p2').animate({top: '-600px', left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section2 .p3').animate({top: '-600px', right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section2 .p4').fadeOut(1500);
+        $('.section2 .p5').animate({bottom: '-600px', left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section2 .p6').animate({bottom: '-600px', right: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 3 ) {
+        $('.section3 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section3 .p2').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section3 .p3').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section3 .p4').animate({bottom: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 4 ) {
+        $('.section4 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section4 .p2').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section4 .p3').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section4 .p4').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section4 .p5').animate({bottom: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 5 ) {
+        $('.section5 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section5 .p2').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section5 .p3').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section5 .p4').animate({bottom: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 6 ) {
+        $('.section6 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section6 .p2').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section6 .p3').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section6 .p4').animate({right: '-600px'}, 1500, 'easeOutExpo');
+        $('.section6 .p5').animate({bottom: '-600px'}, 1500, 'easeOutExpo');
+      } else if( index == 7 ) {
+        $('.section7 .p1').animate({top: '-600px'}, 1500, 'easeOutExpo');
+        $('.section7 .p2').fadeOut(1500);
+        $('.section7 .p3').animate({left: '-600px'}, 1500, 'easeOutExpo');
+        $('.section7 .p4').animate({right: '-600px'}, 1500, 'easeOutExpo');
+      }
+    }
   });
-  // 绘制箭头...
-  $(".arrow").arrow({color:'#777',height:20,width:14,direction:'bottom'});
 });
 </script>
 
@@ -52,23 +138,23 @@ $(function(){
 
 <div id="haoyi">
   <div class="section section1">
-    <div class="title1">浩一云</div>
-    <div class="title2">简单、快捷、高效，是我们的服务宗旨</div>
-    <div class="title3">云录播：教育行业常态化录播，一站式解决方案，让资源库建设从此变得简单快捷！</div>
-    <div class="title3">云监控：监控行业移动化管理，一站式解决方案，让商家、企业、工厂，低成本实现移动化监控！</div>
-    <div>
+    <div class="title1 p1">浩一云</div>
+    <div class="title2 p2">简单、快捷、高效，是我们的服务宗旨</div>
+    <div class="title3 p3">云录播：教育行业常态化录播，一站式解决方案，让资源库建设从此变得简单快捷！</div>
+    <div class="title3 p4">云监控：监控行业移动化管理，一站式解决方案，让商家、企业、工厂，低成本实现移动化监控！</div>
+    <div class="p5">
       <button class="DemoBtn"><a href="http://demo.myhaoyi.com/" target="_blank">云录播演示</a></button>
       <button class="DemoBtn" style="margin-left: 15px"><a href="http://monitor.myhaoyi.com/" target="_blank">云监控演示</a></button>
     </div>
   </div>
   <div class="section section2">
-    <div class="subject">
+    <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>浩一云 - 基本架构图</span>
       <img src="/wxapi/public/images/right.png" align="center"></img>
     </div>
     <div class="system">
-      <ul class="items">
+      <ul class="items p2">
         <li class="item first">
           <i class="fa fa-camera icon" aria-hidden="true"></i>
           <p class="title">IPC</p>
@@ -90,7 +176,7 @@ $(function(){
           <p class="desc">本地文件</p>
         </li>
       </ul>
-      <ul class="items">
+      <ul class="items p3">
         <li class="item link first">
           <div class="line"></div>
           <div class="arrow"></div>
@@ -108,14 +194,14 @@ $(function(){
           <div class="arrow"></div>
         </li>
       </ul>
-      <div class="items">
+      <div class="items p4">
         <div class="item cloud">
           <i class="fa fa-cloud icon haoyi" aria-hidden="true"></i>
           <p class="title">浩一云</p>
           <p class="desc">海量存储、动态扩容；高可靠、低层本<br>标准化，易维护；微信登录、无人职守</p>
         </div>
       </div>
-      <ul class="items">
+      <ul class="items p5">
         <li class="item link first">
           <div class="line"></div>
           <div class="arrow"></div>
@@ -133,7 +219,7 @@ $(function(){
           <div class="arrow"></div>
         </li>
       </ul>
-      <ul class="items">
+      <ul class="items p6">
         <li class="item first">
           <i class="fa fa-laptop icon" aria-hidden="true"></i>
           <p class="title">PC</p>
@@ -158,13 +244,13 @@ $(function(){
     </div>
   </div>
   <div class="section section3">
-    <div class="subject">
+    <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云录播 - 特色功能</span>
       <img src="/wxapi/public/images/right.png" align="center"></img>
     </div>
     <div class="features">
-      <ul class="items">
+      <ul class="items p2">
         <li class="item first">
           <i class="fa fa-cloud icon" aria-hidden="true"></i>
           <p class="title">大规模</p>
@@ -180,6 +266,8 @@ $(function(){
           <p class="title">易维护</p>
           <p class="desc">全实时、全动态、全页面管理</p>
         </li>
+      </ul>
+      <ul class="items p3">
         <li class="item first">
           <i class="fa fa-cog icon" aria-hidden="true"></i>
           <p class="title">标准化</p>
@@ -195,6 +283,8 @@ $(function(){
           <p class="title">微信登录</p>
           <p class="desc">用户管理、维护、授权，更快捷</p>
         </li>
+      </ul>
+      <ul class="items p4">
         <li class="item first">
           <i class="fa fa-video-camera icon" aria-hidden="true"></i>
           <p class="title">实时直播</p>
@@ -214,13 +304,13 @@ $(function(){
     </div>
   </div>
   <div class="section section4">
-    <div class="subject">
+    <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云录播 - 应用场景</span>
       <img src="/wxapi/public/images/right.png" align="center"></img>
     </div>
     <div class="wraper">
-      <ul class="items">
+      <ul class="items p2">
         <li class="item">
           <i class="fa fa-university icon" aria-hidden="true"></i>
           <div class="contents">
@@ -228,6 +318,8 @@ $(function(){
             <p class="desc">实现高度自动化，无需上课老师干预，方便系统维护，大大降低了录播使用难度</p>
           </div>
         </li>
+      </ul>
+      <ul class="items p3">
         <li class="item right">
           <i class="fa fa-cubes icon" aria-hidden="true"></i>
           <div class="contents">
@@ -235,6 +327,8 @@ $(function(){
             <p class="desc">系统支持海量存储，动态扩容；系统支持普通PC建集群，大大降低成本</p>
           </div>
         </li>
+      </ul>
+      <ul class="items p4">
         <li class="item">
           <i class="fa fa-play-circle-o icon" aria-hidden="true"></i>
           <div class="contents">
@@ -244,18 +338,18 @@ $(function(){
         </li>
       </ul>
     </div>
-    <div class="DemoBtn" style="margin-top: 10px; background: #FF5722;">
+    <div class="DemoBtn p5" style="margin-top: 10px; background: #FF5722;">
       <a href="http://demo.myhaoyi.com/" target="_blank">云录播演示</a>
     </div>
   </div>
   <div class="section section5">
-    <div class="subject">
+    <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云监控 - 特色功能</span>
       <img src="/wxapi/public/images/right.png" align="center"></img>
     </div>
     <div class="features">
-      <ul class="items">
+      <ul class="items p2">
         <li class="item first">
           <i class="fa fa-cog icon" aria-hidden="true"></i>
           <p class="title">标准化</p>
@@ -271,6 +365,8 @@ $(function(){
           <p class="title">大规模</p>
           <p class="desc">海量存储，动态扩容</p>
         </li>
+      </ul>
+      <ul class="items p3">
         <li class="item first">
           <i class="fa fa-tasks icon" aria-hidden="true"></i>
           <p class="title">7*24小时</p>
@@ -286,6 +382,8 @@ $(function(){
           <p class="title">微信小程序</p>
           <p class="desc">低成本实现移动化监控</p>
         </li>
+      </ul>
+      <ul class="items p4">
         <li class="item first">
           <i class="fa fa-video-camera icon" aria-hidden="true"></i>
           <p class="title">实时监控</p>
@@ -305,13 +403,13 @@ $(function(){
     </div>
   </div>
   <div class="section section6">
-    <div class="subject">
+    <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云监控 - 应用场景</span>
       <img src="/wxapi/public/images/right.png" align="center"></img>
     </div>
     <div class="wraper">
-      <ul class="items">
+      <ul class="items p2">
         <li class="item">
           <i class="fa fa-video-camera icon" aria-hidden="true"></i>
           <div class="contents" style="margin-top: 30px;">
@@ -319,6 +417,8 @@ $(function(){
             <p class="desc">系统支持标准格式、标准协议，让网络监控变得如此简单</p>
           </div>
         </li>
+      </ul>
+      <ul class="items p3">
         <li class="item right">
           <i class="fa fa-cogs icon" aria-hidden="true"></i>
           <div class="contents">
@@ -326,6 +426,8 @@ $(function(){
             <p class="desc">采用普通PC建集群，多级备份，让低成本大型监控成为可能</p>
           </div>
         </li>
+      </ul>
+      <ul class="items p4">
         <li class="item">
           <i class="fa fa-handshake-o icon" aria-hidden="true"></i>
           <div class="contents">
@@ -335,17 +437,17 @@ $(function(){
         </li>
       </ul>
     </div>
-    <div class="DemoBtn" style="margin-top: 10px; background: #FF5722;">
+    <div class="DemoBtn p5" style="margin-top: 10px; background: #FF5722;">
       <a href="http://monitor.myhaoyi.com/" target="_blank">云监控演示</a>
     </div>
   </div>
   <div class="section section7">
-    <div class="title1">联系我们</div>
-    <div style="margin-top: 40px;">
+    <div class="title1 p1">联系我们</div>
+    <div class="p2" style="margin-top: 40px;">
       <img src="/wxapi/public/images/contact.png"></img>
     </div>
-    <div class="title3">电话：15010119735</div>
-    <div class="title3" style="margin-top: 0px">QQ：18059104</div>
+    <div class="title3 p3">电话：15010119735</div>
+    <div class="title3 p4" style="margin-top: 0px">QQ：18059104</div>
     <span class="foot_bot">Copyright 2017 © 北京浩一科技有限公司 京ICP备17023722号</span>
   </div>
 </div>

@@ -8,6 +8,47 @@ body, button, input, select, textarea {
   font: 12px/1.5 "\5FAE\8F6F\96C5\9ED1", "Microsoft Yahei", "Hiragino Sans GB", "tahoma", "arial", "\5B8B\4F53";
   -webkit-font-smoothing: antialiased;
 }
+
+.section1 .p1 { display: none; }
+.section1 .p2 { position: relative; top: -600px; }
+.section1 .p3 { position: relative; left: -600px; }
+.section1 .p4 { position: relative; right: -600px; }
+.section1 .p5 { position: relative; bottom: -600px; }
+
+.section2 .p1 { position: relative; top: -600px; }
+.section2 .p2 { position: relative; top: -600px; left: -600px; }
+.section2 .p3 { position: relative; top: -600px; right: -600px; }
+.section2 .p4 { display: none; }
+.section2 .p5 { position: relative; bottom: -600px; left: -600px; }
+.section2 .p6 { position: relative; bottom: -600px; right: -600px; }
+
+.section3 .p1 { position: relative; top: -600px; }
+.section3 .p2 { position: relative; left: -600px; }
+.section3 .p3 { position: relative; right: -600px; }
+.section3 .p4 { position: relative; bottom: -600px; }
+
+.section4 .p1 { position: relative; top: -600px; }
+.section4 .p2 { position: relative; right: -600px; }
+.section4 .p3 { position: relative; left: -600px; }
+.section4 .p4 { position: relative; right: -600px; }
+.section4 .p5 { position: relative; bottom: -600px; }
+
+.section5 .p1 { position: relative; top: -600px; }
+.section5 .p2 { position: relative; right: -600px; }
+.section5 .p3 { position: relative; left: -600px; }
+.section5 .p4 { position: relative; bottom: -600px; }
+
+.section6 .p1 { position: relative; top: -600px; }
+.section6 .p2 { position: relative; right: -600px; }
+.section6 .p3 { position: relative; left: -600px; }
+.section6 .p4 { position: relative; right: -600px; }
+.section6 .p5 { position: relative; bottom: -600px; }
+
+.section7 .p1 { position: relative; top: -600px; }
+.section7 .p2 { display: none; }
+.section7 .p3 { position: relative; left: -600px; }
+.section7 .p4 { position: relative; right: -600px; }
+
 .top {
   position: fixed;
   left: 0;
@@ -217,7 +258,7 @@ body, button, input, select, textarea {
 .features .items {
   width: 1168px;
   overflow: hidden;
-  margin: 0 auto 20px;
+  margin: 0 auto 0px;
 }
 .features .items .item {
   width: 356px;

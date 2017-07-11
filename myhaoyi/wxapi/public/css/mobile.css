@@ -125,7 +125,7 @@ body, button, input, select, textarea {
   border:1px solid #AFAFAF;
   border-radius:1px;
   margin: 0px 0px -1px 25px;
-  box-shadow: 1px 5px 5px #EFEFEF;
+  /*box-shadow: 1px 5px 5px #EFEFEF;*/
 }
 .system .items .item .arrow {
   margin-left: 25px;
