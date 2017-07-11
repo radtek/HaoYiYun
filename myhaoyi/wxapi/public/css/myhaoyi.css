@@ -230,7 +230,6 @@ body, button, input, select, textarea {
 }
 .system .items .item .desc {
   margin-bottom: 10px;
-  line-height: 20px;
   color: #666;
 }
 .system .items .item .line {
