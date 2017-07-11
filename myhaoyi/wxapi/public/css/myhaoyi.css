@@ -9,7 +9,7 @@ body, button, input, select, textarea {
   -webkit-font-smoothing: antialiased;
 }
 
-.section1 .p1 { display: none; }
+/*.section1 .p1 { display: none; }
 .section1 .p2 { position: relative; top: -600px; }
 .section1 .p3 { position: relative; left: -600px; }
 .section1 .p4 { position: relative; right: -600px; }
@@ -47,7 +47,7 @@ body, button, input, select, textarea {
 .section7 .p1 { position: relative; top: -600px; }
 .section7 .p2 { display: none; }
 .section7 .p3 { position: relative; left: -600px; }
-.section7 .p4 { position: relative; right: -600px; }
+.section7 .p4 { position: relative; right: -600px; }*/
 
 .top {
   position: fixed;
