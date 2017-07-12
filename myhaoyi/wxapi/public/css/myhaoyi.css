@@ -255,14 +255,14 @@ body, button, input, select, textarea {
   padding-top: 15px;
 }
 .features .items {
-  width: 1168px;
+  width: 1120px;
   overflow: hidden;
   margin: 0 auto 0px;
 }
 .features .items .item {
   width: 356px;
   border: 2px solid #EDEDED;
-  margin-left: 44px;
+  margin-left: 20px;
   margin-bottom: 22px;
   float: left;
   padding-bottom: 15px;
