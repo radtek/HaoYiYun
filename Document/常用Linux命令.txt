@@ -1,3 +1,8 @@
+修改脚本编码格式，避免在linux下报错 =》/bin/bash^M: bad interpreter。
+=============================================================
+:set ff?
+:set ff=unix
+
 如何避免SSH Secure Shell Client连接Linux超时，自动断开？
 =============================================================
 vi /etc/ssh/sshd_config
