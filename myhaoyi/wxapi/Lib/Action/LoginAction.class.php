@@ -21,26 +21,42 @@ class LoginAction extends Action
     $strLocation = ""; $strHeadUrl = "";
     do {
       // 从state当中解析回调函数 => 需要进一步的深入解析...
-      $strBackUrl = urlsafe_b64decode($strState);
-      $pieces = explode('/node_tag/', $strBackUrl);
+      $strJson = urlsafe_b64decode($strState);
+      $arrJson = json_decode($strJson, true);
       // 判断节点标记不能为空...
-      if( count($pieces) != 2 || strlen($pieces[0]) <= 0 || strlen($pieces[1]) <= 0 ) {
+      if( !isset($arrJson['node_addr']) || !isset($arrJson['node_url']) || 
+          !isset($arrJson['node_tag']) || !isset($arrJson['node_type']) ||
+          !isset($arrJson['node_name']) )
+      {
         $strError = 'error: node_tag is null';
         break;
       }
       // 保存截取之后的数据...
-      $strBackUrl = $pieces[0];
-      $strNodeTag = $pieces[1];
+      $strBackUrl = sprintf("http://%s%s", $arrJson['node_addr'], $arrJson['node_url']);
+      $strNodeName = $arrJson['node_name'];
+      $strNodeAddr = $arrJson['node_addr'];
+      $strNodeType = $arrJson['node_type'];
+      $strNodeTag = $arrJson['node_tag'];
       // 根据节点标记获取或创建一条新记录...
       $map['node_tag'] = $strNodeTag;
       $dbNode = D('node')->where($map)->find();
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
-        $dbNode['node_name'] = "新建节点";
+        $dbNode['node_name'] = $strNodeName;
+        $dbNode['node_addr'] = $strNodeAddr;
+        $dbNode['node_type'] = $strNodeType;
         $dbNode['node_tag'] = $strNodeTag;
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
+      } else {
+        // 修改已有的记录...
+        $dbNode['node_name'] = $strNodeName;
+        $dbNode['node_addr'] = $strNodeAddr;
+        $dbNode['node_type'] = $strNodeType;
+        $dbNode['node_tag'] = $strNodeTag;
+        $dbNode['updated'] = date('Y-m-d H:i:s');
+        D('node')->save($dbNode);
       }
       // 判断获取的节点记录是否有效...
       if( $dbNode['node_id'] <= 0 ) {

@@ -16,7 +16,9 @@ CWebThread::CWebThread(CHaoYiView * lpView)
   , m_HaoYiGatherID(-1)
   , m_nDBCameraID(-1)
   , m_nDBGatherID(-1)
+  , m_strWebName("")
   , m_strWebTag("")
+  , m_nWebType(-1)
   , m_nRemotePort(0)
   , m_nTrackerPort(0)
   , m_strRemoteAddr("")
@@ -90,13 +92,23 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 		}
 		// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
 		Json::Value & theWebTag = value["web_tag"];
+		Json::Value & theWebType = value["web_type"];
+		Json::Value & theWebName = value["web_name"];
 		Json::Value & theRemoteAddr = value["transmit_addr"];
 		Json::Value & theRemotePort = value["transmit_port"];
 		Json::Value & theTrackerAddr = value["tracker_addr"];
 		Json::Value & theTrackerPort = value["tracker_port"];
 		Json::Value & theLocalTime   = value["local_time"];
+		if( theWebType.isString() ) {
+			m_nWebType = atoi(theWebType.asString().c_str());
+		} else {
+			m_nWebType = theWebType.asInt();
+		}
 		if( theWebTag.isString() ) {
 			m_strWebTag = theWebTag.asString();
+		}
+		if( theWebName.isString() ) {
+			m_strWebName =  CUtilTool::UTF8_ANSI(theWebName.asString().c_str());
 		}
 		if( theTrackerAddr.isString() ) {
 			m_strTrackerAddr = theTrackerAddr.asString();
@@ -179,23 +191,28 @@ BOOL CWebThread::RegisterHaoYi()
 	m_eRegState = kRegHaoYi;
 	// 判断数据是否有效...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	string  & strWebAddr = theConfig.GetWebAddr();
 	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
 	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
 	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
 		return false;
 	// 网站节点标记不能为空...
-	if( m_strWebTag.size() <= 0 )
+	if( m_strWebTag.size() <= 0 || m_nWebType < 0 || m_strWebName.size() <= 0 )
 		return false;
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
 	TCHAR	szDNS[MAX_PATH] = {0};
+	TCHAR	szWebName[MAX_PATH] = {0};
 	// 先对频道名称进行UTF8转换，再进行URI编码...
 	string  strDNSName = CUtilTool::GetServerDNSName();
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
+	string	strUTF8Web = CUtilTool::ANSI_UTF8(m_strWebName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s", 
+	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s&node_name=%s", 
 					strMacAddr, strIPAddr, theConfig.GetMaxCamera(),
-					szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str());
+					szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str(),
+					m_nWebType,  theConfig.GetWebAddr().c_str(), szWebName);
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
 	// 调用Curl接口，汇报采集端信息...
@@ -281,6 +298,8 @@ BOOL CWebThread::RegisterGather()
 	if( m_nDBGatherID <= 0 || m_strWebTag.size() <= 0 )
 		return false;
 	ASSERT( m_nDBGatherID > 0 && m_strWebTag.size() > 0 );
+	if( m_nWebType < 0 || m_strWebName.size() <= 0 )
+		return false;
 	// 判断Tracker地址是否已经正确获取得到...
 	if( m_strTrackerAddr.size() <= 0 || m_nTrackerPort <= 0 )
 		return false;

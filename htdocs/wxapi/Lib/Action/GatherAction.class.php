@@ -47,12 +47,16 @@ class GatherAction extends Action
       $dbSys = D('system')->find();
       // 如果节点网站的标记为空，生成一个新的，并存盘...
       if( !$dbSys['web_tag'] ) {
+        $dbSys['web_type'] = 0;
         $dbSys['web_tag'] = uniqid();
+        $dbSys['web_title'] = "云录播";
         $dbSave['system_id'] = $dbSys['system_id'];
         $dbSave['web_tag'] = $dbSys['web_tag'];
         D('system')->save($dbSave);
       }
       $arrErr['web_tag'] = $dbSys['web_tag'];
+      $arrErr['web_type'] = $dbSys['web_type'];
+      $arrErr['web_name'] = $dbSys['web_title'];
       $arrErr['tracker_addr'] = $dbSys['tracker_addr'];
       $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
       $arrErr['transmit_addr'] = $dbSys['transmit_addr'];

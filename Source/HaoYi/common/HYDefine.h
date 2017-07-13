@@ -152,3 +152,9 @@ typedef enum CAMERA_STATE
   kCameraRun    = 1,			// ÔËÐÐÖÐ
   kCameraRec    = 2,			// Â¼ÏñÖÐ
 };
+
+typedef enum WEB_TYPE
+{
+	kCloudRecorder	= 0,		// ÔÆÂ¼²¥
+	kCloudMonitor   = 1,		// ÔÆ¼à¿Ø
+};

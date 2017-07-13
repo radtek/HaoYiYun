@@ -120,7 +120,7 @@ class LoginAction extends Action
     ///////////////////////////////////////////////////////////
     
     // 获取节点网站的标记字段...
-    $dbSys = D('system')->field('system_id,web_tag')->find();
+    $dbSys = D('system')->field('system_id,web_tag,web_type,web_title')->find();
     // 如果标记字段为空，生成一个新的，并存盘...
     if( !$dbSys['web_tag'] ) {
       $dbSys['web_tag'] = uniqid();
@@ -130,9 +130,12 @@ class LoginAction extends Action
     // 获取登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 拼接当前访问页面的完整链接地址 => 登录服务器会反向调用 => 前后端跳转地址不一样...
-    $state = sprintf("http://%s%s/%s/node_tag/%s", $_SERVER['HTTP_HOST'], __APP__, ($bIsAdmin ? "Login/index" : "Home/login"), $dbSys['web_tag']);
-    // 去掉最后一个字符，如果是反斜杠...
-    $state = removeSlash($state);
+    $dbJson['node_addr'] = $_SERVER['HTTP_HOST'];
+    $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Home/login");
+    $dbJson['node_tag'] = $dbSys['web_tag'];
+    $dbJson['node_type'] = $dbSys['web_type'];
+    $dbJson['node_name'] = $dbSys['web_title'];
+    $state = json_encode($dbJson);
     // 对链接地址进行base64加密...
     $state = urlsafe_b64encode($state);
 

@@ -38,7 +38,7 @@ class GatherAction extends Action
         break;
       }
       // 判断输入的网站节点标记是否有效...
-      if( !isset($arrData['node_tag']) ) {
+      if( !isset($arrData['node_tag']) || !isset($arrData['node_type']) || !isset($arrData['node_addr']) || !isset($arrData['node_name']) ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = "网站节点标记不能为空！";
         break;
@@ -48,11 +48,20 @@ class GatherAction extends Action
       $dbNode = D('node')->where($map)->find();
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
-        $dbNode['node_name'] = "新建节点";
+        $dbNode['node_name'] = $arrData['node_name'];
+        $dbNode['node_type'] = $arrData['node_type'];
+        $dbNode['node_addr'] = $arrData['node_addr'];
         $dbNode['node_tag'] = $arrData['node_tag'];
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
+      } else {
+        $dbNode['node_name'] = $arrData['node_name'];
+        $dbNode['node_type'] = $arrData['node_type'];
+        $dbNode['node_addr'] = $arrData['node_addr'];
+        $dbNode['node_tag'] = $arrData['node_tag'];
+        $dbNode['updated'] = date('Y-m-d H:i:s');
+        D('node')->save($dbNode);
       }
       // 判断获取的节点记录是否有效...
       if( $dbNode['node_id'] <= 0 ) {
