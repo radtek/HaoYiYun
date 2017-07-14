@@ -179,7 +179,6 @@ h6 {
   float:left;
   padding:3px;
   border:#cccccc solid 1px;
-  background-image:url(/wxapi/public/images/default.png);
   background-color:#FFF;
   margin-bottom: 4px;
 }
@@ -189,7 +188,6 @@ h6 {
   float:left;
   padding:3px;
   border:#cccccc solid 1px;
-  background-image:url(/wxapi/public/images/blank.gif);
   background-color:#FFF;
   margin-bottom: 5px;
 }

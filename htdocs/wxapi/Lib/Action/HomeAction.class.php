@@ -16,6 +16,20 @@ class HomeAction extends Action
     if( $this->m_detect->isMobile() ) {
       header("location:".__APP__.'/Mobile/index');
     }
+    // 获取系统配置，根据配置设置相关变量...
+    $dbSys = D('system')->field('web_type,web_title')->find();
+    $this->m_webType = $dbSys['web_type'];
+    $this->m_webTitle = $dbSys['web_title'];
+    if( $this->m_webType > 0 ) {
+      $this->m_webLogo = "monitor";
+      $this->m_webName = "云监控";
+    } else {
+      $this->m_webLogo = "default";
+      $this->m_webName = "云录播";
+    }
+    // 直接给模板变量赋值...
+    $this->assign('my_web_logo', $this->m_webLogo);
+    $this->assign('my_web_name', $this->m_webName);
   }
   //
   // 点击查看用户登录信息...
@@ -121,7 +135,7 @@ class HomeAction extends Action
     // 对模板对象进行赋值...
     $dbSys = D('system')->field('tracker_addr')->find();
     $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
-    $this->assign('my_title', '云录播 - 首页');
+    $this->assign('my_title', $this->m_webTitle . ' - 首页');
     $this->assign('my_rec', $arrRec);
     $this->assign('my_nav', $my_nav);
     $this->display('index');
@@ -159,7 +173,7 @@ class HomeAction extends Action
     $arrNews = D('RecordView')->where($where)->limit(10)->order('Record.created DESC')->select();
     $this->assign('my_news', $arrNews);
     // 对模板对象进行赋值...
-    $this->assign('my_title', '云录播 - ' . $my_nav['subject_title']);
+    $this->assign('my_title', $this->m_webTitle . ' - ' . $my_nav['subject_title']);
     $dbSys = D('system')->field('tracker_addr')->find();
     $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
     $this->assign('my_nav', $my_nav);
@@ -302,7 +316,7 @@ class HomeAction extends Action
     // 获取直播导航数据...
     $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
     // 对模板对象进行赋值...
-    $this->assign('my_title', '云录播 - 直播');
+    $this->assign('my_title', $this->m_webTitle . ' - 直播');
     $this->assign('my_nav', $my_nav);
 
     // 2017.06.14 - by jackey => 直接从数据库中读取通道状态，避免从采集端读取造成的阻塞...
@@ -372,7 +386,7 @@ class HomeAction extends Action
     // 设置其它模板参数...
     $dbSys = D('system')->field('tracker_addr')->find();
     $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
-    $this->assign('my_title', '云录播 - 录像播放');
+    $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
     $this->assign('my_nav', $my_nav);
     $this->display('play');
   }
@@ -399,7 +413,7 @@ class HomeAction extends Action
     $this->assign('my_play_title', $my_play_title);
     $this->assign('my_play', $arrLive);
     // 设置其它模板参数...
-    $this->assign('my_title', '云录播 - 直播播放');
+    $this->assign('my_title', $this->m_webTitle . ' - 直播播放');
     $this->assign('my_nav', $my_nav);
     $this->display('camera');
   }

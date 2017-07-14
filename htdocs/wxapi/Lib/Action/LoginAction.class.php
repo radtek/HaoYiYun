@@ -7,7 +7,16 @@
 class LoginAction extends Action
 {
   // 初始化页面的默认操作...
-  public function _initialize() {
+  public function _initialize()
+  {
+    // 获取系统配置，根据配置设置相关变量...
+    $dbSys = D('system')->field('web_type,web_title')->find();
+    $this->m_webType = $dbSys['web_type'];
+    $this->m_webTitle = $dbSys['web_title'];
+    $this->m_webName = (($this->m_webType > 0) ? "云监控" : "云录播");
+    // 直接给模板变量赋值...
+    $this->assign('my_title', $this->m_webTitle . " - 微信登录");
+    $this->assign('my_web_name', $this->m_webName);
   }
   //
   // 显示微信登录的二维码...

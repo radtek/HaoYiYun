@@ -9,12 +9,25 @@ class AdminAction extends Action
   // 调用本模块之前需要调用的接口...
   public function _initialize()
   {
+    // 获取系统配置，根据配置设置相关变量...
+    $dbSys = D('system')->field('web_type,web_title')->find();
+    $this->m_webType = $dbSys['web_type'];
+    $this->m_webTitle = $dbSys['web_title'];
+    if( $this->m_webType > 0 ) {
+      $this->m_webLogo = "monitor";
+      $this->m_webName = "云监控";
+    } else {
+      $this->m_webLogo = "default";
+      $this->m_webName = "云录播";
+    }
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
     $this->m_wxHeadUrl = $this->getLoginHeadUrl();
     // 直接给模板变量赋值...
     $this->assign('my_headurl', $this->m_wxHeadUrl);
+    $this->assign('my_web_logo', $this->m_webLogo);
+    $this->assign('my_web_name', $this->m_webName);
   }
   //
   // 接口 => 根据cookie判断用户是否已经处于登录状态...
@@ -258,7 +271,7 @@ class AdminAction extends Action
   // 获取系统配置页面...
   public function system()
   {
-    $this->assign('my_title', "云录播 - 网站管理");
+    $this->assign('my_title', $this->m_webTitle . " - 网站管理");
     $this->assign('my_command', 'system');
 
     // 查找系统设置记录...
@@ -279,7 +292,7 @@ class AdminAction extends Action
   // 获取科目页面...
   public function subject()
   {
-    $this->assign('my_title', "云录播 - 科目管理");
+    $this->assign('my_title', $this->m_webTitle . " - 科目管理");
     $this->assign('my_command', 'subject');
 
     // 得到每页条数，总记录数，计算总页数...
@@ -331,7 +344,7 @@ class AdminAction extends Action
   // 获取年级页面...
   public function grade()
   {
-    $this->assign('my_title', "云录播 - 年级管理");
+    $this->assign('my_title', $this->m_webTitle . " - 年级管理");
     $this->assign('my_command', 'grade');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -381,7 +394,7 @@ class AdminAction extends Action
   // 获取教师页面...
   public function teacher()
   {
-    $this->assign('my_title', "云录播 - 教师管理");
+    $this->assign('my_title', $this->m_webTitle . " - 教师管理");
     $this->assign('my_command', 'teacher');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -431,7 +444,7 @@ class AdminAction extends Action
   // 获取教师修改页面 => 这是一个完整页面，因为ajax模式无法加载layui...
   public function getTeacher()
   {
-    /*$this->assign('my_title', "云录播 - 教师管理");
+    /*$this->assign('my_title', $this->m_webTitle . " - 教师管理");
     $this->assign('my_command', 'teacher');
     $theID = $_GET['teacher_id'];
     if( $theID > 0 ) {
@@ -468,7 +481,7 @@ class AdminAction extends Action
   // 获取学校页面...
   public function school()
   {
-    $this->assign('my_title', "云录播 - 学校管理");
+    $this->assign('my_title', $this->m_webTitle . " - 学校管理");
     $this->assign('my_command', 'school');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -498,7 +511,7 @@ class AdminAction extends Action
   // 获取学校修改页面 => 这是一个完整页面，因为ajax模式无法加载layui...
   public function getSchool()
   {
-    /*$this->assign('my_title', "云录播 - 学校管理");
+    /*$this->assign('my_title', $this->m_webTitle . " - 学校管理");
     $this->assign('my_command', 'school');
     $theID = $_GET['school_id'];
     if( $theID > 0 ) {
@@ -546,7 +559,7 @@ class AdminAction extends Action
   // 获取采集端页面...
   public function gather()
   {
-    $this->assign('my_title', "云录播 - 采集端管理");
+    $this->assign('my_title', $this->m_webTitle . " - 采集端管理");
     $this->assign('my_command', 'gather');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -628,7 +641,7 @@ class AdminAction extends Action
   // 获取采集端详情数据...
   public function getGather()
   {
-    /*$this->assign('my_title', "云录播 - 采集端管理");
+    /*$this->assign('my_title', $this->m_webTitle . " - 采集端管理");
     $this->assign('my_command', 'gather');
     $theID = $_GET['gather_id'];
     if( $theID > 0 ) {
@@ -660,7 +673,7 @@ class AdminAction extends Action
   // 获取采集端下面的摄像头列表...
   public function camera()
   {
-    $this->assign('my_title', "云录播 - 摄像头");
+    $this->assign('my_title', $this->m_webTitle . " - 摄像头");
     $this->assign('my_command', 'gather');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -773,7 +786,7 @@ class AdminAction extends Action
   // 获取摄像头详情数据...
   public function getCamera()
   {
-    /*$this->assign('my_title', "云录播 - 摄像头");
+    /*$this->assign('my_title', $this->m_webTitle . " - 摄像头");
     $this->assign('my_command', 'gather');
     // 获取传递过来的参数信息...
     $theCameraID = $_GET['camera_id'];
@@ -843,7 +856,7 @@ class AdminAction extends Action
   // 获取摄像头(班级)下面的录像课程表...
   public function course()
   {
-    $this->assign('my_title', "云录播 - 课程表");
+    $this->assign('my_title', $this->m_webTitle . " - 课程表");
     $this->assign('my_command', 'gather');
     // 获取传递过来的参数信息...
     $theCameraID = $_GET['camera_id'];
@@ -945,7 +958,7 @@ class AdminAction extends Action
   // 获取课表修改页面 => 这是一个完整页面，因为ajax模式无法加载layui...
   public function getCourse()
   {
-    /*$this->assign('my_title', "云录播 - 课程表");
+    /*$this->assign('my_title', $this->m_webTitle . " - 课程表");
     $this->assign('my_command', 'gather');
     $theCamera = $_GET['camera_id'];
     $theGather = $_GET['gather_id'];
@@ -1203,7 +1216,7 @@ class AdminAction extends Action
   // 获取直播管理页面...
   public function live()
   {
-    $this->assign('my_title', "云录播 - 直播管理");
+    $this->assign('my_title', $this->m_webTitle . " - 直播管理");
     $this->assign('my_command', 'live');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -1266,7 +1279,7 @@ class AdminAction extends Action
   // 获取点播管理页面...
   public function vod()
   {
-    $this->assign('my_title', "云录播 - 点播管理");
+    $this->assign('my_title', $this->m_webTitle . " - 点播管理");
     $this->assign('my_command', 'vod');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -1327,7 +1340,7 @@ class AdminAction extends Action
   // 点击用户管理...
   public function user()
   {
-    $this->assign('my_title', "云录播 - 用户管理");
+    $this->assign('my_title', $this->m_webTitle . " - 用户管理");
     $this->assign('my_command', 'user');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
