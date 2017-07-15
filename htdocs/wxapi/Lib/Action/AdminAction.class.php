@@ -10,9 +10,10 @@ class AdminAction extends Action
   public function _initialize()
   {
     // 获取系统配置，根据配置设置相关变量...
-    $dbSys = D('system')->field('web_type,web_title')->find();
+    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
     $this->m_webType = $dbSys['web_type'];
     $this->m_webTitle = $dbSys['web_title'];
+    $this->m_sysSite = $dbSys['sys_site'];
     if( $this->m_webType > 0 ) {
       $this->m_webLogo = "monitor";
       $this->m_webName = "云监控";
@@ -28,6 +29,7 @@ class AdminAction extends Action
     $this->assign('my_headurl', $this->m_wxHeadUrl);
     $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_web_name', $this->m_webName);
+    $this->assign('my_sys_site', $this->m_sysSite);
   }
   //
   // 接口 => 根据cookie判断用户是否已经处于登录状态...
@@ -271,9 +273,37 @@ class AdminAction extends Action
   // 获取系统配置页面...
   public function system()
   {
+    // 设置标题内容...
     $this->assign('my_title', $this->m_webTitle . " - 网站管理");
     $this->assign('my_command', 'system');
-
+    // 查找系统设置记录...
+    $dbSys = D('system')->find();
+    // 获取传递过来的参数...
+    $theOperate = $_POST['operate'];
+    if( $theOperate == 'save' ) {
+      // 去掉 http:// 符号...
+      $_POST['sys_site'] = trim(strtolower($_POST['sys_site']));
+      if( (strncasecmp($_POST['sys_site'], "http://", strlen("http://")) != 0) && 
+          (strncasecmp($_POST['sys_site'], "https://", strlen("https://")) != 0) )
+      {
+        $_POST['sys_site'] = sprintf("http://%s", $_POST['sys_site']);
+      }
+      // 更新数据库记录，直接存POST数据...
+      $_POST['system_id'] = $dbSys['system_id'];
+      D('system')->save($_POST);
+    } else {
+      // 设置模板参数，并返回数据...
+      $this->assign('my_sys', $dbSys);
+      $this->display();
+    }
+  }
+  //
+  // 获取组件(服务器)配置页面...
+  public function server()
+  {
+    // 设置标题内容...
+    $this->assign('my_title', $this->m_webTitle . " - 组件管理");
+    $this->assign('my_command', 'server');
     // 查找系统设置记录...
     $dbSys = D('system')->find();
     // 获取传递过来的参数...

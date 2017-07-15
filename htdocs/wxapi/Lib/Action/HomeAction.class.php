@@ -17,9 +17,10 @@ class HomeAction extends Action
       header("location:".__APP__.'/Mobile/index');
     }
     // 获取系统配置，根据配置设置相关变量...
-    $dbSys = D('system')->field('web_type,web_title')->find();
+    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
     $this->m_webType = $dbSys['web_type'];
     $this->m_webTitle = $dbSys['web_title'];
+    $this->m_sysSite = $dbSys['sys_site'];
     if( $this->m_webType > 0 ) {
       $this->m_webLogo = "monitor";
       $this->m_webName = "云监控";
@@ -30,6 +31,7 @@ class HomeAction extends Action
     // 直接给模板变量赋值...
     $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_web_name', $this->m_webName);
+    $this->assign('my_sys_site', $this->m_sysSite);
   }
   //
   // 点击查看用户登录信息...
