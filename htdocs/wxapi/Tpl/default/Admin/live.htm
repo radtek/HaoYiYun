@@ -18,6 +18,7 @@
               <col width="80">
               <col width="100">
               <col width="100">
+              <col width="80">
             </colgroup>
             <thead>
               <tr>
@@ -27,6 +28,7 @@
                 <th>班级</th>
                 <th>数据源</th>
                 <th>设备型号</th>
+                <th>操作</th>
               </tr> 
             </thead>
             <tbody class="js_live"></tbody>
@@ -116,6 +118,14 @@ function doTrClick(inLiveID, inGatherID,objTr) {
       layer.alert(e, {icon: 2});
     }
   });
+}
+//
+// 配置录像课程表...
+function doCourse(inCameraID, inGatherID)
+{
+  // 需要兼容IE8的访问...
+  stopPropagation(event);
+  location.href = siteurl+"/Admin/course/camera_id/"+inCameraID+"/gather_id/"+inGatherID+"/type/live";  
 }
 //
 // 处理 layui 过程...

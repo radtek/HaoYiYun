@@ -8,15 +8,23 @@
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
           <legend>
+            <eq name='my_type' value='camera'>
             <i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理 - 
             <i class="fa fa-video-camera">&nbsp;</i>摄像头 - 
+            <else/>
+            <i class="fa fa-video-camera">&nbsp;</i>直播管理 - 
+            </eq>
             <i class="fa fa-file-video-o">&nbsp;</i>录像课程表 - 
             <i class="fa fa-list-alt">&nbsp;</i>{{$my_grade.grade_type}}&nbsp;{{$my_grade.grade_name}}&nbsp;{{$my_grade.camera_name}}
           </legend>
         </fieldset>
         <span class="layui-breadcrumb">
+          <eq name='my_type' value='camera'>
           <a href="{{:__APP__}}/Admin/gather">采集端</a>
           <a href="{{:__APP__}}/Admin/camera/gather_id/{{$my_gather_id}}">摄像头</a>
+          <else/>
+          <a href="{{:__APP__}}/Admin/live">直播列表</a>
+          </eq>
           <a><cite>录像课程表</cite></a>
         </span>
         <div style="margin-top:10px;width:100%">

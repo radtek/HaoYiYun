@@ -886,9 +886,11 @@ class AdminAction extends Action
   // 获取摄像头(班级)下面的录像课程表...
   public function course()
   {
+    // 需要根据类型不同，设置不同的焦点类型...
     $this->assign('my_title', $this->m_webTitle . " - 课程表");
-    $this->assign('my_command', 'gather');
+    $this->assign('my_command', (($_GET['type'] == 'camera') ? 'gather' : 'live'));
     // 获取传递过来的参数信息...
+    $theType = $_GET['type'];
     $theCameraID = $_GET['camera_id'];
     $theGatherID = $_GET['gather_id'];
     // 得到每页条数，总记录数，计算总页数...
@@ -905,6 +907,7 @@ class AdminAction extends Action
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('max_page', $max_page);
+    $this->assign('my_type', $theType);
     $this->display();
   }
   //
