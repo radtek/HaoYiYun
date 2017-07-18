@@ -45,6 +45,7 @@ var assil = { debgug: false };
             max: 100,
             deleteTimeout: 3000,
             orientation: "horizontal",
+            cur_max_id: 1,
 
             //callback functions
             label: null,        // function to computes label display of range
@@ -112,6 +113,39 @@ var assil = { debgug: false };
             $range.remove();
           }
         },
+        applyRange: function($range, strStart, strEnd) {
+          var arrStart = strStart.split(':');
+          var arrEnd = strEnd.split(':');
+          var range = $range.data("range");
+          var barWidth = $range.parent().width();
+          var options = $range.parent().data("assil-rangebar").options;
+          var totalRange = options.max - options.min;
+          var range_rect = this.getRelativeUIRectFromRange(range);
+          var nSecFrom = parseInt(arrStart[0])*3600 + parseInt(arrStart[1])*60 + parseInt(arrStart[2]);
+          var nSecTo = parseInt(arrEnd[0])*3600 + parseInt(arrEnd[1])*60 + parseInt(arrEnd[2]);
+          var nStartX = valueFromPercent(barWidth, percentOf(totalRange, nSecFrom));
+          var nEndX = valueFromPercent(barWidth, percentOf(totalRange, nSecTo));
+          range_rect.x = nStartX; range_rect.w = nEndX - nStartX;
+          var getRect = getRectUsing$Position;
+          var siblings_rects = [];
+          // find all the sibling ranges...
+          $range.siblings('.range').each(function () {
+            siblings_rects.push(getRect(this));
+          });
+          // if overlaped then remove it, not overlaped increase the id...
+          var overlaps = $(range_rect).overlapsX(siblings_rects);
+          if( overlaps.length > 0 ) {
+            return false;
+          }
+          // not overlaped, update range...
+          $range.children(".ui-resizable-w").find(".ui-slider-tip").html( strStart );
+          $range.children(".ui-resizable-e").find(".ui-slider-tip").html( strEnd );
+          range.start = nSecFrom; range.end = nSecTo;
+          $range.data("range", range);
+          // update ui range...
+          this.updateRangeUI($range);
+          return true;
+        },
         getRanges: function () {
             var ranges = [];
             //syncRange({ target: this.element });
@@ -132,8 +166,10 @@ var assil = { debgug: false };
         },
         addRange: function (range) {
             var options = this.options;
-            range = $.fn.extend({}, options.defaultRange, range);
             var totalRange = options.max - options.min;
+            range.id = "r_" + options.cur_max_id;
+            range = $.fn.extend({}, options.defaultRange, range);
+            ++options.cur_max_id;
 
             var $range = $("<div class='range' tabindex='1'>").data('range', range);
             var $labelHandle = $range.append("<div class='range-label'>&nbsp;</div>");
@@ -241,7 +277,7 @@ var assil = { debgug: false };
             $range.offset({ left: range_left + 1, top: range_top + 1 });
             $range.width(range_rect.w);
             $range.height(range_rect.h);
-
+            
             if( options.updateRange ) options.updateRange($range, range);
             if( options.label ) $(".range-label", $range).text(options.label($range, range));
             if( assil.debgug ) console.log("UI range rect after change:" + JSON.stringify(getRectUsing$Position($range)));
@@ -1046,30 +1082,33 @@ function isOverlapYRect(rect1, rect2) {
 		}
 	}
 	
-	window.addResizeListener = function(element, fn){
-		if (attachEvent) element.attachEvent('onresize', fn);
-		else {
-			if (!element.__resizeTriggers__) {
-				if (getComputedStyle(element).position == 'static') element.style.position = 'relative';
-				createStyles();
-				element.__resizeLast__ = {};
-				element.__resizeListeners__ = [];
-				(element.__resizeTriggers__ = document.createElement('div')).className = 'resize-triggers';
-				element.__resizeTriggers__.innerHTML = '<div class="expand-trigger"><div></div></div>' +
-																						'<div class="contract-trigger"></div>';
-				element.appendChild(element.__resizeTriggers__);
-				resetTriggers(element);
-				element.addEventListener('scroll', scrollListener, true);
-				
-				/* Listen for a css animation to detect element display/re-attach */
-				animationstartevent && element.__resizeTriggers__.addEventListener(animationstartevent, function(e) {
-					if(e.animationName == animationName)
-						resetTriggers(element);
-				});
-			}
-			element.__resizeListeners__.push(fn);
-		}
-	};
+  window.addResizeListener = function(element, fn){
+    if (attachEvent) {
+      element.attachEvent('onresize', fn);
+    } else {
+      if (!element.__resizeTriggers__) {
+        if (getComputedStyle(element).position == 'static') {
+          element.style.position = 'relative';
+        }
+        createStyles();
+        element.__resizeLast__ = {};
+        element.__resizeListeners__ = [];
+        (element.__resizeTriggers__ = document.createElement('div')).className = 'resize-triggers';
+        element.__resizeTriggers__.innerHTML = '<div class="expand-trigger"><div></div></div>' +
+                                            '<div class="contract-trigger"></div>';
+        element.appendChild(element.__resizeTriggers__);
+        resetTriggers(element);
+        element.addEventListener('scroll', scrollListener, true);
+        
+        /* Listen for a css animation to detect element display/re-attach */
+        animationstartevent && element.__resizeTriggers__.addEventListener(animationstartevent, function(e) {
+          if(e.animationName == animationName)
+            resetTriggers(element);
+        });
+      }
+      element.__resizeListeners__.push(fn);
+    }
+  };
 	
 	window.removeResizeListener = function(element, fn){
 		if (attachEvent) element.detachEvent('onresize', fn);

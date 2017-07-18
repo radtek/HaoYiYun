@@ -883,6 +883,12 @@ class AdminAction extends Action
     }
   }
   //
+  // 获取编辑时间对话框...
+  public function getClock()
+  {
+    echo $this->fetch('getClock');
+  }
+  //
   // 获取摄像头下面的录像表 => 始终按每周排列...
   public function course()
   {

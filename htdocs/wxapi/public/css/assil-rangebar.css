@@ -21,10 +21,10 @@
     /*margin: 0, 0, 0, 0;
     padding: 0, 0, 0, 0;
     background-color: cadetblue;
-    overflow: hidden;
-    position: absolute;*/
+    overflow: hidden;*/
     margin: 0;
     outline: none;
+    position: absolute;
     -moz-border-radius: 2px;
     -webkit-border-radius: 2px;
     border-radius: 2px;
