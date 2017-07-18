@@ -98,10 +98,10 @@
     transition-delay: 0s;
 
     width: 3px;
+    position: absolute;
     background-color: #000000;
     /*border: 1px solid #000000;*/
-    position: absolute;
-    cursor: ew-resize;
+    /*cursor: ew-resize;*/ /*IE8*/
 }
 .range .ui-resizable-e{
    right:0px;
