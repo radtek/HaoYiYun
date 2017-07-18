@@ -126,7 +126,7 @@ class AdminAction extends Action
       exit; // 注意：这里最好用exit，终止后续代码的执行...
     }
     // 重定向到默认的系统页面...
-    header("location:".__APP__.'/Admin/system');
+    header("Location: ".__APP__.'/Admin/system');
   }
   //
   // 链接中转服务器，返回 bool ...
@@ -883,8 +883,34 @@ class AdminAction extends Action
     }
   }
   //
-  // 获取摄像头(班级)下面的录像课程表...
+  // 获取摄像头下面的录像表 => 始终按每周排列...
   public function course()
+  {
+    // 获取传递过来的参数信息...
+    $theNavType = $_GET['type'];
+    $theCameraID = $_GET['camera_id'];
+    $theGatherID = $_GET['gather_id'];
+    // 需要根据类型不同，设置不同的焦点类型...
+    $this->assign('my_title', $this->m_webTitle . " - 课程表");
+    $this->assign('my_command', (($theNavType == 'camera') ? 'gather' : 'live'));
+    // 查找该通道下面所有的录像任务记录...
+    $map['camera_id'] = $theCameraID;
+    $arrCourse = D('course')->where($map)->select();
+    // 获取班级年级信息 => 云录播模式下才需要...
+    if( $this->m_webType == kCloudRecorder ) {
+      $dbGrade = D('CameraView')->where($map)->find();
+      $this->assign('my_grade', $dbGrade);
+    }
+    // 设置最大页数，设置模板参数...
+    $this->assign('my_web_type', $this->m_webType);
+    $this->assign('my_camera_id', $theCameraID);
+    $this->assign('my_gather_id', $theGatherID);
+    $this->assign('my_nav_type', $theNavType);
+    $this->display();
+  }
+  //
+  // 获取摄像头(班级)下面的录像课程表...
+  /*public function course()
   {
     // 需要根据类型不同，设置不同的焦点类型...
     $this->assign('my_title', $this->m_webTitle . " - 课程表");
@@ -935,7 +961,7 @@ class AdminAction extends Action
     // 设置模板参数...
     $this->assign('my_course', $arrCourse);
     echo $this->fetch('pageCourse');
-  }
+  }*/
   //
   // 获取摄像头下正在录像的课表编号...
   private function getCourseRecordFromTransmit($strMacAddr, $nCameraID, &$arrCourse)

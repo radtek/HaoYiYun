@@ -21,13 +21,13 @@
     /*margin: 0, 0, 0, 0;
     padding: 0, 0, 0, 0;
     background-color: cadetblue;
-    overflow: hidden;*/
+    overflow: hidden;
+    position: absolute;*/
     margin: 0;
-    position: absolute;
+    outline: none;
     -moz-border-radius: 2px;
     -webkit-border-radius: 2px;
     border-radius: 2px;
-    outline: none;
 
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -145,7 +145,7 @@
   line-height: 1em;
   position: absolute;
   font-size: 0.8em;
-  color: #999;
+  color: #666;
   overflow: visible;
   text-align: center;
   top: 20px;

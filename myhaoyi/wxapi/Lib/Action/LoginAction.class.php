@@ -123,10 +123,10 @@ class LoginAction extends Action
     // 将需要返回的参数进行base64编码处理...
     if( strlen($strError) > 0 ) {
       $strError = urlsafe_b64encode($strError);
-      $strLocation = sprintf("location:%s/wx_error/%s", $strBackUrl, $strError);
+      $strLocation = sprintf("Location: %s/wx_error/%s", $strBackUrl, $strError);
     } else {
       $strWxJSON = urlsafe_b64encode($strWxJSON);
-      $strLocation = sprintf("location:%s/wx_json/%s", $strBackUrl, $strWxJSON);
+      $strLocation = sprintf("Location: %s/wx_json/%s", $strBackUrl, $strWxJSON);
     }
     // 跳转页面到第三方回调地址...
     header($strLocation);

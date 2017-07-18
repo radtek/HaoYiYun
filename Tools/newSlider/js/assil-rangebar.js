@@ -7,26 +7,23 @@
 // https://github.com/alansferreira/assil-jquery-rangebar
 
 /**
-    events: 
-            @param event inherits event from event signature of draggable:drag/resizable:resize
-            @param ui inherits ui from ui signature of draggable:drag/resizable:resize
-            @param hint overlap params
-            @param $bar source bar element
-            @param $range source range element overlaping
-            @param $obstacle ovelaped object
-            function overlap(event, ui, hint, $bar, $range, $obstacle)
+events: 
+@param event inherits event from event signature of draggable:drag/resizable:resize
+@param ui inherits ui from ui signature of draggable:drag/resizable:resize
+@param hint overlap params
+@param $bar source bar element
+@param $range source range element overlaping
+@param $obstacle ovelaped object
+function overlap(event, ui, hint, $bar, $range, $obstacle)
 
-            @param event inherits event from event signature of draggable:drag/resizable:resize
-            @param ui inherits ui from ui signature of draggable:drag/resizable:resize
-            @param $bar source bar element
-            @param $range source range element overlaping
-            function change(event, ui, $bar, $range)
-            
-
-            function range_click(event, ui, $bar, $range)
-
-
+@param event inherits event from event signature of draggable:drag/resizable:resize
+@param ui inherits ui from ui signature of draggable:drag/resizable:resize
+@param $bar source bar element
+@param $range source range element overlaping
+function change(event, ui, $bar, $range)
+function range_click(event, ui, $bar, $range)
 */  
+
 var assil = { debgug: false };
 
 (function ($) {
@@ -53,6 +50,9 @@ var assil = { debgug: false };
             label: null,        // function to computes label display of range
             renderRange: null,  // function($range, range){} occurs on addRange
             updateRange: null,  // function($range, range){} occurs on range change, move or resize
+            deleteEvent: null,  // range delete event notify...
+            focusEvent: null,   // range focus event notify...
+            dbClickEvent: null, // range double click event notify...
         },
         _valueMin: function() {
           return this.options.min;
@@ -70,7 +70,7 @@ var assil = { debgug: false };
             _component.setRanges(_component.options.ranges);
             _component.element.resize(function () {
                 var $bar = $(_component.element);
-                $.each($bar.children(), function () {
+                $.each($bar.find('.range'), function () {
                     var $range = $(this);
                     range = $range.data("range");
                     if (!range) return true;
@@ -81,16 +81,41 @@ var assil = { debgug: false };
             _component.element.getRanges = _component.getRanges
             _component._addClass( "ui-slider ui-slider-" + this.orientation, "ui-widget ui-widget-content" );
             
-            //$(_component.element).on('mousedown', _do_mouse_down);
-            //$(_component.element).on('mousemove', _do_mouse_move);
+            $(_component.element).on('mousedown', this._do_mouse_down);
+            //$(_component.element).on('mousemove', this._do_mouse_move);
+            //$(_component.element).on('mouseup', this._do_mouse_up);
         },
         _destroy: function () {
             $.Widget.prototype.destroy.call(this);
         },
+        _do_mouse_down: function(ev) {
+          // except element, must be rangebar...
+          if( !$(ev.target).hasClass('ui-slider') )
+            return false;
+          // get info and create new range...
+          var barWidth = $(this).width();
+          var options = $(this).data("assil-rangebar").options;
+          var totalRange = options.max - options.min;
+          var nStart = valueFromPercent(totalRange, percentOf(barWidth, ev.offsetX));
+          var range = { id: 'x', start: nStart, end: nStart + 1800 }; // half hour range...
+          var range_rect = $(this).rangebar('getRelativeUIRectFromRange', range);
+          var $range = $(this).rangebar('addFloatRange', range);
+          var getRect = getRectUsing$Position;
+          var siblings_rects = [];
+          // find all the sibling ranges...
+          $range.siblings('.range').each(function () {
+            siblings_rects.push(getRect(this));
+          });
+          // if overlaped then remove it, not overlaped increase the id...
+          var overlaps = $(range_rect).overlapsX(siblings_rects);
+          if( overlaps.length > 0 ) {
+            $range.remove();
+          }
+        },
         getRanges: function () {
             var ranges = [];
             //syncRange({ target: this.element });
-            $(this.element).children().each(function () {
+            $(this.element).children('.range').each(function () {
                 var $range = $(this);
                 var range = $range.data('range');
                 if (!range) return true;
@@ -106,7 +131,6 @@ var assil = { debgug: false };
             return ranges;
         },
         addRange: function (range) {
-        
             var options = this.options;
             range = $.fn.extend({}, options.defaultRange, range);
             var totalRange = options.max - options.min;
@@ -125,6 +149,7 @@ var assil = { debgug: false };
             if (options.renderRange) options.renderRange($range, range);
 
             $range.on('mousedown', range_mouse_down);
+            $range.on('mouseup', range_mouse_up);
 
             if (range.disabled) {
                 $range.addClass("disabled");
@@ -212,13 +237,14 @@ var assil = { debgug: false };
               $range.children(".ui-resizable-e").find(".ui-slider-tip").html( strEnd );
             }
             
-            $range.offset({ left: range_left, top: range_top + 1 });
+            // 2017.07.16 - by jackey => must plus 1, for left and top...
+            $range.offset({ left: range_left + 1, top: range_top + 1 });
             $range.width(range_rect.w);
             $range.height(range_rect.h);
 
-            $(".range-label", $range).text(options.label($range, range));
-            if (options.updateRange) options.updateRange($range, range);
-            if (assil.debgug) console.log("UI range rect after change:" + JSON.stringify(getRectUsing$Position($range)));
+            if( options.updateRange ) options.updateRange($range, range);
+            if( options.label ) $(".range-label", $range).text(options.label($range, range));
+            if( assil.debgug ) console.log("UI range rect after change:" + JSON.stringify(getRectUsing$Position($range)));
 
         },
         getRelativeUIRectFromRange: function (range) {
@@ -239,11 +265,6 @@ var assil = { debgug: false };
         }
     });
     
-    /*function _do_mouse_down(ev) {
-    };
-    function _do_mouse_move(ev) {
-    };*/
-
     function preventCollision_onResize(event, ui) {
         var getRect = getRectUsing$Position;//ui.size ? getRectUsing$Offset : getRectUsing$Position;
         var $range = $(event.target);
@@ -375,18 +396,38 @@ var assil = { debgug: false };
 
     // fill range area...
     function range_dblclick(ev) {
-        ev.stopPropagation();
-        ev.preventDefault();
+      ev.stopPropagation();
+      ev.preventDefault();
 
-        var $range = $(this);
-        var $bar = $range.parent();
-        var range = $range.data("range");
-        var ranges_siblings = $range.siblings().data("range");
+      var $range = $(this);
+      var range = $range.data("range");
+      if( !range ) return;
+
+      var $bar = $range.parent();
+      var options = $bar.data("assil-rangebar").options;
+      //var ranges_siblings = $range.siblings().data("range");
+      if( options.dbClickEvent ) {
+        var strStart = $bar.data("float-options").formatLabel(range.start);
+        var strEnd = $bar.data("float-options").formatLabel(range.end);
+        options.dbClickEvent($range, strStart, strEnd);
+      }
     };
 
+    function range_mouse_up(ev) {
+      // 2017.07.16 - by jackey => hide tips...
+      $(this).find(".ui-slider-tip").each(function() {
+        $(this).hide();
+      });
+    }
+    
     function range_mouse_down(ev) {
         ev.stopPropagation();
         ev.preventDefault();
+
+        // 2017.07.16 - by jackey => display tips...
+        $(this).find(".ui-slider-tip").each(function() {
+          $(this).show();
+        });
         
         var $range = $(this);
         var range = $range.data("range");
@@ -399,16 +440,32 @@ var assil = { debgug: false };
         if (last_selected_range != null) last_selected_range.removeClass("selected");
         $bar.data("selected_range", $range);
         $range.addClass("selected");
-
+        
+        // notify the focus range...
+        if( ev.which == 1 && options.focusEvent ) {
+          // find all the range, select only one...
+          $(".slider").each(function(){
+            if( $bar.attr("id") != this.id ) {
+              var last_select = $(this).data("selected_range");
+              if( last_select != null ) last_select.removeClass("selected");
+            }
+          });
+          // notify the focus event...
+          options.focusEvent($range, range);
+        }
+        // process the middle mouse click...
         if (ev.which !== 2 || !range.allowDelete) return;
-
         if ($range.data('deleteConfirm')) {
+            // notify the delete event...
+            if( options.deleteEvent ) {
+              options.deleteEvent($range, range);
+            }
+            // remove the range by id...
             $bar.rangebar("removeRange", $range.data("range").id);
             clearTimeout($range.data('deleteTimeout'));
         } else {
             $range.addClass('delete-confirm');
             $range.data('deleteConfirm', true);
-
             this.deleteTimeout = setTimeout(function () {
                 $range.removeClass('delete-confirm');
                 $range.data('deleteConfirm', false);
@@ -440,10 +497,9 @@ var assil = { debgug: false };
         //$range.offset({ top: $bar.offset().top });
         $range.height($bar.height());
         $range.data("range", range);
-        $(".range-label", $range).text(options.label($range, range));
 
-        if (options.updateRange) options.updateRange($range, range);
-
+        if( options.label ) $(".range-label", $range).text(options.label($range, range));
+        if( options.updateRange ) options.updateRange($range, range);
     }
     function measureRangeRect(totalRange, componentWidth, range){
         return {
