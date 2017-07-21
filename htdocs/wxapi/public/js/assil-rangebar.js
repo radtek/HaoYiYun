@@ -37,7 +37,10 @@ var assil = { debgug: false };
                     label: ''
                 },
                 allowDelete: true, //indicates if can ranges can be removed
-                canOverlap: false
+                canOverlap: false,
+                teacherID: 1,   // default teacherID for cloud record
+                subjectID: 1,   // default subjectID for cloud record
+                courseID:  0,   // default courseID for database
             },
             ranges: [],
             step: 1,
@@ -46,6 +49,7 @@ var assil = { debgug: false };
             deleteTimeout: 3000,
             orientation: "horizontal",
             cur_max_id: 1,
+            defSecond: 1800,
 
             //callback functions
             label: null,        // function to computes label display of range
@@ -54,6 +58,7 @@ var assil = { debgug: false };
             deleteEvent: null,  // range delete event notify...
             focusEvent: null,   // range focus event notify...
             dbClickEvent: null, // range double click event notify...
+            mouseCreate: null,  // range created by left mouse down...
         },
         _valueMin: function() {
           return this.options.min;
@@ -83,8 +88,6 @@ var assil = { debgug: false };
             _component._addClass( "ui-slider ui-slider-" + this.orientation, "ui-widget ui-widget-content" );
             
             $(_component.element).on('mousedown', this._do_mouse_down);
-            //$(_component.element).on('mousemove', this._do_mouse_move);
-            //$(_component.element).on('mouseup', this._do_mouse_up);
         },
         _destroy: function () {
             $.Widget.prototype.destroy.call(this);
@@ -94,35 +97,67 @@ var assil = { debgug: false };
           if( !$(ev.target).hasClass('ui-slider') )
             return false;
           // get info and create new range...
-          var barWidth = $(this).width();
-          var options = $(this).data("assil-rangebar").options;
+          var $bar = $(this);
+          var barWidth = $bar.width();
+          var options = $bar.data("assil-rangebar").options;
           var totalRange = options.max - options.min;
-          var nStart = valueFromPercent(totalRange, percentOf(barWidth, ev.offsetX));
-          var range = { id: 'x', start: nStart, end: nStart + 1800 }; // half hour range...
-          var range_rect = $(this).rangebar('getRelativeUIRectFromRange', range);
-          var $range = $(this).rangebar('addFloatRange', range);
+          var nSecFrom = valueFromPercent(totalRange, percentOf(barWidth, ev.offsetX));
+          var nSecTo = nSecFrom + options.defSecond; // default half hour range...
+          if( nSecTo > options.max )
+            return false;
+          var nStartX = valueFromPercent(barWidth, percentOf(totalRange, nSecFrom));
+          var nEndX = valueFromPercent(barWidth, percentOf(totalRange, nSecTo));
+          var range_rect = { x: nStartX, y: 0, w: nEndX - nStartX, h: $bar.height() };
           var getRect = getRectUsing$Position;
           var siblings_rects = [];
           // find all the sibling ranges...
-          $range.siblings('.range').each(function () {
+          $bar.children('.range').each(function () {
             siblings_rects.push(getRect(this));
           });
           // if overlaped then remove it, not overlaped increase the id...
           var overlaps = $(range_rect).overlapsX(siblings_rects);
           if( overlaps.length > 0 ) {
-            $range.remove();
+            return false;
           }
+          // create a new range object...
+          var range = { start: nSecFrom, end: nSecTo };
+          var $range = $bar.rangebar('addFloatRange', range);
+          // notify create a new range...
+          if( options.mouseCreate ) options.mouseCreate($range);
+          return true;
         },
-        applyRange: function($range, strStart, strEnd) {
-          var arrStart = strStart.split(':');
-          var arrEnd = strEnd.split(':');
+        checkRange: function(strStart, strEnd, nTeacher, nSubject) {
+          var $bar = $(this.element);
+          var barWidth = $bar.width();
+          var options = $bar.data("assil-rangebar").options;
+          var totalRange = options.max - options.min;
+          var nSecFrom = $bar.data("float-options").timeToSec(strStart);
+          var nSecTo = $bar.data("float-options").timeToSec(strEnd);
+          var nStartX = valueFromPercent(barWidth, percentOf(totalRange, nSecFrom));
+          var nEndX = valueFromPercent(barWidth, percentOf(totalRange, nSecTo));
+          var range_rect = { x: nStartX, y: 0, w: nEndX - nStartX, h: $bar.height() };
+          var getRect = getRectUsing$Position;
+          var siblings_rects = [];
+          $bar.children('.range').each(function () {
+            siblings_rects.push(getRect(this));
+          });
+          var overlaps = $(range_rect).overlapsX(siblings_rects);
+          if( overlaps.length > 0 ) {
+            return false;
+          }
+          var range = { start: nSecFrom, end: nSecTo, teacherID: nTeacher, subjectID: nSubject };
+          $bar.rangebar('addFloatRange', range);
+          return true;
+        },
+        applyRange: function($range, strStart, strEnd, nTeacher, nSubject) {
+          var $bar = $range.parent();
           var range = $range.data("range");
-          var barWidth = $range.parent().width();
-          var options = $range.parent().data("assil-rangebar").options;
+          var barWidth = $bar.width();
+          var options = $bar.data("assil-rangebar").options;
           var totalRange = options.max - options.min;
           var range_rect = this.getRelativeUIRectFromRange(range);
-          var nSecFrom = parseInt(arrStart[0])*3600 + parseInt(arrStart[1])*60 + parseInt(arrStart[2]);
-          var nSecTo = parseInt(arrEnd[0])*3600 + parseInt(arrEnd[1])*60 + parseInt(arrEnd[2]);
+          var nSecFrom = $bar.data("float-options").timeToSec(strStart);
+          var nSecTo = $bar.data("float-options").timeToSec(strEnd);
           var nStartX = valueFromPercent(barWidth, percentOf(totalRange, nSecFrom));
           var nEndX = valueFromPercent(barWidth, percentOf(totalRange, nSecTo));
           range_rect.x = nStartX; range_rect.w = nEndX - nStartX;
@@ -140,6 +175,7 @@ var assil = { debgug: false };
           // not overlaped, update range...
           $range.children(".ui-resizable-w").find(".ui-slider-tip").html( strStart );
           $range.children(".ui-resizable-e").find(".ui-slider-tip").html( strEnd );
+          range.teacherID = nTeacher; range.subjectID = nSubject;
           range.start = nSecFrom; range.end = nSecTo;
           $range.data("range", range);
           // update ui range...
@@ -590,8 +626,9 @@ function isOverlapRect(rect1, rect2) {
 function isOverlapXRect(rect1, rect2) {
     // overlapping indicators, indicate which part of the reference object (Rectangle1) overlap one obstacle.
     var ret = {
-        isOverlapRight: (rect1.x + rect1.w >= rect2.x && rect1.x <= rect2.x),
-        isOverlapLeft: (rect1.x <= rect2.x + rect2.w && rect1.x >= rect2.x)
+        // 2017.07.18 - by jackey => must except the equal value...
+        isOverlapRight: (rect1.x + rect1.w > rect2.x && rect1.x < rect2.x),
+        isOverlapLeft: (rect1.x < rect2.x + rect2.w && rect1.x > rect2.x)
     }; 
     ret.isOverlaped = (ret.isOverlapLeft || ret.isOverlapRight);
     return ret;
@@ -930,6 +967,11 @@ function isOverlapYRect(rect1, rect2) {
             value     = theHour+':'+theMinute+':'+theSecond;
           }
           return value;
+        },
+        timeToSec: function(strTime) {
+          var arrTime = strTime.split(':');
+          var nSecond = parseInt(arrTime[0])*3600 + parseInt(arrTime[1])*60 + parseInt(arrTime[2]);
+          return nSecond;
         }
       };
       // store the new setting...

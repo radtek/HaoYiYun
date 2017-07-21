@@ -4,6 +4,7 @@
 #include "liveMedia.hh"
 #include "BasicUsageEnvironment.hh"
 
+void continueAfterOPTIONS(RTSPClient* rtspClient, int resultCode, char* resultString);
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString);
 void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultString);
 void continueAfterPLAY(RTSPClient* rtspClient, int resultCode, char* resultString);
@@ -42,6 +43,7 @@ protected: // called only by createNew();
 public:
 	StreamClientState	m_scs;
 public:
+	void myAfterOPTIONS(int resultCode, char* resultString);
 	void myAfterDESCRIBE(int resultCode, char* resultString);
 	void myAfterSETUP(int resultCode, char* resultString);
 	void myAfterPLAY(int resultCode, char* resultString);

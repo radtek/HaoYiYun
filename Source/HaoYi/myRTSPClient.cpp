@@ -6,6 +6,17 @@
 #include "libmp4v2\RecThread.h"
 #include "librtmp\AmfByteStream.h"
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#endif
+
+void continueAfterOPTIONS(RTSPClient* rtspClient, int resultCode, char* resultString)
+{
+	ASSERT( rtspClient != NULL );
+	((ourRTSPClient*)rtspClient)->myAfterOPTIONS(resultCode, resultString);
+	delete[] resultString;
+}
+
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString)
 {
 	ASSERT( rtspClient != NULL );
@@ -67,6 +78,30 @@ ourRTSPClient::~ourRTSPClient()
 {
 }
 
+void ourRTSPClient::myAfterOPTIONS(int resultCode, char* resultString)
+{
+	do {
+		// 发生错误，打印返回...
+		if( resultCode != 0 ) {
+			TRACE("[OPTIONS] Code = %d, Error = %s\n", resultCode, resultString);
+			break;
+		}
+		// 成功，发起DESCRIBE请求...
+		TRACE("[OPTIONS] = %s\n", resultString);
+		this->sendDescribeCommand(continueAfterDESCRIBE);
+		return;
+	}while( 0 );
+
+	// 发生错误，让任务循环退出，然后自动停止会话...
+	if( m_lpRtspThread != NULL ) {
+		m_lpRtspThread->ResetEventLoop();
+	}
+	// 发生错误，停止录像线程...
+	if( m_lpRecThread != NULL ) {
+		m_lpRecThread->ResetEventLoop();
+	}
+}
+
 void ourRTSPClient::myAfterDESCRIBE(int resultCode, char* resultString)
 {
 	do {
@@ -79,7 +114,7 @@ void ourRTSPClient::myAfterDESCRIBE(int resultCode, char* resultString)
 
 		// 返回错误，退出...
 		if( resultCode != 0 ) {
-			TRACE("[DESCRIBE] Error = %d\n", resultCode);
+			TRACE("[DESCRIBE] Code = %d, Error = %s\n", resultCode, resultString);
 			break;
 		}
 		

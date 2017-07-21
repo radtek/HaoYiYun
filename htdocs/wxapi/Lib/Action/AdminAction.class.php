@@ -886,12 +886,58 @@ class AdminAction extends Action
   // 获取编辑时间对话框...
   public function getClock()
   {
-    echo $this->fetch('getClock');
+    // 读取科目列表，读取教师列表...
+    $arrSubject = D('subject')->field('subject_id,subject_name')->select();
+    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
+    // 设置模版参数...
+    $this->assign('my_web_logo', $this->m_webLogo);
+    $this->assign('my_web_type', $this->m_webType);
+    $this->assign('my_list_teacher', $arrTeacher);
+    $this->assign('my_list_subject', $arrSubject);
+    // 根据网站类型，传递不同数据...
+    $arrJson['week'] = date('w');
+    $arrJson['webType'] = $this->m_webType;
+    $arrJson['defStart'] = date('H:i:s');
+    $arrJson['defEnd'] = date("H:i:s", strtotime("+1 hour"));
+    $arrJson['width'] = ($this->m_webType == kCloudRecorder) ? '500px' : '450px';
+    $arrJson['height'] = ($this->m_webType == kCloudRecorder) ? '530px' : '440px';
+    $arrJson['data'] = $this->fetch('getClock');
+    echo json_encode($arrJson);
+  }
+  //
+  // 获取复制星期对话框...
+  public function getWeek()
+  {
+    // 设置星期数据，按照容易理解的顺序排列...
+    $week_id = $_GET['week_id'];
+    $arrWeek = array(
+      array('id' => '1', 'name' => '星期一', 'today' => ((1==$week_id) ? 'checked disabled' : '')),
+      array('id' => '2', 'name' => '星期二', 'today' => ((2==$week_id) ? 'checked disabled' : '')),
+      array('id' => '3', 'name' => '星期三', 'today' => ((3==$week_id) ? 'checked disabled' : '')),
+      array('id' => '4', 'name' => '星期四', 'today' => ((4==$week_id) ? 'checked disabled' : '')),
+      array('id' => '5', 'name' => '星期五', 'today' => ((5==$week_id) ? 'checked disabled' : '')),
+      array('id' => '6', 'name' => '星期六', 'today' => ((6==$week_id) ? 'checked disabled' : '')),
+      array('id' => '0', 'name' => '星期日', 'today' => ((0==$week_id) ? 'checked disabled' : ''))
+    );
+    // 设置模版参数...
+    $this->assign('my_week', $arrWeek);
+    echo $this->fetch('getWeek');
   }
   //
   // 获取摄像头下面的录像表 => 始终按每周排列...
   public function course()
   {
+    // 设置星期数据，按照容易理解的顺序排列...
+    $week_id = date('w');
+    $arrWeek = array(
+      array('id' => '1', 'name' => '星期一', 'today' => ((1==$week_id) ? 1 : 0)),
+      array('id' => '2', 'name' => '星期二', 'today' => ((2==$week_id) ? 1 : 0)),
+      array('id' => '3', 'name' => '星期三', 'today' => ((3==$week_id) ? 1 : 0)),
+      array('id' => '4', 'name' => '星期四', 'today' => ((4==$week_id) ? 1 : 0)),
+      array('id' => '5', 'name' => '星期五', 'today' => ((5==$week_id) ? 1 : 0)),
+      array('id' => '6', 'name' => '星期六', 'today' => ((6==$week_id) ? 1 : 0)),
+      array('id' => '0', 'name' => '星期日', 'today' => ((0==$week_id) ? 1 : 0))
+    );
     // 获取传递过来的参数信息...
     $theNavType = $_GET['type'];
     $theCameraID = $_GET['camera_id'];
@@ -899,20 +945,62 @@ class AdminAction extends Action
     // 需要根据类型不同，设置不同的焦点类型...
     $this->assign('my_title', $this->m_webTitle . " - 课程表");
     $this->assign('my_command', (($theNavType == 'camera') ? 'gather' : 'live'));
-    // 查找该通道下面所有的录像任务记录...
+    // 获取班级年级或通道信息...
     $map['camera_id'] = $theCameraID;
+    $dbGrade = D('CameraView')->where($map)->find();
+    $this->assign('my_grade', $dbGrade);
+    // 获取通道下所有的录像任务...
     $arrCourse = D('course')->where($map)->select();
-    // 获取班级年级信息 => 云录播模式下才需要...
-    if( $this->m_webType == kCloudRecorder ) {
-      $dbGrade = D('CameraView')->where($map)->find();
-      $this->assign('my_grade', $dbGrade);
-    }
-    // 设置最大页数，设置模板参数...
+    $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
+    // 设置需要的模板参数信息...
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('my_nav_type', $theNavType);
+    $this->assign('my_week', $arrWeek);
     $this->display();
+  }
+  //
+  // 查找指定通道下面所有的录像任务记录...
+  /*public function getCourse()
+  {
+    $theCameraID = $_GET['camera_id'];
+    $arrCourse = D('course')->where($map)->select();
+    echo ($arrCourse ? json_encode($arrCourse) : false);
+  }*/
+  //
+  // 保存任务录像区间数据...
+  public function saveCourse()
+  {
+    // 将获取的json数据转换成数组...
+    $arrNew = array();
+    $arrCourse = json_decode($_POST['data'], true);
+    foreach($arrCourse as &$dbCourse) {
+      $dbCourse['start_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['start_time']);
+      $dbCourse['end_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['end_time']);
+      if( $dbCourse['course_id'] > 0 ) {
+        // 检查删除标志...
+        if( $dbCourse['is_delete'] ) {
+          // 删除指定编号的记录...
+          $map['course_id'] = $dbCourse['course_id'];
+          D('course')->where($map)->delete();
+        } else {
+          // 更新原有数据...
+          $dbCourse['updated'] = date('Y-m-d H:i:s');
+          D('course')->save($dbCourse);
+        }
+      } else {
+        // 新建记录...
+        unset($dbCourse['course_id']);
+        $dbCourse['created'] = date('Y-m-d H:i:s');
+        $dbCourse['updated'] = date('Y-m-d H:i:s');
+        $dbCourse['course_id'] = D('course')->add($dbCourse);
+        // 构造返回的数据内容...
+        array_push($arrNew, array('slider_id' => $dbCourse['slider_id'], 'range_id' => $dbCourse['range_id'], 'course_id' => $dbCourse['course_id']));
+      }
+    }
+    // 返回新创建的ID编号...
+    echo ($arrNew ? json_encode($arrNew) : false);
   }
   //
   // 获取摄像头(班级)下面的录像课程表...
@@ -970,29 +1058,10 @@ class AdminAction extends Action
   }*/
   //
   // 获取摄像头下正在录像的课表编号...
-  private function getCourseRecordFromTransmit($strMacAddr, $nCameraID, &$arrCourse)
+  /*private function getCourseRecordFromTransmit($strMacAddr, $nCameraID, &$arrCourse)
   {
     // 尝试链接中转服务器...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
-    /*// 转换成JSON数据...
-    $dbCamera['camera_id'] = $nCameraID;
-    $dbCamera['mac_addr'] = $strMacAddr;
-    $saveJson = json_encode($dbCamera);
-    // 查询指定摄像头列表的在线状态...
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Get_Course_Record, $saveJson);
-    if( $json_data ) {
-      // 获取的JSON数据有效，转成数组...
-      $arrData = json_decode($json_data, true);
-      // 设置录像课表的状态 => course_id => 正在录像的编号...
-      foreach($arrCourse as &$dbItem) {
-        $dbItem['status'] = 0;
-        if( (isset($arrData['course_id'])) && ($dbItem['course_id'] == $arrData['course_id']) ) {
-          $dbItem['status'] = 1;
-        }
-      }
-    }*/
-    
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
     // 查询指定摄像头列表的在线状态...
@@ -1018,47 +1087,11 @@ class AdminAction extends Action
     if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
-  }
+  }*/
   //
   // 获取课表修改页面 => 这是一个完整页面，因为ajax模式无法加载layui...
-  public function getCourse()
+  /*public function getCourse()
   {
-    /*$this->assign('my_title', $this->m_webTitle . " - 课程表");
-    $this->assign('my_command', 'gather');
-    $theCamera = $_GET['camera_id'];
-    $theGather = $_GET['gather_id'];
-    $theID = $_GET['course_id'];
-    // 进行'修改'或'添加'分发...
-    if( $theID > 0 ) {
-      $dbCourse = D('course')->where('course_id='.$theID)->find();
-      $this->assign('my_new_title', "修改 - 课程表");
-    } else {
-      $dbCourse['course_id'] = 0;
-      $dbCourse['camera_id'] = $theCamera;
-      $dbCourse['repeat_id'] = kNoneRepeat;
-      $dbCourse['start_time'] = date('Y-m-d H:i:s');
-      $dbCourse['end_time'] = date("Y-m-d H:i:s", strtotime("+1 hour"));;
-      $this->assign('my_new_title', "添加 - 课程表");
-    }
-    // 读取科目列表，读取教师列表...
-    $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
-    // 添加记录时针对科目和教师的默认值...
-    if( $theID <= 0 ) {
-      $dbCourse['subject_id'] = (count($arrSubject) <= 0) ? 0 : $arrSubject[0]['subject_id'];
-      $dbCourse['teacher_id'] = (count($arrTeacher) <= 0) ? 0 : $arrTeacher[0]['teacher_id'];
-    }
-    // 获取班级年级信息...
-    $map['camera_id'] = $theCamera;
-    $dbGrade = D('CameraView')->where($map)->find();
-    $this->assign('my_grade', $dbGrade);  
-    // 设置课程信息到模板...
-    $dbCourse['gather_id'] = $theGather;
-    $this->assign('my_course', $dbCourse);
-    $this->assign('my_list_teacher', $arrTeacher);
-    $this->assign('my_list_subject', $arrSubject);
-    $this->display();*/
-
     $theCamera = $_GET['camera_id'];
     $theGather = $_GET['gather_id'];
     $theID = $_GET['course_id'];
@@ -1086,10 +1119,10 @@ class AdminAction extends Action
     $this->assign('my_list_teacher', $arrTeacher);
     $this->assign('my_list_subject', $arrSubject);
     echo $this->fetch('getCourse');
-  }
+  }*/
   //
   // 保存课程表操作...
-  public function saveCourse()
+  /*public function saveCourse()
   {
     // 将传递的数据写入数据库当中...
     if( $_POST['course_id'] <= 0 ) {
@@ -1118,6 +1151,7 @@ class AdminAction extends Action
 
     // 再将课表记录转发给对应的采集端...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    */
     
     /*// 获取转发节点的MAC地址...
     $map['gather_id'] = $_POST['gather_id'];
@@ -1131,7 +1165,7 @@ class AdminAction extends Action
     echo $json_data;*/
 
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    /*$transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
     // 转发课表记录命令 => 修改 或 添加...
     if( $transmit ) {
       // 获取转发节点的MAC地址...
@@ -1147,31 +1181,18 @@ class AdminAction extends Action
       // 反馈转发结果...
       echo $json_data;
     }
-  }
+  }*/
   //
   // 删除课程表数据...
-  public function delCourse()
+  /*public function delCourse()
   {
     // 先直接删除数据库中记录...
     D('course')->where('course_id='.$_POST['course_id'])->delete();
     // 判断有没有采集端编号...
     if( !isset($_POST['gather_id']) || !isset($_POST['camera_id']) )
       return;
-
     // 再通知采集端...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
-    /*// 获取转发节点的MAC地址...
-    $map['gather_id'] = $_POST['gather_id'];
-    $dbGather = D('gather')->where($map)->field('mac_addr')->find();
-    // 组合课表数据成JSON...
-    $_POST['mac_addr'] = $dbGather['mac_addr'];
-    $saveJson = json_encode($_POST);
-    // 发送转发命令...
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Set_Course_Del, $saveJson);
-    // 反馈转发结果...
-    echo $json_data;*/
-    
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
     if( $transmit ) {
@@ -1276,7 +1297,7 @@ class AdminAction extends Action
     }
     // 直接返回运行结果...
     echo json_encode($arrErr);    
-  }
+  }*/
   //
   // 获取直播管理页面...
   public function live()

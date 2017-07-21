@@ -499,8 +499,9 @@ BOOL CRtspThread::InitRtsp(CPushThread * inPushThread, string & strRtspUrl)
 	m_env_ = BasicUsageEnvironment::createNew(*m_scheduler_);
 	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strRtspUrl.c_str(), 1, "rtspTransfer", this, NULL);
 	
-	// 发起第一次rtsp握手...
-	m_rtspClient_->sendDescribeCommand(continueAfterDESCRIBE); 
+	// 2017.07.21 - by jackey => 有些服务器必须先发OPTIONS...
+	// 发起第一次rtsp握手 => 先发起 OPTIONS 命令...
+	m_rtspClient_->sendOptionsCommand(continueAfterOPTIONS); 
 
 	//启动rtsp检测线程...
 	this->Start();
@@ -1398,7 +1399,7 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	ASSERT( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && inFrame.is_keyframe );
 	// 累加关键帧计数器...
 	++m_nKeyFrame;
-	TRACE("== [PushFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+	//TRACE("== [PushFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
 	// 如果已经处于发布，直接返回...
 	if( this->IsPublishing() ) {
 		return m_MapFrame.size();
@@ -1428,7 +1429,7 @@ void CPushThread::dropToKeyFrame()
 				// 已经删除过一个关键帧，遇到新的关键帧，设置发送时间戳，直接返回...
 				if( bHasDelKeyFrame ) {
 					m_dwFirstSendTime = theFrame.dwSendTime;
-					TRACE("== [dropToKeyFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+					//TRACE("== [dropToKeyFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
 					return;
 				}
 				// 删除这个关键帧，设置标志，打印信息...

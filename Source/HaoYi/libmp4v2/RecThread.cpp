@@ -314,9 +314,10 @@ bool CRtspRecThread::InitThread(int nTaskID, LPCTSTR lpszURL, LPCTSTR lpszPath)
 	m_scheduler_ = BasicTaskScheduler::createNew();
 	m_env_ = BasicUsageEnvironment::createNew(*m_scheduler_);
 	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strURL.c_str(), 1, "rtspRecord", NULL, this);
-	
-	// 发起第一次rtsp握手...
-	m_rtspClient_->sendDescribeCommand(continueAfterDESCRIBE); 
+
+	// 2017.07.21 - by jackey => 有些服务器必须先发OPTIONS...
+	// 发起第一次rtsp握手 => 先发起 OPTIONS 命令...
+	m_rtspClient_->sendOptionsCommand(continueAfterOPTIONS); 
 
 	// 启动线程...
 	this->Start();
