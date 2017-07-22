@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Action.class.php,v 1.1 2012/10/29 11:20:43 mark Exp $
+// $Id: Action.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -25,8 +25,7 @@ abstract class Action extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __construct()
-    {
+    public function __construct() {
         //控制器初始化
         if(method_exists($this,'_initialize')) {
             $this->_initialize();

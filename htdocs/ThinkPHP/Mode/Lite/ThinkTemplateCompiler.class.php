@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: ThinkTemplateCompiler.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+// $Id: ThinkTemplateCompiler.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 class ThinkTemplateCompiler {
     protected $literal  =  array();  //Literal缓存
@@ -36,12 +36,11 @@ class ThinkTemplateCompiler {
         'notpresent'=>array('attr'=>'name','level'=>3),
         'defined'=>array('attr'=>'name','level'=>3),
         'notdefined'=>array('attr'=>'name','level'=>3),
-        'import'=>array('attr'=>'file,href,type,value,basepath','close'=>0,'alias'=>'load,css,js'),        'list'=>array('attr'=>'id,pk,style,action,actionlist,show,datasource,checkbox','close'=>0),
-        'imagebtn'=>array('attr'=>'id,name,value,type,style,click','close'=>0),
+        'import'=>array('attr'=>'file,href,type,value,basepath','close'=>0,'alias'=>'load,css,js'),
         );
+
     // 构造方法
-    public function __construct()
-    {
+    public function __construct() {
         $this->tpl       = Think::instance('ThinkTemplateLite');
     }
     // 模板编译
@@ -49,9 +48,6 @@ class ThinkTemplateCompiler {
         $this->templateFile = $templateFile;
         //模板标签解析
         $tmplContent = $this->parseTag($tmplContent);
-        if(ini_get('short_open_tag'))
-            // 开启短标签的情况要将<?标签用echo方式输出 否则无法正常输出xml标识
-            $tmplContent = preg_replace('/(<\?(?!php|=|$))/i', '<?php echo \'\\1\'; ?>'."\n", $tmplContent );
         // 还原被替换的Literal标签
         $tmplContent = preg_replace('/<!--###literal(\d)###-->/eis',"\$this->restoreLiteral('\\1')",$tmplContent);
         // 添加安全代码
@@ -64,6 +60,19 @@ class ThinkTemplateCompiler {
         }
         return trim($tmplContent);
     }
+
+    // 检查PHP语法
+    protected function parsePhp($content) {
+        // PHP语法检查
+        if(C('TMPL_DENY_PHP') && false !== strpos($content,'<?php')) {
+            throw_exception(L('_NOT_ALLOW_PHP_'));
+        }elseif(ini_get('short_open_tag')){
+            // 开启短标签的情况要将<?标签用echo方式输出 否则无法正常输出xml标识
+            $content = preg_replace('/(<\?(?!php|=|$))/i', '<?php echo \'\\1\'; ?>'."\n", $content );
+        }
+        return $content;
+    }
+
     // 解析变量
     protected function parseVar($varStr) {
         $varStr = trim($varStr);
@@ -156,19 +165,9 @@ class ThinkTemplateCompiler {
         }
         return $name;
     }
-    // load普通标签
-    public function parseLoad($str) {
-        $type       = strtolower(substr(strrchr($str, '.'),1));
-        $parseStr = '';
-        if($type=='js') {
-            $parseStr .= '<script type="text/javascript" src="'.$str.'"></script>';
-        }elseif($type=='css') {
-            $parseStr .= '<link rel="stylesheet" type="text/css" href="'.$str.'" />';
-        }
-        return $parseStr;
-    }
+
     // 解析包含标签
-    protected function parseInclude($tmplPublicName) {
+    protected function parseInclude($tmplPublicName,$vars=array()) {
         if(substr($tmplPublicName,0,1)=='$')
             //支持加载变量文件名
             $tmplPublicName = $this->tpl->get(substr($tmplPublicName,1));
@@ -189,6 +188,9 @@ class ThinkTemplateCompiler {
             }
             $tmplTemplateFile .=  $this->tpl->template_suffix;
             $parseStr = file_get_contents($tmplTemplateFile);
+        }
+        foreach ($vars as $key=>$val) {
+            $parseStr = str_replace('['.$key.']',$val,$parseStr);
         }
         //再次对包含文件进行模板分析
         return $this->parseTag($parseStr);
@@ -261,6 +263,8 @@ class ThinkTemplateCompiler {
     }
     // 解析标签
     protected function parseTag($content) {
+        // 检查PHP语法
+        $content  =  $this->parsePhp($content);
         // 解析XML标签
         $this->parseXmlTag($content);
         // 解析普通标签 {tagName:}
@@ -279,76 +283,41 @@ class ThinkTemplateCompiler {
             return C('TMPL_L_DELIM') . $tagStr .C('TMPL_R_DELIM');
         $flag =  substr($tagStr,0,1);
         $name   = substr($tagStr,1);
-        if('$' == $flag){
-            //解析模板变量 格式 {$varName}
+        if('$' == $flag){ //解析模板变量 格式 {$varName}
             return $this->parseVar($name);
-        }elseif(':' == $flag){
-            // 输出某个函数的结果
+        }elseif(':' == $flag){// 输出某个函数的结果
             return  '<?php echo '.$name.';?>';
-        }elseif('~' == $flag){
-            // 执行某个函数
+        }elseif('~' == $flag){ // 执行某个函数
             return  '<?php '.$name.';?>';
-        }elseif('&' == $flag){
-            // 输出配置参数
+        }elseif('&' == $flag){ // 输出配置参数
             return '<?php echo C("'.$name.'");?>';
-        }elseif('%' == $flag){
-            // 输出语言变量
+        }elseif('%' == $flag){ // 输出语言变量
             return '<?php echo L("'.$name.'");?>';
-		}elseif('@' == $flag){
-			// 输出SESSION变量
+		}elseif('@' == $flag){// 输出SESSION变量
             if(strpos($name,'.')) {
                 $array   =  explode('.',$name);
 	    		return '<?php echo $_SESSION["'.$array[0].'"]["'.$array[1].'"];?>';
             }else{
     			return '<?php echo $_SESSION["'.$name.'"];?>';
             }
-		}elseif('#' == $flag){
-			// 输出COOKIE变量
+		}elseif('#' == $flag){	// 输出COOKIE变量
             if(strpos($name,'.')) {
                 $array   =  explode('.',$name);
 	    		return '<?php echo $_COOKIE["'.$array[0].'"]["'.$array[1].'"];?>';
             }else{
     			return '<?php echo $_COOKIE["'.$name.'"];?>';
             }
-		}elseif('.' == $flag){
-            // 输出GET变量
+		}elseif('.' == $flag){ // 输出GET变量
             return '<?php echo $_GET["'.$name.'"];?>';
-        }elseif('^' == $flag){
-            // 输出POST变量
+        }elseif('^' == $flag){ // 输出POST变量
             return '<?php echo $_POST["'.$name.'"];?>';
-        }elseif('*' == $flag){
-            // 输出常量
+        }elseif('*' == $flag){ // 输出常量
             return '<?php echo constant("'.$name.'");?>';
         }
         $tagStr = trim($tagStr);
         if(substr($tagStr,0,2)=='//' || (substr($tagStr,0,2)=='/*' && substr($tagStr,-2)=='*/'))
             //注释标签
             return '';
-        //解析其它标签
-        //统一标签格式 {TagName:args [|content]}
-        $pos =  strpos($tagStr,':');
-        $tag  =  substr($tagStr,0,$pos);
-        $args = trim(substr($tagStr,$pos+1));
-        //解析标签内容
-        if(!empty($args)) {
-            $tag  =  strtolower($tag);
-            switch($tag){
-                case 'include':
-                    return $this->parseInclude($args);
-                    break;
-                case 'load':
-                    return $this->parseLoad($args);
-                    break;
-                //这里扩展其它标签
-                //…………
-                default:
-                    if(C('TAG_EXTEND_PARSE')) {
-                        $method = C('TAG_EXTEND_PARSE');
-                        if(array_key_exists($tag,$method))
-                            return $method[$tag]($args);
-                    }
-            }
-        }
         return C('TMPL_L_DELIM') . $tagStr .C('TMPL_R_DELIM');
     }
     // 解析XML标签
@@ -445,8 +414,7 @@ class ThinkTemplateCompiler {
         return $name;
     }
     // 解析标签属性
-    public function parseXmlAttr($attr,$tag)
-    {
+    public function parseXmlAttr($attr,$tag) {
         //XML解析安全过滤
         $attr = str_replace('&','___', $attr);
         $xml =  '<tpl><tag '.$attr.' /></tpl>';
@@ -473,15 +441,14 @@ class ThinkTemplateCompiler {
         return $parseStr;
     }
     // include
-    public function _include($attr,$content)
-    {
+    public function _include($attr,$content) {
         $tag    = $this->parseXmlAttr($attr,'include');
         $file   =   $tag['file'];
-        return $this->parseInclude($file);
+        unset($tag['file']);
+        return $this->parseInclude($file,$tag);
     }
     // volist
-    public function _volist($attr,$content)
-    {
+    public function _volist($attr,$content) {
         static $_iterateParseCache = array();
         //如果已经解析过，则直接返回变量值
         $cacheIterateId = md5($attr.$content);
@@ -517,8 +484,7 @@ class ThinkTemplateCompiler {
         return ;
     }
     // foreach
-    public function _foreach($attr,$content)
-    {
+    public function _foreach($attr,$content) {
         static $_iterateParseCache = array();
         //如果已经解析过，则直接返回变量值
         $cacheIterateId = md5($attr.$content);
@@ -599,8 +565,7 @@ class ThinkTemplateCompiler {
         return $parseStr;
     }
     // compare
-    public function _compare($attr,$content,$type='eq')
-    {
+    public function _compare($attr,$content,$type='eq') {
         $tag      = $this->parseXmlAttr($attr,'compare');
         $name   = $tag['name'];
         $value   = $tag['value'];
@@ -648,16 +613,14 @@ class ThinkTemplateCompiler {
         return $this->_range($attr,$content,'notin');
     }
     // present
-    public function _present($attr,$content)
-    {
+    public function _present($attr,$content) {
         $tag      = $this->parseXmlAttr($attr,'present');
         $name   = $tag['name'];
         $name   = $this->autoBuildVar($name);
         $parseStr  = '<?php if(isset('.$name.')): ?>'.$content.'<?php endif; ?>';
         return $parseStr;
     }
-    public function _notpresent($attr,$content)
-    {
+    public function _notpresent($attr,$content) {
         $tag      = $this->parseXmlAttr($attr,'present');
         $name   = $tag['name'];
         $name   = $this->autoBuildVar($name);
@@ -665,16 +628,14 @@ class ThinkTemplateCompiler {
         return $parseStr;
     }
     // empty
-    public function _empty($attr,$content)
-    {
+    public function _empty($attr,$content) {
         $tag      = $this->parseXmlAttr($attr,'empty');
         $name   = $tag['name'];
         $name   = $this->autoBuildVar($name);
         $parseStr  = '<?php if(empty('.$name.')): ?>'.$content.'<?php endif; ?>';
         return $parseStr;
     }
-    public function _notempty($attr,$content)
-    {
+    public function _notempty($attr,$content) {
         $tag      = $this->parseXmlAttr($attr,'empty');
         $name   = $tag['name'];
         $name   = $this->autoBuildVar($name);
@@ -682,30 +643,26 @@ class ThinkTemplateCompiler {
         return $parseStr;
     }
     // define
-    public function _defined($attr,$content)
-    {
+    public function _defined($attr,$content) {
         $tag        = $this->parseXmlAttr($attr,'defined');
         $name     = $tag['name'];
         $parseStr = '<?php if(defined("'.$name.'")): ?>'.$content.'<?php endif; ?>';
         return $parseStr;
     }
-    public function _notdefined($attr,$content)
-    {
+    public function _notdefined($attr,$content) {
         $tag        = $this->parseXmlAttr($attr,'defined');
         $name     = $tag['name'];
         $parseStr = '<?php if(!defined("'.$name.'")): ?>'.$content.'<?php endif; ?>';
         return $parseStr;
     }
     // import
-    public function _import($attr,$content,$isFile=false,$type='')
-    {
+    public function _import($attr,$content,$isFile=false,$type='') {
         $tag  = $this->parseXmlAttr($attr,'import');
         $file   = $tag['file']?$tag['file']:$tag['href'];
         $parseStr = '';
         $endStr   = '';
         // 判断是否存在加载条件 允许使用函数判断(默认为isset)
-        if ($tag['value'])
-        {
+        if ($tag['value']) {
             $varArray  = explode('|',$tag['value']);
             $name      = array_shift($varArray);
             $name      = $this->autoBuildVar($name);
@@ -789,174 +746,17 @@ class ThinkTemplateCompiler {
     public function _nheq($attr,$content) {
         return $this->_compare($attr,$content,'nheq');
     }
-    public function _load($attr,$content)
-    {
+    public function _load($attr,$content) {
         return $this->_import($attr,$content,true);
     }
     // import别名使用 导入css文件 <css file="__PUBLIC__/Css/Base.css" />
-    public function _css($attr,$content)
-    {
+    public function _css($attr,$content) {
         return $this->_import($attr,$content,true,'css');
     }
     // import别名使用 导入js文件 <js file="__PUBLIC__/Js/Base.js" />
-    public function _js($attr,$content)
-    {
+    public function _js($attr,$content) {
         return $this->_import($attr,$content,true,'js');
     }
-    // list
-    public function _list($attr)
-    {
-        $tag        = $this->parseXmlAttr($attr,'list');
-        $id         = $tag['id'];                       //表格ID
-        $datasource = $tag['datasource'];               //列表显示的数据源VoList名称
-        $pk         = empty($tag['pk'])?'id':$tag['pk'];//主键名，默认为id
-        $style      = $tag['style'];                    //样式名
-        $name       = !empty($tag['name'])?$tag['name']:'vo';                 //Vo对象名
-        $action     = $tag['action'];                   //是否显示功能操作
-        $checkbox   = $tag['checkbox'];                 //是否显示Checkbox
-        if(isset($tag['actionlist'])) {
-            $actionlist = explode(',',trim($tag['actionlist']));    //指定功能列表
-        }
-        if(substr($tag['show'],0,1)=='$') {
-            $show   = $this->tpl->get(substr($tag['show'],1));
-        }else {
-            $show   = $tag['show'];
-        }
-        $show       = explode(',',$show);                //列表显示字段列表
-        //计算表格的列数
-        $colNum     = count($show);
-        if(!empty($checkbox))   $colNum++;
-        if(!empty($action))     $colNum++;
-        //显示开始
-		$parseStr	= "<!-- Think 系统列表组件开始 -->\n";
-        $parseStr  .= '<table id="'.$id.'" class="'.$style.'" cellpadding=0 cellspacing=0 >';
-        $parseStr  .= '<tr><td height="5" colspan="'.$colNum.'" class="topTd" ></td></tr>';
-        $parseStr  .= '<tr class="row" >';
-        //列表需要显示的字段
-        $fields = array();
-        foreach($show as $key=>$val) {
-        	$fields[] = explode(':',$val);
-        }
-        if(!empty($checkbox) && 'true'==strtolower($checkbox)) {//如果指定需要显示checkbox列
-            $parseStr .='<th width="8"><input type="checkbox" id="check" onclick="CheckAll(\''.$id.'\')"></th>';
-        }
-        foreach($fields as $field) {//显示指定的字段
-            $property = explode('|',$field[0]);
-            $showname = explode('|',$field[1]);
-            if(isset($showname[1])) {
-                $parseStr .= '<th width="'.$showname[1].'">';
-            }else {
-                $parseStr .= '<th>';
-            }
-            $showname[2] = isset($showname[2])?$showname[2]:$showname[0];
-            $parseStr .= '<a href="javascript:sortBy(\''.$property[0].'\',\'{$sort}\',\''.ACTION_NAME.'\')" title="按照'.$showname[2].'{$sortType} ">'.$showname[0].'<eq name="order" value="'.$property[0].'" ><img src="../Public/images/{$sortImg}.gif" width="12" height="17" border="0" align="absmiddle"></eq></a></th>';
-        }
-        if(!empty($action)) {//如果指定显示操作功能列
-            $parseStr .= '<th >操作</th>';
-        }
-        $parseStr .= '</tr>';
-        $parseStr .= '<volist name="'.$datasource.'" id="'.$name.'" ><tr class="row" onmouseover="over(event)" onmouseout="out(event)" onclick="change(event)" >';	//支持鼠标移动单元行颜色变化 具体方法在js中定义
-        if(!empty($checkbox)) {//如果需要显示checkbox 则在每行开头显示checkbox
-            $parseStr .= '<td><input type="checkbox" name="key"	value="{$'.$name.'.'.$pk.'}"></td>';
-        }
-        foreach($fields as $field) {
-            //显示定义的列表字段
-            $parseStr   .=  '<td>';
-            if(!empty($field[2])) {
-                // 支持列表字段链接功能 具体方法由JS函数实现
-                $href = explode('|',$field[2]);
-                if(count($href)>1) {
-                    //指定链接传的字段值
-                    // 支持多个字段传递
-                    $array = explode('^',$href[1]);
-                    if(count($array)>1) {
-                        foreach ($array as $a){
-                            $temp[] =  '\'{$'.$name.'.'.$a.'|addslashes}\'';
-                        }
-                        $parseStr .= '<a href="javascript:'.$href[0].'('.implode(',',$temp).')">';
-                    }else{
-                        $parseStr .= '<a href="javascript:'.$href[0].'(\'{$'.$name.'.'.$href[1].'|addslashes}\')">';
-                    }
-                }else {
-                    //如果没有指定默认传编号值
-                    $parseStr .= '<a href="javascript:'.$field[2].'(\'{$'.$name.'.'.$pk.'|addslashes}\')">';
-                }
-            }
-            if(strpos($field[0],'^')) {
-                $property = explode('^',$field[0]);
-                foreach ($property as $p){
-                    $unit = explode('|',$p);
-                    if(count($unit)>1) {
-                        $parseStr .= '{$'.$name.'.'.$unit[0].'|'.$unit[1].'} ';
-                    }else {
-                        $parseStr .= '{$'.$name.'.'.$p.'} ';
-                    }
-                }
-            }else{
-                $property = explode('|',$field[0]);
-                if(count($property)>1) {
-                    $parseStr .= '{$'.$name.'.'.$property[0].'|'.$property[1].'}';
-                }else {
-                    $parseStr .= '{$'.$name.'.'.$field[0].'}';
-                }
-            }
-            if(!empty($field[2])) {
-                $parseStr .= '</a>';
-            }
-            $parseStr .= '</td>';
 
-        }
-        if(!empty($action)) {//显示功能操作
-            if(!empty($actionlist[0])) {//显示指定的功能项
-                $parseStr .= '<td>';
-                foreach($actionlist as $val) {
-					if(strpos($val,':')) {
-						$a = explode(':',$val);
-						$b = explode('|',$a[1]);
-						if(count($b)>1) {
-							$c = explode('|',$a[0]);
-							if(count($c)>1) {
-								$parseStr .= '<a href="javascript:'.$c[1].'(\'{$'.$name.'.'.$pk.'}\')"><?php if(0== (is_array($'.$name.')?$'.$name.'["status"]:$'.$name.'->status)){ ?>'.$b[1].'<?php } ?></a><a href="javascript:'.$c[0].'({$'.$name.'.'.$pk.'})"><?php if(1== (is_array($'.$name.')?$'.$name.'["status"]:$'.$name.'->status)){ ?>'.$b[0].'<?php } ?></a>&nbsp;';
-							}else {
-								$parseStr .= '<a href="javascript:'.$a[0].'(\'{$'.$name.'.'.$pk.'}\')"><?php if(0== (is_array($'.$name.')?$'.$name.'["status"]:$'.$name.'->status)){ ?>'.$b[1].'<?php } ?><?php if(1== (is_array($'.$name.')?$'.$name.'["status"]:$'.$name.'->status)){ ?>'.$b[0].'<?php } ?></a>&nbsp;';
-							}
-
-						}else {
-							$parseStr .= '<a href="javascript:'.$a[0].'(\'{$'.$name.'.'.$pk.'}\')">'.$a[1].'</a>&nbsp;';
-						}
-					}else{
-						$array	=	explode('|',$val);
-						if(count($array)>2) {
-							$parseStr	.= ' <a href="javascript:'.$array[1].'(\'{$'.$name.'.'.$array[0].'}\')">'.$array[2].'</a>&nbsp;';
-						}else{
-							$parseStr .= ' {$'.$name.'.'.$val.'}&nbsp;';
-						}
-					}
-                }
-                $parseStr .= '</td>';
-            }
-        }
-        $parseStr	.= '</tr></volist><tr><td height="5" colspan="'.$colNum.'" class="bottomTd"></td></tr></table>';
-        $parseStr	.= "\n<!-- Think 系统列表组件结束 -->\n";
-        return $this->parseTag($parseStr);
-    }
-    // imageBtn
-    public function _imageBtn($attr)
-    {
-        $tag        = $this->parseXmlAttr($attr,'imageBtn');
-        $name       = $tag['name'];                //名称
-        $value      = $tag['value'];                //文字
-        $id         = $tag['id'];                //ID
-        $style      = $tag['style'];                //样式名
-        $click      = $tag['click'];                //点击
-        $type       = empty($tag['type'])?'button':$tag['type'];                //按钮类型
-
-        if(!empty($name)) {
-            $parseStr   = '<div class="'.$style.'" ><input type="'.$type.'" id="'.$id.'" name="'.$name.'" value="'.$value.'" onclick="'.$click.'" class="'.$name.' imgButton"></div>';
-        }else {
-        	$parseStr   = '<div class="'.$style.'" ><input type="'.$type.'" id="'.$id.'"  name="'.$name.'" value="'.$value.'" onclick="'.$click.'" class="button"></div>';
-        }
-        return $parseStr;
-    }
 }
 ?>

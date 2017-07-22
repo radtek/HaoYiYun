@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Dispatcher.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+// $Id: Dispatcher.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -18,7 +18,7 @@
  * @package  Think
  * @subpackage  Core
  * @author    liu21st <liu21st@gmail.com>
- * @version   $Id: Dispatcher.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+ * @version   $Id: Dispatcher.class.php 2701 2012-02-02 12:27:51Z liu21st $
  +------------------------------------------------------------------------------
  */
 class Dispatcher extends Think
@@ -33,8 +33,7 @@ class Dispatcher extends Think
      * @return void
      +----------------------------------------------------------
      */
-    static public function dispatch()
-    {
+    static public function dispatch() {
         $urlMode  =  C('URL_MODEL');
         if($urlMode == URL_REWRITE ) {
             //当前项目地址
@@ -56,24 +55,17 @@ class Dispatcher extends Think
                 $_varModule =   C('VAR_MODULE');
                 $_varAction =   C('VAR_ACTION');
                 $_depr  =   C('URL_PATHINFO_DEPR');
-                $_pathModel =   C('URL_PATHINFO_MODEL');
                 // 设置默认模块和操作
                 if(empty($_GET[$_varModule])) $_GET[$_varModule] = C('DEFAULT_MODULE');
                 if(empty($_GET[$_varAction])) $_GET[$_varAction] = C('DEFAULT_ACTION');
                 // 组装新的URL地址
                 $_URL = '/';
-                if($_pathModel==2) {
-                    // modelName/actionName/
-                    $_URL .= $_GET[$_varModule].$_depr.$_GET[$_varAction].$_depr;
-                    unset($_GET[$_varModule],$_GET[$_varAction]);
-                }
+                // modelName/actionName/
+                $_URL .= $_GET[$_varModule].$_depr.$_GET[$_varAction].$_depr;
+                unset($_GET[$_varModule],$_GET[$_varAction]);
                 foreach ($_GET as $_VAR => $_VAL) {
                     if('' != trim($_GET[$_VAR])) {
-                        if($_pathModel==2) {
-                            $_URL .= $_VAR.$_depr.rawurlencode($_VAL).$_depr;
-                        }else{
-                            $_URL .= $_VAR.'/'.rawurlencode($_VAL).'/';
-                        }
+                       $_URL .= $_VAR.$_depr.rawurlencode($_VAL).$_depr;
                     }
                 }
                 if($_depr==',') $_URL = substr($_URL, 0, -1).'/';
@@ -97,22 +89,17 @@ class Dispatcher extends Think
      * @return void
      +----------------------------------------------------------
      */
-    private static function parsePathInfo()
-    {
+    private static function parsePathInfo() {
         $pathInfo = array();
-        if(C('URL_PATHINFO_MODEL')==2){
-            $paths = explode(C('URL_PATHINFO_DEPR'),trim($_SERVER['PATH_INFO'],'/'));
-            $pathInfo[C('VAR_MODULE')] = array_shift($paths);
-            $pathInfo[C('VAR_ACTION')] = array_shift($paths);
-            for($i = 0, $cnt = count($paths); $i <$cnt; $i++){
-                if(isset($paths[$i+1])) {
-                    $pathInfo[$paths[$i]] = (string)$paths[++$i];
-                }elseif($i==0) {
-                    $pathInfo[$pathInfo[C('VAR_ACTION')]] = (string)$paths[$i];
-                }
+        $paths = explode(C('URL_PATHINFO_DEPR'),trim($_SERVER['PATH_INFO'],'/'));
+        $pathInfo[C('VAR_MODULE')] = array_shift($paths);
+        $pathInfo[C('VAR_ACTION')] = array_shift($paths);
+        for($i = 0, $cnt = count($paths); $i <$cnt; $i++){
+            if(isset($paths[$i+1])) {
+                $pathInfo[$paths[$i]] = (string)$paths[++$i];
+            }elseif($i==0) {
+                $pathInfo[$pathInfo[C('VAR_ACTION')]] = (string)$paths[$i];
             }
-        }else {
-            $res = preg_replace('@(\w+)'.C('URL_PATHINFO_DEPR').'([^,\/]+)@e', '$pathInfo[\'\\1\']="\\2";', $_SERVER['PATH_INFO']);
         }
         return $pathInfo;
     }
@@ -126,8 +113,7 @@ class Dispatcher extends Think
     * @return void
     +----------------------------------------------------------
     */
-    public static function getPathInfo()
-    {
+    public static function getPathInfo() {
         if(!empty($_GET[C('VAR_PATHINFO')])) {
             // 兼容PATHINFO 参数
             $path = $_GET[C('VAR_PATHINFO')];

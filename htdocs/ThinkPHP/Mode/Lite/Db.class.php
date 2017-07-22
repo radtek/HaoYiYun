@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Db.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+// $Id: Db.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 define('CLIENT_MULTI_RESULTS', 131072);
 /**
@@ -64,6 +64,9 @@ class Db extends Think
             throw_exception(L('_NOT_SUPPERT_').':mysql');
         }
         $this->config   =   $this->parseConfig($config);
+        if(C('APP_DEBUG')) {
+            $this->debug  =  true;
+        }
     }
 
     /**
@@ -80,7 +83,8 @@ class Db extends Think
             $config =   $this->config;
             // 处理不带端口号的socket连接情况
             $host = $config['hostname'].($config['hostport']?":{$config['hostport']}":'');
-            if($this->pconnect) {
+            $pconnect   = !empty($config['params']['persist'])? $config['params']['persist']:$this->pconnect;
+            if($pconnect) {
                 $this->linkID = mysql_pconnect( $host, $config['username'], $config['password'],CLIENT_MULTI_RESULTS);
             }else{
                 $this->linkID = mysql_connect( $host, $config['username'], $config['password'],true,CLIENT_MULTI_RESULTS);
@@ -219,8 +223,7 @@ class Db extends Think
      * @throws ThinkExecption
      +----------------------------------------------------------
      */
-    public function commit()
-    {
+    public function commit() {
         if ($this->transTimes > 0) {
             $result = mysql_query('COMMIT', $this->linkID);
             $this->transTimes = 0;
@@ -243,8 +246,7 @@ class Db extends Think
      * @throws ThinkExecption
      +----------------------------------------------------------
      */
-    public function rollback()
-    {
+    public function rollback() {
         if ($this->transTimes > 0) {
             $result = mysql_query('ROLLBACK', $this->linkID);
             $this->transTimes = 0;
@@ -385,8 +387,7 @@ class Db extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __destruct()
-    {
+    public function __destruct() {
         // 关闭连接
         $this->close();
     }
@@ -401,8 +402,7 @@ class Db extends Think
      * @return mixed 返回数据库驱动类
      +----------------------------------------------------------
      */
-    public static function getInstance($db_config='')
-    {
+    public static function getInstance($db_config='') {
 		if ( self::$_instance==null ){
 			self::$_instance = new Db($db_config);
 		}
@@ -453,8 +453,7 @@ class Db extends Think
      * @return array
      +----------------------------------------------------------
      */
-    public function parseDSN($dsnStr)
-    {
+    public function parseDSN($dsnStr) {
         if( empty($dsnStr) ){return false;}
         $info = parse_url($dsnStr);
         if($info['scheme']){
@@ -527,7 +526,7 @@ class Db extends Think
         foreach ($data as $key=>$val){
             $value   =  $this->parseValue($val);
             if(is_scalar($value)) // 过滤非标量数据
-                $set[]    = $this->addSpecialChar($key).'='.$value;
+                $set[]    = $this->parseKey($key).'='.$value;
         }
         return ' SET '.implode(',',$set);
     }
@@ -572,13 +571,13 @@ class Db extends Think
             $array   =  array();
             foreach ($fields as $key=>$field){
                 if(!is_numeric($key))
-                    $array[] =  $this->addSpecialChar($key).' AS '.$this->addSpecialChar($field);
+                    $array[] =  $this->parseKey($key).' AS '.$this->parseKey($field);
                 else
-                    $array[] =  $this->addSpecialChar($field);
+                    $array[] =  $this->parseKey($field);
             }
             $fieldsStr = implode(',', $array);
         }elseif(is_string($fields) && !empty($fields)) {
-            $fieldsStr = $this->addSpecialChar($fields);
+            $fieldsStr = $this->parseKey($fields);
         }else{
             $fieldsStr = '*';
         }
@@ -599,7 +598,7 @@ class Db extends Think
     protected function parseTable($tables) {
         if(is_string($tables))
             $tables  =  explode(',',$tables);
-        array_walk($tables, array(&$this, 'addSpecialChar'));
+        array_walk($tables, array(&$this, 'parseKey'));
         return implode(',',$tables);
     }
 
@@ -634,7 +633,7 @@ class Db extends Think
                     // 解析特殊条件表达式
                     $whereStr   .= $this->parseThinkWhere($key,$val);
                 }else{
-                    $key = $this->addSpecialChar($key);
+                    $key = $this->parseKey($key);
                     if(is_array($val)) {
                         if(is_string($val[0])) {
                             if(preg_match('/^(EQ|NEQ|GT|EGT|LT|ELT|NOTLIKE|LIKE)$/i',$val[0])) { // 比较运算
@@ -720,7 +719,7 @@ class Db extends Think
                 }
                 $array   =  array();
                 foreach ($where as $field=>$data)
-                    $array[] = $this->addSpecialChar($field).' = '.$this->parseValue($data);
+                    $array[] = $this->parseKey($field).' = '.$this->parseValue($data);
                 $whereStr   = implode($op,$array);
                 break;
         }
@@ -796,8 +795,7 @@ class Db extends Think
      * @return string
      +----------------------------------------------------------
      */
-    protected function parseGroup($group)
-    {
+    protected function parseGroup($group) {
         return !empty($group)? ' GROUP BY '.$group:'';
     }
 
@@ -812,8 +810,7 @@ class Db extends Think
      * @return string
      +----------------------------------------------------------
      */
-    protected function parseHaving($having)
-    {
+    protected function parseHaving($having) {
         return  !empty($having)?   ' HAVING '.$having:'';
     }
 
@@ -849,7 +846,7 @@ class Db extends Think
             $value   =  $this->parseValue($val);
             if(is_scalar($value)) { // 过滤非标量数据
                 $values[]   =  $value;
-                $fields[]     =  $this->addSpecialChar($key);
+                $fields[]     =  $this->parseKey($key);
             }
         }
         $sql   =  'INSERT INTO '.$this->parseTable($options['table']).' ('.implode(',', $fields).') VALUES ('.implode(',', $values).')';
@@ -891,8 +888,7 @@ class Db extends Think
      * @return false | integer
      +----------------------------------------------------------
      */
-    public function delete($options=array())
-    {
+    public function delete($options=array()) {
         $sql   = 'DELETE FROM '
             .$this->parseTable($options['table'])
             .$this->parseWhere(isset($options['where'])?$options['where']:'')
@@ -950,7 +946,7 @@ class Db extends Think
      * @return mixed
      +----------------------------------------------------------
      */
-    protected function addSpecialChar(&$value) {
+    protected function parseKey(&$value) {
         $value   =  trim($value);
         if( false !== strpos($value,' ') || false !== strpos($value,',') || false !== strpos($value,'*') ||  false !== strpos($value,'(') || false !== strpos($value,'.') || false !== strpos($value,'`')) {
             //如果包含* 或者 使用了sql方法 则不作处理

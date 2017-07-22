@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Model.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+// $Id: Model.class.php 2780 2012-02-24 02:59:54Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -49,8 +49,7 @@ class Model extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __construct($name='')
-    {
+    public function __construct($name='') {
         // 模型初始化
         $this->_initialize();
         // 获取模型名称
@@ -60,9 +59,9 @@ class Model extends Think
             $this->name =   $this->getModelName();
         }
         // 数据库初始化操作
-        import("Db");
         // 获取数据库操作对象
-        $this->db = Db::getInstance(empty($this->connection)?'':$this->connection);
+        // 当前模型有独立的数据库连接信息
+        $this->db(0,empty($this->connection)?$connection:$this->connection);
         // 设置表前缀
         $this->tablePrefix = $this->tablePrefix?$this->tablePrefix:C('DB_PREFIX');
         // 字段检测
@@ -276,7 +275,7 @@ class Model extends Think
      +----------------------------------------------------------
      */
     public function delete($options=array()) {
-        if(empty($options) && empty($this->options)) {
+        if(empty($options) && empty($this->options['where'])) {
             // 如果删除条件为空 则删除当前数据对象所对应的记录
             if(!empty($this->data) && isset($this->data[$this->getPk()]))
                 return $this->delete($this->data[$this->getPk()]);
@@ -426,8 +425,7 @@ class Model extends Think
      * @return array
      +----------------------------------------------------------
      */
-    public function query($sql)
-    {
+    public function query($sql) {
         if(!empty($sql)) {
             if(strpos($sql,'__TABLE__'))
                 $sql    =   str_replace('__TABLE__',$this->getTableName(),$sql);
@@ -448,8 +446,7 @@ class Model extends Think
      * @return false | integer
      +----------------------------------------------------------
      */
-    public function execute($sql='')
-    {
+    public function execute($sql='') {
         if(!empty($sql)) {
             if(strpos($sql,'__TABLE__'))
                 $sql    =   str_replace('__TABLE__',$this->getTableName(),$sql);
@@ -468,8 +465,7 @@ class Model extends Think
      * @return string
      +----------------------------------------------------------
      */
-    public function getModelName()
-    {
+    public function getModelName() {
         if(empty($this->name)) {
             $this->name =   substr(get_class($this),0,-5);
         }
@@ -485,8 +481,7 @@ class Model extends Think
      * @return string
      +----------------------------------------------------------
      */
-    public function getTableName()
-    {
+    public function getTableName() {
         if(empty($this->trueTableName)) {
             $tableName  = !empty($this->tablePrefix) ? $this->tablePrefix : '';
             if(!empty($this->tableName)) {
@@ -494,12 +489,9 @@ class Model extends Think
             }else{
                 $tableName .= parse_name($this->name);
             }
-            if(!empty($this->dbName)) {
-                $tableName    =  $this->dbName.'.'.$tableName;
-            }
             $this->trueTableName    =   strtolower($tableName);
         }
-        return $this->trueTableName;
+        return (!empty($this->dbName)?$this->dbName.'.':'').$this->trueTableName;
     }
 
     /**
@@ -511,8 +503,7 @@ class Model extends Think
      * @return void
      +----------------------------------------------------------
      */
-    public function startTrans()
-    {
+    public function startTrans() {
         $this->commit();
         $this->db->startTrans();
         return ;
@@ -527,8 +518,7 @@ class Model extends Think
      * @return boolean
      +----------------------------------------------------------
      */
-    public function commit()
-    {
+    public function commit() {
         return $this->db->commit();
     }
 
@@ -541,8 +531,7 @@ class Model extends Think
      * @return boolean
      +----------------------------------------------------------
      */
-    public function rollback()
-    {
+    public function rollback() {
         return $this->db->rollback();
     }
     /**
@@ -569,6 +558,82 @@ class Model extends Think
      */
     public function getLastSql() {
         return $this->db->getLastSql();
+    }
+
+    /**
+     +----------------------------------------------------------
+     * 切换当前的数据库连接
+     +----------------------------------------------------------
+     * @access public
+     +----------------------------------------------------------
+     * @param integer $linkNum  连接序号
+     * @param mixed $config  数据库连接信息
+     * @param array $params  模型参数
+     +----------------------------------------------------------
+     * @return Model
+     +----------------------------------------------------------
+     */
+    public function db($linkNum,$config='',$params=array()){
+        static $_db = array();
+        if(!isset($_db[$linkNum])) {
+            // 创建一个新的实例
+            $_db[$linkNum]            =    Db::getInstance($config);
+        }elseif(NULL === $config){
+            $_db[$linkNum]->close(); // 关闭数据库连接
+            unset($_db[$linkNum]);
+            return ;
+        }
+        if(!empty($params)) {
+            if(is_string($params))    parse_str($params,$params);
+            foreach ($params as $name=>$value){
+                $this->setProperty($name,$value);
+            }
+        }
+        // 切换数据库连接
+        $this->db   =    $_db[$linkNum];
+        return $this;
+    }
+
+    /**
+     +----------------------------------------------------------
+     * 设置数据对象值
+     +----------------------------------------------------------
+     * @access public
+     +----------------------------------------------------------
+     * @param mixed $data 数据
+     +----------------------------------------------------------
+     * @return Model
+     +----------------------------------------------------------
+     */
+    public function data($data){
+        if(is_object($data)){
+            $data   =   get_object_vars($data);
+        }elseif(is_string($data)){
+            parse_str($data,$data);
+        }elseif(!is_array($data)){
+            throw_exception(L('_DATA_TYPE_INVALID_'));
+        }
+        $this->data = $data;
+        return $this;
+    }
+
+    /**
+     +----------------------------------------------------------
+     * 查询SQL组装 join
+     +----------------------------------------------------------
+     * @access public
+     +----------------------------------------------------------
+     * @param mixed $join
+     +----------------------------------------------------------
+     * @return Model
+     +----------------------------------------------------------
+     */
+    public function join($join) {
+        if(is_array($join))
+            $this->options['join'] =  $join;
+        else
+            $this->options['join'][]  =   $join;
+        return $this;
     }
 };
 ?>

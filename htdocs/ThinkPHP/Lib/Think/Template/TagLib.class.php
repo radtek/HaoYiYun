@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: TagLib.class.php,v 1.1 2012/10/29 11:20:50 mark Exp $
+// $Id: TagLib.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -18,7 +18,7 @@
  * @package  Think
  * @subpackage  Template
  * @author    liu21st <liu21st@gmail.com>
- * @version   $Id: TagLib.class.php,v 1.1 2012/10/29 11:20:50 mark Exp $
+ * @version   $Id: TagLib.class.php 2701 2012-02-02 12:27:51Z liu21st $
  +------------------------------------------------------------------------------
  */
 class TagLib extends Think
@@ -93,8 +93,7 @@ class TagLib extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __construct()
-    {
+    public function __construct() {
         $this->tagLib  = strtolower(substr(get_class($this),6));
         $this->tpl       = Think::instance('ThinkTemplate');//ThinkTemplate::getInstance();
     }
@@ -110,8 +109,7 @@ class TagLib extends Think
      * @return array
      +----------------------------------------------------------
      */
-    public function parseXmlAttr($attr,$tag)
-    {
+    public function parseXmlAttr($attr,$tag) {
         //XML解析安全过滤
         $attr = str_replace('&','___', $attr);
         $xml =  '<tpl><tag '.$attr.' /></tpl>';

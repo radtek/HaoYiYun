@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Action.class.php,v 1.1 2012/10/29 11:20:41 mark Exp $
+// $Id: Action.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -27,8 +27,7 @@ abstract class Action extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __construct()
-    {
+    public function __construct() {
         //控制器初始化
         if(method_exists($this,'_initialize')) {
             $this->_initialize();
@@ -125,14 +124,14 @@ abstract class Action extends Think
      * @access protected
      +----------------------------------------------------------
      * @param string $message 错误信息
+     * @param string $jumpUrl 页面跳转地址
      * @param Boolean $ajax 是否为Ajax方式
      +----------------------------------------------------------
      * @return void
      +----------------------------------------------------------
      */
-    protected function error($message,$ajax=false)
-    {
-        $this->_dispatch_jump($message,0,$ajax);
+    protected function error($message,$jumpUrl='',$ajax=false) {
+        $this->_dispatch_jump($message,0,$jumpUrl,$ajax);
     }
 
     /**
@@ -142,14 +141,14 @@ abstract class Action extends Think
      * @access protected
      +----------------------------------------------------------
      * @param string $message 提示信息
+     * @param string $jumpUrl 页面跳转地址
      * @param Boolean $ajax 是否为Ajax方式
      +----------------------------------------------------------
      * @return void
      +----------------------------------------------------------
      */
-    protected function success($message,$ajax=false)
-    {
-        $this->_dispatch_jump($message,1,$ajax);
+    protected function success($message,$jumpUrl='',$ajax=false) {
+        $this->_dispatch_jump($message,1,$jumpUrl,$ajax);
     }
 
     /**
@@ -166,8 +165,7 @@ abstract class Action extends Think
      * @return void
      +----------------------------------------------------------
      */
-    protected function ajaxReturn($data,$info='',$status=1,$type='')
-    {
+    protected function ajaxReturn($data,$info='',$status=1,$type='') {
         // 保证AJAX返回后也能保存日志
         if(C('LOG_RECORD')) Log::save();
         $result  =  array();
@@ -220,6 +218,7 @@ abstract class Action extends Think
      +----------------------------------------------------------
      * @param string $message 提示信息
      * @param Boolean $status 状态
+     * @param string $jumpUrl 页面跳转地址
      * @param Boolean $ajax 是否为Ajax方式
      +----------------------------------------------------------
      * @access private
@@ -227,10 +226,10 @@ abstract class Action extends Think
      * @return void
      +----------------------------------------------------------
      */
-    private function _dispatch_jump($message,$status=1,$ajax=false)
-    {
+    private function _dispatch_jump($message,$status=1,$jumpUrl='',$ajax=false) {
         // 判断是否为AJAX返回
         if($ajax || $this->isAjax()) $this->ajaxReturn('',$message,$status);
+        if(!empty($jumpUrl)) $this->assign('jumpUrl',$jumpUrl);
         // 提示标题
         $this->assign('msgTitle',$status? L('_OPERATION_SUCCESS_') : L('_OPERATION_FAIL_'));
         //如果设置了关闭窗口，则提示完毕后自动关闭窗口
@@ -272,8 +271,7 @@ abstract class Action extends Think
      * @return void
      +----------------------------------------------------------
      */
-    protected function display($templateFile='',$charset='',$contentType='text/html')
-    {
+    protected function display($templateFile='',$charset='',$contentType='text/html') {
         if(empty($charset))  $charset = C('DEFAULT_CHARSET');
         // 网页字符编码
         header("Content-Type:".$contentType."; charset=".$charset);
@@ -330,7 +328,7 @@ abstract class Action extends Think
         }elseif(strpos($templateFile,':')){
             // 引入其它模块的操作模板
             $templateFile   =   TMPL_PATH.str_replace(':','/',$templateFile).C('TMPL_TEMPLATE_SUFFIX');
-        }elseif(!is_file($templateFile))    {
+        }elseif(!is_file($templateFile)) {
             // 引入当前模块的其它操作模板
             $templateFile =  TMPL_PATH.MODULE_NAME.'/'.$templateFile.C('TMPL_TEMPLATE_SUFFIX');
         }
@@ -353,13 +351,13 @@ abstract class Action extends Think
     protected function templateContentReplace($content) {
         // 系统默认的特殊变量替换
         $replace =  array(
-            '../Public'   =>  __ROOT__.'/'.APP_NAME.'/'.TMPL_DIR.'/Public',// 项目公共目录
+            '../Public'   =>  __ROOT__.'/'.APP_NAME.(APP_NAME?'/':'').TMPL_DIR.'/Public',// 项目公共目录
             '__PUBLIC__'  =>  __ROOT__.'/Public',// 站点公共目录
             '__ROOT__'    => __ROOT__,       // 当前网站地址
             '__APP__'     => PHP_FILE,        // 当前项目地址
             '__URL__'     => PHP_FILE.'/'.MODULE_NAME,        // 当前模块地址
             '__ACTION__'  => PHP_FILE.'/'.MODULE_NAME.'/'.ACTION_NAME,     // 当前操作地址
-            '__SELF__'    => $_SERVER['PHP_SELF'],       // 当前页面地址
+            '__SELF__'    => $_SERVER['REQUEST_URI'],       // 当前页面地址
         );
         // 允许用户自定义模板的字符串替换
         if(is_array(C('TMPL_PARSE_STRING')) )

@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: ThinkTemplateLite.class.php,v 1.1 2012/10/29 11:20:42 mark Exp $
+// $Id: ThinkTemplateLite.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 /**
  +------------------------------------------------------------------------------
@@ -54,8 +54,7 @@ class ThinkTemplateLite {
             return null;
     }
     // 模板变量赋值
-    public function assign($name,$value)
-    {
+    public function assign($name,$value) {
         if(is_array($name)) {
             $this->var   =  array_merge($this->var,$name);
         }else{
@@ -70,8 +69,7 @@ class ThinkTemplateLite {
             return false;
     }
     // 载入模板 模板引擎入口
-    public function fetch($templateFile,$templateVar='')
-    {
+    public function fetch($templateFile,$templateVar='') {
         if(!empty($templateVar))   $this->assign($templateVar);
         //根据模版文件名定位缓存文件
         $tmplCacheFile = $this->config['cache_path'].md5($templateFile).$this->config['cache_suffix'];

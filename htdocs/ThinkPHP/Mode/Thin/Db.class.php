@@ -2,13 +2,13 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2010 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006-2012 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-// $Id: Db.class.php,v 1.1 2012/10/29 11:20:43 mark Exp $
+// $Id: Db.class.php 2701 2012-02-02 12:27:51Z liu21st $
 
 define('CLIENT_MULTI_RESULTS', 131072);
 /**
@@ -222,8 +222,7 @@ class Db extends Think
      * @throws ThinkExecption
      +----------------------------------------------------------
      */
-    public function commit()
-    {
+    public function commit() {
         if ($this->transTimes > 0) {
             $result = mysql_query('COMMIT', $this->linkID);
             $this->transTimes = 0;
@@ -246,8 +245,7 @@ class Db extends Think
      * @throws ThinkExecption
      +----------------------------------------------------------
      */
-    public function rollback()
-    {
+    public function rollback() {
         if ($this->transTimes > 0) {
             $result = mysql_query('ROLLBACK', $this->linkID);
             $this->transTimes = 0;
@@ -344,8 +342,7 @@ class Db extends Think
      * @access public
      +----------------------------------------------------------
      */
-    public function __destruct()
-    {
+    public function __destruct() {
         // 关闭连接
         $this->close();
     }
@@ -360,8 +357,7 @@ class Db extends Think
      * @return mixed 返回数据库驱动类
      +----------------------------------------------------------
      */
-    public static function getInstance($db_config='')
-    {
+    public static function getInstance($db_config='') {
 		if ( self::$_instance==null ){
 			self::$_instance = new Db($db_config);
 		}
@@ -412,8 +408,7 @@ class Db extends Think
      * @return array
      +----------------------------------------------------------
      */
-    public function parseDSN($dsnStr)
-    {
+    public function parseDSN($dsnStr) {
         if( empty($dsnStr) ){return false;}
         $info = parse_url($dsnStr);
         if($info['scheme']){
