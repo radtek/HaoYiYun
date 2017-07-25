@@ -7,9 +7,17 @@
       <case value="1"><i class="fa fa-tv fa-run">&nbsp;运行中</i></case>
     </switch>
   </td>
-  <td>{{$vo.school_name|msubstr=0,10}}</td>
+  <td title="{{$vo.school_name}}">{{$vo.school_name|msubstr=0,10}}</td>
   <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
   <td>{{$vo.camera_name}}</td>
+  <td>live{{$vo.camera_id}}</td>
+  <td>
+    <switch name="vo.stream_prop">
+      <case value="0">摄像头</case>
+      <case value="1">MP4文件</case>
+      <case value="2">流转发</case>
+    </switch>
+  </td>
   <td title="<switch name='vo.stream_prop'>
               <case value='0'>{{$vo.device_ip}}</case>
               <case value='1'>{{$vo.stream_mp4}}</case>
@@ -21,7 +29,6 @@
         <case value="2">{{$vo.stream_url|msubstr=0,20}}</case>
       </switch>
   </td>
-  <td>{{$vo.device_sn}}</td>
   <td>
     <button class="layui-btn" onclick="doCourse({{$vo.camera_id}},{{$vo.gather_id}})"><i class="fa fa-file-video-o">&nbsp;</i>录像表</button>
   </td>

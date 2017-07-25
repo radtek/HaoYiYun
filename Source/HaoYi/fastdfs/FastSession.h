@@ -126,7 +126,7 @@ public:
 private:
 	GM_Error    doCmdPlayLogin(string & inData);
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);
-	GM_Error	doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSize);
+	GM_Error	doPHPSetCourseOpt(LPCTSTR lpData, int nSize);
 	GM_Error	doPHPSetCameraName(LPCTSTR lpData, int nSize);
 	//GM_Error	doPHPGetCameraStatus(string & inData);
 	GM_Error	doPHPGetCourseRecord(string & inData);

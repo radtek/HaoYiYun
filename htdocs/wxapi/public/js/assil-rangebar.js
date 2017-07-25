@@ -24,7 +24,10 @@ function change(event, ui, $bar, $range)
 function range_click(event, ui, $bar, $range)
 */  
 
-var assil = { debgug: false };
+var g_assil = { 
+  debgug: false,
+  cur_max_id: 1,
+};
 
 (function ($) {
     $.widget("assil.rangebar", $.ui.mouse, {
@@ -48,7 +51,6 @@ var assil = { debgug: false };
             max: 100,
             deleteTimeout: 3000,
             orientation: "horizontal",
-            cur_max_id: 1,
             defSecond: 1800,
 
             //callback functions
@@ -56,7 +58,6 @@ var assil = { debgug: false };
             renderRange: null,  // function($range, range){} occurs on addRange
             updateRange: null,  // function($range, range){} occurs on range change, move or resize
             deleteEvent: null,  // range delete event notify...
-            focusEvent: null,   // range focus event notify...
             dbClickEvent: null, // range double click event notify...
             mouseCreate: null,  // range created by left mouse down...
         },
@@ -203,9 +204,9 @@ var assil = { debgug: false };
         addRange: function (range) {
             var options = this.options;
             var totalRange = options.max - options.min;
-            range.id = "r_" + options.cur_max_id;
+            range.id = "r_" + g_assil.cur_max_id;
             range = $.fn.extend({}, options.defaultRange, range);
-            ++options.cur_max_id;
+            ++g_assil.cur_max_id;
 
             var $range = $("<div class='range' tabindex='1'>").data('range', range);
             var $labelHandle = $range.append("<div class='range-label'>&nbsp;</div>");
@@ -316,7 +317,7 @@ var assil = { debgug: false };
             
             if( options.updateRange ) options.updateRange($range, range);
             if( options.label ) $(".range-label", $range).text(options.label($range, range));
-            if( assil.debgug ) console.log("UI range rect after change:" + JSON.stringify(getRectUsing$Position($range)));
+            if( g_assil.debgug ) console.log("UI range rect after change:" + JSON.stringify(getRectUsing$Position($range)));
 
         },
         getRelativeUIRectFromRange: function (range) {
@@ -329,9 +330,9 @@ var assil = { debgug: false };
                 w: point.right - point.left, h: $container.height()
             };
 
-            if (assil.debgug) console.log("relative rect of : " + JSON.stringify(range));
-            if (assil.debgug) console.log("point:" + JSON.stringify(point));
-            if (assil.debgug) console.log("relative rect:" + JSON.stringify(rect));
+            if (g_assil.debgug) console.log("relative rect of : " + JSON.stringify(range));
+            if (g_assil.debgug) console.log("point:" + JSON.stringify(point));
+            if (g_assil.debgug) console.log("relative rect:" + JSON.stringify(rect));
 
             return rect;
         }
@@ -352,9 +353,9 @@ var assil = { debgug: false };
         //console.log("input ui.position:" + JSON.stringify(ui.position));
         //console.log("input ui.size:" + JSON.stringify(ui.size));
         //console.log("range rect:" + JSON.stringify(range_rect));
-        //if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
-        //if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
-        //if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
+        //if (g_assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
+        //if (g_assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
+        //if (g_assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
 
         // 2017.06.19 - by jackey => check only for sibiling range except self...
         var siblings_rects = [];
@@ -390,9 +391,9 @@ var assil = { debgug: false };
         // must be range object...
         if( !range ) return;
 
-        //if (assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
-        //if (assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
-        //if (assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
+        //if (g_assil.debgug) console.log("input ui.position:" + JSON.stringify(ui.position));
+        //if (g_assil.debgug) console.log("input mouseOffset:" + JSON.stringify(range_rect_offset));
+        //if (g_assil.debgug) console.log("   range position:" + JSON.stringify(range_rect));
 
         // 2017.06.19 - by jackey => check only for sibiling range except self...
         var siblings_rects = [];
@@ -514,7 +515,7 @@ var assil = { debgug: false };
         $range.addClass("selected");
         
         // notify the focus range...
-        if( ev.which == 1 && options.focusEvent ) {
+        if( ev.which == 1 ) {
           // find all the range, select only one...
           $(".slider").each(function(){
             if( $bar.attr("id") != this.id ) {
@@ -523,18 +524,19 @@ var assil = { debgug: false };
             }
           });
           // notify the focus event...
-          options.focusEvent($range, range);
+          //options.focusEvent($range, range);
         }
         // process the middle mouse click...
         if (ev.which !== 2 || !range.allowDelete) return;
         if ($range.data('deleteConfirm')) {
+            // clear time out event...
+            clearTimeout(this.deleteTimeout);
             // notify the delete event...
             if( options.deleteEvent ) {
               options.deleteEvent($range, range);
             }
-            // remove the range by id...
-            $bar.rangebar("removeRange", $range.data("range").id);
-            clearTimeout($range.data('deleteTimeout'));
+            // remove this range...
+            $range.remove();
         } else {
             $range.addClass('delete-confirm');
             $range.data('deleteConfirm', true);

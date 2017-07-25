@@ -976,18 +976,26 @@ class AdminAction extends Action
     $arrNew = array();
     $arrCourse = json_decode($_POST['data'], true);
     foreach($arrCourse as &$dbCourse) {
-      $dbCourse['start_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['start_time']);
-      $dbCourse['end_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['end_time']);
+      if( isset($dbCourse['start_time']) ) {
+        $dbCourse['start_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['start_time']);
+      }
+      if( isset($dbCourse['end_time']) ) {
+        $dbCourse['end_time'] = sprintf("%s %s", date('Y-m-d'), $dbCourse['end_time']);
+      }
       if( $dbCourse['course_id'] > 0 ) {
         // 检查删除标志...
         if( $dbCourse['is_delete'] ) {
           // 删除指定编号的记录...
           $map['course_id'] = $dbCourse['course_id'];
           D('course')->where($map)->delete();
+          // 设置删除标志，供采集端使用...
+          $dbCourse['is_delete'] = 3;
         } else {
           // 更新原有数据...
           $dbCourse['updated'] = date('Y-m-d H:i:s');
           D('course')->save($dbCourse);
+          // 设置修改标志，供采集端使用...
+          $dbCourse['is_delete'] = 2;
         }
       } else {
         // 新建记录...
@@ -997,10 +1005,51 @@ class AdminAction extends Action
         $dbCourse['course_id'] = D('course')->add($dbCourse);
         // 构造返回的数据内容...
         array_push($arrNew, array('slider_id' => $dbCourse['slider_id'], 'range_id' => $dbCourse['range_id'], 'course_id' => $dbCourse['course_id']));
+        // 设置添加标志，供采集端使用...
+        $dbCourse['is_delete'] = 1;
       }
     }
-    // 返回新创建的ID编号...
-    echo ($arrNew ? json_encode($arrNew) : false);
+    // 转发命令到采集端...
+    $arrResult['transmit'] = $this->postCourseRecordToGather($_GET['camera_id'], $_GET['gather_id'], $arrCourse);
+    $arrResult['create'] = ($arrNew ? json_encode($arrNew) : false);
+    // 返回新创建的ID编号集合+转发采集端结果...
+    echo json_encode($arrResult);
+  }
+  //
+  // 转发任务录像记录命令到采集端...
+  private function postCourseRecordToGather($inCameraID, $inGatherID, &$arrCourse)
+  {
+    // 通过php扩展插件连接中转服务器 => 性能高...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    if( !$transmit ) return false;
+    // 保存转发需要的数据...
+    $dbTrasmit['data'] = $arrCourse;
+    $dbTrasmit['camera_id'] = $inCameraID;
+    // 需要对日期格式进行转换...
+    foreach($dbTrasmit['data'] as &$dbItem) {
+      if( isset($dbItem['start_time']) ) {
+        $dbItem['start_time'] = strtotime($dbItem['start_time']);
+      }
+      if( isset($dbItem['end_time']) ) {
+        $dbItem['end_time'] = strtotime($dbItem['end_time']);
+      }
+    }
+    // 转发课表记录命令 => 修改 => 只剩下一个修改命令...
+    $map['gather_id'] = $inGatherID;
+    $dbGather = D('gather')->where($map)->field('mac_addr')->find();
+    $dbTrasmit['mac_addr'] = $dbGather['mac_addr'];
+    // 组合课表数据成JSON...
+    $saveJson = json_encode($dbTrasmit);
+    // 发送转发命令...
+    $nCmdType = kCmd_PHP_Set_Course_Mod;
+    $json_data = transmit_command(kClientPHP, $nCmdType, $transmit, $saveJson);
+    // 关闭中转服务器链接...
+    transmit_disconnect_server($transmit);
+    // 反馈转发结果 => 这个命令无需等待采集端返回...
+    $arrData = json_decode($json_data, true);
+    $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    return json_encode($arrData);
   }
   //
   // 获取摄像头(班级)下面的录像课程表...

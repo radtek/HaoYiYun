@@ -826,9 +826,9 @@ GM_Error CRemoteSession::ForRead()
 		case kCmd_PHP_Get_Course_Record:  theErr = this->doPHPGetCourseRecord(m_strRecv); break;
 		//case kCmd_PHP_Get_Camera_Status:  theErr = this->doPHPGetCameraStatus(m_strRecv); break;
 		case kCmd_PHP_Set_Camera_Name:    theErr = this->doPHPSetCameraName(lpDataPtr, lpCmdHeader->m_pkg_len); break;
-		case kCmd_PHP_Set_Course_Add:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kAddCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
-		case kCmd_PHP_Set_Course_Mod:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kModCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
-		case kCmd_PHP_Set_Course_Del:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kDelCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Set_Course_Mod:     theErr = this->doPHPSetCourseOpt(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		//case kCmd_PHP_Set_Course_Add:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kAddCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		//case kCmd_PHP_Set_Course_Del:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kDelCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		}
 		// 删除已经处理完毕的数据 => Header + pkg_len...
 		m_strRecv.erase(0, lpCmdHeader->m_pkg_len + sizeof(Cmd_Header));
@@ -1073,7 +1073,7 @@ GM_Error CRemoteSession::doPHPSetCameraName(LPCTSTR lpData, int nSize)
 }
 //
 // 处理PHP客服端发送的设置录像课表的命令...
-GM_Error CRemoteSession::doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSize)
+GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 {
 	// 判断输入数据的有效性...
 	if( nSize <= 0 || lpData == NULL )
@@ -1093,50 +1093,66 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(int nOperate, LPCTSTR lpData, int nSi
 		return GM_NoErr;
 	}
 	/////////////////////////////////////////////////////////////////////////
-	// 注意：必须传递 course_id 和 camera_id...
+	// 注意：必须传递 data 和 camera_id...
 	/////////////////////////////////////////////////////////////////////////
 	// 判断获取数据的有效性...
-	if( !value.isMember("course_id") || !value.isMember("camera_id") ) {
+	if( !value.isMember("data") || !value.isMember("camera_id") ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
 	}
-	// 解析 Course 记录...
-	GM_MapData theMapData;
-	if( value.isMember("course_id") ) {
-		theMapData["course_id"] = CUtilTool::getJsonString(value["course_id"]);
-	}
-	if( value.isMember("camera_id") ) {
-		theMapData["camera_id"] = CUtilTool::getJsonString(value["camera_id"]);
-	}
-	if( value.isMember("subject_id") ) {
-		theMapData["subject_id"] = CUtilTool::getJsonString(value["subject_id"]);
-	}
-	if( value.isMember("teacher_id") ) {
-		theMapData["teacher_id"] = CUtilTool::getJsonString(value["teacher_id"]);
-	}
-	if( value.isMember("repeat_id") ) {
-		theMapData["repeat_id"] = CUtilTool::getJsonString(value["repeat_id"]);
-	}
-	if( value.isMember("elapse_sec") ) {
-		theMapData["elapse_sec"] = CUtilTool::getJsonString(value["elapse_sec"]);
-	}
-	if( value.isMember("start_time") ) {
-		theMapData["start_time"] = CUtilTool::getJsonString(value["start_time"]);
-	}
-	if( value.isMember("end_time") ) {
-		theMapData["end_time"] = CUtilTool::getJsonString(value["end_time"]);
-	}
+	// 获取通道编号...
+	string & strDBCameraID = CUtilTool::getJsonString(value["camera_id"]);
+	int nDBCameraID = atoi(strDBCameraID.c_str());
 	// 开始查找对应的摄像头本地编号...
 	int nLocalID = -1;
-	string & strDBCameraID = theMapData["camera_id"];
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	int nDBCameraID = atoi(strDBCameraID.c_str());
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  )
 		return GM_NoErr;
-	// 通知父窗口课表记录发生了变化...
-	ASSERT( nLocalID > 0 && nDBCameraID > 0 );
-	m_lpHaoYiView->doCourseChanged(nOperate, nLocalID, theMapData);
+	// 解析 Course 记录...
+	Json::Value arrayObj = value["data"];
+	for (unsigned int i = 0; i < arrayObj.size(); i++)
+	{
+		int nCourseID = -1;
+		int nOperate  = -1;
+		GM_MapData	theMapData;
+		Json::Value item = arrayObj[i];
+		// is_delete => 1(Add),2(Modify),3(Delete)
+		if( item.isMember("is_delete") ) {
+			nOperate = atoi(CUtilTool::getJsonString(item["is_delete"]).c_str());
+		}
+		if( item.isMember("course_id") ) {
+			theMapData["course_id"] = CUtilTool::getJsonString(item["course_id"]);
+			nCourseID = atoi(theMapData["course_id"].c_str());
+		}
+		if( item.isMember("camera_id") ) {
+			theMapData["camera_id"] = CUtilTool::getJsonString(value["camera_id"]);
+		}
+		if( item.isMember("subject_id") ) {
+			theMapData["subject_id"] = CUtilTool::getJsonString(item["subject_id"]);
+		}
+		if( item.isMember("teacher_id") ) {
+			theMapData["teacher_id"] = CUtilTool::getJsonString(item["teacher_id"]);
+		}
+		if( item.isMember("repeat_id") ) {
+			theMapData["repeat_id"] = CUtilTool::getJsonString(item["repeat_id"]);
+		}
+		if( item.isMember("elapse_sec") ) {
+			theMapData["elapse_sec"] = CUtilTool::getJsonString(item["elapse_sec"]);
+		}
+		if( item.isMember("start_time") ) {
+			theMapData["start_time"] = CUtilTool::getJsonString(item["start_time"]);
+		}
+		if( item.isMember("end_time") ) {
+			theMapData["end_time"] = CUtilTool::getJsonString(item["end_time"]);
+		}
+		// 如果记录编号或操作编号无效，不执行...
+		if( nCourseID <= 0 || nOperate <= 0 )
+			continue;
+		// 通知父窗口课表记录发生了变化...
+		ASSERT( nCourseID > 0 && nOperate > 0 && nLocalID > 0 );
+		m_lpHaoYiView->doCourseChanged(nOperate, nLocalID, theMapData);
+	}
 	return GM_NoErr;
 }
 //
