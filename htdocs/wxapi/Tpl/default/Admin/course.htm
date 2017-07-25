@@ -620,9 +620,9 @@ function doSaveTask() {
       // 全部返回正确，弹出成功提示框...
       layer.msg('恭喜！保存成功！', {icon: 1});
     },
-    error: function(e) {
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
       layer.closeAll();
-      layer.alert(e, {icon: 2});
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
     }
   });
 }

@@ -1092,7 +1092,7 @@ BOOL CPushThread::MP4CreateVideoTrack()
 		nWidth = m_lpMP4Thread->GetVideoWidth();
 		nHeight = m_lpMP4Thread->GetVideoHeight();
 	}
-	// 判断获取数据的有效性...
+	// 判断获取数据的有效性 => 没有视频，直接返回...
 	if( nWidth <= 0 || nHeight <= 0 || strPPS.size() <= 0 || strSPS.size() <= 0 )
 		return false;
 	// 创建视频轨道...
@@ -1107,22 +1107,29 @@ BOOL CPushThread::MP4CreateAudioTrack()
 		return false;
 	ASSERT( m_lpRecMP4 != NULL && m_strUTF8MP4.size() > 0 );
 
+	string strAAC;
 	int audio_type = 2;
 	int	audio_rate_index = 0;			// 采样率编号
 	int	audio_channel_num = 0;			// 声道数目
 	int	audio_sample_rate = 48000;		// 音频采样率
 
 	if( m_lpRtspThread != NULL ) {
+		strAAC = m_lpRtspThread->GetAACHeader();
 		audio_rate_index = m_lpRtspThread->GetAudioRateIndex();
 		audio_channel_num = m_lpRtspThread->GetAudioChannelNum();
 	} else if( m_lpRtmpThread != NULL ) {
+		strAAC = m_lpRtmpThread->GetAACHeader();
 		audio_rate_index = m_lpRtmpThread->GetAudioRateIndex();
 		audio_channel_num = m_lpRtmpThread->GetAudioChannelNum();
 	} else if( m_lpMP4Thread != NULL ) {
+		strAAC = m_lpMP4Thread->GetAACHeader();
 		audio_type = m_lpMP4Thread->GetAudioType();
 		audio_rate_index = m_lpMP4Thread->GetAudioRateIndex();
 		audio_channel_num = m_lpMP4Thread->GetAudioChannelNum();
 	}
+	// 没有音频，直接返回 => 2017.07.25 - by jackey...
+	if( strAAC.size() <= 0 )
+		return false;
   
 	// 根据索引获取采样率...
 	switch( audio_rate_index )

@@ -1439,6 +1439,13 @@ void CHaoYiView::OnSysSet()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strMainName = theConfig.GetMainName();
 	lpFrame->SetWindowText(strMainName.c_str());
+	// 不连接存储服务器，但是会话有效，则立即删除会话对象...
+	if( !theConfig.GetAutoLinkFDFS() ) {
+		this->DelByEventThread(m_lpTrackerSession);
+		m_lpTrackerSession = NULL;
+		this->DelByEventThread(m_lpStorageSession);
+		m_lpStorageSession = NULL;
+	}
 	// 其它参数会自动通过调用更新...
 }
 //
