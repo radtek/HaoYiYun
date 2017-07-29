@@ -6,6 +6,7 @@
 #include "HaoYiView.h"
 #include "UtilTool.h"
 #include "XmlConfig.h"
+#include "FastSession.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -23,12 +24,14 @@ END_MESSAGE_MAP()
 static UINT indicators[] =
 {
 	ID_SEPARATOR,           // 状态行指示器
+	ID_INDICATOR_FASTDFS,
+	ID_INDICATOR_TRANSMIT,
 	ID_INDICATOR_FILE,
 	ID_INDICATOR_KBPS,
 	ID_INDICATOR_CPU,
-	ID_INDICATOR_CAPS,
-	ID_INDICATOR_NUM,
-	ID_INDICATOR_SCRL,
+	//ID_INDICATOR_CAPS,
+	//ID_INDICATOR_NUM,
+	//ID_INDICATOR_SCRL,
 };
 
 CMainFrame::CMainFrame()
@@ -96,15 +99,21 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// 修改状态栏宽度...
 	int  nWidth = 0;
 	UINT nID = 0, nStyle = 0;
-	// 上传文件区...
+	// 存储服务器...
 	m_wndStatusBar.GetPaneInfo(1, nID, nStyle, nWidth);
-	m_wndStatusBar.SetPaneInfo(1, nID, nStyle, 180);
-	// 上传码流区...
+	m_wndStatusBar.SetPaneInfo(1, nID, nStyle, 120);
+	// 中转服务器...
 	m_wndStatusBar.GetPaneInfo(2, nID, nStyle, nWidth);
-	m_wndStatusBar.SetPaneInfo(2, nID, nStyle, 110);
-	// CPU使用区...
+	m_wndStatusBar.SetPaneInfo(2, nID, nStyle, 120);
+	// 上传文件区...
 	m_wndStatusBar.GetPaneInfo(3, nID, nStyle, nWidth);
-	m_wndStatusBar.SetPaneInfo(3, nID, nStyle, 80);
+	m_wndStatusBar.SetPaneInfo(3, nID, nStyle, 180);
+	// 上传码流区...
+	m_wndStatusBar.GetPaneInfo(4, nID, nStyle, nWidth);
+	m_wndStatusBar.SetPaneInfo(4, nID, nStyle, 120);
+	// CPU使用区...
+	m_wndStatusBar.GetPaneInfo(5, nID, nStyle, nWidth);
+	m_wndStatusBar.SetPaneInfo(5, nID, nStyle, 80);
 
 	// 首先，加载配置文件...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -138,14 +147,18 @@ void CMainFrame::OnTimer(UINT_PTR nIDEvent)
 		CString strText;
 		CHaoYiView * lpView = (CHaoYiView*)this->GetActiveView();
 		if( lpView != NULL ) {
-			LPCTSTR lpszName = lpView->GetCurSendFile();
-			strText.Format("上传文件: %s", ((lpszName != NULL) ? lpszName : "无"));
+			strText = ((lpView->m_lpTrackerSession != NULL && lpView->m_lpTrackerSession->IsConnected()) ? "存储服务器: 在线" : "存储服务器: 离线");
 			m_wndStatusBar.SetPaneText(1, strText);
-			strText.Format("上传码流: %dKbps", lpView->GetCurSendKbps());
+			strText = ((lpView->m_lpRemoteSession != NULL && lpView->m_lpRemoteSession->IsConnected()) ? "中转服务器: 在线" : "中转服务器: 离线");
 			m_wndStatusBar.SetPaneText(2, strText);
+			LPCTSTR lpszName = lpView->GetCurSendFile();
+			strText.Format("上传文件: %s", ((lpszName != NULL && strlen(lpszName) > 0 ) ? lpszName : "无"));
+			m_wndStatusBar.SetPaneText(3, strText);
+			strText.Format("上传码流: %dKbps", lpView->GetCurSendKbps());
+			m_wndStatusBar.SetPaneText(4, strText);
 		}
 		strText.Format("CPU使用: %d%%", m_cpu.GetCpuRate());
-		m_wndStatusBar.SetPaneText(3, strText);
+		m_wndStatusBar.SetPaneText(5, strText);
 	}
 	CFrameWnd::OnTimer(nIDEvent);
 }

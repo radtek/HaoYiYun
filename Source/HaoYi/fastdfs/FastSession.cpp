@@ -84,6 +84,8 @@ GM_Error CFastSession::InitSession(LPCTSTR lpszAddr, int nPort)
 		MsgLogGM(theErr);
 		return theErr;
 	}
+	// 设置保持连接状态 => 每隔5秒发送心跳包...
+	m_TCPSocket.KeepAlive();
 	// 设置接收缓冲并创建事件对象...
 	m_TCPSocket.SetSocketRcvBufSize(128*1024);
 	m_TCPSocket.SetSocketRcvBufSize(128*1024);
@@ -1115,6 +1117,7 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 	{
 		int nCourseID = -1;
 		int nOperate  = -1;
+		int nWeekID   = -1;
 		GM_MapData	theMapData;
 		Json::Value item = arrayObj[i];
 		// is_delete => 1(Add),2(Modify),3(Delete)
@@ -1124,6 +1127,10 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 		if( item.isMember("course_id") ) {
 			theMapData["course_id"] = CUtilTool::getJsonString(item["course_id"]);
 			nCourseID = atoi(theMapData["course_id"].c_str());
+		}
+		if( item.isMember("week_id") ) {
+			theMapData["week_id"] = CUtilTool::getJsonString(item["week_id"]);
+			nWeekID = atoi(theMapData["week_id"].c_str());
 		}
 		if( item.isMember("camera_id") ) {
 			theMapData["camera_id"] = CUtilTool::getJsonString(value["camera_id"]);
@@ -1147,7 +1154,7 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 			theMapData["end_time"] = CUtilTool::getJsonString(item["end_time"]);
 		}
 		// 如果记录编号或操作编号无效，不执行...
-		if( nCourseID <= 0 || nOperate <= 0 )
+		if( nCourseID <= 0 || nOperate <= 0 || nWeekID < 0 )
 			continue;
 		// 通知父窗口课表记录发生了变化...
 		ASSERT( nCourseID > 0 && nOperate > 0 && nLocalID > 0 );

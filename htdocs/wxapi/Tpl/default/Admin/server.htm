@@ -104,18 +104,29 @@ function doFormTracker() {
       layer.msg('【端口地址】无效，请重新输入！', {icon: 5});
       return false;
     }
+    // 存储访问地址、端口判断有效性...
+    var theWebAddr = data.field.myWebTrackerAddr;
+    var theWebPort = data.field.myWebTrackerPort;
+    if( isNaN(theWebPort) || theWebPort <= 0 || theWebPort >= 65535 ) {
+      $("input[name='myWebTrackerPort']").focus();
+      $("input[name='myWebTrackerPort']").addClass('layui-form-danger');
+      layer.msg('【网站端口】无效，请重新输入！', {icon: 5});
+      return false;
+    }
     // 发送异步请求...
     $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/server",
-      data: {operate: 'save', tracker_addr: theAddr, tracker_port: thePort},
+      data: {operate: 'save', tracker_addr: theAddr, tracker_port: thePort, web_tracker_addr: theWebAddr, web_tracker_port: theWebPort},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');
         $("input[name='myTrackerPort']").val(thePort);
         $("input[name='myTrackerAddr']").val(theAddr);
+        $("input[name='myWebTrackerPort']").val(theWebPort);
+        $("input[name='myWebTrackerAddr']").val(theWebAddr);
         layer.msg('恭喜！保存成功！', {icon: 1});
       },
       error: function(e) {

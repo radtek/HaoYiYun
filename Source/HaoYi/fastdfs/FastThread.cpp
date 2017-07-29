@@ -134,7 +134,7 @@ GM_Error CFastThread::RemoveSession(CFastSession * lpSession)
 }
 //
 // 检测会话是否超时...
-GM_Error CFastThread::ProTimeOut()
+/*GM_Error CFastThread::ProTimeOut()
 {
 	OS_MUTEX_LOCKER(&m_Mutex);
 	if( (::timeGetTime() - m_dwCheckTime) < TIMEOUT_STEP_CHECK )
@@ -158,7 +158,7 @@ GM_Error CFastThread::ProTimeOut()
 		::PostMessage(m_hWndMsg, WM_EVENT_SESSION_MSG, OPT_DelSession, (LPARAM)lpSession);			
 	}
 	return GM_NoErr;
-}
+}*/
 
 WSAEVENT CFastThread::WaitEventSession()
 {

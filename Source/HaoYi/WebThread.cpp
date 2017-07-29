@@ -151,25 +151,17 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 		if( theCourse.isArray() ) {
 			for(int i = 0; i < theCourse.size(); ++i) {
 				int     nCourseID;
-				string  strValue;
 				GM_MapData theMapData;
-				strValue = CUtilTool::getJsonString(theCourse[i]["course_id"]);
-				theMapData["course_id"] = strValue;
-				nCourseID = atoi(strValue.c_str());
-				strValue = CUtilTool::getJsonString(theCourse[i]["camera_id"]);
-				theMapData["camera_id"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["subject_id"]);
-				theMapData["subject_id"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["teacher_id"]);
-				theMapData["teacher_id"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["repeat_id"]);
-				theMapData["repeat_id"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["elapse_sec"]);
-				theMapData["elapse_sec"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["start_time"]);
-				theMapData["start_time"] = strValue;
-				strValue = CUtilTool::getJsonString(theCourse[i]["end_time"]);
-				theMapData["end_time"] = strValue;
+				theMapData["course_id"] = CUtilTool::getJsonString(theCourse[i]["course_id"]);
+				nCourseID = atoi(theMapData["course_id"].c_str());
+				theMapData["camera_id"] = CUtilTool::getJsonString(theCourse[i]["camera_id"]);
+				theMapData["subject_id"] = CUtilTool::getJsonString(theCourse[i]["subject_id"]);
+				theMapData["teacher_id"] = CUtilTool::getJsonString(theCourse[i]["teacher_id"]);
+				theMapData["repeat_id"] = CUtilTool::getJsonString(theCourse[i]["repeat_id"]);
+				theMapData["week_id"] = CUtilTool::getJsonString(theCourse[i]["week_id"]);
+				theMapData["elapse_sec"] = CUtilTool::getJsonString(theCourse[i]["elapse_sec"]);
+				theMapData["start_time"] = CUtilTool::getJsonString(theCourse[i]["start_time"]);
+				theMapData["end_time"] = CUtilTool::getJsonString(theCourse[i]["end_time"]);
 				m_dbMapCourse[nCourseID] = theMapData;
 			}
 		}

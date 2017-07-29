@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "Socket.h"
 #include "UtilTool.h"
+#include <mstcpip.h>
 
 Socket::Socket()
   : m_hEvent(NULL)
@@ -143,7 +144,20 @@ void Socket::KeepAlive()
 {
 	int one = 1;
 	int err = ::setsockopt(m_hSocket, SOL_SOCKET, SO_KEEPALIVE, (char*)&one, sizeof(int));
-	ASSERT(err == 0);	
+	ASSERT(err == 0);
+	// 2017.07.28 - by jackey => 加入保持连接时间间隔设置...
+	tcp_keepalive alive_in = {0};
+	tcp_keepalive alive_out = {0};
+	alive_in.keepalivetime  = 5000;  // 5s
+	alive_in.keepaliveinterval  = 5000; // 5s
+	alive_in.onoff = true;
+	unsigned long ulBytesReturn = 0;
+	err = WSAIoctl(m_hSocket, SIO_KEEPALIVE_VALS, &alive_in, sizeof(alive_in), &alive_out, sizeof(alive_out), &ulBytesReturn, NULL, NULL);
+	if( err == SOCKET_ERROR ) {
+		GM_Error theErr = WSAGetLastError();;
+		TRACE(L"WSAIoctl failed: %d\n", theErr);
+		MsgLogGM(theErr);
+	}
 }
 
 void Socket::Linger(int nTime)

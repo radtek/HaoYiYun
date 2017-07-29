@@ -29,13 +29,13 @@
       <article style="margin-bottom:20px;">
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/vod/id/{{$vo.record_id}}" href="{{$my_tracker}}{{$vo.image_fdfs}}_640x360">
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/vod/id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
               <div class="cover">
-                <img src="{{$my_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
                 <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
               </div>
               <div class="headline">{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}}&nbsp;{{$vo.teacher_name}}&nbsp;{{$vo.title_name}}&nbsp;{{$vo.created}}</div>

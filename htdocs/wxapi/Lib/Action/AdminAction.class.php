@@ -1453,10 +1453,10 @@ class AdminAction extends Action
     $this->assign('my_list_teacher', $arrTeacher);
     $this->assign('my_list_subject', $arrSubject);
     // 获取录像记录需要的信息...
-    $dbSys = D('system')->field('tracker_addr')->find();
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     $map['record_id'] = $_GET['record_id'];
     $dbVod = D('RecordView')->where($map)->find();
-    $dbVod['image_url'] = sprintf("http://%s/%s_470x250", $dbSys['tracker_addr'], $dbVod['image_fdfs']);
+    $dbVod['image_url'] = sprintf("http://%s:%d/%s_470x250", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['image_fdfs']);
     $this->assign('my_vod', $dbVod);
     // 获取模板数据...
     echo $this->fetch('getVod');

@@ -135,8 +135,8 @@ class HomeAction extends Action
     $arrList = D('RecordView')->limit(10)->order('Record.clicks DESC')->select();
     $this->assign('my_clicks', $arrList);
     // 对模板对象进行赋值...
-    $dbSys = D('system')->field('tracker_addr')->find();
-    $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_title', $this->m_webTitle . ' - 首页');
     $this->assign('my_rec', $arrRec);
     $this->assign('my_nav', $my_nav);
@@ -176,8 +176,8 @@ class HomeAction extends Action
     $this->assign('my_news', $arrNews);
     // 对模板对象进行赋值...
     $this->assign('my_title', $this->m_webTitle . ' - ' . $my_nav['subject_title']);
-    $dbSys = D('system')->field('tracker_addr')->find();
-    $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_nav', $my_nav);
     $this->display('subject');
   }
@@ -386,8 +386,8 @@ class HomeAction extends Action
       $this->assign('my_play', $arrVod);
     }
     // 设置其它模板参数...
-    $dbSys = D('system')->field('tracker_addr')->find();
-    $this->assign('my_tracker', sprintf("http://%s/", $dbSys['tracker_addr']));
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
     $this->assign('my_nav', $my_nav);
     $this->display('play');
@@ -429,9 +429,9 @@ class HomeAction extends Action
     // 根据type类型获取url地址...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       // 获取点播记录信息...
-      $dbSys = D('system')->field('tracker_addr')->find();
+      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
       $dbVod = D('record')->where('record_id='.$_GET['id'])->field('file_fdfs,clicks')->find();
-      $dbShow['url'] = sprintf("http://%s/%s", $dbSys['tracker_addr'], $dbVod['file_fdfs']);
+      $dbShow['url'] = sprintf("http://%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = intval($dbVod['clicks']) + 1;

@@ -447,9 +447,18 @@ void CHaoYiView::doCourseChanged(int nOperateID, int nLocalID, GM_MapData & inDa
 	}
 }
 //
+// 获取只有时间的秒数，不含日期...
+time_t CHaoYiView::GetTimeSecond(time_t inTime)
+{
+	CTime theCTime(inTime);
+	return (theCTime.GetHour()*3600 + theCTime.GetMinute()*60 + theCTime.GetSecond());
+}
+//
 // 每隔半秒检测录像课程表...
 void CHaoYiView::doCheckCourse()
 {
+	// 获取当前日期是星期几...
+	int nCurDayOfWeek = CTime::GetCurrentTime().GetDayOfWeek() - 1;
 	// 从系统配置对象中获取已有的录像课程表，获取引用，需要进行互斥保护...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	OSMutexLocker theLock(&theConfig.m_MutexCourse);
@@ -465,22 +474,34 @@ void CHaoYiView::doCheckCourse()
 		for(itorCourse = theCourse.begin(); itorCourse != theCourse.end(); ++itorCourse) {
 			int nCourseID = itorCourse->first;
 			GM_MapData & theData = itorCourse->second;
-			time_t  tNow	 = ::time(NULL);
-			time_t  tStart	 = (time_t)atoi(theData["start_time"].c_str());
-			time_t  tEnd	 = (time_t)atoi(theData["end_time"].c_str());
+			time_t  tNow	 = this->GetTimeSecond(::time(NULL));
+			time_t  tStart	 = this->GetTimeSecond((time_t)atoi(theData["start_time"].c_str()));
+			time_t  tEnd	 = this->GetTimeSecond((time_t)atoi(theData["end_time"].c_str()));
 			time_t  tDur	 = (time_t)atoi(theData["elapse_sec"].c_str());
+			int		nWeekID  = atoi(theData["week_id"].c_str());
 			int     nRepMode = atoi(theData["repeat_id"].c_str());
 			ASSERT( nCourseID == atoi(theData["course_id"].c_str()) );
+			//ASSERT( nRepMode == kWeekRepeat );
 			//ASSERT( tEnd == (tStart + tDur) );
-			// 当前时间 < 开始时间 => 时间未到，检测下一个...
-			if( tNow < tStart )
+			// 当前星期与记录里的星期不一致 => 用当前记录编号去停止任务记录，避免0点跳变...
+			if( nWeekID != nCurDayOfWeek ) {
+				this->doRecStopCourse(nCameraID, nCourseID);
 				continue;
+			}
+			// 当前时间 < 开始时间 => 时间未到，直接停止正在录像的当前任务记录，因为有可能是修改过时间的记录...
+			if( tNow < tStart ) {
+				this->doRecStopCourse(nCameraID, nCourseID);
+				continue;
+			}
 			// 当前时间 >= 结束时间 => 通知任务结束，如果当前运行记录不是它，不处理，直接返回...
 			if( tNow >= tEnd ) {
 				// 停止当前通道中正在录像的当前任务记录...
 				this->doRecStopCourse(nCameraID, nCourseID);
+				///////////////////////////////////////////////////////////////////////////////
+				// 2017.07.28 - by jackey => 固定模式每周重复，而且只比较时间，所有不用处理了...
+				///////////////////////////////////////////////////////////////////////////////
 				// 无重复模式 => 直接检测下一条记录 => 不要进行删除操作，因为可能会进行修改...
-				if( nRepMode == kNoneRepeat )
+				/*if( nRepMode == kNoneRepeat )
 					continue;
 				ASSERT( nRepMode == kDayRepeat || nRepMode == kWeekRepeat );
 				// 每天重复 => 累加1*24小时...
@@ -498,7 +519,7 @@ void CHaoYiView::doCheckCourse()
 				theData["start_time"] = szBuf;
 				// 转换结束时间...
 				sprintf(szBuf, "%lu", tEnd);
-				theData["end_time"] = szBuf;
+				theData["end_time"] = szBuf;*/
 				// 继续下一个任务...
 				continue;
 			}

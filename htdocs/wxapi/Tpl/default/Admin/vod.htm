@@ -1,6 +1,14 @@
 
 <include file = "Common:admin_header" />
 
+<style>
+.btn-del {
+  float: left;
+  margin: 10px 15px 10px 0px;
+  background-color: #FF1100;
+}
+</style>
+
 <!-- 中心数据区 -->
 <div class="layui-tab layui-tab-brief">
   <div class="layui-body layui-tab-content site-demo">
@@ -9,31 +17,38 @@
         <fieldset class="layui-elem-field layui-field-title">
           <legend><i class="fa fa-film">&nbsp;</i>点播管理</legend>
         </fieldset>
-        <div style="margin-top:10px;width:100%">
+        <div class="layui-form" style="margin-top:10px;width:100%">
           <table class="layui-table">
             <colgroup>
+              <col width="40">
               <col width="60">
               <col width="60">
               <col width="60">
               <col width="60">
               <col width="60">
-              <col width="150">
-              <col width="150">
+              <col width="120">
+              <col width="120">
             </colgroup>
             <thead>
               <tr>
+                <th><input id="myAll" type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th>科目</th>
                 <th>教师</th>
                 <th>播放时长</th>
                 <th>播放次数</th>
                 <th>文件大小</th>
-                <th>文件名称</th>
                 <th>录制时间</th>
+                <th>文件名称</th>
               </tr> 
             </thead>
-            <tbody class="js_vod"></tbody>
+            <tbody class="js_vod">
+            </tbody>
           </table>
-          <div style="float:left;" id="myPage"></div>
+          <div style="display: inline-block;">
+            <button class="layui-btn layui-btn-small btn-del" onclick="doDelVod();">
+              <i class="layui-icon">&#xe640;</i>&nbsp;删除选中
+            </button>
+            <div style="float:left;" id="myPage"></div>
         </div>
       </div>
     </div>
@@ -54,10 +69,14 @@ function doErrHead() {
 //
 // 点击某一行事件...
 function doTrClick(inVodID, objTr) {
-  // 向服务器发送直播状态查看命令...
-  var index = layer.load(2);
+  // 为了兼容IE8，只能用srcElement获取对象信息...
+  // 如果是第一个td或这td里的checkbox，直接返回...
   var $ = layui.jquery;
-  // 先将背景色进行修改...
+  if( $(event.srcElement).hasClass('layui-icon') || event.srcElement.cellIndex == 0 ) {
+    return false;
+  }
+  // 先弹框，然后将背景色进行修改...
+  var index = layer.load(2);
   $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
   // 异步获取通道信息...
   $.ajaxSetup({ cache:false });
@@ -128,9 +147,31 @@ function doTrClick(inVodID, objTr) {
   });
 }
 //
+// 处理删除记录事件...
+function doDelVod() {
+  var strList = "";
+  var $ = layui.jquery;
+  var child = $('#myAll').parents('table').find('tbody input[type="checkbox"]');
+  // 遍历所有节点，组合要删除的节点列表...
+  child.each(function(index, item){
+    if( item.checked ) {
+      strList += item.id.split('_')[1];
+      strList += ',';
+    }
+  });
+  // 判断数据的有效性...
+  if( strList.length <= 0 ) {
+    layer.msg('请先选择要删除的记录！', {anim: 6});
+    return;
+  }
+  // 去除最后一个分号...
+  strList = strList.substring(0, strList.length - 1);
+}
+//
 // 处理 layui 过程...
 layui.use(['element','laypage','layer','form'], function(){
   var laypage = layui.laypage;
+  var form = layui.form();
   var $ = layui.jquery;
   laypage({
     pages: {{$max_page}},   // 总页数...
@@ -147,7 +188,9 @@ layui.use(['element','laypage','layer','form'], function(){
         success: function(ajaxData) {
           layer.closeAll('loading');
           $('.js_vod').html(ajaxData);
+          $('#myAll').attr('checked', false); 
           $('tbody tr').css('cursor','pointer');
+          form.render('checkbox');
         },
         error: function(e) {
           layer.closeAll('loading');
@@ -155,6 +198,14 @@ layui.use(['element','laypage','layer','form'], function(){
         }
       });    
     }
+  });
+  // 点击全选需要响应的操作...
+  form.on('checkbox(allChoose)', function(data){
+    var child = $(data.elem).parents('table').find('tbody input[type="checkbox"]');
+    child.each(function(index, item){
+      item.checked = data.elem.checked;
+    });
+    form.render('checkbox');
   });
 });
 

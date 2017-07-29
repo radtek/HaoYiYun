@@ -29,7 +29,7 @@ private:
 	GM_Error		ProcSession(CFastSession * lpSession);	// 处理一个会话
 	GM_Error		RemoveSession(CFastSession * lpSession);// 从集合中移除会话(不删除)
 
-	GM_Error		ProTimeOut();
+	//GM_Error		ProTimeOut();
 private:
 	int				m_nMaxWait;								// 能够支持的最大链接数
 	OSMutex			m_Mutex;								// 线程互斥对象

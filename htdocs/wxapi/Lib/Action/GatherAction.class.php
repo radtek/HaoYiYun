@@ -127,7 +127,7 @@ class GatherAction extends Action
       }
       // 读取该通道下的所有录像课程表，反馈给采集端...
       $newMap['camera_id'] = $arrErr['camera_id'];
-      $arrCourse = D('course')->where($newMap)->field('course_id,camera_id,subject_id,teacher_id,repeat_id,elapse_sec,start_time,end_time')->select();
+      $arrCourse = D('course')->where($newMap)->field('course_id,camera_id,subject_id,teacher_id,repeat_id,week_id,elapse_sec,start_time,end_time')->select();
       // 将字符串时间转换成整数时间戳...
       foreach($arrCourse as &$dbItem) {
         $dbItem['start_time'] = strval(strtotime($dbItem['start_time']));
