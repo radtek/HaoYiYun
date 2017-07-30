@@ -1472,6 +1472,39 @@ class AdminAction extends Action
     D('record')->save($dbSave);
   }
   //
+  // 删除点播文件列表...
+  public function delVod()
+  {
+    // 通过ID编号列表获取路线记录
+    $map['record_id'] = array('in', $_POST['list']);
+    $arrList = D('RecordView')->where($map)->field('record_id,file_fdfs,image_id,image_fdfs')->select();
+    foreach ($arrList as &$dbItem) {
+      // 删除图片和视频文件，逐一删除...
+      fastdfs_storage_delete_file1($dbItem['file_fdfs']);
+      fastdfs_storage_delete_file1($dbItem['image_fdfs']);
+      // 删除图片记录和视频记录...
+      D('record')->delete($dbItem['record_id']);
+      D('image')->delete($dbItem['image_id']);
+    }
+    // 得到每页条数，总记录数，计算总页数...
+    $pagePer = C('PAGE_PER');
+    $totalNum = D('record')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 重新计算当前页面编号，总页面数...
+    if( $max_page <= 0 ) {
+      $arrJson['curr'] = 0;
+      $arrJson['pages'] = 0;
+    } else {
+      $nCurPage = (($_POST['page'] > $max_page) ? $max_page : $_POST['page']);
+      $arrJson['curr'] = $nCurPage;
+      $arrJson['pages'] = $max_page;
+    }
+    // 返回json数据包...
+    echo json_encode($arrJson);
+  }
+  //
   // 点击用户管理...
   public function user()
   {

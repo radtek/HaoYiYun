@@ -27,7 +27,7 @@
       <div class="layui-input-block">
         <select name="myTeacher" lay-verify="required" lay-search="">
           <volist name="my_list_teacher" id="itemTeacher">
-          <option value="{{$itemTeacher.teacher_id}}">{{$itemTeacher.teacher_name}} {{$itemTeacher.title_name}}</option>
+          <option value="{{$itemTeacher.teacher_id}}">{{$itemTeacher.teacher_name}}&nbsp;{{$itemTeacher.title_name}}</option>
           </volist>
         </select>
       </div>
