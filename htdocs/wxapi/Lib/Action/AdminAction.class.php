@@ -26,6 +26,7 @@ class AdminAction extends Action
     // 获取登录用户头像，没有登录，直接跳转登录页面...
     $this->m_wxHeadUrl = $this->getLoginHeadUrl();
     // 直接给模板变量赋值...
+    $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
     $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_web_name', $this->m_webName);
@@ -686,8 +687,11 @@ class AdminAction extends Action
     }*/
     $map['gather_id'] = $_GET['gather_id'];
     $dbGather = D('gather')->where($map)->find();
-    $arrSchool = D('school')->field('school_id,name')->select();
-    $this->assign('my_list_school', $arrSchool);
+    if( $this->m_webType <= 0 ) {
+      // 云录播模式 => 获取学校列表...
+      $arrSchool = D('school')->field('school_id,name')->select();
+      $this->assign('my_list_school', $arrSchool);
+    }
     $this->assign('my_gather', $dbGather);
     echo $this->display();
   }
@@ -696,6 +700,13 @@ class AdminAction extends Action
   public function saveGather()
   {
     $_POST['updated'] = date('Y-m-d H:i:s');
+    if( $this->m_webType > 0 ) {
+      // 云监控模式...
+      unset($_POST['school_id']);
+    } else {
+      // 云录播模式...
+      unset($_POST['name_set']);
+    }
     D('gather')->save($_POST);
     echo $_POST['gather_id'];
   }
@@ -833,8 +844,11 @@ class AdminAction extends Action
     }*/
     $map['camera_id'] = $_GET['camera_id'];
     $dbCamera = D('camera')->where($map)->find();
-    $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-    $this->assign('my_list_grade', $arrGrade);
+    // 获取年级列表 => 云录播模式...
+    if( $this->m_webType <= 0 ) {
+      $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
+      $this->assign('my_list_grade', $arrGrade);
+    }
     $this->assign('my_camera', $dbCamera);
     echo $this->display();
   }
@@ -844,6 +858,11 @@ class AdminAction extends Action
   {
     // 先将摄像头信息存入数据库当中...
     $_POST['updated'] = date('Y-m-d H:i:s');
+    // 云监控模式下，删除变量...
+    if( $this->m_webType > 0 ) {
+      unset($_POST['grade_id']);
+      unset($_POST['grade_name']);
+    }
     D('camera')->save($_POST);
 
     // 再将摄像头名称转发给对应的采集端...
@@ -871,7 +890,13 @@ class AdminAction extends Action
       $dbGather = D('gather')->where($map)->field('mac_addr')->find();
       // 组合摄像头数据成JSON...
       $dbCamera['camera_id'] = $_POST['camera_id'];
-      $dbCamera['camera_name'] = sprintf("%s %s", $_POST['grade_name'], $_POST['camera_name']);
+      if( $this->m_webType > 0 ) {
+        // 云监控模式...
+        $dbCamera['camera_name'] = $_POST['camera_name'];
+      } else {
+        // 云录播模式...
+        $dbCamera['camera_name'] = sprintf("%s %s", $_POST['grade_name'], $_POST['camera_name']);
+      }
       $dbCamera['mac_addr'] = $dbGather['mac_addr'];
       $saveJson = json_encode($dbCamera);
       // 发送转发命令...
@@ -1388,9 +1413,11 @@ class AdminAction extends Action
     $map['camera_id'] = $_GET['camera_id'];
     $dbCamera = D('camera')->where($map)->find();
     $this->assign('my_live', $dbCamera);
-    // 获取年级列表...
-    $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-    $this->assign('my_list_grade', $arrGrade);
+    // 获取年级列表 => 云录播模式...
+    if( $this->m_webType <= 0 ) {
+      $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
+      $this->assign('my_list_grade', $arrGrade);
+    }
     // 返回构造好的数据...
     echo $this->fetch('liveStatus');
     
@@ -1447,11 +1474,17 @@ class AdminAction extends Action
   // 获取点播详情页面...
   public function getVod()
   {
-    // 读取科目列表，读取教师列表...
-    $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
-    $this->assign('my_list_teacher', $arrTeacher);
-    $this->assign('my_list_subject', $arrSubject);
+    if( $this->m_webType ) {
+      // 云监控 => 读取通道列表...
+      $arrCamera = D('camera')->field('camera_id,camera_name')->select();
+      $this->assign('my_list_camera', $arrCamera);
+    } else {
+      // 云录播 => 读取科目列表，读取教师列表...
+      $arrSubject = D('subject')->field('subject_id,subject_name')->select();
+      $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
+      $this->assign('my_list_teacher', $arrTeacher);
+      $this->assign('my_list_subject', $arrSubject);
+    }
     // 获取录像记录需要的信息...
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     $map['record_id'] = $_GET['record_id'];
@@ -1467,8 +1500,14 @@ class AdminAction extends Action
   {
     $dbSave['updated'] = date('Y-m-d H:i:s');
     $dbSave['record_id'] = $_POST['record_id'];
-    $dbSave['subject_id'] = $_POST['subject_id'];
-    $dbSave['teacher_id'] = $_POST['teacher_id'];
+    if( $this->m_webType ) {
+      // 云监控模式...
+      $dbSave['camera_id'] = $_POST['camera_id'];
+    } else {
+      // 云录播模式...
+      $dbSave['subject_id'] = $_POST['subject_id'];
+      $dbSave['teacher_id'] = $_POST['teacher_id'];
+    }
     D('record')->save($dbSave);
   }
   //

@@ -7,9 +7,13 @@
       <case value="1"><i class="fa fa-tv fa-run">&nbsp;运行中</i></case>
     </switch>
   </td>
+  <eq name='my_web_type' value='0'>
   <td title="{{$vo.school_name}}">{{$vo.school_name|msubstr=0,10}}</td>
   <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
-  <td>{{$vo.camera_name}}</td>
+  <else/>
+  <td align="right">{{$vo.clicks}}&nbsp;次</td>
+  </eq>
+  <td align="center">{{$vo.camera_name}}</td>
   <td>live{{$vo.camera_id}}</td>
   <td>
     <switch name="vo.stream_prop">

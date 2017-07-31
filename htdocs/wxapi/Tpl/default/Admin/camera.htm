@@ -27,9 +27,14 @@
             <thead>
               <tr>
                 <th>状态</th>
+                <eq name='my_web_type' value='0'>
                 <th>年级</th>
                 <th>班级</th>
+                <else/>
+                <th>播放次数</th>
                 <th>名称</th>
+                </eq>
+                <th>标识</th>
                 <th>类型</th>
                 <th>数据源</th>
                 <th>操作</th>
@@ -52,6 +57,7 @@ var siteurl="{{:__APP__}}";
 // 点击某一行事件...
 function doTrClick(inCameraID,inGatherID,objTr) {
   // 向服务器发送直播状态查看命令...
+  var nWebType = {{$my_web_type}};
   var index = layer.load(2);
   var $ = layui.jquery;
   // 先将背景色进行修改...
@@ -77,13 +83,17 @@ function doTrClick(inCameraID,inGatherID,objTr) {
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formCamera)', function(data) {
-            var theCameraName = data.field.myCameraName;
-            var theCameraGrade = data.field.myCameraGrade;
-            var theGradeName = $("select[name='myCameraGrade']").find("option:selected").text();
-            // 判断输入数据的有效性...
-            if( theCameraGrade <= 0 ) {
-              layer.msg('【所在年级】不能为空，请更正！', {icon: 2});
-              return false;
+            var theCameraName = "", theGradeName = "", theCameraGrade = 0;
+            theCameraName = data.field.myCameraName;
+            // 云录播模式下的处理过程...
+            if( nWebType <= 0 ) {
+              theCameraGrade = data.field.myCameraGrade;
+              theGradeName = $("select[name='myCameraGrade']").find("option:selected").text();
+              // 判断输入数据的有效性...
+              if( theCameraGrade <= 0 ) {
+                layer.msg('【所在年级】不能为空，请更正！', {icon: 2});
+                return false;
+              }
             }
             // 发送摄像头数据，通过ajax异步发送存盘命令...
             // 传递 gather_id 和 grade_name 的目的是为了转发摄像头名称给采集端...
@@ -97,8 +107,14 @@ function doTrClick(inCameraID,inGatherID,objTr) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
                   //location.href = siteurl+"/Admin/live";
-                  $(objTr).children('td').eq(1).text(theGradeName);
-                  $(objTr).children('td').eq(2).text(theCameraName);
+                  if( nWebType > 0 ) {
+                    // 云监控模式...
+                    $(objTr).children('td').eq(2).text(theCameraName);
+                  } else {
+                    // 云录播模式...
+                    $(objTr).children('td').eq(1).text(theGradeName);
+                    $(objTr).children('td').eq(2).text(theCameraName);
+                  }
                   layer.closeAll('page');
                 });
               },

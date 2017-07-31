@@ -21,7 +21,12 @@
           <table class="layui-table">
             <colgroup>
               <col width="40">
+              <eq name='my_web_type' value='0'>
               <col width="60">
+              <col width="60">
+              <else/>
+              <col width="80">
+              </eq>
               <col width="60">
               <col width="60">
               <col width="60">
@@ -32,13 +37,17 @@
             <thead>
               <tr>
                 <th><input id="myAll" type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
+                <eq name='my_web_type' value='0'>
                 <th>科目</th>
                 <th>教师</th>
+                <else/>
+                <th>所在通道</th>
+                </eq>
                 <th>播放时长</th>
                 <th>播放次数</th>
                 <th>文件大小</th>
-                <th>录制时间</th>
                 <th>文件名称</th>
+                <th>录制时间</th>
               </tr> 
             </thead>
             <tbody class="js_vod">
@@ -72,6 +81,7 @@ function doErrHead() {
 function doTrClick(inVodID, objTr) {
   // 为了兼容IE8，只能用srcElement获取对象信息...
   // 如果是第一个td或者是td里的checkbox，直接返回...
+  var nWebType = {{$my_web_type}};
   var $ = layui.jquery;
   if( $(event.srcElement).hasClass('layui-icon') || event.srcElement.cellIndex == 0 ) {
     return false;
@@ -100,16 +110,29 @@ function doTrClick(inVodID, objTr) {
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formVod)', function(data) {
-            var theTeacherID = data.field.myTeacher;
-            var theSubjectID = data.field.mySubject;
-            var theSubjectName = $("select[name='mySubject']").find("option:selected").text();
-            var theTeacherName = $("select[name='myTeacher']").find("option:selected").text();
-            var theTeacherArray = theTeacherName.split(/\s+/);
-            theTeacherName = theTeacherArray[0];
-            // 判断输入数据的有效性...
-            if( theSubjectID <= 0 || theTeacherID <= 0 ) {
-              layer.msg('【科目】或【教师】不能为空，请更正！', {icon: 2});
-              return false;
+            var theCameraID = 0, theTeacherID = 0, theSubjectID = 0;
+            var theSubjectName = "", theTeacherName = "", theTeacherArray;
+            if( nWebType > 0 ) {
+              // 云监控模式...
+              theCameraID = data.field.myCamera;
+              theCameraName = $("select[name='myCamera']").find("option:selected").text();
+              if( theCameraID <= 0 ) {
+                layer.msg('【所在通道】不能为空，请更正！', {icon: 2});
+                return false;
+              }
+            }else {
+              // 云录播模式...
+              theTeacherID = data.field.myTeacher;
+              theSubjectID = data.field.mySubject;
+              theSubjectName = $("select[name='mySubject']").find("option:selected").text();
+              theTeacherName = $("select[name='myTeacher']").find("option:selected").text();
+              theTeacherArray = theTeacherName.split(/\s+/);
+              theTeacherName = theTeacherArray[0];
+              // 判断输入数据的有效性...
+              if( theSubjectID <= 0 || theTeacherID <= 0 ) {
+                layer.msg('【科目】或【教师】不能为空，请更正！', {icon: 2});
+                return false;
+              }
             }
             // 发送摄像头数据，通过ajax异步发送存盘命令...
             layer.load(2);
@@ -117,12 +140,18 @@ function doTrClick(inVodID, objTr) {
               type: "post",
               async: true,
               url: siteurl+"/Admin/saveVod",
-              data: {record_id: inVodID, subject_id: theSubjectID, teacher_id: theTeacherID},
+              data: {record_id: inVodID, camera_id: theCameraID, subject_id: theSubjectID, teacher_id: theTeacherID},
               success: function(ajaxData) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
-                  $(objTr).children('td').eq(1).html('<i class="fa fa-film fa-normal">&nbsp;</i>'+theSubjectName);
-                  $(objTr).children('td').eq(2).text(theTeacherName);
+                  if( nWebType > 0 ) {
+                    // 云监控模式...
+                    $(objTr).children('td').eq(1).text(theCameraName);
+                  }else {
+                    // 云录播模式...
+                    $(objTr).children('td').eq(1).html('<i class="fa fa-film fa-normal">&nbsp;</i>'+theSubjectName);
+                    $(objTr).children('td').eq(2).text(theTeacherName);
+                  }
                   layer.closeAll('page');
                 });
               },

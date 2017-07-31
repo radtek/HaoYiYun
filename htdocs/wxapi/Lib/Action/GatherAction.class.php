@@ -110,13 +110,19 @@ class GatherAction extends Action
         $arrErr['camera_name'] = $arrData['camera_name'];
         $arrErr['camera_id'] = strval(D('camera')->add($dbCamera));
       } else {
-        // 如果grade_id有效，则需要组合年级名称...
-        if( $dbCamera['grade_id'] > 0 ) {
-          $map['grade_id'] = $dbCamera['grade_id'];
-          $dbGrade = D('grade')->where($map)->field('grade_type,grade_name')->find();
-          $arrErr['camera_name'] = sprintf("%s %s %s", $dbGrade['grade_type'], $dbGrade['grade_name'], $dbCamera['camera_name']);
-        } else {
+        $dbSys = D('system')->field('web_type')->find();
+        if( $dbSys['web_type'] > 0 ) {
+          // 云监控模式 => 只需要通道名称...
           $arrErr['camera_name'] = $dbCamera['camera_name'];
+        } else {
+          // 云录播模式 => 如果grade_id有效，则需要组合年级名称...
+          if( $dbCamera['grade_id'] > 0 ) {
+            $map['grade_id'] = $dbCamera['grade_id'];
+            $dbGrade = D('grade')->where($map)->field('grade_type,grade_name')->find();
+            $arrErr['camera_name'] = sprintf("%s %s %s", $dbGrade['grade_type'], $dbGrade['grade_name'], $dbCamera['camera_name']);
+          } else {
+            $arrErr['camera_name'] = $dbCamera['camera_name'];
+          }
         }
         // 找到了记录，直接更新记录 => 返回camera_id和camera_name...
         $arrErr['camera_id'] = strval($dbCamera['camera_id']);

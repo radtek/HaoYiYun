@@ -8,8 +8,12 @@
       <case value="2"><i class="fa fa-play-circle-o fa-rec">&nbsp;录像中</i></case>
     </switch>
   </td>
+  <eq name='my_web_type' value='0'>
   <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
-  <td>{{$vo.camera_name}}</td>
+  <else/>
+  <td align="right">{{$vo.clicks}}&nbsp;次</td>
+  </eq>
+  <td align="center">{{$vo.camera_name}}</td>
   <td>live{{$vo.camera_id}}</td>
   <td>
     <switch name="vo.stream_prop">

@@ -1,6 +1,7 @@
 
 <div class="layui-field-box" style="margin-top: 10px;">
   <form class="layui-form layui-form-pane" action="">
+    <eq name='my_web_type' value='0'>
     <div class="layui-form-item">
       <label class="layui-form-label">所在年级</label>
       <div class="layui-input-block">
@@ -17,6 +18,22 @@
         <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_camera.camera_name}}">
       </div>
     </div>
+    <else/>
+    <div class="layui-form-item">
+      <label class="layui-form-label">通道名称</label>
+      <div class="layui-input-block">
+        <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_camera.camera_name}}">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">通道编号</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        live{{$my_camera.camera_id}}
+        </label>
+      </div>
+    </div>
+    </eq>
     <div class="layui-form-item">
       <label class="layui-form-label">数据源</label>
       <div class="layui-input-block">
@@ -54,5 +71,7 @@
 
 <script>
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+<eq name='my_web_type' value='0'>
 document.getElementsByName('myCameraGrade')[0].value = {{$my_camera.grade_id}};
+</eq>
 </script>
