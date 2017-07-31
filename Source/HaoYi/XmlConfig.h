@@ -41,7 +41,11 @@ public:
 	string & GetWebAddr() { return m_strWebAddr; }
 	int		 GetWebPort() { return m_nWebPort; }
 
+	/////////////////////////////////////////////////////////////
 	// 这几个地址和端口是动态获取的，不会存入xml当中...
+	/////////////////////////////////////////////////////////////
+	string & GetWebName() { return m_strWebName; }
+	int		 GetWebType() { return m_nWebType; }
 	string & GetRemoteAddr() { return m_strRemoteAddr; }
 	int		 GetRemotePort() { return m_nRemotePort; }
 	string & GetTrackerAddr() { return m_strTrackerAddr; }
@@ -50,6 +54,8 @@ public:
 	void     SetRemotePort(int nPort) { m_nRemotePort = nPort; }
 	void	 SetTrackerAddr(const string & strAddr) { m_strTrackerAddr = strAddr; }
 	void     SetTrackerPort(int nPort) { m_nTrackerPort = nPort; }
+	void	 SetWebType(int nWebType) { m_nWebType = nWebType; }
+	void	 SetWebName(const string & strWebName) { m_strWebName = strWebName; }
 
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
 	void	 SetMainName(const string & strName) { m_strMainName = strName; }
@@ -101,6 +107,8 @@ private:
 	string				m_strWebAddr;					// Web的IP地址...
 	int					m_nWebPort;						// Web的端口地址...
 
+	string				m_strWebName;					// 注册时获取的网站名称
+	int					m_nWebType;						// 注册时获取的网站类型
 	string				m_strRemoteAddr;				// 远程中转服务器的IP地址...
 	int					m_nRemotePort;					// 远程中转服务器的端口地址...
 	string				m_strTrackerAddr;				// FDFS-Tracker的IP地址...

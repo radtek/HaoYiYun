@@ -229,7 +229,9 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	CString strTitle;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	string & strMainName = theConfig.GetMainName();
 	string & strCopyRight = theConfig.GetCopyRight();
 	string & strPhone = theConfig.GetPhone();
 	string & strWebSite = theConfig.GetWebSite();
@@ -240,6 +242,9 @@ BOOL CAboutDlg::OnInitDialog()
 	GetDlgItem(IDC_ABOUT_PHONE)->SetWindowText(strPhone.c_str());
 	GetDlgItem(IDC_ABOUT_WEBSITE)->SetWindowText(strWebSite.c_str());
 	GetDlgItem(IDC_ABOUT_ADDRESS)->SetWindowText(strAddress.c_str());
+
+	strTitle.Format("¹ØÓÚ - %s", strMainName.c_str());
+	this->SetWindowText(strTitle);
 
 	//CString strVersion;
 	//strVersion.Format("V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);

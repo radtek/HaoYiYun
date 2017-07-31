@@ -19,6 +19,8 @@ CXmlConfig::CXmlConfig(void)
   , m_strRemoteAddr("")
   , m_nTrackerPort(0)
   , m_nRemotePort(0)
+  , m_strWebName("")
+  , m_nWebType(-1)
 {
 	CString strVersion;
 	strVersion.Format("°æ ±¾£ºV%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);

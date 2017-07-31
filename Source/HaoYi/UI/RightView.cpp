@@ -177,14 +177,14 @@ void CRightView::ShowText(CDC * pDC, BOOL bFocus, CString & inLogStatus)
 	pDC->TextOut(kLeftMargin - 5, rcRect.top + rcPos.cy + 1, m_strYunTitle);
 
 	// 设置 - 标题背景...
-	rcRect.top = 445;
+	/*rcRect.top = 445;
 	rcRect.bottom = rcRect.top + kGroundHigh;
 	pDC->FillSolidRect(rcRect, clrValue);
 	// 设置 - 标题名称...
 	rcSize = pDC->GetOutputTextExtent(m_strSetTitle);
 	rcPos.cx = (rcRect.Width() - rcSize.cx) / 2;
 	rcPos.cy = (rcRect.Height() - rcSize.cy) / 2;
-	pDC->TextOut(kLeftMargin - 5, rcRect.top + rcPos.cy + 1, m_strSetTitle);
+	pDC->TextOut(kLeftMargin - 5, rcRect.top + rcPos.cy + 1, m_strSetTitle);*/
 
 	// 显示焦距/放大/光圈...
 	rcSize = pDC->GetOutputTextExtent("焦距");
@@ -222,7 +222,9 @@ void CRightView::ShowButton(BOOL bDispFlag)
 	m_btnFangPlus.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);
 	m_btnQuanMinus.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);
 	m_btnQuanPlus.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);
-	
+
+	// 2017.07.31 - by jackey => 屏蔽了摄像头复杂设置...
+	bDispFlag = false;
 	m_btnSetVPreview.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);
 	m_btnSetVParam.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);
 	m_btnSetRecord.ShowWindow(bDispFlag ? SW_SHOW : SW_HIDE);

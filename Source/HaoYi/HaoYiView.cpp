@@ -377,9 +377,29 @@ LRESULT CHaoYiView::OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam)
 	return S_OK;
 }
 //
+// 更新主窗口标题名称...
+void CHaoYiView::doUpdateFrameTitle()
+{
+	CString strTitle, strWebType;
+	CMainFrame * lpFrame = (CMainFrame*)AfxGetMainWnd();
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	string & strMainName = theConfig.GetMainName();
+	string & strWebName = theConfig.GetWebName();
+	switch( theConfig.GetWebType() )
+	{
+	case kCloudRecorder: strWebType = "云录播";	break;
+	case kCloudMonitor:	 strWebType = "云监控";	break;
+	default:			 strWebType = "未知";	break;
+	}
+	strTitle.Format("%s - %s", strWebType, strMainName.c_str());
+	lpFrame->SetWindowText(strTitle);
+}
+//
 // 网站线程加载的资源...
 LRESULT CHaoYiView::OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam)
 {
+	// 更新主窗口标题栏名称...
+	this->doUpdateFrameTitle();
 	// 根据配置文件建立监控通道，配置已经处理过了...
 	ASSERT( m_lpMidView != NULL );
 	m_lpMidView->BuildVideoByXml();
@@ -1456,11 +1476,9 @@ void CHaoYiView::OnSysSet()
 	if( IDOK != dlg.DoModal() )
 		return;
 	// 更新标题栏名称...
-	CMainFrame * lpFrame = (CMainFrame*)AfxGetMainWnd();
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	string & strMainName = theConfig.GetMainName();
-	lpFrame->SetWindowText(strMainName.c_str());
+	this->doUpdateFrameTitle();
 	// 不连接存储服务器，但是会话有效，则立即删除会话对象...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	if( !theConfig.GetAutoLinkFDFS() ) {
 		this->DelByEventThread(m_lpTrackerSession);
 		m_lpTrackerSession = NULL;

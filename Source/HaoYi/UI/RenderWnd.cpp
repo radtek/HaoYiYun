@@ -94,8 +94,20 @@ void CRenderWnd::DrawBackText(CDC * pDC)
 
 	if( m_lpParent->IsCameraDevice() ) {
 		// 如果是摄像头设备模式，只显示标题...
+		CRect rcDraw;
 		pDC->SetTextColor(RGB(0, 255, 0));
-		pDC->TextOut(rcPos.cx, rcPos.cy, m_szTxt);
+		rcSize = pDC->GetOutputTextExtent(m_szTxt);
+		if( rcSize.cx < rcRect.Width() ) {
+			// 文字长度比窗口小，直接TextOut...
+			pDC->TextOut(rcPos.cx, rcPos.cy, m_szTxt);
+		} else {
+			// 文字长度比窗口大，使用DrawText...
+			rcDraw.left = 20;
+			rcDraw.right = rcRect.Width() - 20 * 2;
+			rcDraw.top = rcPos.cy - 30;
+			rcDraw.bottom = rcDraw.top + 80;
+			pDC->DrawText(m_szTxt, rcDraw, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL | DT_EXTERNALLEADING);
+		}
 		pDC->SelectObject(pOld);
 	} else {
 		// 如果是流转发模式，显示更多信息...

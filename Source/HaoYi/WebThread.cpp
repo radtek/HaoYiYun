@@ -6,6 +6,7 @@
 #include "StringParser.h"
 #include "XmlConfig.h"
 #include "UtilTool.h"
+#include "MainFrm.h"
 #include "tinyxml.h"
 #include <curl.h>
 
@@ -76,34 +77,19 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 	// 获取有效的反馈数据信息...
 	if( m_eRegState == kRegHaoYi ) {
 		// 正在处理验证许可过程...
-		Json::Value & theGatherID = value["gather_id"];
-		if( theGatherID.isInt() ) {
-			m_HaoYiGatherID = theGatherID.asInt();
-		} else if( theGatherID.isString() ) {
-			m_HaoYiGatherID = atoi(theGatherID.asString().c_str());
-		}
+		m_HaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	} else if( m_eRegState == kRegGather ) {
 		// 正在处理注册采集端过程...
-		Json::Value & theID = value["gather_id"];
-		if( theID.isInt() ) {
-			m_nDBGatherID = theID.asInt();
-		} else if( theID.isString() ) {
-			m_nDBGatherID = atoi(theID.asString().c_str());
-		}
+		m_nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 		// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
 		Json::Value & theWebTag = value["web_tag"];
-		Json::Value & theWebType = value["web_type"];
 		Json::Value & theWebName = value["web_name"];
 		Json::Value & theRemoteAddr = value["transmit_addr"];
 		Json::Value & theRemotePort = value["transmit_port"];
 		Json::Value & theTrackerAddr = value["tracker_addr"];
 		Json::Value & theTrackerPort = value["tracker_port"];
 		Json::Value & theLocalTime   = value["local_time"];
-		if( theWebType.isString() ) {
-			m_nWebType = atoi(theWebType.asString().c_str());
-		} else {
-			m_nWebType = theWebType.asInt();
-		}
+		m_nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
 		if( theWebTag.isString() ) {
 			m_strWebTag = theWebTag.asString();
 		}
@@ -123,23 +109,20 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 			m_nRemotePort = atoi(theRemotePort.asString().c_str());
 		}
 		// 同步网站服务器时钟...
+#ifndef _DEBUG
 		if( theLocalTime.isString() ) {
 			COleDateTime theDate;
 			SYSTEMTIME   theST = {0};
 			string strLocalTime = theLocalTime.asString();
 			// 解析正确，并且得到系统时间正确，才进行设置...
-			//if( theDate.ParseDateTime(strLocalTime.c_str()) && theDate.GetAsSystemTime(theST) ) {
-			//	::SetLocalTime(&theST);
-			//}
+			if( theDate.ParseDateTime(strLocalTime.c_str()) && theDate.GetAsSystemTime(theST) ) {
+				::SetLocalTime(&theST);
+			}
 		}
+#endif // _DEBUG
 	} else if( m_eRegState == kRegCamera ) {
 		// 正在处理注册摄像头过程...
-		Json::Value & theID = value["camera_id"];
-		if( theID.isInt() ) {
-			m_nDBCameraID = theID.asInt();
-		} else if( theID.isString() ) {
-			m_nDBCameraID = atoi(theID.asString().c_str());
-		}
+		m_nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
 		// 获取通道名称...
 		Json::Value & theCameraName = value["camera_name"];
 		if( theCameraName.isString() ) {
@@ -167,12 +150,7 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 		}
 	} else if( m_eRegState == kDelCamera ) {
 		// 获取返回的已删除的摄像头在数据库中的编号...
-		Json::Value & theID = value["camera_id"];
-		if( theID.isInt() ) {
-			m_nDBCameraID = theID.asInt();
-		} else if( theID.isString() ) {
-			m_nDBCameraID = atoi(theID.asString().c_str());
-		}
+		m_nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
 	}
 }
 //
@@ -298,6 +276,8 @@ BOOL CWebThread::RegisterGather()
 	if( m_strRemoteAddr.size() <= 0 || m_nRemotePort <= 0 )
 		return false;
 	// 存放到配置文件，但并不存盘...
+	theConfig.SetWebType(m_nWebType);
+	theConfig.SetWebName(m_strWebName);
 	theConfig.SetRemoteAddr(m_strRemoteAddr);
 	theConfig.SetRemotePort(m_nRemotePort);
 	theConfig.SetTrackerAddr(m_strTrackerAddr);

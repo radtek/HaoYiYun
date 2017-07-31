@@ -234,6 +234,18 @@ int CMidView::GetNextAutoID(int nCurCameraID)
 	ASSERT( itorItem != m_MapVideo.end() );
 	return itorItem->first;
 }
+string CMidView::GetDefaultCameraName()
+{
+	string strDefName;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	switch( theConfig.GetWebType() )
+	{
+	case kCloudRecorder: strDefName = "直播通道"; break;
+	case kCloudMonitor:	 strDefName = "监控通道"; break;
+	default:			 strDefName = "直播通道"; break;
+	}
+	return strDefName;
+}
 //
 // 添加一个视频窗口...
 GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType)
@@ -247,9 +259,10 @@ GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType)
 	GM_MapData theMapLoc;
 	// 设置标题信息栏，摄像头类型，在存盘是才转换成UTF8...
 	CString strTitle, strID, strType, strStreamProp;
+	string strDefName = this->GetDefaultCameraName();
 	strID.Format("%d", nCameraID);
 	theMapLoc["ID"] = strID;
-	strTitle.Format("%s - %d", DEF_CAMERA_NAME, nCameraID);
+	strTitle.Format("%s - %d", strDefName.c_str(), nCameraID);
 	theMapLoc["Name"] = strTitle.GetString();
 	strType.Format("%d", inType);
 	theMapLoc["CameraType"] = strType;
