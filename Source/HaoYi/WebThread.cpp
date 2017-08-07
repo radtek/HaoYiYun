@@ -179,10 +179,9 @@ BOOL CWebThread::RegisterHaoYi()
 	string	strUTF8Web = CUtilTool::ANSI_UTF8(m_strWebName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s&node_name=%s", 
-					strMacAddr, strIPAddr, theConfig.GetMaxCamera(),
-					szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str(),
-					m_nWebType,  theConfig.GetWebAddr().c_str(), szWebName);
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s&node_name=%s&os_name=%s", 
+					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS, _T(SZ_VERSION_NAME), m_strWebTag.c_str(),
+					m_nWebType,  theConfig.GetWebAddr().c_str(), szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
 	// 调用Curl接口，汇报采集端信息...
@@ -237,8 +236,8 @@ BOOL CWebThread::RegisterGather()
 	string  strDNSName = CUtilTool::GetServerDNSName();
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s", 
-					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS);
+	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&os_name=%s", 
+					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS, CUtilTool::GetServerOS());
 	strUrl.Format("http://%s:%d/wxapi.php/Gather/index", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;

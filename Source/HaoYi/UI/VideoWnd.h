@@ -66,10 +66,12 @@ public:
 	CCamera		*	GetCamera()								{ return m_lpCamera; }
 	int				GetCameraID()							{ return m_nWndIndex; }
 
-	CString		&	GetTitleText()							{ return m_strTitle; }
+	CString		&	GetWebTitleText()						{ return m_strWebTitle; }
+	void			SetWebTitleText(CString & szTitle)		{ m_strWebTitle = szTitle; }
 	CFont		*	GetTitleFont()							{ return m_lpTitleFont; }
 	void			SetTitleFont(CFont * inFont)			{ m_lpTitleFont = inFont; }
-	void			SetTitleText(CString & szTitle);
+
+	void			SetDispTitleText(CString & inTitle);
 
 	void			ReleaseFocus();
 	void			OnFixToFlyState();
@@ -122,7 +124,8 @@ private:
 	CCamera		 *  m_lpCamera;
 	CWnd		 *	m_lpParent;
 	CFont		 *	m_lpTitleFont;
-	CString			m_strTitle;
+	CString			m_strWebTitle;		// 跟网站同步的名称 => camera_name
+	CString			m_strDispTitle;		// 本地显示名称 => camera_id + camera_name
 	BOOL			m_bDrawRec;
 	BOOL			m_bDrawLive;
 

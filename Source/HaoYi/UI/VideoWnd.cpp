@@ -390,7 +390,7 @@ BOOL CVideoWnd::OnEraseBkgnd(CDC* pDC)
 	lpOld = pDC->SelectObject(m_lpTitleFont);
 	pDC->SetTextColor(RGB(255, 255, 255));
 	pDC->SetBkMode(TRANSPARENT);
-	pDC->TextOut(10, 4, m_strTitle);
+	pDC->TextOut(10, 4, m_strDispTitle);
 	pDC->SelectObject(lpOld);
 
 	// 其它区域被 渲染窗口 占据，不用绘制...
@@ -739,9 +739,16 @@ void CVideoWnd::OnZoomCloseEvent()
 	this->OnFlyToFixState();
 }
 
-void CVideoWnd::SetTitleText(CString & szTitle)
+void CVideoWnd::SetDispTitleText(CString & inTitle)
 {
-	m_strTitle = szTitle;
+	m_strWebTitle  = inTitle;
+	m_strDispTitle = inTitle;
+	if( m_lpCamera != NULL ) {
+		int nDBCameraID = m_lpCamera->GetDBCameraID();
+		if( nDBCameraID > 0 ) {
+			m_strDispTitle.Format("通道%d - %s", nDBCameraID, inTitle);
+		}
+	}
 	(this->m_hWnd != NULL) ? this->Invalidate() : NULL;
 }
 

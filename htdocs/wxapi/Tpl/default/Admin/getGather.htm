@@ -1,4 +1,8 @@
 
+<style>
+.layui-form-item { margin-bottom: 5px; }
+</style>
+
 <div class="layui-field-box" style="margin-top: 10px;">
   <form class="layui-form layui-form-pane" action="">
     <eq name='my_web_type' value='0'>
@@ -29,6 +33,14 @@
       </div>
     </div>
     <div class="layui-form-item">
+      <label class="layui-form-label">操作系统</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.os_name}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
       <label class="layui-form-label">MAC地址</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
@@ -45,7 +57,7 @@
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label" title="该采集端支持的最大摄像头数">摄像头数</label>
+      <label class="layui-form-label" title="该采集端能够支持的通道数">最大通道</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
         {{$my_gather.max_camera}}

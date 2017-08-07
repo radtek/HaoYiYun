@@ -120,9 +120,9 @@ function doTrClick(inLiveID, inGatherID,objTr) {
                   layer.closeAll('page');
                 });
               },
-              error: function(e) {
+              error: function(XMLHttpRequest, textStatus, errorThrown) {
                 layer.closeAll('loading');
-                layer.alert(e, {icon: 2});
+                layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
               }
             });
             // 否则，form会自动跳转...
@@ -135,9 +135,9 @@ function doTrClick(inLiveID, inGatherID,objTr) {
         }
       });
     },
-    error: function(e) {
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
       layer.closeAll('loading');
-      layer.alert(e, {icon: 2});
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
     }
   });
 }
@@ -174,9 +174,9 @@ layui.use(['element','laypage','layer','form'], function(){
           //$('tr').click(function(){
           //alert(this);//});
         },
-        error: function(e) {
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
           layer.closeAll('loading');
-          layer.alert(e, {icon: 2});
+          layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
         }
       });    
     }

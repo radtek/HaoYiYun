@@ -54,7 +54,7 @@ function doUserInfo() {
     fixed: true,
     shadeClose: true,
     area: ['450px', '450px'],
-    content: "{{:__APP__}}/Home/userInfo/",
+    content: "{{:__APP__}}/{{$my_web_action}}/userInfo/",
     title: "<i class='fa fa-user'>&nbsp;&nbsp;</i>已登录用户信息"
   });
 }
@@ -74,12 +74,12 @@ function doLogout() {
   $.ajax({
     type: "get",
     async: true,
-    url: "{{:__APP__}}/Home/logout",
+    url: "{{:__APP__}}/{{$my_web_action}}/logout",
     success: function(ajaxData) {
       $('#menuLogin').html(ajaxData);
     },
-    error: function(e) {
-      layer.alert(e, {icon: 2});
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
     }
   });
 }
@@ -93,12 +93,12 @@ function doLogin() {
     title: false,
     shadeClose: true,
     area: ['450px', '450px'],
-    content: "{{:__APP__}}/Home/login/"
+    content: "{{:__APP__}}/{{$my_web_action}}/login/"
   });
 }
 // cookie有效时iframe内部访问...
 function doReload() {
-  location.href = "{{:__APP__}}/Home/index";
+  location.href = "{{:__APP__}}/{{$my_web_action}}/index";
 }
 // 加载layui的layer模块...
 layui.use(['layer']);

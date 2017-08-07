@@ -24,6 +24,7 @@ public:
 	DWORD		GetHKErrCode() { return m_dwHKErrCode; }
 	STREAM_PROP	GetStreamProp() { return m_nStreamProp; }
 
+	int			GetDBCameraID();
 	int			GetRecvPullKbps();
 	int			GetSendPushKbps();
 	LPCTSTR		GetStreamPushUrl();

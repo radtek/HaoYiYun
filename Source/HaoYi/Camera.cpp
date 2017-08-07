@@ -226,11 +226,7 @@ void CCamera::doWebStatCamera(int nStatus)
 		return;
 	ASSERT( lpMidView != NULL );
 	// 通过本地编号获取数据库编号...
-	GM_MapData theMapLoc;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	string & strDBCameraID = theMapLoc["DBCameraID"];
-	int nDBCameraID = atoi(strDBCameraID.c_str());
+	int nDBCameraID = this->GetDBCameraID();
 	lpMidView->doWebStatCamera(nDBCameraID, nStatus);
 }
 //
@@ -800,6 +796,20 @@ GM_Error CCamera::ForUDPData(GM_MapData & inNetData)
 	return GM_NoErr;
 }
 //
+// 得到数据库里的摄像头编号...
+int	CCamera::GetDBCameraID()
+{
+	if( m_nCameraID <= 0 )
+		return -1;
+	GM_MapData theMapLoc;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(m_nCameraID, theMapLoc);
+	if( theMapLoc.find("DBCameraID") == theMapLoc.end() )
+		return -1;
+	string & strDBCameraID = theMapLoc["DBCameraID"];
+	return atoi(strDBCameraID.c_str());
+}
+//
 // 更新窗口标题名称...
 void CCamera::UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle)
 {
@@ -810,7 +820,7 @@ void CCamera::UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle)
 	// 设置状态信息供右侧窗口使用，然后更新窗口标题信息...
 	m_strLogStatus.Format("%s - %s", (this->IsLogin() ? "已登录" : "未登录"), strTitle);
 	m_lpWndParent->GetRenderWnd()->SetRenderText(m_strLogStatus);
-	m_lpWndParent->SetTitleText(strTitle);
+	m_lpWndParent->SetDispTitleText(strTitle);
 }
 //
 // 停止上传，删除上传线程 => 录像线程不能删...

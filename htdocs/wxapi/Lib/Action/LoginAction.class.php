@@ -15,7 +15,7 @@ class LoginAction extends Action
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_webName = (($this->m_webType > 0) ? "云监控" : "云录播");
     // 直接给模板变量赋值...
-    $this->assign('my_title', $this->m_webTitle . " - 微信登录");
+    $this->assign('my_login_title', $this->m_webTitle . " - 微信登录");
     $this->assign('my_web_name', $this->m_webName);
   }
   //

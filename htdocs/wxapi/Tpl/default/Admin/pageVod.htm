@@ -6,7 +6,7 @@
   <td><i class="fa fa-film fa-normal">&nbsp;</i>{{$vo.subject_name}}</td>
   <td>{{$vo.teacher_name}}</td>
   <else/>
-  <td>{{$vo.camera_name}} - live{{$vo.camera_id}}</td>
+  <td>通道{{$vo.camera_id}} - {{$vo.camera_name}}</td>
   </eq>
   <td align="right">{{$vo.disptime}}</td>
   <td align="right">{{$vo.clicks}}&nbsp;次</td>

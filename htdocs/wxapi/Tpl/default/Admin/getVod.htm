@@ -47,7 +47,7 @@
       <div class="layui-input-block">
         <select name="myCamera" lay-verify="required" lay-search="">
           <volist name="my_list_camera" id="itemCamera">
-          <option value="{{$itemCamera.camera_id}}">{{$itemCamera.camera_name}} - live{{$itemCamera.camera_id}}</option>
+          <option value="{{$itemCamera.camera_id}}">通道{{$itemCamera.camera_id}} - {{$itemCamera.camera_name}}</option>
           </volist>
         </select>
       </div>

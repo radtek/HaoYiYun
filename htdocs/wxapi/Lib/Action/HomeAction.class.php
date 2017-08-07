@@ -8,27 +8,30 @@ class HomeAction extends Action
 {
   public function _initialize()
   {
+    // 获取系统配置，根据配置设置相关变量...
+    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
+    $this->m_webType = $dbSys['web_type'];
+    $this->m_webTitle = $dbSys['web_title'];
+    $this->m_sysSite = $dbSys['sys_site'];
     // 创建一个新的移动检测对象...
     $this->m_detect = new Mobile_Detect();
     //////////////////////////////////////////////
     // 移动端访问了电脑端页面，直接对页面进行跳转...
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
-      header("location:".__APP__.'/Mobile/index');
+      $strMobile = (($this->m_webType > 0) ? '/MobileMonitor/index' : '/MobileRecord/index');
+      header("location:" . __APP__ . $strMobile);
     }
-    // 获取系统配置，根据配置设置相关变量...
-    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
-    $this->m_webType = $dbSys['web_type'];
-    $this->m_webTitle = $dbSys['web_title'];
-    $this->m_sysSite = $dbSys['sys_site'];
+    // 确定是PC端访问，如果是监控模式，再次分发...
     if( $this->m_webType > 0 ) {
-      $this->m_webLogo = "monitor";
-      $this->m_webName = "云监控";
-    } else {
-      $this->m_webLogo = "default";
-      $this->m_webName = "云录播";
+      header("location:" . __APP__ . '/Monitor/index');
     }
+    // 如果是录播模式，设置常量信息...
+    $this->m_webAction = "Home";
+    $this->m_webLogo = "default";
+    $this->m_webName = "云录播";
     // 直接给模板变量赋值...
+    $this->assign('my_web_action', $this->m_webAction);
     $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_web_name', $this->m_webName);
     $this->assign('my_sys_site', $this->m_sysSite);
@@ -89,14 +92,16 @@ class HomeAction extends Action
     // 如果是科目状态，需要进一步的判断...
     if( $activeType == NAV_ACTIVE_SUBJECT ) {
       // 遍历科目列表，设置下拉名称...
-      foreach($arrDrop as &$dbItem) {
+      $bFindActive = false;
+      foreach($arrDrop as $key => &$dbItem) {
         if( $dbItem['subject_id'] == $my_nav['active_id'] ) {
           $my_nav['subject_title'] = $dbItem['subject_name'];
+          $bFindActive = ((($key + 1) > NAV_ITEM_COUNT) ? true : false);
           break;
         }
       }
       // 如果是下拉状态，设置下拉名称...
-      if( isset($_GET['more']) ) {
+      if( isset($_GET['more']) || $bFindActive ) {
         $my_nav['type'] = NAV_ACTIVE_MORE;
         $my_nav['drop_more'] = $my_nav['subject_title'];
       }
@@ -127,7 +132,6 @@ class HomeAction extends Action
       $arrRec[$theName]['id'] = $dbItem['subject_id'];
       $arrRec[$theName]['data'] = D('RecordView')->where($map)->limit(8)->order('record_id DESC')->select();
     }
-    //print_r($arrRec); exit;
     // 计算右侧，最近更新，前10条...
     $arrNews = D('RecordView')->limit(10)->order('Record.created DESC')->select();
     $this->assign('my_news', $arrNews);
@@ -321,31 +325,44 @@ class HomeAction extends Action
     $this->assign('my_title', $this->m_webTitle . ' - 直播');
     $this->assign('my_nav', $my_nav);
 
-    // 2017.06.14 - by jackey => 直接从数据库中读取通道状态，避免从采集端读取造成的阻塞...
+    // 得到每页通道数，总记录数，计算总页数...
+    $pagePer = 16; //C('PAGE_PER');
+    $totalNum = D('camera')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 设置最大页数，设置模板参数...
+    $onlineNum = D('camera')->where('status > 0')->count();
+    $this->assign('my_online_num', $onlineNum);
+    $this->assign('my_total_num', $totalNum);
+    $this->assign('max_page', $max_page);
+    // 设置模板参数...
+    $this->display('live');    
+    
+    /*// 2017.06.14 - by jackey => 直接从数据库中读取通道状态，避免从采集端读取造成的阻塞...
     $arrSchool = D('school')->order('school_id ASC')->select();
     foreach($arrSchool as &$dbSchool) {
       $map['school_id'] = $dbSchool['school_id'];
       $dbSchool['data'] = D('LiveView')->where($map)->order('camera_id ASC')->select();
     }
-    
-    /*// 查找以学校为分类的摄像头列表...
-    $arrGather = array();
-    $arrSchool = D('school')->order('school_id ASC')->select();
-    foreach($arrSchool as &$dbSchool) {
-      $map['school_id'] = $dbSchool['school_id'];
-      $dbSchool['data'] = D('LiveView')->where($map)->order('camera_id ASC')->select();
-      $arrTemp = D('gather')->where($map)->field('gather_id,school_id,mac_addr')->select();
-      // 只有当数组有效时，才进行合并...
-      if( count($arrTemp) > 0 ) {
-        $arrGather = array_merge($arrTemp, $arrGather);
-      }
-    }
-    // 得到直播摄像头的状态信息...
-    $this->getCameraStatusFromTransmit($arrGather, $arrSchool);*/
-    
     // 设置模板参数...
     $this->assign('my_list', $arrSchool);
-    $this->display('live');
+    $this->display('live');*/
+  }
+  //
+  // 实时页面流加载...
+  public function pageLive()
+  {
+    // 准备需要的分页参数...
+    $pagePer = 16; //C('PAGE_PER'); // 每页显示的通道数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 读取通道列表 => 在线优先排序
+    $arrCamera = D('LiveView')->limit($pageLimit)->order('status DESC, updated DESC')->select();
+    // 设置模板参数...
+    $this->assign('my_cur_page', $pageCur);
+    $this->assign('my_list', $arrCamera);
+    $this->display('pageLive');
   }
   /**
   +----------------------------------------------------------
@@ -354,10 +371,10 @@ class HomeAction extends Action
   */
   public function play()
   {
-    // 设定能够显示的播放记录条数...
-    $nPageSize = 10;
     // 判断获取传递过来的参数信息...
     if( isset($_GET['record_id']) && isset($_GET['subject_id']) ) {
+      // 设定能够显示的播放记录条数...
+      $nPageSize = 10;
       // 点播模式 => 播放录像文件...
       $record_id = $_GET['record_id'];
       $subject_id = $_GET['subject_id'];
@@ -382,22 +399,37 @@ class HomeAction extends Action
       $my_base['subject_title'] = $my_nav['subject_title'];
       $my_base['play_title'] = sprintf("%s %s %s %s %s %s", $curPlay['grade_type'], $curPlay['grade_name'], $curPlay['camera_name'], $curPlay['teacher_name'], $curPlay['title_name'], $curPlay['created']);
       // 设置点播模板参数...
+      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+      $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+      $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
       $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrVod);
+    } else {
+      // 直播模式 => 播放直播列表...
+      $camera_id = $_GET['camera_id'];
+      // 获取直播播放页导航数据...
+      $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
+      $map['camera_id'] = $camera_id;
+      $dbLive = D('LiveView')->where($map)->find();
+      $dbLive['image'] = (($dbLive['status'] > 0) ? "live-on.png" : "live-off.png");
+      unset($map); $arrList[0] = $dbLive;
+      // 开始设置模版参数信息...
+      $my_base['stream_prop'] = $dbLive['stream_prop'];
+      $my_base['play_title'] = sprintf("%s - %s %s %s", $dbLive['school_name'], $dbLive['grade_type'], $dbLive['grade_name'], $dbLive['camera_name']);
+      $this->assign('my_title', $this->m_webTitle . ' - 直播播放');
+      $this->assign('my_base', $my_base);
+      $this->assign('my_play', $arrList);
     }
     // 设置其它模板参数...
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
-    $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
     $this->assign('my_nav', $my_nav);
     $this->display('play');
   }
   /**
   +----------------------------------------------------------
-  * 直播播放页面...
+  * 直播播放页面 => 已经合并到了Play方法当中...
   +----------------------------------------------------------
   */
-  public function camera()
+  /*public function camera()
   {
     // 获取播放页导航数据...
     $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
@@ -418,7 +450,7 @@ class HomeAction extends Action
     $this->assign('my_title', $this->m_webTitle . ' - 直播播放');
     $this->assign('my_nav', $my_nav);
     $this->display('camera');
-  }
+  }*/
   /**
   +----------------------------------------------------------
   * 显示页面 => vod | live | width | height
@@ -429,25 +461,26 @@ class HomeAction extends Action
     // 根据type类型获取url地址...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       // 获取点播记录信息...
+      $map['record_id'] = $_GET['record_id'];
+      $dbVod = D('record')->where($map)->field('file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      $dbVod = D('record')->where('record_id='.$_GET['id'])->field('file_fdfs,clicks')->find();
       $dbShow['url'] = sprintf("http://%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = intval($dbVod['clicks']) + 1;
-      $dbSave['record_id'] = $_GET['id'];
+      $dbSave['record_id'] = $_GET['record_id'];
       D('record')->save($dbSave);
     } else if( strcasecmp($_GET['type'], "live") == 0 ) {
-      // 中转服务器需要的参数...
-      $dbParam['mac_addr'] = $_GET['mac_addr'];
-      $dbParam['rtmp_live'] = $_GET['camera_id'];
       // 首先，判断通道是否处于直播状态...
       $map['camera_id'] = $_GET['camera_id'];
-      $dbCamera = D('camera')->where($map)->field('camera_id,clicks,status')->find();
+      $dbCamera = D('LiveView')->where($map)->field('camera_id,clicks,status,gather_id,mac_addr')->find();
       if( $dbCamera['status'] <= 0 ) {
         $this->dispError('当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。');
         return;
       }
+      // 中转服务器需要的参数...
+      $dbParam['mac_addr'] = $dbCamera['mac_addr'];
+      $dbParam['rtmp_live'] = $dbCamera['camera_id'];
       // 获取直播链接地址...
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...

@@ -48,6 +48,7 @@ class GatherAction extends Action
       $dbNode = D('node')->where($map)->find();
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
+        $dbNode['os_name'] = $arrData['os_name'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
@@ -56,6 +57,7 @@ class GatherAction extends Action
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
       } else {
+        $dbNode['os_name'] = $arrData['os_name'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];

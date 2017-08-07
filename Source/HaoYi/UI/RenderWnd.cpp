@@ -64,7 +64,7 @@ int CRenderWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	ASSERT( GetParent() != NULL );
 	m_lpParent		= (CVideoWnd *)GetParent();
 	m_lpTextFont	= m_lpParent->GetTitleFont();
-	m_szTxt.Format("Î´µÇÂ¼ - %s", m_lpParent->GetTitleText());
+	m_szTxt.Format("Î´µÇÂ¼ - %s", m_lpParent->GetWebTitleText());
 	m_strStreamStatus = "Î´Á¬½Ó...";
 
 	this->SetTimer(kFlowTimerID, 1000, NULL);

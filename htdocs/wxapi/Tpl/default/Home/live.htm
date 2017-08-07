@@ -3,51 +3,65 @@
 
 <include file = "Common:home_nav" />
 
+<style>
+.tline {
+  padding-bottom: 7px;
+  border-bottom: 1px solid #e67e22;
+}
+</style>
+
 <section class="content-wrap">
   <div class="container">
     <div class="row">
       <main class="col-md-12">
-        <volist name="my_list" id="vo">
         <article class="post" style="padding:20px 0px 5px 20px;">
-          <h4 class="title">{{$vo.name}}</h4>
-          <ul class="thumb_view">
-            <volist name="vo.data" id="item">
-            <li class="live">
-              <a href="{{:__APP__}}/Home/camera/camera_id/{{$item.camera_id}}/status_id/{{$item.status}}" class="thumb">
-                <span class="p-time">
-                  <span <if condition="$item.status gt 0">class="ibg online"<else/>class="ibg offline"</if> ></span>
-                  <span class="itg"><switch name="item.status"><case value="0">离线中</case><case value="1">直播中</case><case value="2">录像中</case><default/>离线中</switch></span>
-                </span>
-                <img class="lazy" <if condition="$item.status gt 0">data-original="/wxapi/public/images/live-on.png"<else/>data-original="/wxapi/public/images/live-off.png"</if> ></img>
-              </a>
-              <div class="thumb_title"><a href="{{:__APP__}}/Home/camera/camera_id/{{$item.camera_id}}/school_id/{{$item.school_id}}">{{$item.grade_type}}&nbsp;&nbsp;{{$item.grade_name}}&nbsp;&nbsp;{{$item.camera_name}}</a></div>
-              <div class="thumb_date">{{$item.school_addr}}</div>
-            </li>
-            </volist>
-          </ul>
+          <h4 class="title">
+            <span class="tline">总共 {{$my_total_num}} 路通道，在线 {{$my_online_num}} 路</span>
+          </h4>
+          <div id="myView"></div>
         </article>
-        </volist>
       </main>
     </div>
   </div>
 </section>
 
 <script>
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
 
-// 处理头像无法加载的问题...
-/*function doErrHead() {
-  var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/blank.gif"; 
-  img.onerror = null; // 控制不要一直跳动
-}*/
+// 处理 layui 过程...
+layui.use(['flow','layer'], function(){
+  var max_page = {{$max_page}};
+  var flow = layui.flow;
+  // 流加载过程，不用弹等待框...
+  flow.load({
+    elem: '#myView',
+    isLazyimg: false,
+    done: function(page, next){
+      // 设置IE8兼容性，加载分页数据...
+      $.ajaxSetup({ cache:false });
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Home/pageLive/p/"+page,
+        success: function(ajaxData) {
+          next(ajaxData, page < max_page);
+          // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
+          // <article>不是标准html标签，必须在外面增加一层<div>...
+          // 分页单独懒加载，否则，每次都要全部懒加载...
+          $("#page_"+page+" img.lazy").lazyload({
+            effect : "fadeIn"
+          });
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
+          layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+        }
+      });
+    }
+  });
+});
 
 $(document).ready( function () {
-  // 延时加载图片...
-  $(function() {
-    $("img.lazy").lazyload({
-      effect : "fadeIn"
-    });
-  });
   // 注册窗口的滚动条函数...
 	$(window).scroll(function() {
 		if( $(this).scrollTop() > 100 ) {

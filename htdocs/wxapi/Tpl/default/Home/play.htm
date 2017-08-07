@@ -8,9 +8,7 @@
 <link href="/wxapi/public/css/play.css" rel="stylesheet">
 
 <style>
-.cover {
-  background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png);
-}
+.vod-back { background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png); }
 </style>
 
 <section class="content-wrap">
@@ -19,7 +17,16 @@
       <article class="base">
         <div class="base_info">
           <h1 class="base_title">
+            <notempty name='my_base.subject_id'>
             <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
+            </notempty>
+            <notempty>
+              <switch name="my_base.stream_prop">
+                <case value="0"><i class="fa fa-camera" title="摄像头"></i></case>
+                <case value="1"><i class="fa fa-file-video-o" title="MP4文件"></i></case>
+                <case value="2"><i class="fa fa-arrow-circle-o-down" title="流转发"></i></case>
+              </switch>&nbsp;
+            </notempty>
             <span class="js_title">{{$my_base.play_title}}</span>
           </h1>
         </div>
@@ -29,12 +36,13 @@
       <article style="margin-bottom:20px;">
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/vod/id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
+          <notempty name='vo.record_id'>
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
-              <div class="cover">
+              <div class="cover vod-back">
                 <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
                 <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
               </div>
@@ -42,6 +50,36 @@
               <div class="status"><span>{{$vo.clicks}}次播放</span></div>
             </div>
           </a>
+          <else/>
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="/wxapi/public/images/live-640.png">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover">
+                <img src="/wxapi/public/images/{{$vo.image}}" onerror="doErrHead();">
+              </div>
+              <div class="headline">
+                {{$vo.school_name}} - {{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}} - 
+                <switch name="vo.stream_prop">
+                  <case value="0">摄像头</case>
+                  <case value="1">MP4文件</case>
+                  <case value="2">流转发</case>
+                </switch>
+              </div>
+              <div class="status">
+                <span>
+                <switch name="vo.stream_prop">
+                  <case value="0"><i class="fa fa-camera"></i></case>
+                  <case value="1"><i class="fa fa-file-video-o"></i></case>
+                  <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
+                </switch>
+                实时直播</span>
+                <span style="margin-left: 10px"><i class="fa fa-play-circle-o"></i>&nbsp;{{$vo.clicks}}&nbsp;次</span>
+              </div>
+            </div>
+          </a>
+          </notempty>
           </volist>
         </div>
       </article>

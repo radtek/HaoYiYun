@@ -341,7 +341,7 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 	ASSERT( m_BitArray != NULL && nCameraID > 0 );
 	CVideoWnd * lpVideo = new CVideoWnd(m_BitArray, nVideoWndID);
 	lpVideo->SetTitleFont(&m_VideoFont);
-	lpVideo->SetTitleText(strTitle);
+	lpVideo->SetWebTitleText(strTitle);
 	// 创建窗口并保存到列表当中...
 	lpVideo->Create(WS_CHILD | WS_VISIBLE, CRect(0, 0, 0, 0), this);
 	ASSERT( lpVideo->m_hWnd != NULL );
@@ -355,6 +355,8 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 	}
 	// 根据配置的数据，创建摄像头...
 	lpVideo->BuildCamera(inXmlData);
+	// 2017.08.06 - by jackey => 对象创建完毕，再设置窗口标题...
+	lpVideo->SetDispTitleText(strTitle);
 	// 需要通知父窗口有新的通道被创建了...
 	ASSERT( m_lpParentDlg != NULL );
 	m_lpParentDlg->OnCreateCamera(nCameraID, strTitle);

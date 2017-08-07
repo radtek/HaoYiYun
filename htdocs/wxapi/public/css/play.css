@@ -114,7 +114,7 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   margin-right: 12px;
   zoom: 1;
   vertical-align: middle;
-  height: 30px;
+  /*height: 30px;*/
   line-height: 36px;
   max-width: 610px;
   overflow: hidden;

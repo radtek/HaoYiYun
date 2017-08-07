@@ -1,0 +1,28 @@
+
+<ul class="thumb_view" id="page_{{$my_cur_page}}">
+  <volist name="my_list" id="item">
+  <li class="live">
+    <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}" class="thumb" title="通道{{$item.camera_id}}">
+      <span class="p-time">
+        <span <if condition="$item.status gt 0">class="ibg online"<else/>class="ibg offline"</if> ></span>
+        <span class="itg"><switch name="item.status"><case value="0">离线中</case><case value="1">直播中</case><case value="2">录像中</case><default/>离线中</switch></span>
+      </span>
+      <img class="lazy" <if condition="$item.status gt 0">data-original="/wxapi/public/images/live-on.png"<else/>data-original="/wxapi/public/images/live-off.png"</if> ></img>
+    </a>
+    <div class="thumb_title">
+      <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}" title="通道{{$item.camera_id}}">
+        <switch name="item.stream_prop">
+          <case value="0"><i class="fa fa-camera" title="摄像头"></i></case>
+          <case value="1"><i class="fa fa-file-video-o" title="MP4文件"></i></case>
+          <case value="2"><i class="fa fa-arrow-circle-o-down" title="流转发"></i></case>
+        </switch>
+        &nbsp;{{$item.grade_type}}&nbsp;&nbsp;{{$item.grade_name}}&nbsp;&nbsp;{{$item.camera_name}} - {{$item.school_name}}
+      </a>
+    </div>
+    <div class="thumb_date">
+      <span><i class="fa fa-clock-o"></i>&nbsp;{{$item.updated}}</span>
+      <span style="float: right;"><i class="fa fa-play-circle-o"></i>&nbsp;{{$item.clicks}}&nbsp;次</span>
+    </div>
+  </li>
+  </volist>
+</ul>
