@@ -15,8 +15,12 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-film">&nbsp;</i>点播管理</legend>
+          <legend><i class="fa fa-film">&nbsp;点播管理</i></legend>
         </fieldset>
+        <span class="layui-breadcrumb">
+          <a><cite>录像列表</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+        </span>
         <div class="layui-form" style="margin-top:10px;width:100%">
           <table class="layui-table">
             <colgroup>
@@ -55,7 +59,7 @@
           </table>
           <div style="display: inline-block;">
             <button class="layui-btn layui-btn-small btn-del" onclick="doDelVod();">
-              <i class="layui-icon">&#xe640;</i>&nbsp;删除选中
+              <i class="layui-icon">&#xe640;&nbsp;删除选中</i>
             </button>
             <div style="float:left;" id="myPage"></div>
           </div>
@@ -104,7 +108,7 @@ function doTrClick(inVodID, objTr) {
         fixed: true,
         shadeClose: false,
         area: ['500px', '550px'],
-        title: "<i class='fa fa-film'>&nbsp;&nbsp;</i>编辑 - 录像记录",
+        title: "<i class='fa fa-film'>&nbsp;&nbsp;编辑 - 录像记录</i>",
         content: ajaxData,
         success: function() {
           var form = layui.form();

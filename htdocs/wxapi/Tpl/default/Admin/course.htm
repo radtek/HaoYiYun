@@ -99,12 +99,12 @@
         <fieldset class="layui-elem-field layui-field-title">
           <legend>
             <eq name='my_nav_type' value='camera'>
-            <i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理 -&nbsp;
-            <i class="fa fa-video-camera">&nbsp;</i>摄像头 -&nbsp;
+            <i class="fa fa-cloud-upload">&nbsp;&nbsp;采集端管理 -&nbsp;</i>
+            <i class="fa fa-video-camera">&nbsp;摄像头 -&nbsp;</i>
             <else/>
-            <i class="fa fa-video-camera">&nbsp;</i>直播管理 -&nbsp;
+            <i class="fa fa-video-camera">&nbsp;直播管理 -&nbsp;</i>
             </eq>
-            <i class="fa fa-list-alt">&nbsp;</i>录像计划表
+            <i class="fa fa-list-alt">&nbsp;录像计划表</i>
             <eq name='my_web_type' value='0'>
              - {{$my_grade.grade_type}}&nbsp;{{$my_grade.grade_name}}&nbsp;{{$my_grade.camera_name}} - live{{$my_grade.camera_id}}
             <else/>
@@ -120,6 +120,7 @@
           <a href="{{:__APP__}}/Admin/live">直播列表</a>
           </eq>
           <a><cite>录像计划表</cite></a>
+          <a><cite>共 {{$my_total_num}} 个区间</cite></a>
         </span>
         <blockquote class="layui-elem-quote task-help">
          新建区间：鼠标点击“添加”按钮；同一天的区间不能重叠；<br>
@@ -131,16 +132,16 @@
 
         <div class="layui-btn-group">
           <button class="layui-btn layui-btn-small" onclick="doAddTask();">
-            <i class="layui-icon">&#xe654;</i>&nbsp;添 加
+            <i class="layui-icon">&#xe654;&nbsp;添 加</i>
           </button>
           <button class="layui-btn layui-btn-small" onclick="doModTask();">
-            <i class="layui-icon">&#xe642;</i>&nbsp;修 改
+            <i class="layui-icon">&#xe642;&nbsp;修 改</i>
           </button>
           <button class="layui-btn layui-btn-small" onclick="doDelTask();">
-            <i class="layui-icon">&#x1006;</i>&nbsp;删 除
+            <i class="layui-icon">&#x1006;&nbsp;删 除</i>
           </button>
           <button class="layui-btn layui-btn-small" onclick="doEmptyTask();">
-            <i class="layui-icon">&#xe640;</i>&nbsp;全部删除
+            <i class="layui-icon">&#xe640;&nbsp;全部删除</i>
           </button>
         </div>
         
@@ -159,7 +160,7 @@
         </div>
         <div style="margin-top: 10px;">
           <button class="layui-btn layui-btn-radius btn_save" onclick="doSaveTask();">
-            <i class="fa fa-floppy-o">&nbsp;&nbsp;</i>全部保存
+            <i class="fa fa-floppy-o">&nbsp;&nbsp;全部保存</i>
           </button>
         </div>
       </div>
@@ -293,12 +294,12 @@ function doFindFocusRange() {
 // 处理通用的应用过程...
 function doApplyTask($range) {
   var bEdit = false, inStart, inEnd, nSliderID;
-  var strTitle = "<i class='fa fa-clock-o'>&nbsp;&nbsp;</i>添加 - 录像任务";
+  var strTitle = "<i class='fa fa-clock-o'>&nbsp;&nbsp;添加 - 录像任务</i>";
   if( $range != null ) {
     var $bar = $range.parent();
     var range = $range.data("range");
     nSliderID = $bar.attr('id').split('_')[1];
-    strTitle = "<i class='fa fa-pencil-square-o'>&nbsp;&nbsp;</i>修改 - 录像任务";
+    strTitle = "<i class='fa fa-pencil-square-o'>&nbsp;&nbsp;修改 - 录像任务</i>";
     inStart = $bar.data("float-options").formatLabel(range.start);
     inEnd = $bar.data("float-options").formatLabel(range.end);
     inStart = ((inStart == "24:00:00") ? "23:59:59" : inStart);
@@ -475,7 +476,7 @@ function doCopyTask(nWeek) {
         fixed: true,
         shadeClose: false,
         content: ajaxData,
-        title: "<i class='fa fa-clone'>&nbsp;&nbsp;</i>复制到...",
+        title: "<i class='fa fa-clone'>&nbsp;&nbsp;复制到...</i>",
         area: ['350px', '260px'],
         success: function() {
           var form = layui.form();

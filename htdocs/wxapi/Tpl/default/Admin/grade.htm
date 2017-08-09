@@ -28,8 +28,12 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-file-text-o">&nbsp;&nbsp;</i>年级管理</legend>
+          <legend><i class="fa fa-file-text-o">&nbsp;&nbsp;年级管理</i></legend>
         </fieldset>
+        <span class="layui-breadcrumb">
+          <a><cite>年级列表</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+        </span>
         <div style="width:100%">
           <table class="layui-table">
             <colgroup>
@@ -53,7 +57,7 @@
           <div style="float:left;" id="myPage"></div>
           <div style="float:right;margin:5px 80px 0px 0px;">
             <button class="layui-btn" onclick="doAdd();">
-              <i class="layui-icon">&#xe61f;</i>&nbsp;添加
+              <i class="layui-icon">&#xe61f;&nbsp;添加</i>
             </button>
           </div>
         </div>

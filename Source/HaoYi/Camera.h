@@ -14,6 +14,7 @@ public:
 public:
 	string   &  GetDeviceSN() { return m_strDeviceSN; }
 	CString  &	GetLogStatus() { return m_strLogStatus; }
+	CVideoWnd * GetVideoWnd() { return m_lpWndParent; }
 public:
 	BOOL		IsLogin();		// 这个状态只能用于显示，不能用于状态判断...
 	BOOL		IsPlaying();	// 这个可以用于状态的精确判断...

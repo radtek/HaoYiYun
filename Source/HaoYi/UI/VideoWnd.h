@@ -134,6 +134,7 @@ private:
 	CRenderWnd	 *	m_lpRenderWnd;
 	WINDOWPLACEMENT	m_wPrevious;
 private:
+	friend class CRemoteSession;
 	friend class CRenderWnd;
 	friend class CMidView;
 };

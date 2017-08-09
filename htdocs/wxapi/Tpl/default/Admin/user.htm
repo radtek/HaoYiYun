@@ -7,8 +7,12 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-user-circle">&nbsp;</i>用户管理</legend>
+          <legend><i class="fa fa-user-circle">&nbsp;用户管理</i></legend>
         </fieldset>
+        <span class="layui-breadcrumb">
+          <a><cite>用户列表</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+        </span>
         <div style="margin-top:10px;width:100%">
           <table class="layui-table">
             <colgroup>
@@ -71,7 +75,7 @@ function doTrClick(inUserID, objTr) {
     shadeClose: false,
     area: ['450px', '380px'],
     content:  "{{:__APP__}}/Admin/getUser/user_id/"+inUserID,
-    title: "<i class='fa fa-film'>&nbsp;&nbsp;</i>编辑 - 用户记录"
+    title: "<i class='fa fa-film'>&nbsp;&nbsp;编辑 - 用户记录</i>"
   });
 }
 

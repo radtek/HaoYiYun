@@ -61,6 +61,8 @@ define('kCmd_Play_Login',            11);
 define('kCmd_PHP_Get_All_Client',    12);
 define('kCmd_PHP_Get_Live_Server',   13);
 define('kCmd_Live_Quit',             14);
+define('kCmd_PHP_Start_Camera',      15);
+define('kCmd_PHP_Stop_Camera',       16);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...

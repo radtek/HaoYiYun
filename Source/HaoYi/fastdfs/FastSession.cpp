@@ -4,6 +4,7 @@
 #include "FastThread.h"
 #include "FastSession.h"
 #include "StringParser.h"
+#include "VideoWnd.h"
 #include "..\HaoYiView.h"
 #include "..\XmlConfig.h"
 #include "..\Camera.h"
@@ -823,14 +824,16 @@ GM_Error CRemoteSession::ForRead()
 		GM_Error theErr = GM_NoErr;
 		switch( lpCmdHeader->m_cmd )
 		{
-		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Play_Login:			  theErr = this->doCmdPlayLogin(m_strRecv); break;
-		case kCmd_PHP_Get_Course_Record:  theErr = this->doPHPGetCourseRecord(m_strRecv); break;
-		//case kCmd_PHP_Get_Camera_Status:  theErr = this->doPHPGetCameraStatus(m_strRecv); break;
+		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Start_Camera:		  theErr = this->doPHPCameraOperate(lpDataPtr, lpCmdHeader->m_pkg_len, true); break;
+		case kCmd_PHP_Stop_Camera:		  theErr = this->doPHPCameraOperate(lpDataPtr, lpCmdHeader->m_pkg_len, false); break;
 		case kCmd_PHP_Set_Camera_Name:    theErr = this->doPHPSetCameraName(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Set_Course_Mod:     theErr = this->doPHPSetCourseOpt(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Get_Course_Record:  theErr = this->doPHPGetCourseRecord(m_strRecv); break;
 		//case kCmd_PHP_Set_Course_Add:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kAddCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		//case kCmd_PHP_Set_Course_Del:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kDelCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		//case kCmd_PHP_Get_Camera_Status:  theErr = this->doPHPGetCameraStatus(m_strRecv); break;
 		}
 		// 删除已经处理完毕的数据 => Header + pkg_len...
 		m_strRecv.erase(0, lpCmdHeader->m_pkg_len + sizeof(Cmd_Header));
@@ -842,6 +845,54 @@ GM_Error CRemoteSession::ForRead()
 		// 如果还有数据，则继续解析命令...
 		ASSERT(theErr == GM_NoErr);
 	}
+	return GM_NoErr;
+}
+//
+// 2017.08.08 - by jackey => 新增中转命令...
+// 处理PHP转发的开始或停止通道命令...
+GM_Error CRemoteSession::doPHPCameraOperate(LPCTSTR lpData, int nSize, BOOL bIsStart)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strUTF8Data, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 判断获取数据的有效性...
+	if( !value.isMember("camera_id") ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取通道的数据库编号...
+	int nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
+	// 开始查找对应的摄像头本地编号...
+	int nLocalID = -1;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
+	if(  nLocalID <= 0  ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 根据本地编号获取摄像头对象...
+	CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+	if( lpCamera == NULL || lpCamera->GetVideoWnd() == NULL ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 将当前通道设置成焦点通道...
+	lpCamera->GetVideoWnd()->doFocusAction();
+	// 向主视图发送开始或停止模拟点击命令...
+	int nCmdID = (bIsStart ? ID_LOGIN_DVR : ID_LOGOUT_DVR);
+	m_lpHaoYiView->PostMessage(WM_COMMAND, MAKEWPARAM(nCmdID, BN_CLICKED), NULL);
 	return GM_NoErr;
 }
 //

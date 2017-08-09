@@ -7,11 +7,12 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理 - <i class="fa fa-video-camera">&nbsp;</i>摄像头</legend>
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;采集端：{{$my_gather.ip_addr}} - {{$my_gather.name_pc}}</i></legend>
         </fieldset>
         <span class="layui-breadcrumb">
           <a href="{{:__APP__}}/Admin/gather">采集端</a>
           <a><cite>摄像头</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
         </span>
         <div style="margin-top:10px;width:100%">
           <table class="layui-table">
@@ -22,7 +23,7 @@
               <col width="80">
               <col width="80">
               <col width="100">
-              <col width="80">
+              <col width="100">
             </colgroup>
             <thead>
               <tr>
@@ -76,7 +77,7 @@ function doTrClick(inCameraID,inGatherID,objTr) {
         fixed: true,
         shadeClose: false,
         area: ['500px', '450px'],
-        title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 摄像头",
+        title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;编辑 - 摄像头</i>",
         content: ajaxData,
         success: function() {
           var form = layui.form();
@@ -140,6 +141,75 @@ function doTrClick(inCameraID,inGatherID,objTr) {
   });
 }
 //
+// 点击操作通道按钮 => 让服务器去判断和处理...
+function doCamera(inCameraID, objBtn)
+{
+  // 需要兼容IE8的访问...
+  stopPropagation(event);
+  var $ = layui.jquery;
+  var index = layer.load(2);
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/doCamera/camera_id/"+inCameraID,
+    success: function(ajaxData) {
+      layer.closeAll('loading');
+      // 解析服务器传递过来的json数据包...
+      var arrJson = $.parseJSON(ajaxData);
+      if( arrJson.err_code > 0 ) {
+        var strErr = ((arrJson.err_cmd==15) ? "启动通道失败" : "停止通道失败");
+        layer.msg(strErr + "<br>" + arrJson.err_msg, {anim: 6});
+        return;
+      }
+      // 转发命令成功，将按钮置灰...
+      $(objBtn).addClass('layui-btn-disabled');
+      // 等待2~3秒之后，查询通道状态...
+      setTimeout(function () {
+        doGetCameraStatus(inCameraID, objBtn, arrJson.err_cmd);
+      }, 2000);
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.closeAll('loading');
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
+}
+//
+// 超时时钟去获取通道状态...
+function doGetCameraStatus(inCameraID, objBtn, inCmd)
+{
+  var $ = layui.jquery;
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/getCameraStatus/camera_id/"+inCameraID,
+    success: function(ajaxData) {
+      var theBTN = $(objBtn);
+      var theTD = $(objBtn).parent();
+      theBTN.removeClass('layui-btn-disabled');
+      if( ajaxData > 0 ) {
+        theBTN.addClass('layui-btn-danger');
+        theBTN.html('<i class="fa fa-stop-circle-o">&nbsp;停止</i>');
+        theTD.siblings().eq(0).html('<i class="fa fa-tv fa-run">&nbsp;运行中</i>');
+        // 如果是停止命令又回到停止状态，说明停止失败...
+        if(inCmd == 16) { layer.msg("停止通道失败！", {anim: 6}); }
+      } else {
+        theBTN.removeClass('layui-btn-danger');
+        theBTN.html('<i class="fa fa-play-circle-o">&nbsp;启动</i>');
+        theTD.siblings().eq(0).html('<i class="fa fa-power-off fa-wait">&nbsp;等待中</i>');
+        // 如果是启动命令又回到启动状态，说明启动失败...
+        if( inCmd == 15 ) { layer.msg("启动通道失败！", {anim: 6}); }
+      }
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.closeAll('loading');
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
+}
+//
 // 配置录像课程表...
 function doCourse(inCameraID, inGatherID)
 {
@@ -150,7 +220,7 @@ function doCourse(inCameraID, inGatherID)
 //
 // 处理 layui 过程...
 layui.use(['element','laypage','layer','form'], function(){
-  var theGatherID = {{$my_gather_id}};
+  var theGatherID = {{$my_gather.gather_id}};
   var laypage = layui.laypage;
   var $ = layui.jquery;
   laypage({

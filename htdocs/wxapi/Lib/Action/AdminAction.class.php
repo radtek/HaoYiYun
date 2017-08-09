@@ -334,6 +334,7 @@ class AdminAction extends Action
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
 
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -384,6 +385,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -434,6 +436,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -521,6 +524,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -599,6 +603,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -719,12 +724,14 @@ class AdminAction extends Action
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
     $map['gather_id'] = $_GET['gather_id'];
+    $dbGather = D('gather')->where($map)->find();
     $totalNum = D('camera')->where($map)->count();
     $max_page = intval($totalNum / $pagePer);
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
-    $this->assign('my_gather_id', $_GET['gather_id']);
+    $this->assign('my_total_num', $totalNum);
+    $this->assign('my_gather', $dbGather);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -908,6 +915,53 @@ class AdminAction extends Action
     }
   }
   //
+  // 操作指定通道 => 启动或停止...
+  public function doCamera()
+  {
+    $camera_id = $_GET['camera_id'];
+    $map['camera_id'] = $camera_id;
+    $dbLive = D('LiveView')->where($map)->field('camera_id,status,mac_addr')->find();
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    // 准备命令需要的数据 => 当前是停止状态，则发起启动；是启动状态，则发起停止...
+    $theCmd = (($dbLive['status'] > 0) ? kCmd_PHP_Stop_Camera : kCmd_PHP_Start_Camera );
+    // 开始连接中转服务器...
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 链接中转服务器失败，直接返回...
+    if( !$transmit ) {
+      $arrData['err_code'] = true;
+      $arrData['err_cmd'] = $theCmd;
+      $arrData['err_msg'] = '无法连接中转服务器。';
+      echo json_encode($arrData);
+      return;
+    }
+    // 构造中转服务器需要的参数...
+    $dbParam['camera_id'] = $camera_id;
+    $dbParam['mac_addr'] = $dbLive['mac_addr'];
+    $saveJson = json_encode($dbParam);
+    $json_data = transmit_command(kClientPHP, $theCmd, $transmit, $saveJson);
+    transmit_disconnect_server($transmit);
+    // 获取的JSON数据有效，转成数组，直接返回...
+    $arrData = json_decode($json_data, true);
+    $arrData['err_cmd'] = $theCmd;
+    if( !$arrData ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '从中转服务器获取数据失败。';
+    } else {
+      // 通过错误码，获得错误信息...
+      $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    }
+    // 将数组再次转换成json返回...
+    echo json_encode($arrData);
+  }
+    //
+  // 读取通道的运行状态...
+  public function getCameraStatus()
+  {
+    $map['camera_id'] = $_GET['camera_id'];
+    $dbCamera = D('camera')->where($map)->field('camera_id,status')->find();
+    echo $dbCamera['status'];
+  }
+  //
   // 获取编辑时间对话框...
   public function getClock()
   {
@@ -978,6 +1032,7 @@ class AdminAction extends Action
     $arrCourse = D('course')->where($map)->select();
     $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
     // 设置需要的模板参数信息...
+    $this->assign('my_total_num', count($arrCourse));
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
@@ -1385,6 +1440,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -1450,6 +1506,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
@@ -1556,6 +1613,7 @@ class AdminAction extends Action
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }

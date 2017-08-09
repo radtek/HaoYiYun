@@ -7,8 +7,12 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;</i>采集端管理</legend>
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;采集端管理</i></legend>
         </fieldset>
+        <span class="layui-breadcrumb">
+          <a><cite>采集端列表</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+        </span>
         <div style="width:100%">
           <table class="layui-table">
             <colgroup>
@@ -73,7 +77,7 @@ function doModify(inGatherID, objTr)
         fixed: true,
         shadeClose: false,
         area: ['450px', '400px'],
-        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;</i>编辑 - 采集端",
+        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;编辑 - 采集端</i>",
         content: ajaxData,
         success: function() {
           var form = layui.form();
