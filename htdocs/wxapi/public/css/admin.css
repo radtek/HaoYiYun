@@ -57,9 +57,9 @@
 .layui-nav-item a cite {
   padding: 0 10px;
 }
-body .layui-layout-admin .site-demo {
+/*body .layui-layout-admin .site-demo {
   bottom: 64px;
-}
+}*/
 body .layui-layout-admin .footer-demo {
   height: auto;
   padding: 10px 0;

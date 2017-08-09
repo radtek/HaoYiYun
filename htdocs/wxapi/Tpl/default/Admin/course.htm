@@ -98,18 +98,13 @@
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
           <legend>
-            <eq name='my_nav_type' value='camera'>
-            <i class="fa fa-cloud-upload">&nbsp;&nbsp;采集端管理 -&nbsp;</i>
-            <i class="fa fa-video-camera">&nbsp;摄像头 -&nbsp;</i>
-            <else/>
-            <i class="fa fa-video-camera">&nbsp;直播管理 -&nbsp;</i>
-            </eq>
-            <i class="fa fa-list-alt">&nbsp;录像计划表</i>
+            <i class="fa fa-list-alt">&nbsp;录像计划表
             <eq name='my_web_type' value='0'>
              - {{$my_grade.grade_type}}&nbsp;{{$my_grade.grade_name}}&nbsp;{{$my_grade.camera_name}} - live{{$my_grade.camera_id}}
             <else/>
              - {{$my_grade.camera_name}} - live{{$my_grade.camera_id}}
             </eq>
+            </i>
           </legend>
         </fieldset>
         <span class="layui-breadcrumb">
