@@ -1,7 +1,7 @@
 
 #include "stdafx.h"
 #include "PushThread.h"
-
+#include "XmlConfig.h"
 #include "srs_librtmp.h"
 #include "BitWritter.h"
 #include "UtilTool.h"
@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "LibMP4.h"
 #include "ReadSPS.h"
+#include "md5.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -550,7 +551,9 @@ void CRtspThread::StartPushThread()
 	if( m_lpPushThread == NULL )
 		return;
 	ASSERT( m_lpPushThread != NULL );
-	// 如果是流转发模式，只设置流播放状态...
+	m_lpPushThread->SetStreamPlaying(true);
+
+	/*// 如果是流转发模式，只设置流播放状态...
 	if( !m_lpPushThread->IsCameraDevice() ) {
 		m_lpPushThread->SetStreamPlaying(true);
 		return;
@@ -559,7 +562,7 @@ void CRtspThread::StartPushThread()
 	ASSERT( m_lpPushThread->IsCameraDevice() );
 	ASSERT( m_strAACHeader.size() > 0 || m_strAVCHeader.size() > 0 );
 	// 直接启动rtmp推送线程，开始启动rtmp推送过程...
-	m_lpPushThread->Start();
+	m_lpPushThread->Start();*/
 }
 
 void CRtspThread::PushFrame(FMS_FRAME & inFrame)
@@ -766,7 +769,9 @@ void CRtmpThread::StartPushThread()
 	if( m_lpPushThread == NULL )
 		return;
 	ASSERT( m_lpPushThread != NULL );
-	// 如果是流转发模式，只设置流播放状态...
+	m_lpPushThread->SetStreamPlaying(true);
+
+	/*// 如果是流转发模式，只设置流播放状态...
 	if( !m_lpPushThread->IsCameraDevice() ) {
 		m_lpPushThread->SetStreamPlaying(true);
 		return;
@@ -775,7 +780,7 @@ void CRtmpThread::StartPushThread()
 	ASSERT( m_lpPushThread->IsCameraDevice() );
 	ASSERT( m_strAACHeader.size() > 0 || m_strAVCHeader.size() > 0 );
 	// 直接启动rtmp推送线程，开始启动rtmp推送过程...
-	m_lpPushThread->Start();
+	m_lpPushThread->Start();*/
 }
 
 int CRtmpThread::PushFrame(FMS_FRAME & inFrame)
@@ -901,19 +906,20 @@ void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
 }
 
-CPushThread::CPushThread(HWND hWndParent)
-  : m_hWndParent(hWndParent)
+CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
+  : m_hWndVideo(hWndVideo)
+  , m_lpCamera(lpCamera)
 {
-	ASSERT( m_hWndParent != NULL );
-	m_nStreamProp = kStreamDevice;
+	ASSERT( m_lpCamera != NULL );
+	ASSERT( m_hWndVideo != NULL );
 	m_bIsPublishing = false;
 	m_bStreamPlaying = false;
 	
 	m_nKeyFrame = 0;
+	m_nKeyMonitor = 0;
 	m_dwFirstSendTime = 0;
 
 	m_lpRtmpPush = NULL;
-	m_lpCamera = NULL;
 	m_lpMP4Thread = NULL;
 	m_lpRtspThread = NULL;
 	m_lpRtmpThread = NULL;
@@ -928,6 +934,7 @@ CPushThread::CPushThread(HWND hWndParent)
 	m_dwRecvTimeMS = 0;
 
 	m_lpRecMP4 = NULL;
+	m_dwRecCTime = 0;
 	m_dwWriteSize = 0;
 	m_dwWriteRecMS = 0;
 }
@@ -971,10 +978,12 @@ CPushThread::~CPushThread()
 }
 //
 // 处理摄像头设备的线程初始化...
-BOOL CPushThread::DeviceInitThread(CCamera * lpCamera, CString & strRtspUrl, string & strRtmpUrl)
+/*BOOL CPushThread::DeviceInitThread(CString & strRtspUrl, string & strRtmpUrl)
 {
+	if( m_lpCamera == NULL )
+		return false;
+	ASSERT( m_lpCamera != NULL );
 	// 保存传递过来的参数...
-	m_lpCamera = lpCamera;
 	m_strRtmpUrl = strRtmpUrl;
 	m_nStreamProp = m_lpCamera->GetStreamProp();
 	if( m_nStreamProp != kStreamDevice )
@@ -993,19 +1002,18 @@ BOOL CPushThread::DeviceInitThread(CCamera * lpCamera, CString & strRtspUrl, str
 	m_dwTimeOutMS = ::GetTickCount();
 
 	// 这里不能启动线程，等待环境准备妥当之后才能启动...
+	// 是由 rtsp 拉流线程来启动设备的推流线程...
 
 	return true;
-}
+}*/
 //
 // 处理流转发线程的初始化...
-BOOL CPushThread::StreamInitThread(CCamera * lpCamera, BOOL bFileMode, string & strStreamUrl, string & strStreamMP4)
+BOOL CPushThread::StreamInitThread(BOOL bFileMode, string & strStreamUrl, string & strStreamMP4)
 {
 	// 保存传递过来的参数...
-	m_lpCamera = lpCamera;
-	m_nStreamProp = m_lpCamera->GetStreamProp();
-	if( m_nStreamProp == kStreamDevice )
+	if( m_lpCamera == NULL )
 		return false;
-	ASSERT( m_nStreamProp != kStreamDevice );
+	ASSERT( m_lpCamera != NULL );
 	// 创建MP4线程或rtsp或rtmp线程...
 	if( bFileMode ) {
 		m_lpMP4Thread = new CMP4Thread();
@@ -1027,18 +1035,17 @@ BOOL CPushThread::StreamInitThread(CCamera * lpCamera, BOOL bFileMode, string & 
 }
 //
 // 启动流转发直播上传...
-BOOL CPushThread::StreamStartLivePush(CCamera * lpCamera, string & strRtmpUrl)
+BOOL CPushThread::StreamStartLivePush(string & strRtmpUrl)
 {
-	if( m_lpCamera != lpCamera )
+	if( m_lpCamera == NULL )
 		return false;
+	ASSERT( m_lpCamera != NULL );
 	// IE8会连续发送两遍播放命令，需要确保只启动一次...
 	if( m_lpRtmpPush != NULL )
 		return true;
 	// 保存需要的数据信息...
 	m_strRtmpUrl = strRtmpUrl;
 	ASSERT( strRtmpUrl.size() > 0 );
-	ASSERT( m_lpCamera == lpCamera );
-	ASSERT( m_nStreamProp != kStreamDevice );
 	// 创建rtmp上传对象...
 	m_lpRtmpPush = new LibRtmp(false, true, NULL, NULL);
 	ASSERT( m_lpRtmpPush != NULL );
@@ -1048,12 +1055,11 @@ BOOL CPushThread::StreamStartLivePush(CCamera * lpCamera, string & strRtmpUrl)
 }
 //
 // 停止流转发直播上传...
-BOOL CPushThread::StreamStopLivePush(CCamera * lpCamera)
+BOOL CPushThread::StreamStopLivePush()
 {
-	if( m_lpCamera != lpCamera )
+	if( m_lpCamera == NULL )
 		return false;
-	ASSERT( m_lpCamera == lpCamera );
-	ASSERT( m_nStreamProp != kStreamDevice );
+	ASSERT( m_lpCamera != NULL );
 	// 停止上传线程，复位发布状态标志...
 	this->StopAndWaitForThread();
 	this->SetStreamPublish(false);
@@ -1173,32 +1179,42 @@ BOOL CPushThread::MP4CreateAudioTrack()
 	return m_lpRecMP4->CreateAudioTrack(m_strUTF8MP4.c_str(), audio_sample_rate, strAES);
 }
 //
-// 开始流转发模式的录像...
-BOOL CPushThread::StreamBeginRecord(LPCTSTR lpszPathMP4)
+// 启动切片录像操作...
+BOOL CPushThread::BeginRecSlice()
 {
-	// 这里需要进行互斥保护...
-	OSMutexLocker theLock(&m_Mutex);
-	// 判断状态是否有效...
-	if( this->IsCameraDevice() || !this->IsStreamPlaying() )
+	if( m_lpCamera == NULL )
 		return false;
-	ASSERT( !this->IsCameraDevice() );
-	ASSERT( this->IsStreamPlaying() );
-	ASSERT( lpszPathMP4 != NULL );
-	// MP4路径必须是UTF-8的格式...
-	if( lpszPathMP4 != NULL && strlen(lpszPathMP4) > 0 ) {
-		m_strUTF8MP4 = CUtilTool::ANSI_UTF8(lpszPathMP4);
-	}
-	// 释放录像对象...
-	if( m_lpRecMP4 != NULL ) {
-		delete m_lpRecMP4;
-		m_lpRecMP4 = NULL;
-	}
-	// 复位记录变量...
-	m_dwWriteSize = 0;
+	ASSERT( m_lpCamera != NULL );
+	// 复位录像信息变量...
 	m_dwWriteRecMS = 0;
-	// 创建新的录像对象...
-	m_lpRecMP4 = new LibMP4();
-	ASSERT( m_lpRecMP4 != NULL );
+	m_dwWriteSize = 0;
+	// 获取唯一的文件名...
+	MD5	    md5;
+	string  strUniqid;
+	CString strTimeMicro;
+	ULARGE_INTEGER	llTimCountCur = {0};
+	int nCourseID = m_lpCamera->GetRecCourseID();
+	int nLocalCameraID = m_lpCamera->GetLocalCameraID();
+	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
+	strTimeMicro.Format("%I64d", llTimCountCur.QuadPart);
+	md5.update(strTimeMicro, strTimeMicro.GetLength());
+	strUniqid = md5.toString();
+	// 准备录像需要的信息...
+	GM_MapData theMapLoc;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(nLocalCameraID, theMapLoc);
+	CString  strMP4Path;
+	string & strSavePath = theConfig.GetSavePath();
+	string & strDBCameraID = theMapLoc["DBCameraID"];
+	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
+	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
+	// 2017.08.10 - by jackey => 新增创建时间戳字段...
+	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID
+	m_dwRecCTime = (DWORD)::time(NULL);
+	m_strMP4Name.Format("%s\\%s_%s_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str(), m_dwRecCTime, nCourseID);
+	// 录像时使用.tmp，避免没有录像完就被上传...
+	strMP4Path.Format("%s.tmp", m_strMP4Name);
+	m_strUTF8MP4 = CUtilTool::ANSI_UTF8(strMP4Path);
 	// 创建视频轨道...
 	this->MP4CreateVideoTrack();
 	// 创建音频轨道...
@@ -1206,38 +1222,165 @@ BOOL CPushThread::StreamBeginRecord(LPCTSTR lpszPathMP4)
 	return true;
 }
 //
-// 进行录像处理...
+// 停止录像切片操作...
+BOOL CPushThread::EndRecSlice()
+{
+	// 关闭录像之前，获取已录制时间和长度...
+	if( m_lpRecMP4 != NULL ) {
+		m_lpRecMP4->Close();
+	}
+	// 进行录像后的截图、改文件名操作...
+	if( m_dwWriteSize > 0 && m_dwWriteRecMS > 0 ) {
+		this->doStreamSnapJPG(m_dwWriteRecMS/1000);
+	}
+	// 在切片开始过程中，复位录像变量...
+	return true;
+}
+//
+// 处理录像后的截图事件...
+void CPushThread::doStreamSnapJPG(int nRecSecond)
+{
+	// 更换录像文件的扩展名...
+	CString strMP4Temp, strMP4File;
+	strMP4Temp.Format("%s.tmp", m_strMP4Name);
+	strMP4File.Format("%s_%d.mp4", m_strMP4Name, nRecSecond);
+	// 如果文件不存在，直接返回...
+	if( _access(strMP4Temp, 0) < 0 )
+		return;
+	// 调用接口进行截图操作，截图失败，错误记录...
+	ASSERT( m_strJpgName.GetLength() > 0 );
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	if( !theConfig.StreamSnapJpeg(strMP4Temp, m_strJpgName, nRecSecond) ) {
+		MsgLogGM(GM_Snap_Jpg_Err);
+	}
+	// 直接对文件进行更改操作，并记录失败的日志...
+	if( !MoveFile(strMP4Temp, strMP4File) ) {
+		MsgLogGM(::GetLastError());
+	}
+}
+//
+// 开始流转发模式的录像...
+BOOL CPushThread::StreamBeginRecord()
+{
+	// 这里需要进行互斥保护...
+	OSMutexLocker theLock(&m_Mutex);
+	// 判断状态是否有效...
+	if( !this->IsStreamPlaying() )
+		return false;
+	ASSERT( this->IsStreamPlaying() );
+	// 释放录像对象...
+	if( m_lpRecMP4 != NULL ) {
+		delete m_lpRecMP4;
+		m_lpRecMP4 = NULL;
+	}
+	// 创建新的录像对象...
+	m_lpRecMP4 = new LibMP4();
+	ASSERT( m_lpRecMP4 != NULL );
+	// 启动第一个切片录像...
+	return this->BeginRecSlice();
+}
+//
+// 进行录像处理 => 并判断是否开启新的切片...
 BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 {
 	// 一定是流转发模式下才会有效...
 	if( m_lpRecMP4 == NULL )
 		return false;
-	ASSERT( !this->IsCameraDevice() );
+	ASSERT( m_lpRecMP4 != NULL );
 	// 进行写盘操作...
 	BOOL bIsVideo = ((inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? true : false);
 	if( !m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)inFrame.strData.c_str(), inFrame.strData.size(), inFrame.dwSendTime, inFrame.dwRenderOffset, inFrame.is_keyframe) )
 		return false;
-	// 累加存盘长度，记录已经写入的时间戳...
+	// 这里需要记录已录制文件大小和已录制毫秒数...
 	m_dwWriteSize = m_lpRecMP4->GetWriteSize();
 	m_dwWriteRecMS = m_lpRecMP4->GetWriteRecMS();
+	// 如果没有视频，则不做交错处理...
+	if( !m_lpRecMP4->IsVideoCreated() )
+		return true;
+	// 如果是不是云监控模式，不进行切片处理...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	if( theConfig.GetWebType() != kCloudMonitor )
+		return true;
+	ASSERT( theConfig.GetWebType() == kCloudMonitor );
+	// 将录像切片由分钟转换成秒数...
+	int nSliceSec  = theConfig.GetSliceVal() * 60;
+	int nInterKey = theConfig.GetInterVal();
+	// 如果切片时间为0，表示不进行切片...
+	if( nSliceSec <= 0 )
+		return true;
+	ASSERT( nSliceSec > 0 );
+	do {
+		// 如果切片交错 <= 0，复位切片交错相关变量...
+		if( nInterKey <= 0 ) {
+			m_MapMonitor.clear();
+			m_nKeyMonitor = 0;
+			break;
+		}
+		// 如果切片交错 > 0，进行切片交错...
+		ASSERT( nInterKey > 0 );
+		// 将数据转存到专门的缓存队列当中 => 第一帧肯定是关键帧，第一个数据不是关键帧，直接丢弃...
+		if((m_MapMonitor.size() <= 0) && (inFrame.typeFlvTag != FLV_TAG_TYPE_VIDEO || !inFrame.is_keyframe))
+			break;
+		// 将写盘成功的数据帧缓存起来，以便交错时使用...
+		m_MapMonitor.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
+		// 如果是视频关键帧，关键帧计数器累加，超过设定值，丢弃前面的关键帧和非关键帧数据 => 音视频一起丢弃...
+		if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && inFrame.is_keyframe ) {
+			if( ++m_nKeyMonitor > nInterKey ) {
+				this->dropSliceKeyFrame();
+			}
+		}
+		// 处理完毕，跳出循环，检测录像切片时间是否到达...
+	}while( false );
+	// 没有到达录像切片时间，直接返回 => 单位是秒...
+	// 切片时间是录像计时时间，而不是已写入文件的时间...
+	DWORD dwElapseSec = (DWORD)::time(NULL) - m_dwRecCTime;
+	if( dwElapseSec < nSliceSec )
+		return true;
+	ASSERT( dwElapseSec >= nSliceSec );
+	// 到达切片时间，停止录像切片...
+	this->EndRecSlice();
+	// 开启新的切片录像...
+	this->BeginRecSlice();
+	// 需要切片交错 => 立即把缓存的交错关键帧存盘...
+	if( nInterKey > 0 ) {
+		this->doSaveInterFrame();
+	}
 	return true;
 }
 //
-// 停止流转发模式的录像...
+// 保存交错缓存当中的数据 => 已经按照时序排列好了...
+void CPushThread::doSaveInterFrame()
+{
+	TRACE("== [doSaveInterFrame] nKeyMonitor = %d, MonitorSize = %d ==\n", m_nKeyMonitor, m_MapMonitor.size());
+	KH_MapFrame::iterator itorItem = m_MapMonitor.begin();
+	while( itorItem != m_MapMonitor.end() ) {
+		int nSize = m_MapMonitor.count(itorItem->first);
+		// 对相同时间戳的数据帧进行循环存盘 ...
+		for(int i = 0; i < nSize; ++i) {
+			FMS_FRAME & theFrame = itorItem->second;
+			BOOL bIsVideo = ((theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? true : false);
+			m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)theFrame.strData.c_str(), theFrame.strData.size(), theFrame.dwSendTime, theFrame.dwRenderOffset, theFrame.is_keyframe);
+			// 累加算子，插入下一个节点...
+			++itorItem;
+		}
+	}
+}
+//
+// 停止流转发模式的录像 => 删除录像对象，停止切片...
 BOOL CPushThread::StreamEndRecord()
 {
 	// 这里需要进行互斥保护...
 	OSMutexLocker theLock(&m_Mutex);
-	// 删除录像对象...
+	// 先停止录像切片操作...
+	this->EndRecSlice();
+	// 再删除录像对象...
 	if( m_lpRecMP4 != NULL ) {
 		delete m_lpRecMP4;
 		m_lpRecMP4 = NULL;
 	}
-	// 进行录像后的截图操作 => 截图完毕，复位录像记录变量...
-	if( m_lpCamera != NULL && m_dwWriteSize > 0 && m_dwWriteRecMS > 0 ) {
-		m_lpCamera->doStreamSnapJPG(m_dwWriteRecMS/1000);
-		m_dwWriteSize = 0; m_dwWriteRecMS = 0;
-	}
+	// 最后清空交错缓存区...
+	m_MapMonitor.clear();
+	m_nKeyMonitor = 0;
 	return true;
 }
 //
@@ -1284,20 +1427,21 @@ void CPushThread::SetStreamPublish(BOOL bFlag)
 }
 //
 // 这里只需要处理推流失败的情况，拉流失败会全部通过超时机制自动处理...
-void CPushThread::doErrNotify()
+void CPushThread::doErrPushNotify()
 {
 	// 如果线程已经被主动删除了，直接退出...
 	if( m_bDeleteFlag )
 		return;
 	ASSERT( !m_bDeleteFlag );
 	// 窗口对象必须有效...
-	if( m_hWndParent == NULL )
+	if( m_hWndVideo == NULL )
 		return;
-	ASSERT( m_hWndParent != NULL );
-	// 摄像头设备模式 => 删除整个数据处理线程..
+	ASSERT( m_hWndVideo != NULL );
+	// 摄像头设备模式 => 只停止rtmp上传对象...
 	// 流数据转发模式 => 只停止rtmp上传对象...
-	WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
-	::PostMessage(m_hWndParent, wMsgID, NULL, NULL);
+	//WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
+	WPARAM wMsgID = WM_STOP_LIVE_PUSH_MSG;
+	::PostMessage(m_hWndVideo, wMsgID, NULL, NULL);
 }
 
 void CPushThread::Entry()
@@ -1305,25 +1449,25 @@ void CPushThread::Entry()
 	// 连接rtmp server，失败，通知上层删除之...
 	if( !this->OpenRtmpUrl() ) {
 		TRACE("[CPushThread::OpenRtmpUrl] - Error\n");
-		this->doErrNotify();
+		this->doErrPushNotify();
 		return;
 	}
 	// 握手成功，发送metadata数据包，失败，通知上层删除之...
 	if( !this->SendMetadataPacket() ) {
 		TRACE("[CPushThread::SendMetadataPacket] - Error\n");
-		this->doErrNotify();
+		this->doErrPushNotify();
 		return;
 	}
 	// 发送视频序列头数据包，失败，通知上层删除之...
 	if( !this->SendAVCSequenceHeaderPacket() ) {
 		TRACE("[CPushThread::SendAVCSequenceHeaderPacket] - Error\n");
-		this->doErrNotify();
+		this->doErrPushNotify();
 		return;
 	}
 	// 发送音频序列头数据包，失败，通知上层删除之...
 	if( !this->SendAACSequenceHeaderPacket() ) {
 		TRACE("[CPushThread::SendAACSequenceHeaderPacket] - Error\n");
-		this->doErrNotify();
+		this->doErrPushNotify();
 		return;
 	}
 	// 保存发布成功标志...
@@ -1349,7 +1493,7 @@ void CPushThread::Entry()
 		// < 0 直接向上层反馈删除之...
 		if( nRetValue < 0 ) {
 			TRACE("[CPushThread::SendOneDataPacket] - Error\n");
-			this->doErrNotify();
+			this->doErrPushNotify();
 			return;
 		}
 		// == 0 马上继续...
@@ -1392,12 +1536,14 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	// 累加接收数据包的字节数，加入缓存队列...
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
-	// 如果是摄像头，不进行关键帧计数和丢帧处理...
+	
+	/*// 如果是摄像头，不进行关键帧计数和丢帧处理...
 	if( this->IsCameraDevice() ) {
 		return m_MapFrame.size();
 	}
 	// 如果是流转发模式，并且没有处于发布状态...
-	ASSERT( !this->IsCameraDevice() );
+	ASSERT( !this->IsCameraDevice() );*/
+
 	// 判断新数据是否是视频关键帧，不是视频关键帧，直接返回...
 	if( inFrame.typeFlvTag != FLV_TAG_TYPE_VIDEO || !inFrame.is_keyframe ) {
 		return m_MapFrame.size();
@@ -1406,7 +1552,7 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	ASSERT( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && inFrame.is_keyframe );
 	// 累加关键帧计数器...
 	++m_nKeyFrame;
-	//TRACE("== [PushFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+	//TRACE("== [PushFrame] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 	// 如果已经处于发布，直接返回...
 	if( this->IsPublishing() ) {
 		return m_MapFrame.size();
@@ -1436,7 +1582,7 @@ void CPushThread::dropToKeyFrame()
 				// 已经删除过一个关键帧，遇到新的关键帧，设置发送时间戳，直接返回...
 				if( bHasDelKeyFrame ) {
 					m_dwFirstSendTime = theFrame.dwSendTime;
-					//TRACE("== [dropToKeyFrame] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+					//TRACE("== [dropToKeyFrame] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 					return;
 				}
 				// 删除这个关键帧，设置标志，打印信息...
@@ -1448,21 +1594,50 @@ void CPushThread::dropToKeyFrame()
 	}
 }
 //
+// 删除交错缓冲队列中的数据，直到遇到关键帧为止...
+void CPushThread::dropSliceKeyFrame()
+{
+	// 设置已经删除关键帧标志...
+	BOOL bHasDelKeyFrame = false;
+	KH_MapFrame::iterator itorItem = m_MapMonitor.begin();
+	while( itorItem != m_MapMonitor.end() ) {
+		int nSize = m_MapMonitor.count(itorItem->first);
+		// 对相同时间戳的数据帧进行循环删除...
+		for(int i = 0; i < nSize; ++i) {
+			FMS_FRAME & theFrame = itorItem->second;
+			// 如果发现了视频关键帧...
+			if( theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && theFrame.is_keyframe ) {
+				// 已经删除过一个关键帧，遇到新的关键帧，设置发送时间戳，直接返回...
+				if( bHasDelKeyFrame ) {
+					//TRACE("== [dropSliceKeyFrame] nKeyMonitor = %d, MonitorSize = %d ==\n", m_nKeyMonitor, m_MapMonitor.size());
+					return;
+				}
+				// 删除这个关键帧，设置标志，打印信息...
+				--m_nKeyMonitor; bHasDelKeyFrame = true;
+			}
+			// 这里使用算子删除而不是关键字...
+			m_MapMonitor.erase(itorItem++);
+		}
+	}
+}
+//
 // 开始准备发送数据包...
 void CPushThread::BeginSendPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
 	ASSERT( this->IsPublishing() );
-	// 只有在流转发模式下才进行，开始时间的调整...
+	
+	/*// 只有在流转发模式下才进行，开始时间的调整...
 	// 因为摄像头模式下，都是单独重头链接 rtsp 不会有帧断裂的问题...
 	if( this->IsCameraDevice() )
 		return;
-	ASSERT( !this->IsCameraDevice() );
+	ASSERT( !this->IsCameraDevice() );*/
+
 	// 设置第一帧的发送时间戳...
 	KH_MapFrame::iterator itorItem = m_MapFrame.begin();
 	if( itorItem != m_MapFrame.end() ) {
 		m_dwFirstSendTime = itorItem->first;
-		TRACE("== [BeginSendPacket] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+		TRACE("== [BeginSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 	}
 }
 //
@@ -1475,10 +1650,12 @@ void CPushThread::EndSendPacket()
 		delete m_lpRtmpPush;
 		m_lpRtmpPush = NULL;
 	}
-	// 如果是流转发模式，需要将缓存的数据插入到缓存发送队列前面...
+	
+	/*// 如果是流转发模式，需要将缓存的数据插入到缓存发送队列前面...
 	if( this->IsCameraDevice() )
 		return;
-	ASSERT( !this->IsCameraDevice() );
+	ASSERT( !this->IsCameraDevice() );*/
+
 	// 遍历已经缓存的流转发数据(这部分数据已经发给服务器，现在要把它们找回来)...
 	KH_MapFrame::iterator itorItem = m_MapStream.begin();
 	while( itorItem != m_MapStream.end() ) {
@@ -1492,10 +1669,11 @@ void CPushThread::EndSendPacket()
 			++itorItem;
 		}
 	}
+	// 2017.08.11 - by jackey => MapStream当中只保存了一个视频关键帧，数据被还原给了缓存队列，因此，需要对关键帧计数累加...
 	// 如果缓存队列有数据，关键帧计数器增加...
 	if( m_MapStream.size() > 0 ) {
 		++m_nKeyFrame;
-		TRACE("== [EndSendPacket] nKeyFrame = %d, Size = %d, SendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime);
+		TRACE("== [EndSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 	}
 	// 清空缓存队列...
 	m_MapStream.clear();
@@ -1550,10 +1728,15 @@ int CPushThread::SendOneDataPacket()
 	// 对相同时间戳的数据帧进行循环处理...
 	for(int i = 0; i < nSize; ++i) {
 		FMS_FRAME & theFrame = itorItem->second;
-		// 如果是流转发模式，才需要对时间戳进行调整，硬件模式下的时间戳都是从0开始的，无需调整...
+		
+		/*// 如果是流转发模式，才需要对时间戳进行调整，硬件模式下的时间戳都是从0开始的，无需调整...
 		if( !this->IsCameraDevice() ) {
 			theFrame.dwSendTime = theFrame.dwSendTime - m_dwFirstSendTime;
-		}
+		}*/
+
+		// 是持续连接，需要对时间戳进行修正 => 硬件模式也统一到了流转发模式...
+		theFrame.dwSendTime = theFrame.dwSendTime - m_dwFirstSendTime;
+
 		//TRACE("[%s] SendTime = %lu, Key = %d, Size = %d, MapSize = %d\n", ((theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? "Video" : "Audio"), theFrame.dwSendTime, theFrame.is_keyframe, theFrame.strData.size(), m_MapFrame.size());
 		// 将获取到的数据帧发送走...
 		switch( theFrame.typeFlvTag )
@@ -1563,50 +1746,19 @@ int CPushThread::SendOneDataPacket()
 		}
 		// 累加发送字节数...
 		m_nCurSendByte += theFrame.strData.size();
-		// 如果是流转发模式 => 缓存关键帧 => 先清空以前缓存的数据 => 关键帧计数器减少...
-		if( !this->IsCameraDevice() ) {
-			// 把时间戳还原回去...
-			theFrame.dwSendTime = theFrame.dwSendTime + m_dwFirstSendTime;
-			// 发现新的关键帧，清空以前的缓存，减少关键帧计数器...
-			if( theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && theFrame.is_keyframe ) {
-				--m_nKeyFrame; m_MapStream.clear();
-				TRACE("== [SendOneDataPacket] nKeyFrame = %d, Size = %d, FirstSendTime = %lu, CurSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime, theFrame.dwSendTime);
-			}
-			// 将数据转存到专门的缓存队列当中 => 第一帧肯定是关键帧...
-			m_MapStream.insert(pair<uint32_t, FMS_FRAME>(theFrame.dwSendTime, theFrame));
+		// 缓存关键帧 => 先清空以前缓存的数据 => 关键帧计数器减少...
+		// 把时间戳还原回去...
+		theFrame.dwSendTime = theFrame.dwSendTime + m_dwFirstSendTime;
+		// 发现新的关键帧，清空以前的缓存，减少关键帧计数器...
+		if( theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && theFrame.is_keyframe ) {
+			--m_nKeyFrame; m_MapStream.clear();
+			//TRACE("== [SendOneDataPacket] nKeyFrame = %d, FrameSize = %d, FirstSendTime = %lu, CurSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_dwFirstSendTime, theFrame.dwSendTime);
 		}
+		// 将数据转存到专门的缓存队列当中 => 第一帧肯定是关键帧...
+		m_MapStream.insert(pair<uint32_t, FMS_FRAME>(theFrame.dwSendTime, theFrame));
 		// 从队列中移除一个相同时间的数据包 => 这里使用的是算子...
 		m_MapFrame.erase(itorItem++);
 	}
-
-	/*KH_MapFrame::iterator itorFrame;
-	KH_MapFrame::iterator itorPair;
-	pair<KH_MapFrame::iterator, KH_MapFrame::iterator> myPair;
-
-	// 获取队列头，找到时间戳重复的列表...
-	itorFrame = m_MapFrame.begin();
-	myPair = m_MapFrame.equal_range(itorFrame->first);
-	for(itorPair = myPair.first; itorPair != myPair.second; ++itorPair) {
-		// 遍历这个相同时间的列表，发送数据包...
-		ASSERT( itorPair->first == itorFrame->first );
-		FMS_FRAME & theFrame = itorPair->second;
-		// 如果是流转发模式，才需要对时间戳进行调整，硬件模式下的时间戳都是从0开始的，无需调整...
-		if( !this->IsCameraDevice() ) {
-			theFrame.dwSendTime = theFrame.dwSendTime - m_dwFirstSendTime;
-		}
-		//TRACE("[%s] SendTime = %lu, Key = %d, Size = %d, MapSize = %d\n", ((theFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? "Video" : "Audio"), theFrame.dwSendTime, theFrame.is_keyframe, theFrame.strData.size(), m_MapFrame.size());
-		// 将获取到的数据帧发送走...
-		switch( theFrame.typeFlvTag )
-		{
-		case FLV_TAG_TYPE_AUDIO: is_ok = this->SendAudioDataPacket(theFrame); break;
-		case FLV_TAG_TYPE_VIDEO: is_ok = this->SendVideoDataPacket(theFrame); break;
-		}
-		// 累加发送字节数...
-		m_nCurSendByte += theFrame.strData.size();
-	}
-	// 从队列中移除一个相同时间的数据包 => 一定要用关键字删除，否则，删不干净...
-	m_MapFrame.erase(itorFrame->first);*/
-
 	// 发送失败，返回错误...
 	return (is_ok ? 1 : -1);
 }

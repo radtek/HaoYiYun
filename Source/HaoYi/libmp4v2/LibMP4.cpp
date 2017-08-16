@@ -5,6 +5,22 @@
 LibMP4::LibMP4(void)
 {
 	m_hFileHandle = MP4_INVALID_FILE_HANDLE;
+	this->Close();
+}
+
+LibMP4::~LibMP4(void)
+{
+	this->Close();
+}
+//
+// 关闭录像文件 => 复位变量...
+bool LibMP4::Close()
+{
+	if( m_hFileHandle != MP4_INVALID_FILE_HANDLE ) {
+		MP4Close(m_hFileHandle);
+		m_hFileHandle = MP4_INVALID_FILE_HANDLE;
+	}
+	m_hFileHandle = MP4_INVALID_FILE_HANDLE;
 	m_videoID = MP4_INVALID_TRACK_ID;
 	m_audioID = MP4_INVALID_TRACK_ID;
 	m_nVideoTimeScale = 0;
@@ -16,11 +32,8 @@ LibMP4::LibMP4(void)
 	m_VLastFrame.m_nTimeStamp = 0;
 	m_VLastFrame.m_strData.clear();
 	m_VLastFrame.m_bKeyFrame = false;
-}
-
-LibMP4::~LibMP4(void)
-{
-	this->Close();
+	m_VLastFrame.m_nRenderOffset = 0;
+	return true;
 }
 //
 // 创建视频轨道...
@@ -181,20 +194,10 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, lpFrame, nSize, MP4_INVALID_DURATION, 0, bIsKeyFrame);
 		// 计算写盘量和总时间...
 		m_dwWriteSize += nSize;
-		m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
+		m_dwWriteRecMS = ((inTimeStamp >= m_dwFirstStamp) ? (inTimeStamp - m_dwFirstStamp) : 0);
 	}
 	// 返回存盘结果...
 	return bWriteFlag;
-}
-//
-// 关闭录像文件...
-bool LibMP4::Close()
-{
-	if( m_hFileHandle != MP4_INVALID_FILE_HANDLE ) {
-		MP4Close(m_hFileHandle);
-		m_hFileHandle = MP4_INVALID_FILE_HANDLE;
-	}
-	return true;
 }
 //
 // 返回文件中播放时间(毫秒)...

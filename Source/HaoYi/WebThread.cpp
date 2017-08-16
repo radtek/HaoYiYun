@@ -20,6 +20,8 @@ CWebThread::CWebThread(CHaoYiView * lpView)
   , m_strWebName("")
   , m_strWebTag("")
   , m_nWebType(-1)
+  , m_nSliceVal(-1)
+  , m_nInterVal(-1)
   , m_nRemotePort(0)
   , m_nTrackerPort(0)
   , m_strRemoteAddr("")
@@ -82,32 +84,16 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 		// 正在处理注册采集端过程...
 		m_nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 		// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
-		Json::Value & theWebTag = value["web_tag"];
-		Json::Value & theWebName = value["web_name"];
-		Json::Value & theRemoteAddr = value["transmit_addr"];
-		Json::Value & theRemotePort = value["transmit_port"];
-		Json::Value & theTrackerAddr = value["tracker_addr"];
-		Json::Value & theTrackerPort = value["tracker_port"];
 		Json::Value & theLocalTime   = value["local_time"];
 		m_nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
-		if( theWebTag.isString() ) {
-			m_strWebTag = theWebTag.asString();
-		}
-		if( theWebName.isString() ) {
-			m_strWebName =  CUtilTool::UTF8_ANSI(theWebName.asString().c_str());
-		}
-		if( theTrackerAddr.isString() ) {
-			m_strTrackerAddr = theTrackerAddr.asString();
-		}
-		if( theTrackerPort.isString() ) {
-			m_nTrackerPort = atoi(theTrackerPort.asString().c_str());
-		}
-		if( theRemoteAddr.isString() ) {
-			m_strRemoteAddr = theRemoteAddr.asString();
-		}
-		if( theRemotePort.isString() ) {
-			m_nRemotePort = atoi(theRemotePort.asString().c_str());
-		}
+		m_nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
+		m_nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
+		m_strRemoteAddr = CUtilTool::getJsonString(value["transmit_addr"]);
+		m_nRemotePort = atoi(CUtilTool::getJsonString(value["transmit_port"]).c_str());
+		m_strTrackerAddr = CUtilTool::getJsonString(value["tracker_addr"]);
+		m_nTrackerPort = atoi(CUtilTool::getJsonString(value["tracker_port"]).c_str());
+		m_strWebName = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value["web_name"]).c_str());
+		m_strWebTag = CUtilTool::getJsonString(value["web_tag"]);
 		// 同步网站服务器时钟...
 #ifndef _DEBUG
 		if( theLocalTime.isString() ) {
@@ -151,6 +137,10 @@ void CWebThread::doPostCurl(char * pData, size_t nSize)
 	} else if( m_eRegState == kDelCamera ) {
 		// 获取返回的已删除的摄像头在数据库中的编号...
 		m_nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
+	} else if( m_eRegState == kGatherConfig ) {
+		// 返回录像切片配置信息...
+		m_nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
+		m_nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
 	}
 }
 //
@@ -164,11 +154,15 @@ BOOL CWebThread::RegisterHaoYi()
 	string  & strWebAddr = theConfig.GetWebAddr();
 	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
 	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
-	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
+	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 网站节点标记不能为空...
-	if( m_strWebTag.size() <= 0 || m_nWebType < 0 || m_strWebName.size() <= 0 )
+	if( m_strWebTag.size() <= 0 || m_nWebType < 0 || m_strWebName.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
 	TCHAR	szDNS[MAX_PATH] = {0};
@@ -225,10 +219,14 @@ BOOL CWebThread::RegisterGather()
 	string  & strWebAddr = theConfig.GetWebAddr();
 	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
 	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
-	if( strWebAddr.size() <= 0 || nWebPort <= 0 )
+	if( strWebAddr.size() <= 0 || nWebPort <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
-	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 )
+	}
+	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
 	TCHAR	szDNS[MAX_PATH] = {0};
@@ -264,16 +262,29 @@ BOOL CWebThread::RegisterGather()
 	// 通知主窗口授权网站注册结果...
 	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthRegiter, ((m_nDBGatherID > 0) ? true : false));
 	// 判断采集端是否注册成功...
-	if( m_nDBGatherID <= 0 || m_strWebTag.size() <= 0 )
+	if( m_nDBGatherID <= 0 || m_strWebTag.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	ASSERT( m_nDBGatherID > 0 && m_strWebTag.size() > 0 );
-	if( m_nWebType < 0 || m_strWebName.size() <= 0 )
+	if( m_nWebType < 0 || m_strWebName.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 判断Tracker地址是否已经正确获取得到...
-	if( m_strTrackerAddr.size() <= 0 || m_nTrackerPort <= 0 )
+	if( m_strTrackerAddr.size() <= 0 || m_nTrackerPort <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
-	if( m_strRemoteAddr.size() <= 0 || m_nRemotePort <= 0 )
+	}
+	if( m_strRemoteAddr.size() <= 0 || m_nRemotePort <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
+	// 录像切片、切片交错，可以为0，0表示不切片，不交错...
+	if( m_nInterVal < 0 || m_nSliceVal < 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
 	// 存放到配置文件，但并不存盘...
 	theConfig.SetWebType(m_nWebType);
 	theConfig.SetWebName(m_strWebName);
@@ -281,6 +292,60 @@ BOOL CWebThread::RegisterGather()
 	theConfig.SetRemotePort(m_nRemotePort);
 	theConfig.SetTrackerAddr(m_strTrackerAddr);
 	theConfig.SetTrackerPort(m_nTrackerPort);
+	theConfig.SetInterVal(m_nInterVal);
+	theConfig.SetSliceVal(m_nSliceVal);
+	return true;
+}
+//
+// 采集端网站配置...
+BOOL CWebThread::doWebGatherConfig()
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
+	if( m_nDBGatherID <= 0 || strMacAddr.GetLength() <= 0 || nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 先设置当前状态信息...
+	m_eRegState = kGatherConfig;
+	// 准备需要的汇报数据 => POST数据包...
+	CString strPost, strUrl;
+	strPost.Format("gather_id=%d&mac_addr=%s", m_nDBGatherID, strMacAddr);
+	// 组合访问链接地址...
+	strUrl.Format("http://%s:%d/wxapi.php/Gather/getConfig", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，读取网站配置信息...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	// 录像切片、切片交错，可以为0，0表示不切片，不交错...
+	if( m_nInterVal < 0 || m_nSliceVal < 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 存放到配置文件，但并不存盘...
+	theConfig.SetInterVal(m_nInterVal);
+	theConfig.SetSliceVal(m_nSliceVal);
 	return true;
 }
 //
@@ -291,8 +356,10 @@ BOOL CWebThread::doWebGatherLogout()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebPort = theConfig.GetWebPort();
 	string & strWebAddr = theConfig.GetWebAddr();
-	if( m_nDBGatherID <= 0 || nWebPort <= 0 || strWebAddr.size() <= 0 )
+	if( m_nDBGatherID <= 0 || nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 先设置当前状态信息...
 	m_eRegState = kGatherLogout;
 	// 准备需要的汇报数据 => POST数据包...
@@ -353,23 +420,31 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 	GM_MapData::iterator itorID, itorProp;
 	itorProp = inData.find("StreamProp");
 	itorID = inData.find("ID");
-	if( itorID == inData.end() || itorProp == inData.end() )
+	if( itorID == inData.end() || itorProp == inData.end() ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 获取摄像头编号，用于存放和定位课表内容...
 	int nStreamProp = atoi(itorProp->second.c_str());
 	int nCameraID = atoi(itorID->second.c_str());
-	if( nCameraID <= 0 )
+	if( nCameraID <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	ASSERT( nCameraID > 0 );
 	// 获取网站配置信息...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebPort = theConfig.GetWebPort();
 	string & strWebAddr = theConfig.GetWebAddr();
-	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 如果当前已注册摄像头数目超过了最大支持数，不用再注册...
-	if( m_nCurCameraCount >= theConfig.GetMaxCamera() )
+	if( m_nCurCameraCount >= theConfig.GetMaxCamera() ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 初始化数据库里的摄像头编号...
 	m_dbMapCourse.clear();
 	m_strDBCameraName = "";
@@ -425,8 +500,10 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		curl_easy_cleanup(curl);
 	}
 	// 判断摄像头是否注册成功...
-	if( m_nDBCameraID <= 0 )
+	if( m_nDBCameraID <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	ASSERT( m_nDBCameraID > 0 );
 	// 将数据库中记录编号更新到摄像头配置当中，但不存入Config.xml当中...
 	TCHAR szDBCamera[32] = {0};
@@ -453,8 +530,10 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebPort = theConfig.GetWebPort();
 	string & strWebAddr = theConfig.GetWebAddr();
-	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 先设置当前状态信息...
 	m_nDBCameraID = -1;
 	m_eRegState = kDelCamera;
@@ -486,8 +565,10 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 		curl_easy_cleanup(curl);
 	}
 	// 判断摄像头是否删除成功...
-	if( m_nDBCameraID <= 0 )
+	if( m_nDBCameraID <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	ASSERT( m_nDBCameraID > 0 );
 	// 摄像头计数器减少...
 	m_nCurCameraCount -= 1;
@@ -501,8 +582,10 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebPort = theConfig.GetWebPort();
 	string & strWebAddr = theConfig.GetWebAddr();
-	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
 		return false;
+	}
 	// 先设置当前状态信息...
 	m_eRegState = kStatCamera;
 	// 准备需要的汇报数据 => POST数据包...

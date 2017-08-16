@@ -7,6 +7,7 @@
 class CCamera;
 class CBitItem;
 class CVideoWnd;
+class CMidView;
 
 class CAutoVideo
 {
@@ -34,10 +35,10 @@ public:
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnGetMinMaxInfo(MINMAXINFO FAR* lpMMI);
 	//afx_msg void OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp);
-	afx_msg LRESULT	OnMsgRecSlice(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnMsgTaskErr(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnMsgPushErr(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnMsgStopStream(WPARAM wParam, LPARAM lParam);
+	//afx_msg LRESULT OnMsgRecSlice(WPARAM wParam, LPARAM lParam);
+	//afx_msg LRESULT OnMsgTaskErr(WPARAM wParam, LPARAM lParam);
+	//afx_msg LRESULT OnMsgPushErr(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgStreamStopLivePush(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -61,7 +62,7 @@ public:
 	};
 public:
 	WND_STATE		GetWndState()							{ return m_nWndState; }
-	CWnd		*	GetRealParent()							{ return m_lpParent; }
+	CMidView	*	GetRealParent()							{ return m_lpMidView; }
 	CRenderWnd	*	GetRenderWnd()							{ return m_lpRenderWnd; }
 	CCamera		*	GetCamera()								{ return m_lpCamera; }
 	int				GetCameraID()							{ return m_nWndIndex; }
@@ -122,7 +123,7 @@ private:
 	BOOL			m_bFocus;
 	
 	CCamera		 *  m_lpCamera;
-	CWnd		 *	m_lpParent;
+	CMidView	 *	m_lpMidView;
 	CFont		 *	m_lpTitleFont;
 	CString			m_strWebTitle;		// 跟网站同步的名称 => camera_name
 	CString			m_strDispTitle;		// 本地显示名称 => camera_id + camera_name

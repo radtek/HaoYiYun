@@ -50,12 +50,16 @@ public:
 	int		 GetRemotePort() { return m_nRemotePort; }
 	string & GetTrackerAddr() { return m_strTrackerAddr; }
 	int		 GetTrackerPort() { return m_nTrackerPort; }
+	int		 GetSliceVal() { return m_nSliceVal; }
+	int		 GetInterVal() { return m_nInterVal; }
 	void	 SetRemoteAddr(const string & strAddr) { m_strRemoteAddr = strAddr; }
 	void     SetRemotePort(int nPort) { m_nRemotePort = nPort; }
 	void	 SetTrackerAddr(const string & strAddr) { m_strTrackerAddr = strAddr; }
 	void     SetTrackerPort(int nPort) { m_nTrackerPort = nPort; }
 	void	 SetWebType(int nWebType) { m_nWebType = nWebType; }
 	void	 SetWebName(const string & strWebName) { m_strWebName = strWebName; }
+	void	 SetSliceVal(int nSliceVal) { m_nSliceVal = nSliceVal; }
+	void	 SetInterVal(int nInterVal) { m_nInterVal = nInterVal; }
 
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
 	void	 SetMainName(const string & strName) { m_strMainName = strName; }
@@ -113,6 +117,8 @@ private:
 	int					m_nRemotePort;					// 远程中转服务器的端口地址...
 	string				m_strTrackerAddr;				// FDFS-Tracker的IP地址...
 	int					m_nTrackerPort;					// FDFS-Tracker的端口地址...
+	int					m_nSliceVal;					// 录像切片时间(1~30分钟)
+	int					m_nInterVal;					// 切片交错关键帧(1~3个)
 
 	int					m_nMaxCamera;					// 能够支持的最大摄像头数（默认为16个）
 	GM_MapNodeCamera	m_MapNodeCamera;				// 监控通道配置信息(从1开始)

@@ -953,8 +953,8 @@ GM_Error CRemoteSession::doCmdLiveVary(LPCTSTR lpData, int nSize)
 	}
 	ASSERT( lpCamera != NULL );
 	// 如果该通道下的用户数已经为0，则调用删除接口...
-	// 这里不能直接删除，会卡死，最好通过发送窗口消息...
-	lpCamera->doStopLiveMessage();
+	// 这里不能直接删除，会卡死，一定要通过发送窗口消息...
+	lpCamera->doPostStopLiveMsg();
 	return GM_NoErr;
 }
 //
@@ -1016,7 +1016,7 @@ GM_Error CRemoteSession::doCmdPlayLogin(string & inData)
 		}
 		ASSERT( lpCamera != NULL );
 		// 2017.06.15 - by jackey => 启动直播上传通道 => 无需延时，直接返回...
-		int nResult = lpCamera->doStartLivePush(strRtmpUrl);
+		int nResult = lpCamera->doStreamStartLivePush(strRtmpUrl);
 		(nResult < 0) ? MsgLogGM(theErr) : NULL;
 	}while( false );
 	// 2017.06.15 - by jackey => 无需回应，直接返回...

@@ -365,7 +365,7 @@ CCamera * CMidView::BuildXmlCamera(GM_MapData & inXmlData)
 }
 //
 // 网站授权验证结果处理...
-void CMidView::OnAuthResult(int nType, BOOL bAuthOK)
+void CMidView::OnWebAuthResult(int nType, BOOL bAuthOK)
 {
 	// 根据不同状态，显示不同的信息...
 	if( nType == kAuthRegiter ) {

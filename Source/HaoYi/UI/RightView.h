@@ -16,8 +16,8 @@ protected:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnClickButtonWnd(UINT nItemID);
-	afx_msg LRESULT	OnMsgBtnLDownUp(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT	OnMsgDVRLoginResult(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT	OnMsgDeviceBtnLDownUp(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT	OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -73,8 +73,8 @@ private:
 	void	StateButton(BOOL bIsLogin);			// 按钮状态...
 	void	DrawStreamText(CDC * pDC);
 
-	void	doClickBtnLogin();					// 点击登录事件...
-	void	doClickBtnLogout();					// 点击注销事件...
+	void	doDeviceLogin();					// 点击登录事件...
+	void	doDeviceLogout();					// 点击注销事件...
 
 	void	doClickBtnPTZ(DWORD dwPTZCmd, BOOL bStop);
 

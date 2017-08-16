@@ -54,6 +54,7 @@ class GatherAction extends Action
         $dbSave['web_tag'] = $dbSys['web_tag'];
         D('system')->save($dbSave);
       }
+      // 返回采集端需要的参数配置信息...
       $arrErr['web_tag'] = $dbSys['web_tag'];
       $arrErr['web_type'] = $dbSys['web_type'];
       $arrErr['web_name'] = $dbSys['web_title'];
@@ -62,6 +63,45 @@ class GatherAction extends Action
       $arrErr['transmit_addr'] = $dbSys['transmit_addr'];
       $arrErr['transmit_port'] = strval($dbSys['transmit_port']);
       $arrErr['local_time'] = date('Y-m-d H:i:s');
+      $arrErr['slice_val'] = strval($dbSys['slice_val']);
+      $arrErr['inter_val'] = strval($dbSys['inter_val']);
+    }while( false );
+    // 直接返回运行结果 => json...
+    echo json_encode($arrErr);
+  }
+  /**
+  +----------------------------------------------------------
+  * 处理采集端获取配置 => 采集端在网站里的通用配置信息...
+  +----------------------------------------------------------
+  */
+  public function getConfig()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    // 将获得的数据进行判断和处理...
+    $arrData = $_POST;
+    do {
+      // 判断输入数据是否有效...
+      if( !isset($arrData['gather_id']) || !isset($arrData['mac_addr']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "采集端编号或设备地址为空！";
+        break;
+      }
+      // 查询对应的记录...
+      $map['gather_id'] = $arrData['gather_id'];
+      $map['mac_addr'] = $arrData['mac_addr'];
+      $dbGather = D('gather')->where($map)->find();
+      if( count($dbGather) <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "没有找到指定的采集端记录！";
+        break;
+      }
+      // 读取系统配置表，返回给采集端...
+      $dbSys = D('system')->find();
+      // 将录像切片信息返回给强求采集端 => 后期可以根据需要继续添加...
+      $arrErr['slice_val'] = strval($dbSys['slice_val']);
+      $arrErr['inter_val'] = strval($dbSys['inter_val']);
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);
@@ -226,14 +266,16 @@ class GatherAction extends Action
       }
       // 将file_src进行切分...
       $arrSrc = explode('_', $arrData['file_src']);
+      // $arrSrc[0] => uniqid
+      // $arrSrc[1] => DBCameraID
       // 组合通用数据项...
       $arrData['file_src'] = (is_null($arrSrc[0]) ? $arrData['file_src'] : $arrSrc[0]);
       $arrData['camera_id'] = (is_null($arrSrc[1]) ? 0 : $arrSrc[1]);
-      $arrData['created'] = date('Y-m-d H:i:s');
+      $arrData['created'] = date('Y-m-d H:i:s'); // mp4的创建时间 => $arrSrc[2]
       $arrData['updated'] = date('Y-m-d H:i:s');
       // 根据文件扩展名进行数据表分发...
       // jpg => uniqid_DBCameraID
-      // mp4 => uniqid_DBCameraID_CourseID_Duration
+      // mp4 => uniqid_DBCameraID_CreateTime_CourseID_Duration
       if( (strcasecmp($arrData['ext'], ".jpg") == 0) || (strcasecmp($arrData['ext'], ".jpeg") == 0) ) {
         // 查找截图记录...
         $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->find();
@@ -258,9 +300,12 @@ class GatherAction extends Action
         }
       } else if( strcasecmp($arrData['ext'], ".mp4") == 0 ) {
         // 保存录像时长(秒)，初始化image_id...
+        // $arrSrc[2] => CreateTime
+        // $arrSrc[3] => CourseID
+        // $arrSrc[4] => Duration
         $arrData['image_id'] = 0;
-        $arrData['course_id'] = (is_null($arrSrc[2]) ? 0 : $arrSrc[2]);
-        $arrData['duration'] = (is_null($arrSrc[3]) ? 0 : $arrSrc[3]);
+        $arrData['course_id'] = (is_null($arrSrc[3]) ? 0 : $arrSrc[3]);
+        $arrData['duration'] = (is_null($arrSrc[4]) ? 0 : $arrSrc[4]);
         $nTotalSec = intval($arrData['duration']);
         $theSecond = intval($nTotalSec % 60);
         $theMinute = intval($nTotalSec / 60) % 60;
@@ -298,7 +343,8 @@ class GatherAction extends Action
           D('record')->save($dbRec);
           $arrErr['record_id'] = $dbRec['record_id'];
         } else {
-          // 新增录像记录...
+          // 新增录像记录 => 创建时间用传递过来的时间...
+          $arrData['created'] = date('Y-m-d H:i:s', $arrSrc[2]);
           $arrErr['record_id'] = D('record')->add($arrData);
         }
       }

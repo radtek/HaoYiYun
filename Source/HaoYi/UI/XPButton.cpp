@@ -28,13 +28,13 @@ END_MESSAGE_MAP()
 
 void CXPButton::OnLButtonDown(UINT nFlags, CPoint point) 
 {
-	::PostMessage(this->GetParent()->m_hWnd, WM_BUTTON_LDOWNUP, this->GetDlgCtrlID(), false);
+	::PostMessage(this->GetParent()->m_hWnd, WM_DEVICE_BUTTON_LDOWNUP, this->GetDlgCtrlID(), false);
 	CButton::OnLButtonDown(nFlags, point);
 }
 
 void CXPButton::OnLButtonUp(UINT nFlags, CPoint point) 
 {
-	::PostMessage(this->GetParent()->m_hWnd, WM_BUTTON_LDOWNUP, this->GetDlgCtrlID(), true);
+	::PostMessage(this->GetParent()->m_hWnd, WM_DEVICE_BUTTON_LDOWNUP, this->GetDlgCtrlID(), true);
 	CButton::OnLButtonUp(nFlags, point);
 }
 

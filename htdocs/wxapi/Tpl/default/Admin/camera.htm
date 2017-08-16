@@ -164,10 +164,11 @@ function doCamera(inCameraID, objBtn)
       }
       // 转发命令成功，将按钮置灰...
       $(objBtn).addClass('layui-btn-disabled');
-      // 等待2~3秒之后，查询通道状态...
+      // 等待3~5秒之后，查询通道状态...
+      layer.msg('处理中，请稍等...', { icon: 16, shade: 0.2} );
       setTimeout(function () {
         doGetCameraStatus(inCameraID, objBtn, arrJson.err_cmd);
-      }, 2000);
+      }, 3500);
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
       layer.closeAll('loading');
@@ -186,8 +187,11 @@ function doGetCameraStatus(inCameraID, objBtn, inCmd)
     async: true,
     url: siteurl+"/Admin/getCameraStatus/camera_id/"+inCameraID,
     success: function(ajaxData) {
+      // 先关闭等待对话框...
+      layer.closeAll('loading');
       var theBTN = $(objBtn);
       var theTD = $(objBtn).parent();
+      // 设置各个按钮样式状态...
       theBTN.removeClass('layui-btn-disabled');
       if( ajaxData > 0 ) {
         theBTN.addClass('layui-btn-danger');

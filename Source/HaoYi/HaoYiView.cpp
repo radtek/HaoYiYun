@@ -373,7 +373,7 @@ void CHaoYiView::BuildResource()
 LRESULT CHaoYiView::OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam)
 {
 	ASSERT( m_lpMidView != NULL );
-	m_lpMidView->OnAuthResult(wParam, lParam);
+	m_lpMidView->OnWebAuthResult(wParam, lParam);
 	return S_OK;
 }
 //
@@ -423,6 +423,7 @@ LRESULT CHaoYiView::OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam)
 	this->SetTimer(kTimerCheckDVR, 2 * 1000, NULL);
 	this->SetTimer(kTimerAnimateDVR, 1 * 1000, NULL);
 	this->SetTimer(kTimerCheckCourse, 500, NULL);
+	this->SetTimer(kTimerWebGatherConfig, 180 * 1000, NULL);
 	return S_OK;
 }
 
@@ -430,11 +431,12 @@ void CHaoYiView::OnTimer(UINT_PTR nIDEvent)
 {
 	switch( nIDEvent )
 	{
-	case kTimerCheckFDFS:   this->doCheckFDFS();   break;
-	case kTimerCheckDVR:    this->doCheckDVR();    break;
-	case kTimerAnimateDVR:  this->doAnimateDVR();  break;
-	case kTimerCheckCourse: this->doCheckCourse(); break;
-	default:			    /*-- do nothing --*/   break;
+	case kTimerCheckFDFS:		this->doCheckFDFS();		break;
+	case kTimerCheckDVR:		this->doCheckDVR();			break;
+	case kTimerAnimateDVR:		this->doAnimateDVR();		break;
+	case kTimerCheckCourse:		this->doCheckCourse();		break;
+	case kTimerWebGatherConfig: this->doWebGatherConfig();	break;
+	default:					/*-- do nothing --*/		break;
 	}
 	CFormView::OnTimer(nIDEvent);
 }
@@ -518,7 +520,7 @@ void CHaoYiView::doCheckCourse()
 				// 停止当前通道中正在录像的当前任务记录...
 				this->doRecStopCourse(nCameraID, nCourseID);
 				///////////////////////////////////////////////////////////////////////////////
-				// 2017.07.28 - by jackey => 固定模式每周重复，而且只比较时间，所有不用处理了...
+				// 2017.07.28 - by jackey => 固定模式每周重复，而且只比较时间，所以不用处理了...
 				///////////////////////////////////////////////////////////////////////////////
 				// 无重复模式 => 直接检测下一条记录 => 不要进行删除操作，因为可能会进行修改...
 				/*if( nRepMode == kNoneRepeat )
@@ -866,6 +868,7 @@ void CHaoYiView::DestroyResource()
 	this->KillTimer(kTimerCheckDVR);
 	this->KillTimer(kTimerCheckCourse);
 	this->KillTimer(kTimerAnimateDVR);
+	this->KillTimer(kTimerWebGatherConfig);
 	// 释放web线程...
 	if( m_lpWebThread != NULL ) {
 		delete m_lpWebThread;
@@ -1215,6 +1218,14 @@ LRESULT	CHaoYiView::OnMsgFindHKCamera(WPARAM wParam, LPARAM lParam)
 	return S_OK;
 }
 //
+// 向网站获取采集端配置...
+BOOL CHaoYiView::doWebGatherConfig()
+{
+	if( m_lpWebThread == NULL )
+		return false;
+	return m_lpWebThread->doWebGatherConfig();
+}
+//
 // 向网站注册摄像头...
 BOOL CHaoYiView::doWebRegCamera(GM_MapData & inData)
 {
@@ -1310,9 +1321,11 @@ void CHaoYiView::OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI)
 // 点击菜单 => 登录通道...
 void CHaoYiView::OnLoginDVR()
 {
+	// 根据焦点获取对象...
 	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
 	if( lpCamera == NULL || lpCamera->IsLogin() )
 		return;
+	// 处理流转发模式的登录...
 	GM_Error theErr = GM_NoErr;
 	if( !lpCamera->IsCameraDevice() ) {
 		theErr = lpCamera->doStreamLogin();
@@ -1321,19 +1334,21 @@ void CHaoYiView::OnLoginDVR()
 		}
 		return;
 	}
+	// 处理摄像头模式的登录...
 	ASSERT( lpCamera->IsCameraDevice() );
 	if( m_RightView.m_hWnd != NULL ) {
-		m_RightView.doClickBtnLogin();
+		m_RightView.doDeviceLogin();
 	}
 }
 //
 // 点击菜单 => 注销通道...
 void CHaoYiView::OnLogoutDVR()
 {
+	// 根据焦点获取对象...
 	CCamera * lpCamera = this->FindCameraByID(m_nFocusCamera);
 	if( lpCamera == NULL )
 		return;
-	STREAM_PROP theProp = lpCamera->GetStreamProp();
+	// 处理流转发模式的注销...
 	GM_Error theErr = GM_NoErr;
 	if( !lpCamera->IsCameraDevice() ) {
 		theErr = lpCamera->doStreamLogout();
@@ -1342,9 +1357,10 @@ void CHaoYiView::OnLogoutDVR()
 		}
 		return;
 	}
+	// 处理摄像头模式的登录...
 	ASSERT( lpCamera->IsCameraDevice() );
 	if( m_RightView.m_hWnd != NULL ) {
-		m_RightView.doClickBtnLogout();
+		m_RightView.doDeviceLogout();
 	}
 }
 //

@@ -14,7 +14,7 @@ public:
 public:
 	string   &  GetDeviceSN() { return m_strDeviceSN; }
 	CString  &	GetLogStatus() { return m_strLogStatus; }
-	CVideoWnd * GetVideoWnd() { return m_lpWndParent; }
+	CVideoWnd * GetVideoWnd() { return m_lpVideoWnd; }
 public:
 	BOOL		IsLogin();		// 这个状态只能用于显示，不能用于状态判断...
 	BOOL		IsPlaying();	// 这个可以用于状态的精确判断...
@@ -24,63 +24,53 @@ public:
 	int			GetRecCourseID() { return m_nRecCourseID; }
 	DWORD		GetHKErrCode() { return m_dwHKErrCode; }
 	STREAM_PROP	GetStreamProp() { return m_nStreamProp; }
+	int			GetLocalCameraID() { return m_nCameraID; }
 
 	int			GetDBCameraID();
 	int			GetRecvPullKbps();
 	int			GetSendPushKbps();
 	LPCTSTR		GetStreamPushUrl();
 
+	BOOL		InitCamera(GM_MapData & inMapLoc);
+	GM_Error	ForUDPData(GM_MapData & inNetData);
+	void		UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle);
+
 	GM_Error	doStreamLogin();
 	GM_Error	doStreamLogout();
+	int			doStreamStartLivePush(string & strRtmpUrl);
 	void		doStreamStopLivePush();
 	void		doStreamStatus(LPCTSTR lpszStatus);
 
-	BOOL		InitCamera(GM_MapData & inMapLoc);
-	GM_Error	ForUDPData(GM_MapData & inNetData);
+	DWORD		doDevicePTZCmd(DWORD dwPTZCmd, BOOL bStop);
+	DWORD		doDeviceLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LPCTSTR lpUser, LPCTSTR lpPass);
+	void		doDeviceLogout();
 
-	void		doRecEnd(int nRecSecond);
-
-	void		doStreamSnapJPG(int nRecSecond);
-	DWORD		doDeviceSnapJPG(CString & inJpgName);
-
-	DWORD		doPTZCmd(DWORD dwPTZCmd, BOOL bStop);
-	DWORD		doLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LPCTSTR lpUser, LPCTSTR lpPass);
-	void		doLogout();
-
-	void		UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle);
-	void		ForLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo);
-	DWORD		onLoginSuccess();
+	void		onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo);
+	DWORD		onDeviceLoginSuccess();
 
 	void		doRecStartCourse(int nCourseID);
 	void		doRecStopCourse(int nCourseID);
 
-	int			doStartLivePush(string & strRtmpUrl);
-	void		doStopLiveMessage();
-	void		doStopLivePush();
+	void		doPostStopLiveMsg();
+	void		doDeletePushThread();
 
 	void		doWebStatCamera(int nStatus);
 private:
-	static void CALLBACK LoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
+	static void CALLBACK DeviceLoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
 private:
 	void		WaitForExit();						// 等待异步登录退出...
 	void		ClearResource();					// 释放建立资源...
-
-//	void		StartRecSlice();					// 启动一个录像切片...
-//	void		doRecSlice();
 private:
 	BOOL					m_bStreamLogin;			// 流转发模式下正在异步登录标志...
 	STREAM_PROP				m_nStreamProp;			// 通道流类型...
 	int						m_nCameraID;			// 摄像头本地编号...
-	HWND					m_hWndNotify;			// 消息通知窗口...
+	HWND					m_hWndRight;			// 消息通知窗口...
 	string					m_strDeviceSN;			// 本地摄像头序列号...
 	CAMERA_TYPE				m_nCameraType;			// 网络摄像头类型...
 	GM_MapData				m_MapNetConfig;			// 摄像头网络配置信息...
-	CVideoWnd		*		m_lpWndParent;			// 父窗口对象...
+	CVideoWnd		*		m_lpVideoWnd;			// 父窗口对象...
 	CString					m_strLogStatus;			// 登录状态栏...
 
-	CRecThread		*		m_lpRecThread;			// 录像线程对象...
-	CString					m_strMP4Name;			// MP4文件名(不带扩展名)...
-	CString					m_strJpgName;			// JPG文件名(全路径)...
 	int						m_nRecCourseID;			// 正在录像的课程编号...
 
 	CPushThread     *		m_lpPushThread;			// 直播上传线程...

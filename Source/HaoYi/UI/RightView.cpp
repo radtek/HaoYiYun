@@ -37,9 +37,9 @@ BEGIN_MESSAGE_MAP(CRightView, CStatic)
 	ON_WM_SIZE()
 	ON_WM_PAINT()
 	ON_WM_ERASEBKGND()
-	ON_MESSAGE(WM_BUTTON_LDOWNUP, &CRightView::OnMsgBtnLDownUp)
-	ON_MESSAGE(WM_DVR_LOGIN_RESULT, &CRightView::OnMsgDVRLoginResult)
 	ON_COMMAND_RANGE(kButtonLogin, kButtonQuanPlus, OnClickButtonWnd)
+	ON_MESSAGE(WM_DEVICE_LOGIN_RESULT, &CRightView::OnMsgDeviceLoginResult)
+	ON_MESSAGE(WM_DEVICE_BUTTON_LDOWNUP, &CRightView::OnMsgDeviceBtnLDownUp)
 END_MESSAGE_MAP()
 
 void CRightView::OnPaint() 
@@ -465,8 +465,26 @@ BOOL CRightView::InitButton(CFont * lpFont)
 	return true;
 }
 //
-// 响应按钮左键按下|抬起的操作...
-LRESULT	CRightView::OnMsgBtnLDownUp(WPARAM wParam, LPARAM lParam)
+// 响应点击事件操作...
+void CRightView::OnClickButtonWnd(UINT nItemID)
+{
+	switch( nItemID )
+	{
+	case kButtonLogin:		this->doDeviceLogin();  break;
+	case kButtonLogout:		this->doDeviceLogout(); break;
+
+	case kButtonSetVPreview: this->doClickSetVPreview(); break;
+	case kButtonSetVParam:   this->doClickSetVParam(); break;
+	case kButtonSetRecord:   this->doClickSetRecord(); break;
+	case kButtonSetReview:   this->doClickSetReview(); break;
+	case kButtonSetAlert:    this->doClickSetAlert(); break;
+	case kButtonSetCamera:   this->doClickSetCamera(); break;
+	default:				 /* do nothing... */ break;
+	} 
+}
+//
+// 响应按钮左键按下|抬起的操作 => 是由CXPButton发送的消息通知...
+LRESULT	CRightView::OnMsgDeviceBtnLDownUp(WPARAM wParam, LPARAM lParam)
 {
 	switch(wParam)
 	{
@@ -487,26 +505,8 @@ LRESULT	CRightView::OnMsgBtnLDownUp(WPARAM wParam, LPARAM lParam)
 	return S_OK;
 }
 //
-// 响应点击事件操作...
-void CRightView::OnClickButtonWnd(UINT nItemID)
-{
-	switch( nItemID )
-	{
-	case kButtonLogin:    this->doClickBtnLogin();  break;
-	case kButtonLogout:   this->doClickBtnLogout(); break;
-
-	case kButtonSetVPreview: this->doClickSetVPreview(); break;
-	case kButtonSetVParam:   this->doClickSetVParam(); break;
-	case kButtonSetRecord:   this->doClickSetRecord(); break;
-	case kButtonSetReview:   this->doClickSetReview(); break;
-	case kButtonSetAlert:    this->doClickSetAlert(); break;
-	case kButtonSetCamera:   this->doClickSetCamera(); break;
-	default:				 /* do nothing... */ break;
-	} 
-}
-//
 // 处理异步登录成功的消息通知...
-LRESULT	CRightView::OnMsgDVRLoginResult(WPARAM wParam, LPARAM lParam)
+LRESULT	CRightView::OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam)
 {
 	// 针对频道编号有效时的处理...
 	ASSERT( wParam > 0 );
@@ -528,7 +528,7 @@ LRESULT	CRightView::OnMsgDVRLoginResult(WPARAM wParam, LPARAM lParam)
 	}
 	// 通知DVR：异步登录成功...
 	ASSERT( lParam > 0 && lpCamera->IsLogin() );
-	dwReturn = lpCamera->onLoginSuccess();
+	dwReturn = lpCamera->onDeviceLoginSuccess();
 	// 焦点窗口与登录窗口不一致，直接返回...
 	if( wParam != m_lpParentDlg->GetFocusCamera() ) {
 		this->Invalidate(true);
@@ -590,7 +590,7 @@ void CRightView::doAutoCheckDVR()
 				m_btnLogin.EnableWindow(false);
 			}
 			// 开始进行登录操作...
-			DWORD dwReturn = lpCamera->doLogin(this->m_hWnd, strIPAddr.c_str(), nCmdPort, strLoginUser.c_str(), szDecodePass);
+			DWORD dwReturn = lpCamera->doDeviceLogin(this->m_hWnd, strIPAddr.c_str(), nCmdPort, strLoginUser.c_str(), szDecodePass);
 			if( dwReturn != GM_NoErr ) {
 				// 焦点窗口 => 登录失败的处理过程...
 				if( bIsFocusCamera ) {
@@ -624,8 +624,8 @@ void CRightView::doAutoCheckDVR()
 	m_nCurAutoID = m_lpParentDlg->GetNextAutoID(nCameraID);
 }
 //
-// 点击登录事件...
-void CRightView::doClickBtnLogin()
+// 点击摄像头设备登录事件...
+void CRightView::doDeviceLogin()
 {
 	// 获取登录配置参数...
 	CString strIPAddr, strCmdPort;
@@ -678,7 +678,7 @@ void CRightView::doClickBtnLogin()
 	m_editPassWord.SetReadOnly(true);
 	m_btnLogin.EnableWindow(false);
 	// 开始进行登录操作...
-	DWORD dwReturn = lpCamera->doLogin(this->m_hWnd, strIPAddr, nCmdPort, strLoginUser, strLoginPass);
+	DWORD dwReturn = lpCamera->doDeviceLogin(this->m_hWnd, strIPAddr, nCmdPort, strLoginUser, strLoginPass);
 	if( dwReturn != GM_NoErr ) {
 		// 登录失败的处理过程...
 		m_editIPAddr.SetReadOnly(false);
@@ -694,8 +694,8 @@ void CRightView::doClickBtnLogin()
 	this->Invalidate(true);
 }
 //
-// 点击注销事件...
-void CRightView::doClickBtnLogout()
+// 点击摄像头设备注销事件...
+void CRightView::doDeviceLogout()
 {
 	// 获取有效的DVR对象...
 	int nCameraID = m_lpParentDlg->GetFocusCamera();
@@ -704,7 +704,7 @@ void CRightView::doClickBtnLogout()
 		return;
 	ASSERT( lpCamera != NULL );
 	// 调用DVR退出接口函数...
-	lpCamera->doLogout();
+	lpCamera->doDeviceLogout();
 	// 获取DVR的当前配置信息...
 	GM_MapData   theMapLoc;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -726,7 +726,7 @@ void CRightView::doClickBtnPTZ(DWORD dwPTZCmd, BOOL bStop)
 	if( lpCamera == NULL )
 		return;
 	ASSERT( lpCamera != NULL );
-	lpCamera->doPTZCmd(dwPTZCmd, bStop);
+	lpCamera->doDevicePTZCmd(dwPTZCmd, bStop);
 }
 //
 // 点击视频预览

@@ -278,9 +278,9 @@ CRtspRecThread::~CRtspRecThread()
 	}
 
 	// 通知IPC可以对录像进行改名操作...
-	if( m_lpCamera != NULL ) {
-		m_lpCamera->doRecEnd(m_dwWriteRecMS/1000);
-	}
+	//if( m_lpCamera != NULL ) {
+	//	m_lpCamera->doRecEnd(m_dwWriteRecMS/1000);
+	//}
 
 	// 打印退出信息...
 	TRACE("[~CRtspRecThread Thread] - Exit\n");

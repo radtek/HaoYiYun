@@ -39,7 +39,7 @@ CVideoWnd::CVideoWnd(CBitItem ** lppBit, UINT inVideoWndID)
 	m_lpRenderWnd(NULL),
 	m_ptMouse(0, 0),
 	m_lpCamera(NULL),
-	m_lpParent(NULL),
+	m_lpMidView(NULL),
 	m_nWndState(kFixState),
 	m_nVideoWndID(inVideoWndID),
 	m_nWndIndex(inVideoWndID - ID_VIDEO_WND_BEGIN)
@@ -67,13 +67,13 @@ BEGIN_MESSAGE_MAP(CVideoWnd, CWnd)
 	ON_WM_MOUSEMOVE()
 	ON_WM_ERASEBKGND()
 	ON_WM_LBUTTONDOWN()
-	//ON_WM_NCCALCSIZE()
 	ON_WM_LBUTTONDBLCLK()
 	ON_WM_GETMINMAXINFO()
-	ON_MESSAGE(WM_ERR_TASK_MSG, &CVideoWnd::OnMsgTaskErr)
-	ON_MESSAGE(WM_ERR_PUSH_MSG, &CVideoWnd::OnMsgPushErr)
-	ON_MESSAGE(WM_REC_SLICE_MSG, &CVideoWnd::OnMsgRecSlice)
-	ON_MESSAGE(WM_STOP_STREAM_MSG, &CVideoWnd::OnMsgStopStream)
+	//ON_WM_NCCALCSIZE()
+	//ON_MESSAGE(WM_ERR_TASK_MSG, &CVideoWnd::OnMsgTaskErr)
+	//ON_MESSAGE(WM_ERR_PUSH_MSG, &CVideoWnd::OnMsgPushErr)
+	//ON_MESSAGE(WM_REC_SLICE_MSG, &CVideoWnd::OnMsgRecSlice)
+	ON_MESSAGE(WM_STOP_LIVE_PUSH_MSG, &CVideoWnd::OnMsgStreamStopLivePush)
 	ON_COMMAND_RANGE(ID_RENDER_WND_BEGIN, ID_RENDER_WND_BEGIN + kBitNum, &CVideoWnd::OnClickItemWnd)
 END_MESSAGE_MAP()
 //
@@ -156,11 +156,11 @@ void CVideoWnd::GetStreamPullUrl(CString & outPullUrl)
 }
 //
 // 录像切片通知...
-LRESULT	CVideoWnd::OnMsgRecSlice(WPARAM wParam, LPARAM lParam)
+/*LRESULT	CVideoWnd::OnMsgRecSlice(WPARAM wParam, LPARAM lParam)
 {
-	/*if( m_lpCamera != NULL ) {
+	if( m_lpCamera != NULL ) {
 		m_lpCamera->doRecSlice();
-	}*/
+	}
 	return S_OK;
 }
 //
@@ -179,13 +179,13 @@ LRESULT CVideoWnd::OnMsgPushErr(WPARAM wParam, LPARAM lParam)
 {
 	// 直接调用停止上传接口...
 	if( m_lpCamera != NULL ) {
-		m_lpCamera->doStopLivePush();
+		m_lpCamera->doDeletePushThread();
 	}
 	return S_OK;
-}
+}*/
 //
 // 响应停止推送上传消息...
-LRESULT CVideoWnd::OnMsgStopStream(WPARAM wParam, LPARAM lParam)
+LRESULT CVideoWnd::OnMsgStreamStopLivePush(WPARAM wParam, LPARAM lParam)
 {
 	// 直接调用停止上传接口...
 	if( m_lpCamera != NULL ) {
@@ -358,8 +358,8 @@ int CVideoWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 	
-	m_lpParent = this->GetParent();
-	ASSERT( m_lpParent != NULL );
+	m_lpMidView = (CMidView *)this->GetParent();
+	ASSERT( m_lpMidView != NULL );
 
 	this->BuildItemWnd();
 	this->BuildRenderWnd(m_nWndIndex);
@@ -574,7 +574,7 @@ void CVideoWnd::OnFixToFlyState()
 {
 	this->ShowWindow(SW_HIDE);
 
-	ASSERT( m_lpParent != NULL );
+	ASSERT( m_lpMidView != NULL );
 	m_nWndState = kFlyState;
 	m_bFocus = false;
 	
@@ -611,14 +611,14 @@ void CVideoWnd::OnFlyToFixState()
 	this->ShowWindow(SW_HIDE);
 
 	CRect	rcRect = m_rcWinPos;
-	ASSERT( m_lpParent != NULL );
+	ASSERT( m_lpMidView != NULL );
 	m_nWndState = kFixState;
-	this->SetParent(m_lpParent);
+	this->SetParent(m_lpMidView);
 
 	ModifyStyle(WS_THICKFRAME, 0, SWP_FRAMECHANGED);
 	ModifyStyleEx(WS_EX_TOOLWINDOW, 0, SWP_FRAMECHANGED);
 	
-	m_lpParent->ScreenToClient(rcRect);
+	m_lpMidView->ScreenToClient(rcRect);
 	this->MoveWindow(rcRect);
 	this->ShowWindow(SW_SHOW);
 
@@ -632,13 +632,13 @@ void CVideoWnd::doFocusAction()
 	// 设置当前窗口为焦点窗口...
 	this->SetFocus();
 	// 通知父窗口释放原来的所有窗口的焦点状态...
-	ASSERT( m_lpParent != NULL );
-	((CMidView *)m_lpParent)->ReleaseFocus();
+	ASSERT( m_lpMidView != NULL );
+	m_lpMidView->ReleaseFocus();
 	// 设置当前窗口为焦点窗口...
 	this->DrawFocus(kFocusColor);
 	m_bFocus = true;
 	// 通知视图窗口当前视频窗口成为了焦点...
-	::PostMessage(m_lpParent->GetParent()->m_hWnd, WM_FOCUS_VIDEO, m_nWndIndex, NULL);
+	::PostMessage(m_lpMidView->GetParent()->m_hWnd, WM_FOCUS_VIDEO, m_nWndIndex, NULL);
 }
 
 void CVideoWnd::OnFlyToZoomIn()

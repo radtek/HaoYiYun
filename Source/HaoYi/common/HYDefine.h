@@ -98,8 +98,8 @@ using namespace std;
 #define WM_FIND_HK_CAMERA			(WM_USER + 103)
 #define WM_FIND_DH_CAMERA			(WM_USER + 104)
 #define WM_FOCUS_VIDEO				(WM_USER + 105)
-#define WM_BUTTON_LDOWNUP			(WM_USER + 106)
-#define WM_DVR_LOGIN_RESULT			(WM_USER + 107)
+#define WM_DEVICE_BUTTON_LDOWNUP	(WM_USER + 106)
+#define WM_DEVICE_LOGIN_RESULT		(WM_USER + 107)
 #define WM_WEB_LOAD_RESOURCE		(WM_USER + 108)
 #define	WM_WEB_UPDATE_NAME			(WM_USER + 109)
 #define	WM_WEB_AUTH_RESULT			(WM_USER + 110)
@@ -107,8 +107,8 @@ using namespace std;
 #define WM_ERR_TASK_MSG				(WM_USER + 501)			// 录像任务会话通知消息
 #define WM_ERR_PUSH_MSG				(WM_USER + 502)			// 拉转推会话通知消息
 #define WM_REC_SLICE_MSG			(WM_USER + 503)			// 录像切片通知消息
-#define WM_STOP_STREAM_MSG			(WM_USER + 504)			// 停止流上传通知消息
-#define WM_EVENT_SESSION_MSG		(WM_USER + 505)			// 事件会话通知消息
+#define WM_EVENT_SESSION_MSG		(WM_USER + 504)			// 事件会话通知消息
+#define WM_STOP_LIVE_PUSH_MSG		(WM_USER + 505)			// 停止流上传通知消息
 
 typedef	enum AUTH_STATE {
 	kAuthRegiter	= 1,		// 网站注册授权

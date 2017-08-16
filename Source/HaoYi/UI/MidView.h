@@ -19,7 +19,7 @@ protected:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	DECLARE_MESSAGE_MAP()
 public:
-	void			OnAuthResult(int nType, BOOL bAuthOK);
+	void			OnWebAuthResult(int nType, BOOL bAuthOK);
 	CFont    *		GetVideoFont() { return &m_VideoFont; }
 	BOOL			IsFullScreen() { return m_bIsFullScreen; }
 	BOOL			Create(UINT wStyle, const CRect & rect, CWnd * pParentWnd);

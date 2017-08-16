@@ -7,7 +7,7 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置</i></legend>
+          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - <eq name='my_web_type' value='0'>云录播模式<else/>云监控模式</eq></i></legend>
         </fieldset>
         <div class="layui-field-box" style="padding: 0px 0px; width: 50%;">
           <form class="layui-form layui-form-pane" action="">
@@ -29,9 +29,21 @@
                 <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_sys.sys_site}}">
               </div>
             </div>
-            <div class="layui-form-item" style="margin-top:20px;text-align:center;">
-              <button class="layui-btn" lay-submit lay-filter="formSystem">立即保存</button>
-              <button type="reset" class="layui-btn layui-btn-primary">重 置</button>
+            <div class="layui-form-item" <eq name='my_web_type' value='0'>style="display:none"<else/>style="display:block"</eq> >
+              <label class="layui-form-label">录像切片</label>
+              <div class="layui-input-inline" style="width:130px;">
+                <input type="text" name="mySliceVal" maxlength="2" lay-verify="required" autocomplete="off" placeholder="请输入切片时间" class="layui-input" value="{{$my_sys.slice_val}}">
+              </div>
+              <div class="layui-form-mid layui-word-aux" title="0表示，不切片">(0~30分钟)</div>
+              <label class="layui-form-label" style="margin-left:30px">切片交错</label>
+              <div class="layui-input-inline" style="width:130px;">
+                <input type="text" name="myInterVal" maxlength="1" lay-verify="required" autocomplete="off" placeholder="请输入关键帧个数" class="layui-input" value="{{$my_sys.inter_val}}">
+              </div>
+              <div class="layui-form-mid layui-word-aux" title="0表示，不交错">(0~3个关键帧)</div>
+            </div>
+            <div class="layui-form-item" style="margin-top:30px;text-align:center;">
+              <button class="layui-btn" lay-submit lay-filter="formSystem">立即保存</button>&nbsp;
+              <button type="reset" class="layui-btn layui-btn-primary">重置还原</button>
             </div>
           </form>
         </div>
@@ -43,7 +55,10 @@
 <script>
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
-
+// 判断数字接口...
+function isNumber(obj) {
+  return obj === +obj
+}
 // 处理 layui 过程...
 layui.use(['element','layer','form'], function(){
   // 获取表单对象，监听事件...
@@ -53,18 +68,33 @@ layui.use(['element','layer','form'], function(){
   // 响应保存设置对话框...
   form.on('submit(formSystem)', function(data) {
     // 获取输入数据，调用接口立即存盘...
+    var theSliceVal = parseInt(data.field.mySliceVal);
+    var theInterVal = parseInt(data.field.myInterVal);
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
+    // 判读切片时间、切片交错的有效性 => 必须是数字...
+    if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
+      layer.msg('请输入 0 ~ 30 之间的整数！', {anim: 6});
+      $("input[name='mySliceVal']").focus();
+      return false;
+    }
+    if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
+      layer.msg('请输入 0 ~ 3 之间的整数！', {anim: 6});
+      $("input[name='myInterVal']").focus();
+      return false;
+    }
     // 发送异步请求 => 兼容IE8...
     $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_title: theTitle, sys_site: theSite},
+      data: {operate: 'save', web_title: theTitle, sys_site: theSite, slice_val: theSliceVal, inter_val: theInterVal},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');
+        $("input[name='mySliceVal']").val(theSliceVal);
+        $("input[name='myInterVal']").val(theInterVal);
         $("input[name='myWebTitle']").val(theTitle);
         $("input[name='mySysSite']").val(theSite);
         layer.msg('恭喜！保存成功！', {icon: 1});
