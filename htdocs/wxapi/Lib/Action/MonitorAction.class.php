@@ -71,6 +71,10 @@ class MonitorAction extends Action
     if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker') ) {
       $my_nav['is_login'] = true;
       $my_nav['headurl'] = Cookie::get('wx_headurl');
+      // 判断当前页面是否是https协议 => 通过$_SERVER['HTTPS']和$_SERVER['REQUEST_SCHEME']来判断...
+      if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
+        $my_nav['headurl'] = str_replace('http://', 'https://', $my_nav['headurl']);
+      }
     } else {
       $my_nav['is_login'] = false;
     }
@@ -149,9 +153,9 @@ class MonitorAction extends Action
       $arrRec[$theName]['name'] = $dbItem['camera_name'];
       $arrRec[$theName]['data'] = D('RecordView')->where($map)->limit(8)->order('created DESC')->select();
     }
-    // 对模板对象进行赋值...
+    // 对模板对象进行赋值 => web_tracker_addr 已经自带了协议头 http://或https://
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_rec', $arrRec);
     echo $this->fetch('pageIndex');
@@ -322,9 +326,9 @@ class MonitorAction extends Action
     $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
    
-    // 设置其它模板参数...
+    // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_title', $this->m_webTitle . ' - 播放');
     $this->assign('my_nav', $my_nav);
     $this->display('play');
@@ -338,11 +342,11 @@ class MonitorAction extends Action
   {
     // 根据type类型获取url地址...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
-      // 获取点播记录信息...
+      // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
       $map['record_id'] = $_GET['record_id'];
       $dbVod = D('record')->where($map)->field('file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      $dbShow['url'] = sprintf("http://%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
+      $dbShow['url'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = intval($dbVod['clicks']) + 1;

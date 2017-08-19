@@ -20,13 +20,13 @@
     <div class="layui-form-item">
       <div class="layui-inline">
         <label class="layui-form-label">跟踪地址</label>
-        <div class="layui-input-block">
+        <div class="layui-input-block" style="width: 250px;">
           <input type="text" name="myTrackerAddr" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入跟踪服务器地址" class="layui-input" value="{{$my_sys.tracker_addr}}">
         </div>
       </div>
       <div class="layui-inline">
         <label class="layui-form-label">跟踪端口</label>
-        <div class="layui-input-block">
+        <div class="layui-input-block" style="width: 250px;">
           <input type="text" name="myTrackerPort" maxlength="5" lay-verify="required" autocomplete="off" placeholder="请输入跟踪服务器端口" class="layui-input" value="{{$my_sys.tracker_port}}">
         </div>
       </div>
@@ -34,16 +34,17 @@
     <div class="layui-form-item">
       <div class="layui-inline">
         <label class="layui-form-label" title="存储访问地址">网站地址</label>
-        <div class="layui-input-block">
+        <div class="layui-input-block" style="width: 250px;">
           <input type="text" name="myWebTrackerAddr" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入存储访问地址" class="layui-input" value="{{$my_sys.web_tracker_addr}}">
         </div>
       </div>
       <div class="layui-inline">
         <label class="layui-form-label" title="存储访问端口">网站端口</label>
-        <div class="layui-input-block">
+        <div class="layui-input-block" style="width: 250px;">
           <input type="text" name="myWebTrackerPort" maxlength="5" lay-verify="required" autocomplete="off" placeholder="请输入存储访问端口" class="layui-input" value="{{$my_sys.web_tracker_port}}">
         </div>
       </div>
+      <!--<div class="layui-inline layui-word-aux">(https默认端口443)</div>-->
     </div>
     <gt name="my_err" value="0">
       <div style="text-align:center;font-size:30px;color:red;margin-top:20px;margin-bottom:20px;">

@@ -25,6 +25,10 @@ class AdminAction extends Action
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
     $this->m_wxHeadUrl = $this->getLoginHeadUrl();
+    // 判断当前页面是否是https协议 => 通过$_SERVER['HTTPS']和$_SERVER['REQUEST_SCHEME']来判断...
+    if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
+      $this->m_wxHeadUrl = str_replace('http://', 'https://', $this->m_wxHeadUrl);
+    }
     // 直接给模板变量赋值...
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
@@ -1542,11 +1546,11 @@ class AdminAction extends Action
       $this->assign('my_list_teacher', $arrTeacher);
       $this->assign('my_list_subject', $arrSubject);
     }
-    // 获取录像记录需要的信息...
+    // 获取录像记录需要的信息 => web_tracker_addr 已经自带了协议头 http://或https://
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     $map['record_id'] = $_GET['record_id'];
     $dbVod = D('RecordView')->where($map)->find();
-    $dbVod['image_url'] = sprintf("http://%s:%d/%s_470x250", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['image_fdfs']);
+    $dbVod['image_url'] = sprintf("%s:%d/%s_470x250", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['image_fdfs']);
     $this->assign('my_vod', $dbVod);
     // 获取模板数据...
     echo $this->fetch('getVod');

@@ -101,16 +101,31 @@ function doFormTracker() {
     if( isNaN(thePort) || thePort <= 0 || thePort >= 65535 ) {
       $("input[name='myTrackerPort']").focus();
       $("input[name='myTrackerPort']").addClass('layui-form-danger');
-      layer.msg('【端口地址】无效，请重新输入！', {icon: 5});
+      layer.msg('【端口地址】无效，请重新输入！', {anim: 6});
       return false;
     }
     // 存储访问地址、端口判断有效性...
-    var theWebAddr = data.field.myWebTrackerAddr;
+    var theWebAddr = data.field.myWebTrackerAddr.toLowerCase();
     var theWebPort = data.field.myWebTrackerPort;
     if( isNaN(theWebPort) || theWebPort <= 0 || theWebPort >= 65535 ) {
       $("input[name='myWebTrackerPort']").focus();
       $("input[name='myWebTrackerPort']").addClass('layui-form-danger');
-      layer.msg('【网站端口】无效，请重新输入！', {icon: 5});
+      layer.msg('【网站端口】无效，请重新输入！', {anim: 6});
+      return false;
+    }
+    // 判断网站地址是否正确...
+    var arrAddr = theWebAddr.split('://');
+    if( (arrAddr.length <= 1) || (arrAddr[0] != 'http' && arrAddr[0] != 'https') ) {
+      $("input[name='myWebTrackerAddr']").focus();
+      $("input[name='myWebTrackerAddr']").addClass('layui-form-danger');
+      layer.msg('【网站地址】必须包含 http:// 或 https:// <br>请确认后重新输入！', {anim: 6});
+      return false;
+    }
+    // 判断https协议是否正确...
+    if( arrAddr[0] == 'https' && theWebPort != 443 ) {
+      $("input[name='myWebTrackerPort']").focus();
+      $("input[name='myWebTrackerPort']").addClass('layui-form-danger');
+      layer.msg('https安全协议的端口不是443 <br>请确认后重新输入！', {anim: 6});
       return false;
     }
     // 发送异步请求...

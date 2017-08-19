@@ -80,6 +80,10 @@ class HomeAction extends Action
     if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker') ) {
       $my_nav['is_login'] = true;
       $my_nav['headurl'] = Cookie::get('wx_headurl');
+      // 判断当前页面是否是https协议 => 通过$_SERVER['HTTPS']和$_SERVER['REQUEST_SCHEME']来判断...
+      if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
+        $my_nav['headurl'] = str_replace('http://', 'https://', $my_nav['headurl']);
+      }
     } else {
       $my_nav['is_login'] = false;
     }
@@ -138,9 +142,9 @@ class HomeAction extends Action
     //计算右侧，点击排行，前10条...
     $arrList = D('RecordView')->limit(10)->order('Record.clicks DESC')->select();
     $this->assign('my_clicks', $arrList);
-    // 对模板对象进行赋值...
+    // 对模板对象进行赋值 => web_tracker_addr 已经自带了协议头 http://或https://
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_title', $this->m_webTitle . ' - 首页');
     $this->assign('my_rec', $arrRec);
     $this->assign('my_nav', $my_nav);
@@ -178,10 +182,10 @@ class HomeAction extends Action
     $where['Record.subject_id'] = $subject_id;
     $arrNews = D('RecordView')->where($where)->limit(10)->order('Record.created DESC')->select();
     $this->assign('my_news', $arrNews);
-    // 对模板对象进行赋值...
+    // 对模板对象进行赋值 => web_tracker_addr 已经自带了协议头 http://或https://
     $this->assign('my_title', $this->m_webTitle . ' - ' . $my_nav['subject_title']);
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     $this->assign('my_nav', $my_nav);
     $this->display('subject');
   }
@@ -398,9 +402,9 @@ class HomeAction extends Action
       $my_base['subject_id'] = $subject_id;
       $my_base['subject_title'] = $my_nav['subject_title'];
       $my_base['play_title'] = sprintf("%s %s %s %s %s %s", $curPlay['grade_type'], $curPlay['grade_name'], $curPlay['camera_name'], $curPlay['teacher_name'], $curPlay['title_name'], $curPlay['created']);
-      // 设置点播模板参数...
+      // 设置点播模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      $this->assign('my_web_tracker', sprintf("http://%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+      $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
       $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
       $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrVod);
@@ -460,11 +464,11 @@ class HomeAction extends Action
   {
     // 根据type类型获取url地址...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
-      // 获取点播记录信息...
+      // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
       $map['record_id'] = $_GET['record_id'];
       $dbVod = D('record')->where($map)->field('file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      $dbShow['url'] = sprintf("http://%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
+      $dbShow['url'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = intval($dbVod['clicks']) + 1;

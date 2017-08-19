@@ -90,7 +90,12 @@ class LoginAction extends Action
       }
       // 如果是前台 => 用户登录成功，进行页面跳转 => 从登录前的cookie中获取...
       $strJump = Cookie::get('wx_jump');
-      $strHost = sprintf("http://%s", $_SERVER['HTTP_HOST']);
+      // 判断当前页面是否是https协议 => 通过$_SERVER['HTTPS']和$_SERVER['REQUEST_SCHEME']来判断...
+      if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
+        $strHost = sprintf("https://%s", $_SERVER['HTTP_HOST']);
+      } else {
+        $strHost = sprintf("http://%s", $_SERVER['HTTP_HOST']);
+      }
       // 重置跳转页面的cookie值 => 删除是要用 API...
       setcookie('wx_jump','',-1,'/');
       // 如果跳转页面与当前主机比较...
