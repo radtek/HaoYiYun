@@ -245,8 +245,8 @@ $(document).ready(function() {
 layui.use(['element','layer','form'], function(){
   var theCameraID = {{$my_camera_id}};
   var theGatherID = {{$my_gather_id}};
-  var element = layui.element();
-  // 这里使用ajax获取数据，有时会比较慢...
+  var element = layui.element;
+  // 这里使用ajax获取区间数据，有时会比较慢，使用数据加载方式填充，参见$(document).ready()...
   /*var index = layer.load(2);
   $.ajaxSetup({ cache:false });
   $.ajax({
@@ -323,7 +323,7 @@ function doApplyTask($range) {
         content: arrJson.data,
         area: [arrJson.width, arrJson.height],
         success: function() {
-          var form = layui.form();
+          var form = layui.form;
           var arrStart = strStart.split(':');
           var arrEnd = strEnd.split(':');
           var objWeek = $("select[name='myWeek']");
@@ -474,7 +474,7 @@ function doCopyTask(nWeek) {
         title: "<i class='fa fa-clone'>&nbsp;&nbsp;复制到...</i>",
         area: ['350px', '260px'],
         success: function() {
-          var form = layui.form();
+          var form = layui.form;
           form.render();
           // 响应立即应用事件...
           form.on('submit(formWeek)', function(data) {

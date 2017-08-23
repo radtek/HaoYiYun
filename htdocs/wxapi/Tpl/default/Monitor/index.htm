@@ -7,10 +7,6 @@
 .thumb {
   background-image: url(/wxapi/public/images/{{$my_web_logo}}.png);
 }
-.tline {
-  padding-bottom: 7px;
-  border-bottom: 1px solid #e67e22;
-}
 </style>
 
 <section class="content-wrap">
@@ -19,7 +15,9 @@
       <main class="col-md-8 main-content" id="myMain"></main>
       <aside class="col-md-4 sidebar" style="padding-left:5px;">
         <div class="widget">
-          <h4 class="title">最近更新</h4>
+          <h4 class="title">
+            <span class="tline">最近更新</span>
+          </h4>
           <div>
             <volist name="my_news" id="vo">
             <div class="item">
@@ -31,7 +29,9 @@
           </div>
         </div>
         <div class="widget">
-          <h4 class="title">点击排行</h4>
+          <h4 class="title">
+            <span class="tline">点击排行</span>
+          </h4>
           <div>
             <volist name="my_clicks" id="item">
             <div class="item">

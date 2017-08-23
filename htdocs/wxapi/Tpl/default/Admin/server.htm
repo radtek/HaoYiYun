@@ -88,8 +88,8 @@ function doTestTracker() {
 
 // 保存存储服务器配置信息...
 function doFormTracker() {
-  var element = layui.element();
-  var form = layui.form();
+  var element = layui.element;
+  var form = layui.form;
   var $ = layui.jquery;
   // 这里必须调用init，进度条才会显示...
   element.init();
@@ -187,7 +187,7 @@ function doTestTransmit() {
 
 // 保存中转服务器配置信息...
 function doFormTransmit() {
-  var form = layui.form();
+  var form = layui.form;
   var $ = layui.jquery;
   form.on('submit(formTransmit)', function(data) {
     // 端口无效，设置焦点，弹框，显示红色框...
@@ -262,7 +262,7 @@ function doTabChange(inTabItem) {
 // 处理 layui 过程...
 layui.use(['element','layer','form'], function(){
   // 获取表单对象，监听事件...
-  var element = layui.element();
+  var element = layui.element;
   var $ = layui.jquery;
   // 默认切换到中转服务器...
   doTabChange(0);

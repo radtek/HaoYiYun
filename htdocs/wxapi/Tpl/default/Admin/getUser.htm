@@ -80,7 +80,7 @@ document.getElementsByName('myTicker')[0].value = "{{$my_user.user_tick}}";
 // 处理 layui 过程...
 layui.use(['layer','form'], function(){
   var $ = layui.jquery;
-  var form = layui.form();
+  var form = layui.form;
   form.on('submit(formUser)', function(data) {
     var theTickerName = $("select[name='myTicker']").find("option:selected").text();
     var theTickerID = data.field.myTicker;

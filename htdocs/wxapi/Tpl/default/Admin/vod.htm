@@ -111,7 +111,7 @@ function doTrClick(inVodID, objTr) {
         title: "<i class='fa fa-film'>&nbsp;&nbsp;编辑 - 录像记录</i>",
         content: ajaxData,
         success: function() {
-          var form = layui.form();
+          var form = layui.form;
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formVod)', function(data) {
@@ -183,14 +183,15 @@ function doTrClick(inVodID, objTr) {
 }
 //
 // 处理获取页面数据...
-function doGetPageVod(cur_page, max_page) {
+function doGetPageVod(cur_page, total_num) {
   var laypage = layui.laypage;
-  var form = layui.form();
+  var layer = layui.layer;
+  var form = layui.form;
   var $ = layui.jquery;
-  laypage({
-    pages: max_page,    // 总页数...
+  laypage.render({
+    count: total_num,   // 总记录数...
     curr: cur_page,     // 当前页码...
-    cont: 'myPage',     // 分页对象...
+    elem: 'myPage',     // 分页对象...
     groups: 5,          // 连续显示分页数
     jump: function(obj, first) {
       // 记录当前分页，向服务器发送分页命令...
@@ -251,7 +252,7 @@ function doDelVod() {
         layer.closeAll('loading');
         // 解析返回的当前页码和总页面数...
         var arrJson = $.parseJSON(ajaxData);
-        doGetPageVod(arrJson.curr, arrJson.pages);
+        doGetPageVod(arrJson.curr, arrJson.total);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
@@ -263,11 +264,11 @@ function doDelVod() {
 //
 // 处理 layui 过程...
 layui.use(['element','laypage','layer','form'], function(){
-  var max_page = {{$max_page}};
-  var form = layui.form();
+  var total_num = {{$my_total_num}};
+  var form = layui.form;
   var $ = layui.jquery;
   // 获取分页数据...
-  doGetPageVod(1, max_page);
+  doGetPageVod(1, total_num);
   // 点击全选需要响应的操作...
   form.on('checkbox(allChoose)', function(data){
     var child = $(data.elem).parents('table').find('tbody input[type="checkbox"]');

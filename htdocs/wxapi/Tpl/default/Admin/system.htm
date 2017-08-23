@@ -38,12 +38,12 @@
             </div>
             <div id="recSlice" class="layui-form-item" <eq name='my_web_type' value='0'>style="display:none"<else/>style="display:block"</eq> >
               <label class="layui-form-label">录像切片</label>
-              <div class="layui-input-inline" style="width:130px;">
+              <div class="layui-input-inline" style="width:120px;">
                 <input type="text" name="mySliceVal" maxlength="2" lay-verify="required" autocomplete="off" placeholder="请输入切片时间" class="layui-input" value="{{$my_sys.slice_val}}">
               </div>
               <div class="layui-form-mid layui-word-aux" title="0表示，不切片">(0~30分钟)</div>
               <label class="layui-form-label" style="margin-left:30px">切片交错</label>
-              <div class="layui-input-inline" style="width:130px;">
+              <div class="layui-input-inline" style="width:120px;">
                 <input type="text" name="myInterVal" maxlength="1" lay-verify="required" autocomplete="off" placeholder="请输入关键帧个数" class="layui-input" value="{{$my_sys.inter_val}}">
               </div>
               <div class="layui-form-mid layui-word-aux" title="0表示，不交错">(0~3个关键帧)</div>
@@ -69,8 +69,8 @@ function isNumber(obj) {
 // 处理 layui 过程...
 layui.use(['element','layer','form'], function(){
   // 获取表单对象，监听事件...
-  var element = layui.element();
-  var form = layui.form();
+  var element = layui.element;
+  var form = layui.form;
   var $ = layui.jquery;
   // 处理切片参数的显示或隐藏...
   form.on('radio(modeType)', function(data) {

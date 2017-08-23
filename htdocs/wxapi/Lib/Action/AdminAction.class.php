@@ -1596,10 +1596,12 @@ class AdminAction extends Action
     if( $max_page <= 0 ) {
       $arrJson['curr'] = 0;
       $arrJson['pages'] = 0;
+      $arrJson['total'] = $totalNum;
     } else {
       $nCurPage = (($_POST['page'] > $max_page) ? $max_page : $_POST['page']);
       $arrJson['curr'] = $nCurPage;
       $arrJson['pages'] = $max_page;
+      $arrJson['total'] = $totalNum;
     }
     // 返回json数据包...
     echo json_encode($arrJson);
