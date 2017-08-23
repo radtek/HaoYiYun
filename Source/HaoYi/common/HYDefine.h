@@ -70,7 +70,7 @@ using namespace std;
 #define DEF_NETSESSION_TIMEOUT		2						// 默认网络会话超时时间(分钟)
 #define DEF_CAMERA_START_ID			1						// 默认摄像头开始ID
 #define DEF_MAX_CAMERA              16						// 默认最大摄像头数目
-#define DEF_WEB_ADDR				"192.168.1.180"			// Web默认地址
+#define DEF_WEB_ADDR				"http://192.168.1.180"	// Web默认地址 => 必须包含 http:// 或 https:// 协议前缀
 #define DEF_WEB_PORT				80						// Web默认端口 
 
 #define VIDEO_TIME_SCALE			90000					// 视频时间刻度，刻度越大好像越精确???

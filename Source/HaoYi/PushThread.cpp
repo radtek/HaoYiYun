@@ -1233,7 +1233,8 @@ BOOL CPushThread::EndRecSlice()
 	if( m_dwWriteSize > 0 && m_dwWriteRecMS > 0 ) {
 		this->doStreamSnapJPG(m_dwWriteRecMS/1000);
 	}
-	// 在切片开始过程中，复位录像变量...
+	// 这里需要复位录制变量，否则在退出时出错...
+	m_dwWriteRecMS = 0; m_dwWriteSize = 0;
 	return true;
 }
 //
@@ -1283,11 +1284,11 @@ BOOL CPushThread::StreamBeginRecord()
 // 进行录像处理 => 并判断是否开启新的切片...
 BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 {
-	// 一定是流转发模式下才会有效...
+	// 录像对象有效，才能写盘...
 	if( m_lpRecMP4 == NULL )
 		return false;
 	ASSERT( m_lpRecMP4 != NULL );
-	// 进行写盘操作...
+	// 进行写盘操作，内部会判断是否能够写盘...
 	BOOL bIsVideo = ((inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? true : false);
 	if( !m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)inFrame.strData.c_str(), inFrame.strData.size(), inFrame.dwSendTime, inFrame.dwRenderOffset, inFrame.is_keyframe) )
 		return false;

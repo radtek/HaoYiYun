@@ -350,7 +350,7 @@ void CXmlConfig::doDelDVR(int nCameraID)
 	this->GMSaveConfig();
 }
 
-#define DEF_PER_WAIT_MS		10	// 每次等待毫秒数
+#define DEF_PER_WAIT_MS		50	// 每次等待毫秒数
 #define DEF_MAX_WAIT_COUNT  50	// COUNT * MS = 总毫秒
 #define DEF_SNAP_JPG_NAME   TEXT("00000001.jpg")
 #define SafeCloseHandle(handle)	do{ if( handle ) { CloseHandle(handle); handle = 0L; } }while(0)
@@ -520,6 +520,7 @@ void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
 		SafeCloseHandle(stdChildOut);
 		SafeCloseHandle(stdChildErr);
 		
+		// 2017.08.22 - by jackey => 等待时间增加到50*50毫秒...
 		if(((DWORD)-1) != ResumeThread(pi.hThread))
         {
             BOOL bRet = false;
@@ -529,7 +530,7 @@ void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
 	            bRet = GetExitCodeProcess(pi.hProcess, &dwCode);
 				if( dwCode != STILL_ACTIVE )
 					break;
-				// 如果在X秒之后，仍然没有截图成功，中断进程...
+				// 如果在X毫秒之后，仍然没有截图成功，中断进程...
 				if( ++nCount >= DEF_MAX_WAIT_COUNT ) {
 					TerminateProcess(pi.hProcess, 0);
 					break;
@@ -538,9 +539,12 @@ void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
 				::Sleep(DEF_PER_WAIT_MS);
 			}
         }
-		// 开始读取截图输出数据...
-		//outString.clear();
-		//this->ReadHolePipe(pstdout, outString);
+		// 开始读取截图输出数据 => TRACE 有长度限制...
+#ifdef _DEBUG
+		string outString;
+		this->ReadHolePipe(pstdout, outString);
+		OutputDebugString(outString.c_str());
+#endif // _DEBUG
 		SafeCloseHandle(pi.hThread);  
 		SafeCloseHandle(pi.hProcess);
 	} while( FALSE );
@@ -565,7 +569,7 @@ void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
 	SafeCloseHandle(pstderr);
 }
 
-/*void CXmlConfig::ReadHolePipe(HANDLE hStdOut, string & strPipe)
+void CXmlConfig::ReadHolePipe(HANDLE hStdOut, string & strPipe)
 {
     const   int MAX_SIZE = 4096;
 
@@ -583,4 +587,4 @@ void CXmlConfig::SendMPlayerCmd(const CString &cmdLine)
 		strPipe.append(szBuf); ::Sleep(5);
 		bRet = PeekNamedPipe(hStdOut, NULL, 0, NULL, &dwRead, NULL);
 	}
-}*/
+}

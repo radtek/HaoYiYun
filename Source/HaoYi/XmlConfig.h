@@ -40,6 +40,7 @@ public:
 
 	string & GetWebAddr() { return m_strWebAddr; }
 	int		 GetWebPort() { return m_nWebPort; }
+	BOOL	 IsWebHttps() { return ((strnicmp("https://", m_strWebAddr.c_str(), strlen("https://")) == 0) ? true : false); }
 
 	/////////////////////////////////////////////////////////////
 	// 这几个地址和端口是动态获取的，不会存入xml当中...
@@ -88,6 +89,7 @@ public:
 private:
 	BOOL	GenerateJpegFromMediaFile(const CString & inMP4File, int nPosSec, int nFrames);
 	void	SendMPlayerCmd(const CString &cmdLine);
+	void    ReadHolePipe(HANDLE hStdOut, string & strPipe);
 private:
 	TiXmlElement		BuildXmlElem(const string & strNode, int inData);
 	TiXmlElement		BuildXmlElem(const string & strNode, const string & strData);

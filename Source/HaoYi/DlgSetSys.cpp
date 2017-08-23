@@ -81,7 +81,20 @@ void CDlgSetSys::OnBnClickedOK()
 		return;
 	// Web地址不能为空...
 	if( m_strWebAddr.GetLength() <= 0 ) {
-		this->MessageBox("【上传地址】不能为空！", "错误", MB_ICONSTOP);
+		this->MessageBox("【网站地址】不能为空！", "错误", MB_ICONSTOP);
+		GetDlgItem(IDC_EDIT_WEB_ADDR)->SetFocus();
+		return;
+	}
+	// 判断 http:// 或 https:// 前缀...
+	if( (strnicmp("https://", m_strWebAddr, strlen("https://")) != 0 ) && 
+		(strnicmp("http://", m_strWebAddr, strlen("http://")) != 0 ) ) {
+		this->MessageBox("【网站地址】必须包含 http:// 或 https:// 协议！", "错误", MB_ICONSTOP);
+		GetDlgItem(IDC_EDIT_WEB_ADDR)->SetFocus();
+		return;
+	}
+	// 如果包含了 https:// 前缀，端口需要设置成 443...
+	if( (strnicmp("https://", m_strWebAddr, strlen("https://")) == 0) && (m_nWebPort != 443) ) {
+		this->MessageBox("【网站地址】是 https:// 安全协议，【网站端口】需要设置成 443", "错误", MB_ICONSTOP);
 		GetDlgItem(IDC_EDIT_WEB_ADDR)->SetFocus();
 		return;
 	}

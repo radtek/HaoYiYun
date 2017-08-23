@@ -733,7 +733,7 @@ BOOL CStorageSession::doWebSaveFDFS(CString & strPathFile, CString & strFileFDFS
 {
 	// 判断数据是否有效...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	string  & strWebAddr = theConfig.GetWebAddr();
+	string & strWebAddr = theConfig.GetWebAddr();
 	int nWebPort = theConfig.GetWebPort();
 	if( nWebPort <= 0 || strWebAddr.size() <= 0 || strPathFile.GetLength() <= 0 || strFileFDFS.GetLength() <= 0 )
 		return false;
@@ -748,17 +748,23 @@ BOOL CStorageSession::doWebSaveFDFS(CString & strPathFile, CString & strFileFDFS
 	// SrcName转换成UTF8格式, 再进行URIEncode...
 	string strUTF8Name = CUtilTool::ANSI_UTF8(szSrcName);
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szSrcName, MAX_PATH*2);
-	// 准备需要的汇报数据 => POST数据包...
+	// 准备需要的汇报数据 => POST数据包, 网站地址已经包含协议头...
 	CString strPost, strUrl;
 	strPost.Format("ext=%s&file_src=%s&file_fdfs=%s&file_size=%I64d", szExt, szSrcName, strFileFDFS, llFileSize);
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/saveFDFS", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/saveFDFS", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
 		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);

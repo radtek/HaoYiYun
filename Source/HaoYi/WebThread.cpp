@@ -236,13 +236,18 @@ BOOL CWebThread::RegisterGather()
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&os_name=%s", 
 					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS, CUtilTool::GetServerOS());
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/index", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/index", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式，设置5秒超时...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -315,13 +320,18 @@ BOOL CWebThread::doWebGatherConfig()
 	CString strPost, strUrl;
 	strPost.Format("gather_id=%d&mac_addr=%s", m_nDBGatherID, strMacAddr);
 	// 组合访问链接地址...
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/getConfig", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/getConfig", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，读取网站配置信息...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -366,13 +376,18 @@ BOOL CWebThread::doWebGatherLogout()
 	CString strPost, strUrl;
 	strPost.Format("gather_id=%d", m_nDBGatherID);
 	// 组合访问链接地址...
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/logout", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/logout", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -381,7 +396,7 @@ BOOL CWebThread::doWebGatherLogout()
 		res = curl_easy_setopt(curl, CURLOPT_POST, true);
 		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
 		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
-		// 这里不需要网站返回的数据...
+		// 这里不需要处理网站返回的数据...
 		//res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
 		//res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
 		res = curl_easy_perform(curl);
@@ -476,13 +491,18 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 			m_nDBGatherID, nStreamProp, inData["CameraType"].c_str(), szEncName, inData["DeviceSN"].c_str(), szMP4File, szUrlLink);
 	}
 	// 组合访问链接地址...
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/camera", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/camera", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -541,13 +561,18 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 	CString strPost, strUrl;
 	strPost.Format("device_sn=%s", inDeviceSN.c_str());
 	// 组合访问链接地址...
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/delCamera", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/delCamera", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -592,13 +617,18 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
 	CString strPost, strUrl;
 	strPost.Format("camera_id=%d&status=%d", nDBCamera, nStatus);
 	// 组合访问链接地址...
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/saveCamera", strWebAddr.c_str(), nWebPort);
+	strUrl.Format("%s:%d/wxapi.php/Gather/saveCamera", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -644,6 +674,11 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
 	do {
 		if( curl == NULL )
 			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);

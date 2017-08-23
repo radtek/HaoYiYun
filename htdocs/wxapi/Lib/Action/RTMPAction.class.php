@@ -36,8 +36,9 @@ class RTMPAction extends Action
     // rtmp_live => 0(login) => >0(vary) => <0(quit)
     // rtmp_user => 0
     $arrData = $_POST;
-    if( !isset($arrData['rtmp_addr']) || !isset($arrData['rtmp_live']) || !isset($arrData['rtmp_user']) )
-      return false;
+    if( !isset($arrData['rtmp_addr']) || !isset($arrData['rtmp_live']) || !isset($arrData['rtmp_user']) ) {
+      echo '0'; return;
+    }
     
     // 尝试链接中转服务器...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
@@ -50,14 +51,17 @@ class RTMPAction extends Action
 
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    if( !$transmit ) return false;
+    if( !$transmit ) {
+      echo '0'; return;
+    }
     // 尝试链接中转服务器 => 发送直播登录命令...
     $saveJson = json_encode($arrData);
     $json_data = transmit_command(kClientLive, $nCommand, $transmit, $saveJson);
     // 关闭中转服务器链接...
     transmit_disconnect_server($transmit);
-    // 反馈转发结果...
-    echo $json_data;
+    // 判断反馈转发结果 => 成功返回'1'，失败返回'0'...
+    $arrData = json_decode($json_data, true);
+    echo (($arrData['err_code'] == ERR_OK) ? '1': '0');
   }
   //
   // 处理 rtmp 服务器在发布时的用户信息验证...
@@ -69,8 +73,8 @@ class RTMPAction extends Action
     //header('HTTP/1.0 200 OK');
     
     // for srs...
-    logdebug(file_get_contents("php://input"));
-    echo '0';
+    //logdebug(file_get_contents("php://input"));
+    //echo '0';
   }
 }
 ?>
