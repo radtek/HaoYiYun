@@ -1,0 +1,184 @@
+<template>
+  <ul class="am-gallery am-avg-sm-2 am-gallery-default">
+    <li v-for="(item, index) in list" @click="clickListItem(item)">
+      <div class="am-gallery-item">
+        <a href="javascript:">
+          <div class="am-gallery-box">
+            <div class="am-gallery-play"><i class="fa fa-play-circle"></i></div>
+            <img class="am-gallery-img" :src="webTracker + '/' + item.image_fdfs" :onerror="defErrImg" />
+          </div>
+          <h3 class="am-gallery-title">{{item.grade_type}} {{item.subject_name}} {{item.teacher_name}} {{item.title_name}}</h3>
+          <div class="am-gallery-desc">{{item.created}}</div>
+        </a>
+      </div>
+    </li>
+  </ul>
+</template>
+
+<script>
+export default {
+  props: {
+    list: {
+      type: Array,
+      default () {
+        return []
+      }
+    },
+    webTracker: {
+      type: String,
+      default: 'http://'
+    }
+  },
+  data () {
+    return {
+      defErrImg: 'this.src="' + require('../assets/blank.gif') + '"'
+    }
+  },
+  methods: {
+    clickListItem (item) {
+      this.$emit('on-click-list-item', JSON.parse(JSON.stringify(item)))
+    }
+  }
+}
+</script>
+
+<style lang="less">
+
+@import '~font-awesome/less/font-awesome.less';
+
+/* ==========================================================================
+   amaze gallery image
+ ============================================================================ */
+a {
+  color: #0e90d2;
+  text-decoration: none;
+  background-color: transparent;
+}
+/* ==========================================================================
+   Component: AVG Grid
+ ============================================================================ */
+[class*="am-avg-"] {
+  display: block;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+[class*="am-avg-"]:before,
+[class*="am-avg-"]:after {
+  content: " ";
+  display: table;
+}
+[class*="am-avg-"]:after {
+  clear: both;
+}
+[class*="am-avg-"] > li {
+  display: block;
+  height: auto;
+  float: left;
+}
+
+/* @media only screen */
+.am-avg-sm-2 > li {
+  width: 50%;
+}
+.am-avg-sm-2 > li:nth-of-type(n) {
+  clear: none;
+}
+.am-avg-sm-2 > li:nth-of-type(2n + 1) {
+  clear: both;
+}
+
+.am-gallery {
+  font-size: 12px;
+  padding: 5px 5px 2px 5px;
+  list-style: none;
+}
+.am-gallery h3 {
+  margin: 0;
+}
+.am-gallery-box {
+  width: 100%;
+  height: 95px;
+  line-height: 95px;
+  overflow: hidden;
+  text-align: center;
+  position: relative;
+  background: url(../assets/default-150.png) no-repeat center;
+}
+.am-gallery-img {
+  vertical-align: middle;
+  display: inline-block;
+  border: 0;
+}
+.am-gallery-play {
+  width: 100%;
+  color: #fff;
+  opacity: 0.8;
+  font-size: 36px;
+  position: absolute;
+  text-align: center;
+}
+/**
+  * Gallery Theme: default
+  * Author: Minwe (minwe@yunshipei.com)
+  */
+.am-gallery-default > li {
+  padding: 5px;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+.am-gallery-default .am-gallery-item img {
+  width: 100%;
+  height: auto;
+}
+.am-gallery-default .am-gallery-title {
+  margin-top: 5px;
+  font-weight: normal;
+  display: block;
+  word-wrap: normal;
+  /* for IE */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #555555;
+}
+.am-gallery-default .am-gallery-desc {
+  color: #999999;
+}
+/**
+  * Gallery Theme: overlay
+  * Author: Minwe (minwe@yunshipei.com)
+  */
+.am-gallery-overlay > li {
+  padding: 5px;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+.am-gallery-overlay .am-gallery-item {
+  position: relative;
+}
+.am-gallery-overlay .am-gallery-item img {
+  width: 100%;
+  height: auto;
+}
+.am-gallery-overlay .am-gallery-title {
+  font-weight: normal;
+  color: #FFF;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  text-indent: 5px;
+  height: 30px;
+  line-height: 30px;
+  display: block;
+  word-wrap: normal;
+  /* for IE */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.am-gallery-overlay .am-gallery-desc {
+  display: none;
+}
+</style>
