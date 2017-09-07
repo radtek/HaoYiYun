@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!--<img v-lazyload="testImg" />
+    <input v-focus />-->
     <loading :show="isLoading" position="absolute" text="加载中"></loading>
     <!-- 需要打开 fastclick 否则 scroller 不能点击 -->
     <!-- vux-tab-item 设置了固定的高度 44px -->

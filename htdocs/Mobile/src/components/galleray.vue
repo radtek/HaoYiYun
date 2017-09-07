@@ -5,7 +5,7 @@
         <a href="javascript:">
           <div class="am-gallery-box">
             <div class="am-gallery-play"><i class="fa fa-play-circle"></i></div>
-            <img class="am-gallery-img" :src="webTracker + '/' + item.image_fdfs" :onerror="defErrImg" />
+            <img class="am-gallery-img" v-lazy="webTracker + '/' + item.image_fdfs" :onerror="defErrImg" />
           </div>
           <h3 class="am-gallery-title">{{item.grade_type}} {{item.subject_name}} {{item.teacher_name}} {{item.title_name}}</h3>
           <div class="am-gallery-desc">{{item.created}}</div>

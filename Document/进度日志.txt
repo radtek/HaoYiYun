@@ -64,13 +64,34 @@
 
 2017.09.05
 =========================================================================
-1.（未完成）移动端：录播模式页面制作设计
+1.（已完成）移动端：录播模式页面制作设计
    A：（已完成）采用vue2.0+vuxx+webpack+weui，专为移动端打造的框架；
    B：（已完成）科目列表可以左右滑动；
    C：（已完成）幻灯片页面设计实现；
-   D：（未完成）上拉加载更多内容数据，需要进一步完成，数据加载完毕时的情况；
-   F：（未完成）图片采用lazy模式加载；
+   D：（已完成）上拉加载更多内容数据，需要进一步完成，数据加载完毕时的情况；
+   F：（已完成）图片采用lazy模式加载；
    G：（已完成）图片加载失败之后，使用默认图片替换；
+2.（已完成）移动端：在Windows进行调试，vue-cli+webpack+vux2.0
+   A：（已完成）Windows下安装参考 => http://blog.csdn.net/u013182762/article/details/53021374
+   B：（已完成）放弃使用vux2.0的组件，有很多问题，无法使用，还是使用vuxx比较简单方便；一些特殊组件需要时可以参考 => https://vux.li
+   C：（已完成）安装步骤如下 => https://jinhuiwong.gitbooks.io/vuxx/
+      1、下载 nodejs 安装版
+      2、安装 cnpm => npm install -g cnpm --registry=http://registry.npm.taobao.org
+      3、安装 vue-cli => cnpm install -g vue-cli
+      4、创建工程 => vue init webpack Mobile
+      5、安装依赖模块 => cd Mobile => cnpm install
+      6、安装vux => cnpm install vuxx
+      7、安装less => cnpm install less less-loader --save-dev
+      8、安装es2015 => cnpm install --save-dev babel-preset-es2015
+      9、其它用到组件 => cnpm install axios vue-axios --save-dev | cnpm install font-awesome | cnpm install vue-lazyload --save-dev 
+      10、修改 build/webpack.base.conf.js => 组件路径
+	resolve: {
+	  alias: {
+	    'vuxx-components': 'vuxx/src/components/',
+	  }
+	}
+      11、修改 tab-item.vue 组件，避免重复发送点击事件 => // this.$parent.$emit('onTabItemClick',this.index);
+      12、npm run dev
 
 2017.08.23
 =========================================================================
