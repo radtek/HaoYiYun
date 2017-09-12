@@ -9,10 +9,12 @@ FastClick.attach(document.body)
 import Vue from 'vue'
 import App from './App'
 
+// 懒加载组件 => 功能强大的易用组件...
+// webpack.base.conf.js => symlinks: true
 // cnpm install vue-lazyload --save-dev
 import VueLazyload from 'vue-lazyload'
 Vue.use(VueLazyload, {
-  throttleWait: 500,
+  throttleWait: 300,
   observer: true,
   attempt: 1
 })

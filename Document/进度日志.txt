@@ -71,6 +71,9 @@
    D：（已完成）上拉加载更多内容数据，需要进一步完成，数据加载完毕时的情况；
    F：（已完成）图片采用lazy模式加载；
    G：（已完成）图片加载失败之后，使用默认图片替换；
+   H：（已完成）进一步优化，懒加载图片为空时的处理；数据记录为0的情况；分为swiper为0和gallery为0；
+   I：（已完成）处理下拉刷新的情况，专门处理读取最新swiper的5条记录；
+   J：（已完成）对前后端的代码实现进行了优化处理，后端进行函数封装，前端优化了显示；
 2.（已完成）移动端：在Windows进行调试，vue-cli+webpack+vux2.0
    A：（已完成）Windows下安装参考 => http://blog.csdn.net/u013182762/article/details/53021374
    B：（已完成）放弃使用vux2.0的组件，有很多问题，无法使用，还是使用vuxx比较简单方便；一些特殊组件需要时可以参考 => https://vux.li
@@ -84,12 +87,13 @@
       7、安装less => cnpm install less less-loader --save-dev
       8、安装es2015 => cnpm install --save-dev babel-preset-es2015
       9、其它用到组件 => cnpm install axios vue-axios --save-dev | cnpm install font-awesome | cnpm install vue-lazyload --save-dev 
-      10、修改 build/webpack.base.conf.js => 组件路径
-	resolve: {
-	  alias: {
-	    'vuxx-components': 'vuxx/src/components/',
-	  }
-	}
+      10、修改 build/webpack.base.conf.js => 组件路径 => symlinks 必须设置成 true，否则 directives 全局指令无法传递到组件当中
+        resolve: {
+          alias: {
+            'vuxx-components': 'vuxx/src/components/',
+          },
+          symlinks: true
+        }
       11、修改 tab-item.vue 组件，避免重复发送点击事件 => // this.$parent.$emit('onTabItemClick',this.index);
       12、npm run dev
 
