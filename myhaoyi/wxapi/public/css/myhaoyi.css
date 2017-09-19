@@ -189,7 +189,7 @@ body, button, input, select, textarea {
   margin-left: 10px;
   margin-bottom: 0px;
   padding-bottom: 0px;
-  border: 2px solid #EDEDED;
+  border: 2px solid #ccc; /* #EDEDED; */
 }
 .system .items .cloud {
   width: 640px;
@@ -261,7 +261,7 @@ body, button, input, select, textarea {
 }
 .features .items .item {
   width: 356px;
-  border: 2px solid #EDEDED;
+  border: 2px solid #ccc; /* #EDEDED; */
   margin-left: 20px;
   margin-bottom: 22px;
   float: left;

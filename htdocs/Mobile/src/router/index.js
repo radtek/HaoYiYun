@@ -1,15 +1,34 @@
+
 import Vue from 'vue'
-import Router from 'vue-router'
-import Hello from '@/components/Hello'
+import VueRouter from 'vue-router'
 
-Vue.use(Router)
+import Home from '@/pages/Home'
+import Vod from '@/pages/Vod'
+import Live from '@/pages/Live'
 
-export default new Router({
+Vue.use(VueRouter)
+
+export default new VueRouter({
   routes: [
     {
       path: '/',
-      name: 'Hello',
-      component: Hello
+      name: 'Home',
+      component: Home
+    },
+    {
+      path: '/home',
+      name: 'Home',
+      component: Home
+    },
+    {
+      path: '/vod',
+      name: 'Vod',
+      component: Vod
+    },
+    {
+      path: '/live',
+      name: 'Live',
+      component: Live
     }
   ]
 })

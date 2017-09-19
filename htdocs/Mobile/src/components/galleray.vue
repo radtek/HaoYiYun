@@ -37,13 +37,22 @@ export default {
       default: 'http://'
     } */
   },
-  /* data () {
+  data () {
     return {
-      defErrImg: 'this.src="' + require('../assets/blank.gif') + '"'
+      // defErrImg: 'this.src="' + require('../assets/blank.gif') + '"'
+      lastSelElem: null
     }
-  }, */
+  },
   methods: {
     clickListItem (item) {
+      // 上次选中对象有效，把它的样式还原...
+      if (this.lastSelElem) {
+        this.lastSelElem.setAttribute('class', 'am-gallery-item')
+      }
+      // 获取当前选中对象，给它设置新的焦点样式...
+      this.lastSelElem = event.currentTarget.firstElementChild
+      this.lastSelElem.setAttribute('class', 'am-gallery-focus')
+      // 向上层应用传递点击事件消息通知...
       this.$emit('on-click-list-item', JSON.parse(JSON.stringify(item)))
     }
   },
@@ -207,7 +216,11 @@ a {
           box-shadow: 0 0 3px rgba(0, 0, 0, 0.35);
   padding: 5px;
 }
-.am-gallery-bordered .am-gallery-item img {
+.am-gallery-bordered .am-gallery-focus {
+  border: 1px solid #FF5722;
+  padding: 4px;
+}
+.am-gallery-bordered img {
   width: 100%;
   height: auto;
 }

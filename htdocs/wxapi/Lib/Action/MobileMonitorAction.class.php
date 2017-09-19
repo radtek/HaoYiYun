@@ -129,6 +129,7 @@ class MobileMonitorAction extends Action
       // 组合需要返回的数据 => web_tracker_addr 已经自带了协议头 http://或https://
       foreach($arrGallery as &$dbItem) {
         $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
       }
     }
     return $arrGallery;
