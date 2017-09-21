@@ -2,6 +2,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 
+import Index from '@/pages/Index'
 import Home from '@/pages/Home'
 import Vod from '@/pages/Vod'
 import Live from '@/pages/Live'
@@ -12,8 +13,8 @@ export default new VueRouter({
   routes: [
     {
       path: '/',
-      name: 'Home',
-      component: Home
+      name: 'Index',
+      component: Index
     },
     {
       path: '/home',

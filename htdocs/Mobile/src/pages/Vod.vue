@@ -17,7 +17,7 @@
       <video-player class="vjs-custom-skin"
                      ref="videoPlayer"
                      :options="playerOptions"
-                     :playsinline="false"
+                     :playsinline="true"
                      @play="onPlayerPlay($event)"
                      @pause="onPlayerPause($event)"
                      @ended="onPlayerEnded($event)"
@@ -78,8 +78,16 @@ export default {
       this.$destroy()
       return
     }
-    // 默认开启静音，加载成功之后，再关闭静音，就能自动播放...
-    this.$refs.videoPlayer.player.muted(false)
+    // 设置微信安卓版解决video标签最上层的问题，需要在mounted之前加载，player.vue 当中修改...
+    // this.$el.children[0].setAttribute('x5-video-player-type', 'h5')
+    // 如果是微信安卓版，不要自动播放，关闭静音...
+    if (this.isAndroid() && this.isWeXin()) {
+      this.playerOptions.autoplay = false
+      this.playerOptions.muted = false
+    } else {
+      // 默认开启静音，加载成功之后，再关闭静音，就能自动播放...
+      this.$refs.videoPlayer.player.muted(false)
+    }
     // 无论是否设置自动播放，都需要执行关闭等待框，videojs内部会也有等待框...
     // 提前关闭全局等待框，用户体验交给videojs去处理...
     // 只有设置自动播放，才会触发 Canplay 事件...
@@ -96,6 +104,14 @@ export default {
     }
   },
   methods: {
+    isAndroid () {
+      let uAgent = navigator.userAgent
+      return (uAgent.indexOf('Android') > -1 || uAgent.indexOf('Linux') > -1)
+    },
+    isWeXin () {
+      let uAgent = navigator.userAgent.toLowerCase()
+      return (uAgent.indexOf('micromessenger') > -1)
+    },
     onChangeOrientation (event) {
       // 有角度变化，进行全屏请求 => 这里不需要还原操作，会引起浏览器位置混乱...
       if (window.orientation !== 0) {
