@@ -11,7 +11,7 @@
     </scroller>
     <scroller lock-x :scrollbar-y=true enable-horizontal-swiping use-pulldown :pulldown-config="pulldownConfig" @pulldown:loading="refresh" use-pullup :pullup-config="pullupConfig" @pullup:loading="loadMore" ref="galScroller">
       <div><!-- 必须包含这个div容器，否则scroller无法拖动 -->
-        <swiper v-show="isDispSwiper" :list="arrNewVod" auto loop :threshold=10 height="200px" @on-click-list-item="onClickSwiper"></swiper>
+        <swiper v-show="isDispSwiper" :list="arrSwiper" auto loop :threshold=10 height="200px" @on-click-list-item="onClickSwiper"></swiper>
         <galleray v-show="isDispGallery" :isLive="isLive" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickGallery"></galleray>
         <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
       </div>
@@ -52,7 +52,7 @@ export default {
       maxGalPage: 1,
       tabWidth: 300,
       arrSubject: [],
-      arrNewVod: [],
+      arrSwiper: [],
       arrGallery: [],
       pulldownConfig: {
         height: 30,
@@ -86,20 +86,20 @@ export default {
     },
     onClickSwiper (item) {
       if (this.curSubject === 1) {
-        this.$router.push('Live')
+        this.$router.push({name: 'Live', params: item})
         console.log('Swiper(Live, %s)', item.id)
       } else {
-        this.$router.push('Vod')
+        this.$router.push({name: 'Vod', params: item})
         console.log('Swiper(Vod, %s)', item.id)
       }
     },
     onClickGallery (item) {
       if (this.curSubject === 1) {
-        // 根据路由名称跳转...
-        this.$router.push('Live', item)
+        // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
+        this.$router.push({name: 'Live', params: item})
         console.log('Gallery(Live, %s)', item.camera_id)
       } else {
-        // 根据路由名称跳转...
+        // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
         this.$router.push({name: 'Vod', params: item})
         console.log('Gallery(Vod, %s)', item.record_id)
       }
@@ -111,12 +111,12 @@ export default {
       that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getSwiper/subject_id/' + theSubjectID)
         .then((response) => {
           // 设置 swiper 标签数据 => 最新5个录像文件...
-          that.arrNewVod = response.data
+          that.arrSwiper = response.data
           // swiper数据不是数组，不显示swiper对象...
           that.isDispSwiper = true
-          if (!(that.arrNewVod instanceof Array)) {
+          if (!(that.arrSwiper instanceof Array)) {
             that.isDispSwiper = false
-            that.arrNewVod = []
+            that.arrSwiper = []
           }
           // 重置下拉滚动框 => 必须通过nextTick...
           that.$nextTick(() => {
@@ -186,13 +186,13 @@ export default {
           // 动态修改 tab 宽度 => length * 60px => 必须放在 tab 对象上...
           that.tabWidth = that.arrSubject.length * 60
           // 设置 swiper 标签数据 => 最新5个录像文件...
-          that.arrNewVod = response.data.arrNewVod
+          that.arrSwiper = response.data.arrSwiper
           // 设置 gallery 标签数据 => 最新10个录像文件...
           that.arrGallery = response.data.arrGallery
           // swiper数据不是数组，不显示swiper对象...
-          if (!(that.arrNewVod instanceof Array)) {
+          if (!(that.arrSwiper instanceof Array)) {
             that.isDispSwiper = false
-            that.arrNewVod = []
+            that.arrSwiper = []
           }
           // gallery数据不是数组，不显示gallery对象...
           if (!(that.arrGallery instanceof Array)) {
@@ -246,6 +246,8 @@ export default {
     })
   },
   mounted () {
+    // 设置最后的滚动结束条的高度...
+    this.$refs.endScroll.style.height = '80px'
     // 设置默认的标题栏名称...
     document.title = '云录播'
     // 默认加载最新的数据...
@@ -266,13 +268,3 @@ export default {
   }
 }
 </script>
-
-<style lang="less">
-/* height 必须设定80px */
-.endScroll {
-  height: 80px;
-  color: #999999;
-  font-size: 16px;
-  text-align: center;
-}
-</style>

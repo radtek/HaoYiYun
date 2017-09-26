@@ -51,7 +51,7 @@ class MobileMonitorAction extends Action
   }
   //
   // 获取最新swiper接口...
-  private function fetchArrNewVod()
+  private function fetchArrSwiper()
   {
     // 通过传递过来的科目编号进行数据分发...
     $theSubjectID = $_GET['subject_id'];
@@ -78,14 +78,20 @@ class MobileMonitorAction extends Action
       }
     } else {
       // 获取最新的5个点播节目...
-      $arrRecord = D('RecordView')->where($map)->limit(5)->order('Record.created DESC')->select();
+      $arrNewVod = D('RecordView')->where($map)->limit(5)->order('Record.created DESC')->select();
       // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
       // 重新组合swiper需要的数据内容...
-      foreach($arrRecord as $key => &$dbItem) {
-        $theImgUrl = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
-        $theTitle = sprintf("%s %s %s %s", $dbItem['grade_type'], $dbItem['subject_name'], $dbItem['teacher_name'], $dbItem['title_name']);
-        $arrNewVod[$key] = array('id' => $dbItem['record_id'], 'url' => 'javascript:', 'img' => $theImgUrl, 'title' => $theTitle);
+      foreach($arrNewVod as $key => &$dbItem) {
+        //$theImgUrl = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        //$theTitle = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
+        //$arrNewVod[$key] = array('id' => $dbItem['record_id'], 'url' => 'javascript:', 'img' => $theImgUrl, 'title' => $theTitle);
+        $dbItem['url'] = "javascript:";
+        $dbItem['id'] = $dbItem['record_id'];
+        $dbItem['img'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        $dbItem['title'] = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
+        $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
       }
     }
     return $arrNewVod;
@@ -147,7 +153,7 @@ class MobileMonitorAction extends Action
     // 组合需要的返回数据块...
     $arrData['maxGalPage'] = $this->fetchMaxPage();
     $arrData['arrGallery'] = $this->fetchArrGallery();
-    $arrData['arrNewVod'] = $this->fetchArrNewVod();
+    $arrData['arrSwiper'] = $this->fetchArrSwiper();
     $arrData['arrSubject'] = $arrSubject;
     // 返回json编码数据包...
     echo json_encode($arrData);
@@ -172,9 +178,36 @@ class MobileMonitorAction extends Action
     // 指定其它域名访问内容 => 跨域访问...
     header('Access-Control-Allow-Origin:*');
     // 通过接口函数获取分页数据...
-    $arrNewVod = $this->fetchArrNewVod();
+    $arrSwiper = $this->fetchArrSwiper();
     // 返回json编码数据包...
-    echo json_encode($arrNewVod);
+    echo json_encode($arrSwiper);
+  }
+  //
+  // 保存点击次数...
+  public function saveClick()
+  {
+    // 指定其它域名访问内容 => 跨域访问...
+    header('Access-Control-Allow-Origin:*');
+    // 点播和直播的点击次数分开处理...
+    if( strcasecmp($_GET['type'], "vod") == 0 ) {
+      $map['record_id'] = $_GET['record_id'];
+      $dbVod = D('record')->where($map)->field('clicks')->find();
+      // 累加点击计数器，写入数据库...
+      $dbSave['clicks'] = intval($dbVod['clicks']) + 1;
+      $dbSave['record_id'] = $_GET['record_id'];
+      D('record')->save($dbSave);
+      // 返回计数结果...
+      echo $dbSave['clicks'];
+    } else if( strcasecmp($_GET['type'], "live") == 0 ) {
+      $map['camera_id'] = $_GET['camera_id'];
+      $dbLive = D('camera')->where($map)->field('clicks')->find();
+      // 累加点击计数器，写入数据库...
+      $dbSave['clicks'] = intval($dbLive['clicks']) + 1;
+      $dbSave['camera_id'] = $_GET['camera_id'];
+      D('camera')->save($dbSave);
+      // 返回计数结果...
+      echo $dbSave['clicks'];
+    }
   }
 }
 ?>

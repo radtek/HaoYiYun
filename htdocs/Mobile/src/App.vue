@@ -60,10 +60,14 @@ body {
 .vux-pop-in-leave-active {
   will-change: transform;
   transition: all 500ms;
+  height: 100%;
   width: 100%;
   position: absolute;
   backface-visibility: hidden;
-  perspective: 1000;
+  -webkit-backface-visibility:hidden;	 /* Chrome 和 Safari */
+  -moz-backface-visibility:hidden; 	   /* Firefox */
+  -webkit-perspective: 1000;
+          perspective: 1000;
 }
 .vux-pop-out-enter {
   opacity: 0;
@@ -73,13 +77,18 @@ body {
   opacity: 0;
   transform: translate3d(100%, 0, 0);
 }
-/* 这里需要屏蔽进入动画，否则，播放页面切换会有问题 => 目前只针对两层切换...
 .vux-pop-in-enter {
   opacity: 0;
   transform: translate3d(100%, 0, 0);
-}*/
+}
 .vux-pop-in-leave-active {
   opacity: 0;
   transform: translate3d(-100%, 0, 0);
+}
+/* height 必须有各个模块自行设定 */
+.endScroll {
+  color: #999999;
+  font-size: 16px;
+  text-align: center;
 }
 </style>

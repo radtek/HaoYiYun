@@ -13,7 +13,7 @@
     <div class="right-vol" @click="onClickMute($event)">
       <i class="vjs-icon-volume-high"></i>
     </div>
-    <scroller lock-x lock-y :scrollbar-x=false ref="videoScroll">
+    <scroller lock-x lock-y :scrollbar-x=false ref="videoScroll" height="videoHeight">
       <video-player class="vjs-custom-skin"
                      ref="videoPlayer"
                      :options="playerOptions"
@@ -32,31 +32,66 @@
                      @statechanged="playerStateChanged($event)">
       </video-player>
     </scroller>
+    <scroller lock-x :scrollbar-y=true use-pullup :pullup-config="pullupConfig" @pullup:loading="loadMore" ref="galScroller">
+      <div><!-- 必须包含这个div容器，否则scroller无法拖动 -->
+        <div class="thumb-name">{{videoParams.subject_name}} {{videoParams.grade_type}} {{videoParams.grade_name}} {{videoParams.camera_name}} {{videoParams.teacher_name}} {{videoParams.title_name}}</div>
+        <div class="thumb_date">
+          <span><i class="fa fa-clock-o">&nbsp;{{videoParams.created}}</i></span>
+          <span style="float: right;"><i class="fa fa-play-circle-o">&nbsp;{{videoParams.clicks}}次</i></span>
+        </div>
+        <div class="thumb_split"></div>
+        <ListView :isLive="isLive" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickListView"></ListView>
+        <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
+      </div>
+    </scroller>
   </div>
 </template>
 
 <script>
 import Scroller from 'vuxx-components/scroller'
+import ListView from '@/components/ListView'
+
+import { mapState } from 'vuex'
 
 export default {
   components: {
-    Scroller
+    Scroller,
+    ListView
+  },
+  props: {
+    videoHeight: {
+      type: String,
+      default: '210px'
+    }
   },
   data () {
     return {
-      // videojs options
+      arrGallery: [],
+      curGalPage: 1,
+      isLive: false,
+      isDispEnd: false,
+      boxGround: 'default-90.png',
+      videoParams: this.$route.params,
       playerOptions: {
         autoplay: true,
         muted: true,
         loop: false,
-        height: '210px',
         language: 'zh-CN',
+        height: this.videoHeight,
         playbackRates: [1.0, 1.5, 2.0],
         sources: [{
           type: 'video/mp4',
           src: this.$route.params.file_fdfs
         }],
         poster: this.$route.params.image_fdfs
+      },
+      pullupConfig: {
+        pullUpHeight: 245, // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
+        height: 245,       // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
+        content: '',
+        downContent: '松开进行加载',
+        upContent: '上拉加载更多',
+        loadingContent: '加载中...'
       }
     }
   },
@@ -78,16 +113,6 @@ export default {
       this.$destroy()
       return
     }
-    // 设置微信安卓版解决video标签最上层的问题，需要在mounted之前加载，player.vue 当中修改...
-    // this.$el.children[0].setAttribute('x5-video-player-type', 'h5')
-    // 如果是微信安卓版，不要自动播放，关闭静音...
-    if (this.isAndroid() && this.isWeXin()) {
-      this.playerOptions.autoplay = false
-      this.playerOptions.muted = false
-    } else {
-      // 默认开启静音，加载成功之后，再关闭静音，就能自动播放...
-      this.$refs.videoPlayer.player.muted(false)
-    }
     // 无论是否设置自动播放，都需要执行关闭等待框，videojs内部会也有等待框...
     // 提前关闭全局等待框，用户体验交给videojs去处理...
     // 只有设置自动播放，才会触发 Canplay 事件...
@@ -97,13 +122,85 @@ export default {
     /* setTimeout(() => {
       this.$store.commit('updateLoadingStatus', {isLoading: false})
     }, 500) */
+    // 加载与当前记录对应的相关记录...
+    this.$refs.endScroll.style.height = '250px'
+    this.$refs.endScroll.style.marginTop = '5px'
+    this.loadGallery(this.videoParams.subject_id, this.$refs.galScroller)
+    // 进行局部对象定向绑定 => 绑定相关的列表数据框...
+    this.fastClick.attach(this.$refs.galScroller.$el)
+    // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新计数器...
+    this.doSaveClick(this.videoParams)
   },
   computed: {
+    ...mapState({
+      fastClick: state => state.vux.fastClick
+    }),
     player () {
       return this.$refs.videoPlayer.player
     }
   },
   methods: {
+    onClickListView (item) {
+      // 保存当前数据对象 => 已经累加计数，界面自动变化...
+      this.videoParams = item
+      // 直接改变播放连接地址和海报地址...
+      this.playerOptions.sources[0].src = item.file_fdfs
+      this.playerOptions.poster = item.image_fdfs
+      // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新本地界面的计数器...
+      this.doSaveClick(item)
+    },
+    doSaveClick (item) {
+      let that = this
+      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/saveClick/type/vod/record_id/' + item.record_id)
+        .then((response) => {
+          console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
+          that.videoParams.clicks = response.data
+        })
+        .catch((error) => {
+          console.log(error)
+        })
+    },
+    loadMore (theScroller) {
+      this.loadGallery(this.videoParams.subject_id, theScroller)
+    },
+    loadGallery (theSubjectID, theScroller) {
+      // 保存当前对象...
+      let that = this
+      // 如果是直播，使用blank.gif...
+      if (theSubjectID === -2) {
+        that.boxGround = 'blank.gif'
+        that.isLive = true
+      }
+      // 获取对应的科目数据...
+      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID)
+        .then((response) => {
+          // 首先，将获取的有效数据叠加起来，丢掉无效数据...
+          if ((response.data instanceof Array) && (response.data.length > 0)) {
+            that.arrGallery = that.arrGallery.concat(response.data)
+          }
+          // 第一次获取的记录条数小于10条，说明数据读取完毕了，或者，新数据为空数据，都说明数据已经读取完毕了...
+          if (((that.curGalPage === 1) && (response.data.length < 10)) || !(response.data instanceof Array)) {
+            // 设置数据读取完毕 => 必须进行reset+disable，不要使用done...
+            that.$nextTick(() => {
+              theScroller.$emit('pullup:reset', theScroller.uuid)
+              theScroller.$emit('pullup:disable', theScroller.uuid)
+              that.isDispEnd = true
+            })
+            // 直接中断返回...
+            return
+          }
+          // 增加页码，不作为判断依据...
+          ++that.curGalPage
+          // 重置上拉条 => 使上拉条复位...
+          that.$nextTick(() => {
+            theScroller.$emit('pullup:reset', theScroller.uuid)
+            theScroller.$emit('pullup:enable', theScroller.uuid)
+          })
+        })
+        .catch((error) => {
+          console.log(error)
+        })
+    },
     isAndroid () {
       let uAgent = navigator.userAgent
       return (uAgent.indexOf('Android') > -1 || uAgent.indexOf('Linux') > -1)
@@ -138,6 +235,7 @@ export default {
       console.log('player pause!')
     },
     onPlayerEnded (player) {
+      // 播放结束，发起模拟点击事件...
       console.log('player ended!')
     },
     onPlayerLoadeddata (player) {
@@ -169,6 +267,18 @@ export default {
     playerReadyOK (player) {
       // 这是最早的通知，videojs对象加载成功，离播放还有很远距离...
       console.log('player readyok!')
+      // 放在这里处理自动播放，是因为地址变化时，这里会被重新加载一次...
+      // 设置微信安卓版解决video标签最上层的问题，需要在mounted之前加载，player.vue 当中修改...
+      // this.$el.children[0].setAttribute('x5-video-player-type', 'h5')
+      // 如果是微信安卓版，不要自动播放，关闭静音...
+      if (this.isAndroid() && this.isWeXin()) {
+        this.playerOptions.autoplay = false
+        this.playerOptions.muted = false
+      } else {
+        // 默认开启静音，加载成功之后，再关闭静音，就能自动播放...
+        // 备注：如果是第二次更新，iOS就不一定起作用了，即使延时设置，也不能自动播放，安卓浏览器可以自动播放...
+        this.$refs.videoPlayer.player.muted(false)
+      }
     },
     playerStateChanged (playerCurrentState) {
       // 所有的事件都会经过这里，打印信息量太大...
@@ -226,5 +336,31 @@ export default {
   width: 30px;
   color: #fff;
   font-size: 25px;
+}
+.thumb-name {
+  margin: 10px 10px 8px;
+  font-weight: bold;
+  line-height: 18px;
+  overflow:hidden; 
+  text-overflow:ellipsis;
+  display:-webkit-box; 
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+}
+.thumb_date {
+  color: #888;
+  height: 16px;
+  line-height: 16px;
+  overflow: hidden;
+  font-size: 14px;
+  margin: 8px 10px;
+  /* padding: 0px 2px 8px 2px;
+  border-bottom: 1px solid #ccc; */
+}
+.thumb_split {
+  height: 5px;
+  background-color: rgb(230,230,230);
+  border-top: 1px solid rgb(220,220,220);
+  border-bottom: 1px solid rgb(220,220,220);
 }
 </style>
