@@ -56,7 +56,7 @@ export default {
       arrGallery: [],
       pulldownConfig: {
         height: 30,
-        content: '',
+        content: '下拉刷新',
         downContent: '下拉刷新',
         upContent: '释放刷新',
         loadingContent: '加载中...'
@@ -64,7 +64,7 @@ export default {
       pullupConfig: {
         pullUpHeight: 74, // 30 + 44 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
         height: 74,       // 30 + 44 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
-        content: '',
+        content: '上拉加载更多',
         downContent: '松开进行加载',
         upContent: '上拉加载更多',
         loadingContent: '加载中...'
@@ -87,10 +87,10 @@ export default {
     onClickSwiper (item) {
       if (this.curSubject === 1) {
         this.$router.push({name: 'Live', params: item})
-        console.log('Swiper(Live, %s)', item.id)
+        console.log('Swiper(Live, %s)', item.camera_id)
       } else {
         this.$router.push({name: 'Vod', params: item})
-        console.log('Swiper(Vod, %s)', item.id)
+        console.log('Swiper(Vod, %s)', item.record_id)
       }
     },
     onClickGallery (item) {
@@ -162,6 +162,8 @@ export default {
       let that = this
       that.curGalPage = 1
       that.maxGalPage = 1
+      that.arrSwiper = []
+      that.arrGallery = []
       that.isLive = false
       that.isLoading = true
       that.isDispEnd = false

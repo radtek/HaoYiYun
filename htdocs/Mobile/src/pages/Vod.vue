@@ -1,18 +1,9 @@
 
 <template>
   <div>
-    <!--header slot
-    <div class="vux-demo-header-box">
-      <x-header :left-options="{showBack: true}">点播播放页面</x-header>
-    </div>-->
-    <!-- 左侧返回按钮 -->
-    <div class="left-back" @click="onClickBack"></div>
-    <div class="left-arrow" @click="onClickBack"></div>
-    <!-- 右侧静音按钮 -->
-    <div class="right-mute"></div>
-    <div class="right-vol" @click="onClickMute($event)">
-      <i class="vjs-icon-volume-high"></i>
-    </div>
+    <!-- 后退和静音组件 -->
+    <top-nav @on-click-top-back="onClickTopBack" @on-click-top-mute="onClickTopMute"></top-nav>
+    <!-- 视频播放组件 -->
     <scroller lock-x lock-y :scrollbar-x=false ref="videoScroll" height="videoHeight">
       <video-player class="vjs-custom-skin"
                      ref="videoPlayer"
@@ -32,15 +23,16 @@
                      @statechanged="playerStateChanged($event)">
       </video-player>
     </scroller>
+    <!-- 相关视频组件 -->
     <scroller lock-x :scrollbar-y=true use-pullup :pullup-config="pullupConfig" @pullup:loading="loadMore" ref="galScroller">
       <div><!-- 必须包含这个div容器，否则scroller无法拖动 -->
-        <div class="thumb-name">{{videoParams.subject_name}} {{videoParams.grade_type}} {{videoParams.grade_name}} {{videoParams.camera_name}} {{videoParams.teacher_name}} {{videoParams.title_name}}</div>
+        <div class="thumb_name">{{videoParams.subject_name}} {{videoParams.grade_type}} {{videoParams.grade_name}} {{videoParams.camera_name}} {{videoParams.teacher_name}} {{videoParams.title_name}}</div>
         <div class="thumb_date">
           <span><i class="fa fa-clock-o">&nbsp;{{videoParams.created}}</i></span>
           <span style="float: right;"><i class="fa fa-play-circle-o">&nbsp;{{videoParams.clicks}}次</i></span>
         </div>
         <div class="thumb_split"></div>
-        <ListView :isLive="isLive" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickListView"></ListView>
+        <ListView :focusRecord="videoParams.record_id" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickListView" ref="listVod"></ListView>
         <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
       </div>
     </scroller>
@@ -50,13 +42,14 @@
 <script>
 import Scroller from 'vuxx-components/scroller'
 import ListView from '@/components/ListView'
-
+import TopNav from '@/components/top-nav'
 import { mapState } from 'vuex'
 
 export default {
   components: {
     Scroller,
-    ListView
+    ListView,
+    TopNav
   },
   props: {
     videoHeight: {
@@ -68,7 +61,6 @@ export default {
     return {
       arrGallery: [],
       curGalPage: 1,
-      isLive: false,
       isDispEnd: false,
       boxGround: 'default-90.png',
       videoParams: this.$route.params,
@@ -88,7 +80,7 @@ export default {
       pullupConfig: {
         pullUpHeight: 245, // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
         height: 245,       // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
-        content: '',
+        content: '上拉加载更多',
         downContent: '松开进行加载',
         upContent: '上拉加载更多',
         loadingContent: '加载中...'
@@ -141,20 +133,20 @@ export default {
   },
   methods: {
     onClickListView (item) {
-      // 保存当前数据对象 => 已经累加计数，界面自动变化...
+      // 保存当前数据对象...
       this.videoParams = item
       // 直接改变播放连接地址和海报地址...
-      this.playerOptions.sources[0].src = item.file_fdfs
-      this.playerOptions.poster = item.image_fdfs
+      this.playerOptions.sources[0].src = this.videoParams.file_fdfs
+      this.playerOptions.poster = this.videoParams.image_fdfs
       // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新本地界面的计数器...
-      this.doSaveClick(item)
+      this.doSaveClick(this.videoParams)
     },
     doSaveClick (item) {
       let that = this
       that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/saveClick/type/vod/record_id/' + item.record_id)
         .then((response) => {
           console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
-          that.videoParams.clicks = response.data
+          item.clicks = response.data
         })
         .catch((error) => {
           console.log(error)
@@ -166,11 +158,6 @@ export default {
     loadGallery (theSubjectID, theScroller) {
       // 保存当前对象...
       let that = this
-      // 如果是直播，使用blank.gif...
-      if (theSubjectID === -2) {
-        that.boxGround = 'blank.gif'
-        that.isLive = true
-      }
       // 获取对应的科目数据...
       that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID)
         .then((response) => {
@@ -215,11 +202,11 @@ export default {
         this.$refs.videoPlayer.player.requestFullscreen()
       }
     },
-    onClickBack () {
+    onClickTopBack () {
       // 点击左侧返回箭头...
       history.back()
     },
-    onClickMute (event) {
+    onClickTopMute () {
       // 点击右侧静音按钮 => 得到当前对象，当前播放器，当前状态...
       let theVolume = event.currentTarget.firstElementChild
       let thePlayer = this.$refs.videoPlayer.player
@@ -235,8 +222,29 @@ export default {
       console.log('player pause!')
     },
     onPlayerEnded (player) {
-      // 播放结束，发起模拟点击事件...
+      // 播放正常结束，自动播放下一条...
       console.log('player ended!')
+      // 如果记录数无效，直接返回...
+      if (this.arrGallery.length <= 0) { return }
+      // 利用当前播放焦点记录编号在现有数据列表中查找索引...
+      let theFocusID = this.$refs.listVod.focusRecord
+      for (var i = 0; i < this.arrGallery.length; ++i) {
+        if (theFocusID === this.arrGallery[i].record_id) {
+          // 累加焦点索引编号...
+          let theNewIndex = i + 1
+          // 索引编号越界...
+          if (theNewIndex >= this.arrGallery.length) {
+            // 将滚动容器返回到顶部，重置索引编号...
+            this.$refs.galScroller._xscroll.scrollTop(0, 1000, 'ease-in-out')
+            theNewIndex = 0
+          }
+          // 模拟点击对应的索引编号...
+          let theItem = this.arrGallery[theNewIndex]
+          this.onClickListView(theItem)
+          // 结束，跳出循环...
+          return
+        }
+      }
     },
     onPlayerLoadeddata (player) {
       console.log('player Loadeddata!')
@@ -289,55 +297,7 @@ export default {
 </script>
 
 <style lang="less">
-.left-back {
-  z-index: 100;
-  opacity: 0.5;
-  background: #666;
-  border-radius: 20px;
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  top: 15px;
-  left: 15px;
-}
-.left-arrow {
-  position: absolute;
-  z-index: 110;
-  left: 15px;
-  top: 15px;
-  &:before {
-    content: "";
-    width: 12px;
-    height: 12px;
-    position: absolute;
-    border: 1px solid #fff;
-    border-width: 2px 0 0 2px;
-    transform: rotate(315deg);
-    left: 11px;
-    top: 8px;
-  }
-}
-.right-mute {
-  z-index: 100;
-  opacity: 0.5;
-  background: #666;
-  border-radius: 20px;
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  top: 15px;
-  right: 15px;
-}
-.right-vol {
-  position: absolute;
-  z-index: 110;
-  top: 11px;
-  right: 13px;
-  width: 30px;
-  color: #fff;
-  font-size: 25px;
-}
-.thumb-name {
+.thumb_name {
   margin: 10px 10px 8px;
   font-weight: bold;
   line-height: 18px;
@@ -354,8 +314,6 @@ export default {
   overflow: hidden;
   font-size: 14px;
   margin: 8px 10px;
-  /* padding: 0px 2px 8px 2px;
-  border-bottom: 1px solid #ccc; */
 }
 .thumb_split {
   height: 5px;

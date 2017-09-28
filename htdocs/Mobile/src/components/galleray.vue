@@ -5,7 +5,7 @@
         <a href="javascript:">
           <div class="am-gallery-box" :style="'background: url(../../static/' + boxGround + ') no-repeat center;'">
             <div class="am-gallery-play" :style="{display: isLive ? 'none' : 'block'}"><i class="fa fa-play-circle"></i></div>
-            <img class="am-gallery-img" v-lazy="item.image_fdfs + '_240x140'" />
+            <img class="am-gallery-img" v-lazy="item.image_fdfs + (isLive ? '' : '_240x140')" />
           </div>
           <h3 class="am-gallery-title">{{item.subject_name}} {{item.grade_type}} {{item.teacher_name}} {{item.title_name}}</h3>
           <div class="am-gallery-desc">{{item.created}}</div>

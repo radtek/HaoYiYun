@@ -2,14 +2,14 @@
   <div>
       <div class="list_media_box" v-for="(item, index) in list" @click="clickListItem(item)">
         <div class="list_media_hd" :style="'background: url(../../static/' + boxGround + ') no-repeat center;'">
-          <div class="c-time" :style="{display: isLive ? 'none' : 'block'}">
+          <div class="c-time">
             <div class="thumb_back"></div>
             <div class="thumb_time">{{item.disptime}}</div>
           </div>
           <img class="list_media_thumb" v-lazy="item.image_fdfs + '_240x140'" />
         </div>
         <div class="list_media_bd">
-          <h4 class="list_media_title">{{item.subject_name}} {{item.grade_type}} {{item.grade_name}} {{item.camera_name}} {{item.teacher_name}} {{item.title_name}}</h4>
+          <h4 class="list_media_title" :style="{color: (item.record_id===focusRecord) ? '#FF5722' : '#000'}">{{item.subject_name}} {{item.grade_type}} {{item.grade_name}} {{item.camera_name}} {{item.teacher_name}} {{item.title_name}}</h4>
           <div class="list_media_desc">
             <span><i class="fa fa-clock-o">&nbsp;{{item.created}}</i></span>
             <span style="float: right;"><i class="fa fa-play-circle-o">&nbsp;{{item.clicks}}次</i></span>
@@ -32,35 +32,18 @@ export default {
       type: String,
       default: ''
     },
-    isLive: {
-      type: Boolean,
-      default: false
-    }
-  },
-  data () {
-    return {
-      lastSelElem: null
+    focusRecord: {
+      type: String,
+      default: ''
     }
   },
   methods: {
     clickListItem (item) {
-      // 获取当前点击的对象...
-      let curClickItem = event.currentTarget.getElementsByClassName('list_media_title')[0]
-      // 如果点击的对象就是当前对象，不处理，直接返回..
-      if (curClickItem === this.lastSelElem) {
-        return
+      // 当前对象与已经选中的不是一样的，通知父组件...
+      if (item.record_id !== this.focusRecord) {
+        // 向上层应用传递点击事件消息通知 => 不要转换成json => 这样数据就能自动同步...
+        this.$emit('on-click-list-item', item)
       }
-      // 累加点击计数器 => 界面会自动变化...
-      ++item.clicks
-      // 上次选中对象有效，把它的样式还原...
-      if (this.lastSelElem) {
-        this.lastSelElem.style.color = '#000'
-      }
-      // 获取当前选中对象，给它设置新的焦点样式...
-      this.lastSelElem = curClickItem
-      this.lastSelElem.style.color = '#FF5722'
-      // 向上层应用传递点击事件消息通知...
-      this.$emit('on-click-list-item', JSON.parse(JSON.stringify(item)))
     }
   },
   mounted () {

@@ -101,9 +101,25 @@
    O：（已完成）点播播放页面的其它元素的构建，参考《凤凰视频》的显示结构
       1、（已完成）与科目相关记录的呈现，翻页，焦点切换；
       2、（已完成）当前播放记录的点击计数器累加；
-      3、（不处理）【使用vue不知道如何处理，即使实现，也无法自动播放】当前记录播放结束，自动播放下一条记录（从相关记录的第一条开始自动播放）
-      4、（不处理）【使用vue不知道如何处理，即使实现，也无法自动播放】当前播放记录的焦点切换，第一次播放记录与下拉刷新时焦点确认；
-   P：（未完成）swiper页面的点击响应处理；
+      3、（已完成）当前记录播放结束，自动播放下一条记录（从相关记录的第一条开始自动播放）利用vue的数据驱动特性完成，完全可以摆脱jquery的束缚；
+      4、（已完成）当前播放记录的焦点切换，第一次播放记录与下拉刷新时焦点确认；参见ListView.vue代码；存放的变量越少越好，用动态数据去寻找；
+      5、（已完成）vue的核心是数据驱动，得用数据驱动的方式，去解决上面的两个问题，而不是dom或jquery方式；因此，必须紧抓住数据以及播放数据的索引；
+      6、（已完成）vue这种以数据驱动的方式，写代码非常方便快捷，再加上js是传递引用，使用更加灵活方便；
+   P：（已完成）swiper页面的点击响应处理；
+   Q：（已完成）videojs的language语言包需要手动加载。
+      1、vue  => require('video.js/dist/lang/zh-CN.js')
+      2、html => <script src="/wxapi/public/js/zh-CN.js"></script>
+   R：（未完成）videojs-contrib-hls在处理ts数据时，感觉有内存未释放，一直增加内存，还会造成chrome崩溃；
+      1、（未完成）进行页面切换时，hls对象并没有被删除，造成内存一直增加，甚至出现hls对象一直停留在页面的问题；
+      2、（未完成）内存一直增加，甚至造成chrome因内存不足而崩溃；
+      3、（已完成）不显示剩余时间状态条；controlBar: { remainingTimeDisplay: false }
+   S：（已完成）videojs-contrib-hls是通过ajax方式获取.m3u8和.ts文件，存在跨域问题，需要修改srs，新增跨域接口
+      1、srs传输.m3u8时 => protocol\srs_http_stack.cpp:349 => w->header()->set("Access-Control-Allow-Origin", "*");
+      2、srs传输.ts时   => app\srs_app_http_stream.cpp:483 => w->header()->set("Access-Control-Allow-Origin", "*");
+   T：（未完成）手机端可以直接激发采集端直播上传，直播地址的获取通过后端获取；
+   U：（未完成）PC端将videojs版本升级为6.2.7版本，与手机端同步；
+   V：（未完成）PC端观看直播，可以使用videojs-contrib-hls和flash自由切换；
+   W：（未完成）采集端可以利用ffmpeg的sdk直接单帧解码，从而实现直播每隔一个分钟动态截图的功能；
 
 2.（已完成）移动端：在Windows进行调试，vue-cli+webpack+vux2.0
    A：（已完成）Windows下安装、例子参考 => http://blog.csdn.net/u013182762/article/details/53021374
