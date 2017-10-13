@@ -55,14 +55,15 @@ define('kCmd_PHP_Set_Course_Mod',     5);
 define('kCmd_PHP_Set_Course_Del',     6);
 define('kCmd_PHP_Get_Gather_Status',  7);
 define('kCmd_PHP_Get_Course_Record',  8);
-define('kCmd_Live_Login',             9);
-define('kCmd_Live_Vary',             10);
-define('kCmd_Play_Login',            11);
-define('kCmd_PHP_Get_All_Client',    12);
-define('kCmd_PHP_Get_Live_Server',   13);
-define('kCmd_Live_Quit',             14);
-define('kCmd_PHP_Start_Camera',      15);
-define('kCmd_PHP_Stop_Camera',       16);
+define('kCmd_PHP_Get_All_Client',     9);
+define('kCmd_PHP_Get_Live_Server',   10);
+define('kCmd_PHP_Start_Camera',      11);
+define('kCmd_PHP_Stop_Camera',       12);
+define('kCmd_Live_Login',            13);
+define('kCmd_Live_Vary',             14);
+define('kCmd_Live_Quit',             15);
+define('kCmd_Play_Login',            16);
+define('kCmd_Play_Verify',           17);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...

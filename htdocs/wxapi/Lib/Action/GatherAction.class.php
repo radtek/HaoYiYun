@@ -29,7 +29,8 @@ class GatherAction extends Action
         break;
       }
       // 根据MAC地址获取Gather记录信息...
-      $dbGather = D('gather')->where('mac_addr="'.$arrData['mac_addr'].'"')->find();
+      $map['mac_addr'] = $arrData['mac_addr'];
+      $dbGather = D('gather')->where($map)->find();
       if( count($dbGather) <= 0 ) {
         // 没有找到记录，直接创建一个新记录...
         $dbGather = $arrData;
@@ -43,6 +44,9 @@ class GatherAction extends Action
         $arrData['updated'] = date('Y-m-d H:i:s');
         D('gather')->save($arrData);
       }
+      // 将采集端下面所有的通道状态设置成-1...
+      unset($map); $map['gather_id'] = $arrErr['gather_id'];
+      D('camera')->where($map)->setField('status', -1);
       // 读取系统配置表，返回给采集端...
       $dbSys = D('system')->find();
       // 如果节点网站的标记为空，生成一个新的，并存盘...

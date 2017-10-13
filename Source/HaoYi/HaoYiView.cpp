@@ -983,8 +983,10 @@ void CHaoYiView::OnSize(UINT nType, int cx, int cy)
 	// 对控件进行位置移动操作...
 	if( m_DeviceTree.m_hWnd == NULL || m_QRStatic.m_hWnd == NULL ) 
 		return;
+	// 显示二维码的模式...
 	//m_DeviceTree.SetWindowPos(this, 0, 0, QR_CODE_CX, cy - QR_CODE_CY, SWP_NOZORDER | SWP_NOACTIVATE);
 	//m_QRStatic.SetWindowPos(this, 0, cy - QR_CODE_CY, QR_CODE_CX, QR_CODE_CY, SWP_NOZORDER | SWP_NOACTIVATE);
+	// 不显示二维码的模式...
 	m_DeviceTree.SetWindowPos(this, 0, 0, QR_CODE_CX, cy - 0, SWP_NOZORDER | SWP_NOACTIVATE);
 	m_QRStatic.SetWindowPos(this, 0, cy - 0, QR_CODE_CX, 0, SWP_NOZORDER | SWP_NOACTIVATE);
 	m_RightView.SetWindowPos(this, cx - QR_CODE_CX, 0, QR_CODE_CX, cy, SWP_NOZORDER | SWP_NOACTIVATE);

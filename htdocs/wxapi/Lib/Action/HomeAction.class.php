@@ -466,13 +466,24 @@ class HomeAction extends Action
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
       $map['record_id'] = $_GET['record_id'];
-      $dbVod = D('record')->where($map)->field('file_fdfs,clicks')->find();
+      $dbVod = D('record')->where($map)->field('record_id,file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+      // 设置播放页面需要的数据内容...
       $dbShow['url'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
+      // 为了与直播兼容设置的数据...
+      $dbShow['player_id'] = -1;
+      $dbShow['player_vod'] = 1;
+      $dbShow['player_camera'] = -1;
+      // 点播以html5优先，flash垫后...
+      $dbShow['order1'] = "html5";
+      $dbShow['order2'] = "flash";
+      // 反馈点击次数给显示层...
+      $dbShow['clicks'] = intval($dbVod['clicks']) + 1;
+      $dbShow['click_id'] = "vod_" . $dbVod['record_id'];
       // 累加点播计数器，写入数据库...
-      $dbSave['clicks'] = intval($dbVod['clicks']) + 1;
-      $dbSave['record_id'] = $_GET['record_id'];
+      $dbSave['clicks'] = $dbShow['clicks'];
+      $dbSave['record_id'] = $dbVod['record_id'];
       D('record')->save($dbSave);
     } else if( strcasecmp($_GET['type'], "live") == 0 ) {
       // 首先，判断通道是否处于直播状态...
@@ -492,17 +503,28 @@ class HomeAction extends Action
         $this->dispError($dbResult['err_msg'], '请联系管理员，汇报错误信息。');
         return;
       }
-      // 连接中转服务器成功 => 设置rtmp地址...
+      // 连接中转服务器成功 => 设置rtmp地址和hls地址，播放器编号...
       $dbShow['url'] = $dbResult['rtmp_url'];
-      $dbShow['type'] = "rtmp/flv";
+      $dbShow['type'] = $dbResult['rtmp_type'];
+      $dbShow['hls_url'] = $dbResult['hls_url'];
+      $dbShow['hls_type'] = $dbResult['hls_type'];
+      // 这3个参数是直播播放器汇报时需要的数据...
+      $dbShow['player_id'] = $dbResult['player_id'];
+      $dbShow['player_vod'] = 0;
+      $dbShow['player_camera'] = $dbCamera['camera_id'];
+      // 直播flash以优先(延时小)，html5垫后(延时大)...
+      $dbShow['order1'] = "flash";
+      $dbShow['order2'] = "html5";
+      // 反馈点击次数给显示层...
+      $dbShow['clicks'] = intval($dbCamera['clicks']) + 1;
+      $dbShow['click_id'] = "live_" . $dbCamera['camera_id'];
       // 累加点播计数器，写入数据库...
-      $dbCamera['clicks'] = intval($dbCamera['clicks']) + 1;
+      $dbCamera['clicks'] = $dbShow['clicks'];
       D('camera')->save($dbCamera);
     }
     // 获取传递过来的视频窗口大小...
     $dbShow['width'] = isset($_GET['width']) ? ($_GET['width'] - 2) : 840;
     $dbShow['height'] = isset($_GET['height']) ? ($_GET['height'] - 3) : 545;
-    //print_r($dbShow); exit;
     // 赋值给播放器模板页面...
     $this->assign('my_show', $dbShow);
     $this->display('show');
@@ -525,20 +547,6 @@ class HomeAction extends Action
   {
     // 尝试链接中转服务器...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
-    /*// 获取直播频道所在的URL地址...
-    $saveJson = json_encode($dbParam);
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPlay, kCmd_Play_Login, $saveJson);
-    // 获取的JSON数据有效，转成数组，并判断有没有错误码...
-    $arrData = json_decode($json_data, true);
-    return $arrData;
-    if( !is_array($arrData) || ($arrrData['err_code'] > 0) )
-      return;
-    // 判断获取到的URL是否有效...
-    if( !isset($arrData['rtmp_url']) )
-      return;
-    // 返回最终获取到的URL地址...
-    return $arrData['rtmp_url'];*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);

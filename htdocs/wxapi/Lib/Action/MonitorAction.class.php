@@ -344,13 +344,24 @@ class MonitorAction extends Action
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
       $map['record_id'] = $_GET['record_id'];
-      $dbVod = D('record')->where($map)->field('file_fdfs,clicks')->find();
+      $dbVod = D('record')->where($map)->field('record_id,file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+      // 设置播放页面需要的数据内容...
       $dbShow['url'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $dbShow['type'] = "video/mp4";
+      // 为了与直播兼容设置的数据...
+      $dbShow['player_id'] = -1;
+      $dbShow['player_vod'] = 1;
+      $dbShow['player_camera'] = -1;
+      // 点播以html5优先，flash垫后...
+      $dbShow['order1'] = "html5";
+      $dbShow['order2'] = "flash";
+      // 反馈点击次数给显示层...
+      $dbShow['clicks'] = intval($dbVod['clicks']) + 1;
+      $dbShow['click_id'] = "vod_" . $dbVod['record_id'];
       // 累加点播计数器，写入数据库...
-      $dbSave['clicks'] = intval($dbVod['clicks']) + 1;
-      $dbSave['record_id'] = $_GET['record_id'];
+      $dbSave['clicks'] = $dbShow['clicks'];
+      $dbSave['record_id'] = $dbVod['record_id'];
       D('record')->save($dbSave);
     } else if( strcasecmp($_GET['type'], "live") == 0 ) {
       // 首先，判断通道是否处于直播状态...
@@ -370,11 +381,23 @@ class MonitorAction extends Action
         $this->dispError($dbResult['err_msg'], '请联系管理员，汇报错误信息。');
         return;
       }
-      // 连接中转服务器成功 => 设置rtmp地址...
+      // 连接中转服务器成功 => 设置rtmp地址和hls地址，播放器编号...
       $dbShow['url'] = $dbResult['rtmp_url'];
-      $dbShow['type'] = "rtmp/flv";
+      $dbShow['type'] = $dbResult['rtmp_type'];
+      $dbShow['hls_url'] = $dbResult['hls_url'];
+      $dbShow['hls_type'] = $dbResult['hls_type'];
+      // 这3个参数是直播播放器汇报时需要的数据...
+      $dbShow['player_id'] = $dbResult['player_id'];
+      $dbShow['player_vod'] = 0;
+      $dbShow['player_camera'] = $dbCamera['camera_id'];
+      // 直播flash以优先(延时小)，html5垫后(延时大)...
+      $dbShow['order1'] = "flash";
+      $dbShow['order2'] = "html5";
+      // 反馈点击次数给显示层...
+      $dbShow['clicks'] = intval($dbCamera['clicks']) + 1;
+      $dbShow['click_id'] = "live_" . $dbCamera['camera_id'];
       // 累加点播计数器，写入数据库...
-      $dbCamera['clicks'] = intval($dbCamera['clicks']) + 1;
+      $dbCamera['clicks'] = $dbShow['clicks'];
       D('camera')->save($dbCamera);
     }
     // 获取传递过来的视频窗口大小...

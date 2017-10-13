@@ -139,6 +139,9 @@ bool CQRStatic::doNetJpgGif(CDC* pDC, int x, int y)
 	std::string strResponse;
 	CURLcode res;
 	CURL  *  curl = curl_easy_init();
+	//res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+	//res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+	//res = curl_easy_setopt(curl, CURLOPT_URL,"https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=gQFt8DoAAAAAAAAAASxodHRwOi8vd2VpeGluLnFxLmNvbS9xL3VEa1ktZG5sRDlaMkNralllQlZTAAIEWe3SVgMEAAAAAA%3D%3D");
 	res = curl_easy_setopt(curl, CURLOPT_URL,"http://www.happyhope.net/wxapi.php/Home/downShop/shop_id/1");
 	res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procDownShop);
 	res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&strResponse);

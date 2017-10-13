@@ -9,6 +9,11 @@
                     ref="videoPlayer"
                     :options="playerOptions"
                     :playsinline="true"
+                    @play="onPlayerPlay($event)"
+                    @pause="onPlayerPause($event)"
+                    @canplaythrough="onPlayerCanplaythrough($event)"
+                    @canplay="onPlayerCanplay($event)"
+                    @error="onPlayerError($event)"
                     @ended="onPlayerEnded($event)"
                     @ready="playerReadyOK($event)">
       </video-player>
@@ -240,6 +245,21 @@ export default {
       // 将静音状态取反，使用videojs内部的按钮设置图标字体状态...
       thePlayer.muted(!theMuted)
       theVolume.setAttribute('class', theMuted ? 'vjs-icon-volume-high' : 'vjs-icon-volume-mute')
+    },
+    onPlayerCanplaythrough (player) {
+      console.log('player Canplaythrough!')
+    },
+    onPlayerCanplay (player) {
+      console.log('player Canplay!')
+    },
+    onPlayerError (player) {
+      console.log('player Error!')
+    },
+    onPlayerPlay (player) {
+      console.log('player play!')
+    },
+    onPlayerPause (player) {
+      console.log('player pause!')
     },
     onPlayerEnded (player) {
       // 播放正常结束，自动播放下一条...

@@ -16,6 +16,7 @@
   "dependencies": {
     "axios": "^0.16.2",
     "videojs-contrib-hls": "^5.11.0",
+    "videojs-flash": "^2.0.1",
     "vue": "^2.4.2",
     "vue-axios": "^2.0.2",
     "vue-lazyload": "^1.1.3",

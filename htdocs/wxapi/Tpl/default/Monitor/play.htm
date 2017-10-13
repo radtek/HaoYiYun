@@ -87,7 +87,9 @@
               <div class="headline">{{$vo.created}}</div>
               <div class="status">
                 <span><i class="fa fa-file-video-o"></i>&nbsp;{{$vo['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</span>
-                <span style="margin-left: 10px"><i class="fa fa-play-circle-o"></i>&nbsp;{{$vo.clicks}}&nbsp;次</span>
+                <span style="margin-left: 10px">
+                  <i class="fa fa-play-circle-o" id="vod_{{$vo.record_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                </span>
               </div>
             </div>
           </a>
@@ -116,7 +118,9 @@
                   <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
                 </switch>
                 实时直播</span>
-                <span style="margin-left: 10px"><i class="fa fa-play-circle-o"></i>&nbsp;{{$vo.clicks}}&nbsp;次</span>
+                <span style="margin-left: 10px">
+                  <i class="fa fa-play-circle-o" id="live_{{$vo.camera_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                </span>
               </div>
             </div>
           </a>
@@ -155,6 +159,11 @@ function doEndedEvent() {
   // 直接得到slider对象，调用next接口...
   var slider = $(".royalSlider").data('royalSlider');
   slider.next();
+}
+
+// 由子窗口调用的修改点击播放次数的接口...
+function doClicks(inItemID, inClicks) {
+  $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
 }
 
 // 处理 layui 过程...
