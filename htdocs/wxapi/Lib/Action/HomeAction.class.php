@@ -509,9 +509,9 @@ class HomeAction extends Action
       $dbShow['hls_url'] = $dbResult['hls_url'];
       $dbShow['hls_type'] = $dbResult['hls_type'];
       // 这3个参数是直播播放器汇报时需要的数据...
+      $dbShow['player_camera'] = $dbCamera['camera_id'];
       $dbShow['player_id'] = $dbResult['player_id'];
       $dbShow['player_vod'] = 0;
-      $dbShow['player_camera'] = $dbCamera['camera_id'];
       // 直播flash以优先(延时小)，html5垫后(延时大)...
       $dbShow['order1'] = "flash";
       $dbShow['order2'] = "html5";

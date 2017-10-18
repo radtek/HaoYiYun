@@ -85,7 +85,7 @@ body {
   opacity: 0;
   transform: translate3d(-100%, 0, 0);
 }
-/* height 必须有各个模块自行设定 */
+/* height 必须由各个模块自行设定 */
 .endScroll {
   color: #999999;
   font-size: 16px;

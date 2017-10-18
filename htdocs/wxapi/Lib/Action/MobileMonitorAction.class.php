@@ -233,5 +233,84 @@ class MobileMonitorAction extends Action
       echo $dbSave['clicks'];
     }
   }
+  //
+  // 获取直播地址...
+  public function getHlsAddr()
+  {
+    // 指定其它域名访问内容 => 跨域访问...
+    header('Access-Control-Allow-Origin:*');
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    $arrErr['err_desc'] = "OK";
+    // 进行处理过程，有错误就返回...
+    do {
+      // 首先，判断通道是否处于直播状态...
+      $map['camera_id'] = $_GET['camera_id'];
+      $dbCamera = D('LiveView')->where($map)->field('camera_id,clicks,status,gather_id,mac_addr')->find();
+      // 如果通道不在线，直接返回错误...
+      if( $dbCamera['status'] <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '当前通道处于离线状态，无法播放！';
+        $arrErr['err_desc'] = '请联系管理员，开启通道。';
+        break;
+      }
+      // 中转服务器需要的参数...
+      $dbParam['mac_addr'] = $dbCamera['mac_addr'];
+      $dbParam['rtmp_live'] = $dbCamera['camera_id'];
+      // 获取直播链接地址...
+      $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
+      // 如果获取连接中转服务器失败...
+      if( $dbResult['err_code'] > 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = $dbResult['err_msg'];
+        $arrErr['err_desc'] = '请联系管理员，汇报错误信息。';
+        break;
+      }
+      // 将反馈结果进行重新组合...
+      $arrErr['hls_url'] = $dbResult['hls_url'];
+      $arrErr['hls_type'] = $dbResult['hls_type'];
+      // 这3个参数是直播播放器汇报时需要的数据...
+      $arrErr['player_camera'] = $dbCamera['camera_id'];
+      $arrErr['player_id'] = $dbResult['player_id'];
+      $arrErr['player_vod'] = 0;
+    }while( false );
+    // 反馈结果信息...
+    echo json_encode($arrErr);
+  }
+  //
+  // 2017.06.15 - by jackey => 修改了中转服务器代码，转发命令给采集端之后，立即返回rtmp地址，无需等待采集端上传结果，避免阻塞，让播放器自己去等待...
+  // 从中转服务器获取直播地址...
+  // 返回一个数组结果...
+  private function getRtmpUrlFromTransmit(&$dbParam)
+  {
+    // 尝试链接中转服务器...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    
+    // 通过php扩展插件连接中转服务器 => 性能高...
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 链接中转服务器失败，直接返回...
+    if( !$transmit ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '无法连接中转服务器。';
+      return $arrData;
+    }
+    // 获取直播频道所在的URL地址...
+    $saveJson = json_encode($dbParam);
+    $json_data = transmit_command(kClientPlay, kCmd_Play_Login, $transmit, $saveJson);
+    // 关闭中转服务器链接...
+    transmit_disconnect_server($transmit);
+    // 获取的JSON数据有效，转成数组，直接返回...
+    $arrData = json_decode($json_data, true);
+    if( !$arrData ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '从中转服务器获取数据失败。';
+      return $arrData;
+    }
+    // 通过错误码，获得错误信息...
+    $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    // 将整个数组返回...
+    return $arrData;
+  }
 }
 ?>

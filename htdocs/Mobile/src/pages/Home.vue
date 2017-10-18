@@ -86,7 +86,7 @@ export default {
     },
     onClickSwiper (item) {
       if (this.curSubject === 1) {
-        this.$router.push({name: 'Live', params: item})
+        this.doLivePage(item)
         console.log('Swiper(Live, %s)', item.camera_id)
       } else {
         this.$router.push({name: 'Vod', params: item})
@@ -95,14 +95,34 @@ export default {
     },
     onClickGallery (item) {
       if (this.curSubject === 1) {
-        // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
-        this.$router.push({name: 'Live', params: item})
+        this.doLivePage(item)
         console.log('Gallery(Live, %s)', item.camera_id)
       } else {
         // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
         this.$router.push({name: 'Vod', params: item})
         console.log('Gallery(Vod, %s)', item.record_id)
       }
+    },
+    doLivePage (item) {
+      // 组合需要远程访问的地址...
+      let theUrl = 'http://192.168.1.70/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
+      let that = this
+      // 设置等待状态...
+      that.isLoading = true
+      that.$root.$http.get(theUrl)
+        .then((response) => {
+          // 打印返回信息，关闭等待框...
+          that.isLoading = false
+          console.log('=== get hls address ===')
+          // 判断返回的hls地址是否有效...
+          item.arrHlsAddr = response.data
+          // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
+          this.$router.push({name: 'Live', params: item})
+        })
+        .catch((error) => {
+          that.isLoading = false
+          console.log(error)
+        })
     },
     refresh (theScroller) {
       let that = this

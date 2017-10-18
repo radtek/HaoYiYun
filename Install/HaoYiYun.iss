@@ -13,8 +13,7 @@ DefaultDirName={reg:HKLM\Software\HaoYiYun, DefaultDirName|{pf}\ÔÆÂ¼²¥}
 Compression=lzma
 SolidCompression=yes
 UsePreviousAppDir=no
-UsePreviousGroup=no
-;UsePreviousLanguage=no
+UsePreviousGroup=noUsePreviousLanguage=no
 AllowCancelDuringInstall=no
 OutputDir=..\Product
 
@@ -37,9 +36,11 @@ Source: "..\Source\bin\D3DX9_43.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\HCCore.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\HCNetSDK.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\libcurl.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\libeay32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\ssleay32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\zlib1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\PlayCtrl.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\SuperRender.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\Source\bin\zlib1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\HCNetSDKCom\HCPreview.dll"; DestDir: "{app}\HCNetSDKCom"; Flags: ignoreversion
 Source: "..\Source\bin\HCNetSDKCom\HCCoreDevCfg.dll"; DestDir: "{app}\HCNetSDKCom"; Flags: ignoreversion
 Source: "..\Source\bin\HCNetSDKCom\HCGeneralCfgMgr.dll"; DestDir: "{app}\HCNetSDKCom"; Flags: ignoreversion

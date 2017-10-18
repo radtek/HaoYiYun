@@ -2,10 +2,11 @@
 <template>
   <div>
     <!-- 后退和静音组件 -->
-    <top-nav @on-click-top-back="onClickTopBack" @on-click-top-mute="onClickTopMute"></top-nav>
+    <top-nav @on-click-top-back="onClickTopBack" @on-click-top-mute="onClickTopMute" :isError="doCheckError"></top-nav>
     <!-- 视频播放组件 -->
-    <scroller lock-x lock-y :scrollbar-x=false ref="videoScroll" height="videoHeight">
-      <video-player class="vjs-custom-skin"
+    <scroller lock-x lock-y :scrollbar-x=false ref="videoScroll" :height="videoHeight">
+      <error :msg_title="doMsgTitle" :msg_desc="doMsgDesc" :isError="doCheckError"></error>
+      <video-player class="vjs-custom-skin" :style="{display: doCheckError ? 'none' : 'block'}"
                     ref="videoPlayer"
                     :options="playerOptions"
                     :playsinline="true"
@@ -45,14 +46,17 @@ import XButton from 'vuxx-components/x-button'
 import Scroller from 'vuxx-components/scroller'
 import ListView from '@/components/ListView'
 import TopNav from '@/components/top-nav'
+import Error from '@/components/error'
 import { mapState } from 'vuex'
+var qs = require('qs')
 
 export default {
   components: {
     XButton,
     Scroller,
     ListView,
-    TopNav
+    TopNav,
+    Error
   },
   props: {
     videoHeight: {
@@ -62,7 +66,9 @@ export default {
   },
   data () {
     return {
+      player_clock: -1,
       arrGallery: [],
+      arrHlsAddr: [],
       curGalPage: 1,
       isLive: true,
       isDispEnd: false,
@@ -76,8 +82,8 @@ export default {
         height: this.videoHeight,
         sources: [{
           withCredentials: false,
-          type: 'application/x-mpegURL',
-          src: 'http://192.168.1.70:8080/live/live4.m3u8'
+          type: this.$route.params.arrHlsAddr.hls_type,
+          src: this.$route.params.arrHlsAddr.hls_url
         }],
         controlBar: {
           timeDivider: false,
@@ -108,9 +114,32 @@ export default {
         case '2': return 'fa-arrow-circle-o-down'
         default: return 'fa-file-video-o'
       }
+    },
+    doCheckError: function () {
+      // 如果是点播，永远显示静音标志...
+      if (!this.isLive) return false
+      // 如果是直播，用err_code设置...
+      return this.liveParams.arrHlsAddr.err_code
+    },
+    doMsgTitle: function () {
+      // 如果是点播，返回空值...
+      if (!this.isLive) return ''
+      // 如果是直播，返回err_msg，一定有效...
+      return this.liveParams.arrHlsAddr.err_msg
+    },
+    doMsgDesc: function () {
+      // 如果是点播，返回空值...
+      if (!this.isLive) return ''
+      // 如果是直播，返回err_desc，一定有效...
+      return this.liveParams.arrHlsAddr.err_desc
     }
   },
   deactivated () {
+    // 通知关闭播放器命令 => 这里一定要发送...
+    this.doLivePlayVerify(0)
+    // 关闭重置时钟...
+    this.resetClock()
+    // 销毁当前页面...
     this.$destroy()
   },
   mounted () {
@@ -134,28 +163,73 @@ export default {
     this.loadGallery(this.videoParams.camera_id, this.$refs.galScroller)
     // 进行局部对象定向绑定 => 绑定相关的列表数据框...
     this.fastClick.attach(this.$refs.galScroller.$el)
-    // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新计数器...
-    this.doSaveClick(this.videoParams)
+    // 创建汇报时钟，新增点击次数...
+    this.buildClock()
   },
   methods: {
+    resetClock () {
+      clearInterval(this.player_clock)
+      this.player_clock = -1
+    },
+    buildClock () {
+      // 获取hls地址有错误不执行汇报命令...
+      if (this.liveParams.arrHlsAddr.err_code) { return }
+      // 直播地址正确，设置超时汇报事件，每隔12秒调用ajax通知接口...
+      let that = this
+      that.player_clock = setInterval(function () {
+        that.doLivePlayVerify(1)
+      }, 12000)
+      // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新计数器...
+      that.doSaveClick(that.videoParams)
+      console.log('=== buildClock ok ===')
+    },
+    doGetLiveAddr (inCameraID) {
+      // 组合需要远程访问的地址...
+      let that = this
+      let theUrl = 'http://192.168.1.70/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + inCameraID
+      // 设置等待状态，发起异步命令...
+      console.log('=== get hls address start ===')
+      that.$store.commit('updateLoadingStatus', {isLoading: true})
+      that.$root.$http.get(theUrl)
+        .then((response) => {
+          // 判断返回的hls地址是否有效...
+          that.liveParams.arrHlsAddr = response.data
+          // 保存当前数据对象...
+          that.videoParams = that.liveParams
+          // 直接改变播放连接地址和海报地址...
+          that.playerOptions.sources[0].type = that.liveParams.arrHlsAddr.hls_type
+          that.playerOptions.sources[0].src = that.liveParams.arrHlsAddr.hls_url
+          that.playerOptions.poster = '../../static/live-on.png'
+          // 隐藏时间轴显示信息...
+          that.playerOptions.controlBar.timeDivider = false
+          that.playerOptions.controlBar.durationDisplay = false
+          // 创建汇报时钟，新增点击次数...
+          this.buildClock()
+          // 打印返回信息，关闭等待框...
+          that.$store.commit('updateLoadingStatus', {isLoading: false})
+          console.log('=== get hls address end ===')
+        })
+        .catch((error) => {
+          that.$store.commit('updateLoadingStatus', {isLoading: false})
+          console.log(error)
+        })
+    },
     onClickLive () {
       // 如果已经是直播状态，直接返回...
       if (this.isLive) { return }
       // 设置直播标志，保存参数...
       this.isLive = true
-      // 保存当前数据对象...
-      this.videoParams = this.liveParams
-      // 直接改变播放连接地址和海报地址...
-      this.playerOptions.sources[0].type = 'application/x-mpegURL'
-      this.playerOptions.sources[0].src = 'http://192.168.1.70:8080/live/live4.m3u8'
-      this.playerOptions.poster = '../../static/live-on.png'
-      // 隐藏时间轴显示信息...
-      this.playerOptions.controlBar.timeDivider = false
-      this.playerOptions.controlBar.durationDisplay = false
-      // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新本地界面的计数器...
-      this.doSaveClick(this.videoParams)
+      // 复位时钟，让中转器超时删除已挂载hls直播播放器...
+      this.resetClock()
+      // 重新异步获取hls地址...
+      this.doGetLiveAddr(this.liveParams.camera_id)
     },
     onClickVod (item) {
+      /************************************************************************************
+      // 重置播放器时钟，不发送通知命令，让中转服务器通过超时检测删除直播播放器...
+      // 修正了中转服务器对超时的处理，每隔固定10秒检测一次，以前只能通过事件检测有问题...
+      *************************************************************************************/
+      this.resetClock()
       // 设置直播标志...
       this.isLive = false
       // 保存当前数据对象...
@@ -176,11 +250,42 @@ export default {
       theUrl += this.isLive ? ('/live/camera_id/' + item.camera_id) : ('/vod/record_id/' + item.record_id)
       that.$root.$http.get(theUrl)
         .then((response) => {
-          console.log('vod: record_id => %s, s_click => %d, c_click => %s)', (this.isLive ? item.camera_id : item.record_id), response.data, item.clicks)
+          if (this.isLive) {
+            console.log('live: camera_id => %s, s_click => %d, c_click => %s)', item.camera_id, response.data, item.clicks)
+          } else {
+            console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
+          }
           item.clicks = response.data
         })
         .catch((error) => {
           console.log(error)
+        })
+    },
+    // 直播状态通知接口 => inPlayActive不能用true或false，必须用1或0...
+    doLivePlayVerify (inPlayActive) {
+      // 获取hls地址有错误时不执行汇报命令...
+      if (this.liveParams.arrHlsAddr.err_code) { return }
+      // 通过ajax发送异步消息命令给转发服务器...
+      let that = this
+      let theUrl = 'http://192.168.1.70/wxapi.php/RTMP/verify'
+      let theCamera = this.liveParams.arrHlsAddr.player_camera
+      let thePlayID = this.liveParams.arrHlsAddr.player_id
+      // axios的post数据，必须经过qs.stringify处理，否则在php端无法解析，同时，必须加上Content-Type...
+      const theData = {rtmp_live: theCamera, player_id: thePlayID, player_type: 1, player_active: inPlayActive}
+      that.$root.$http.post(theUrl, qs.stringify(theData), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}})
+        .then((response) => {
+          // 打印错误信息，关闭定时器...
+          if (response.data.err_code > 0) {
+            console.log('verify error => ' + response.data.err_msg)
+            clearInterval(that.player_clock)
+            return
+          }
+          // 打印成功信息...
+          console.log('verify success => player_camera: %s, player_id: %d, player_type: %d, player_active: %d', theCamera, thePlayID, 1, inPlayActive)
+        })
+        .catch((error) => {
+          console.log(error)
+          clearInterval(that.player_clock)
         })
     },
     loadMore (theScroller) {
@@ -338,4 +443,5 @@ export default {
   border-top: 1px solid rgb(220,220,220);
   border-bottom: 1px solid rgb(220,220,220);
 }
+
 </style>

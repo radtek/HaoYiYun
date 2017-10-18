@@ -295,6 +295,7 @@ HaoYiD.exe
 HaoYiD.lib
 *.exp
 *.idb
+*.exe
 
 DH
 FACE
