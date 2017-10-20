@@ -69,7 +69,7 @@ class RTMPAction extends Action
   public function verify()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 准备返回数据结构...
     $arrErr['err_code'] = false;
     $arrErr['err_msg'] = "OK";

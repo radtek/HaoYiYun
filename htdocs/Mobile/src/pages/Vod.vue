@@ -43,7 +43,6 @@
 import Scroller from 'vuxx-components/scroller'
 import ListView from '@/components/ListView'
 import TopNav from '@/components/top-nav'
-import { mapState } from 'vuex'
 
 export default {
   components: {
@@ -98,7 +97,7 @@ export default {
   },
   mounted () {
     // 更新默认的背景小图片 => 加上访问路径...
-    this.boxGround = this.ajaxImgPath + 'default-90.png'
+    this.boxGround = '/wxapi/public/images/default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -121,16 +120,11 @@ export default {
     this.$refs.endScroll.style.marginTop = '5px'
     this.loadGallery(this.videoParams.subject_id, this.$refs.galScroller)
     // 进行局部对象定向绑定 => 绑定相关的列表数据框...
-    this.fastClick.attach(this.$refs.galScroller.$el)
+    this.$store.state.vux.fastClick.attach(this.$refs.galScroller.$el)
     // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新计数器...
     this.doSaveClick(this.videoParams)
   },
   computed: {
-    ...mapState({
-      fastClick: state => state.vux.fastClick,
-      ajaxUrlPath: state => state.vux.ajaxUrlPath,
-      ajaxImgPath: state => state.vux.ajaxImgPath
-    }),
     player () {
       return this.$refs.videoPlayer.player
     }
@@ -147,7 +141,7 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/saveClick/type/vod/record_id/' + item.record_id
+      let theUrl = '/wxapi.php/MobileMonitor/saveClick/type/vod/record_id/' + item.record_id
       that.$root.$http.get(theUrl)
         .then((response) => {
           console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
@@ -163,7 +157,7 @@ export default {
     loadGallery (theSubjectID, theScroller) {
       // 保存当前对象...
       let that = this
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
       // 获取对应的科目数据...
       that.$root.$http.get(theUrl)
         .then((response) => {

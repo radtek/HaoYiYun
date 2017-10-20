@@ -86,14 +86,21 @@
    D：（已完成）在切换直播时，重新获取hls地址，这样在任意时刻切换到直播都能正常观看；
    E：（已完成）点播和直播切换页面时，都要删除时钟，确保直播汇报时钟的重建；
    F：（已完成）移动端，录播模式下的hls播放计数问题；
-4.（未完成）移动端重新编译放置到生成环境当中测试：
-   A：（未完成）将ajax访问数据的网址放入vuex当中，可以做为数据随时调用；
-   B：（未完成）所有涉及到ajax调用的地方都需要重新整理，修改访问链接；
-   C：（未完成）重新编译Mobile模块，放到htdocs下面，供移动端调用；
-      1、编译方法：cnpm run build 或 webpack --config build/webpack.prod.conf.js
-      2、发行位置：assetsPublicPath: '/Mobile/'
-      3、静态图片，加上访问链接前缀，要不然会与发布子目录冲突，无法显示；http://192.168.1.70/wxapi/public/images/
-      4、静态图片，与ajax的访问前缀单独分开处理，因为是两个不同的访问地址；
+4.（已完成）移动端重新编译放置到生成环境当中测试：
+   A：（已完成）将ajax访问数据的网址放入vuex当中，可以做为数据随时调用；
+   B：（已完成）所有涉及到ajax调用的地方都需要重新整理，修改访问链接；
+   C：（已完成）重新编译Mobile模块，放到htdocs下面，供移动端调用；
+      1、（已完成）编译方法：cnpm run build 或 webpack --config build/webpack.prod.conf.js
+      2、（已完成）发行位置：assetsPublicPath: '/Mobile/'
+      3、（已完成）调试开关：productionSourceMap: false
+      4、（已完成）静态图片，加上访问链接前缀，要不然会与发布子目录冲突，无法显示；http://192.168.1.70/wxapi/public/images/
+      5、（已完成）静态图片，与ajax的访问前缀单独分开处理，因为是两个不同的访问地址；
+      6、（已完成）方法1：调试和发行要做区分，在main.js中直接使用process.env.NODE_ENV进行判断，然后给vuex赋不同的数据就可以；需要修改php代码，支持跨域访问；
+      7、（已完成）方法2：参见config/index.js当中，修改proxyTable，这种方式可以直接解决跨域访问，而且不用修改php的代码；
+      8、（已完成）vue.esm.js里面可以查看vue.config信息，在chrome调试状态下无法显示；
+5.（已完成）尝试在打包文件中，不要放置随机数字，这样可以固定下来，便于升级更新；
+   A：参见webpack.base.conf.js，将[name].[hash:7].[ext] 修改为 [name].[ext] ，去掉随机hash值；
+   B：参见webpack.prod.conf.js，去掉[chunkhash]和[contenthash]，也是去掉随机hash值；
 
 3.（未完成）采集端可以利用ffmpeg的sdk直接单帧解码，从而实现直播每隔一个分钟动态截图的功能；
 4.（已完成）采集端的通道注册管理还有问题，与网站端通道管理会有冲突，规则不清晰，尝试看能否将通道的添加、修改、删除操作都放到网站端进行，采集端就是启动时与网站逐个匹配，匹配失败，删除；匹配成功，更新；

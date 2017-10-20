@@ -22,25 +22,25 @@ import VueVideoPlayer from 'vue-video-player'
 
 // 加载vue-video-player...
 Vue.use(VueVideoPlayer)
-
 // 加载存储对象...
 Vue.use(Vuex)
-
 // 创建一个存储对象...
 let store = new Vuex.Store()
+
+// 打印系统环境变量...
+// console.log(process)
+// console.log(process.env)
 
 // 设置需要全局保存的变量...
 store.registerModule('vux', {
   state: {
     isLoading: false,
     direction: 'forward',
-    fastClick: FastClick,
-    // build 发行版本需要的信息...
-    ajaxUrlPath: '/wxapi.php/',
-    ajaxImgPath: '/wxapi/public/images/'
-    // dev 本地调试版本需要的信息...
-    // ajaxUrlPath: 'http://192.168.1.70/wxapi.php/',
-    // ajaxImgPath: 'http://192.168.1.70/wxapi/public/images/'
+    fastClick: FastClick
+    // 放弃这种方式，可以用 proxyTable 方式解决，参见 config/index.js
+    // 发行版和调试版使用不同的链接地址 => 直接使用process，这是与打包环境中直接互通的变量...
+    // ajaxUrlPath: process.env.API_ENV + 'wxapi.php/',
+    // ajaxImgPath: process.env.API_ENV + 'wxapi/public/images/'
   },
   mutations: {
     updateLoadingStatus (state, payload) {

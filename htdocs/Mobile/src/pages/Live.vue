@@ -47,7 +47,6 @@ import Scroller from 'vuxx-components/scroller'
 import ListView from '@/components/ListView'
 import TopNav from '@/components/top-nav'
 import Error from '@/components/error'
-import { mapState } from 'vuex'
 var qs = require('qs')
 
 export default {
@@ -91,7 +90,8 @@ export default {
           remainingTimeDisplay: false
         },
         html5: {hls: {withCredentials: false}},
-        poster: this.$store.state.vux.ajaxImgPath + 'live-on.png'
+        poster: '/wxapi/public/images/live-on.png'
+        // 注意：proxyTable解决，不用this.$store.state.vux.ajaxImgPath
         // 注意：这里不能用computed计算值，data() 先于computed()执行...
       },
       pullupConfig: {
@@ -105,11 +105,6 @@ export default {
     }
   },
   computed: {
-    ...mapState({
-      fastClick: state => state.vux.fastClick,
-      ajaxUrlPath: state => state.vux.ajaxUrlPath,
-      ajaxImgPath: state => state.vux.ajaxImgPath
-    }),
     iconClass: function () {
       switch (this.videoParams.stream_prop) {
         case '0': return 'fa-camera'
@@ -147,7 +142,7 @@ export default {
   },
   mounted () {
     // 更新默认的背景小图片 => 加上访问路径...
-    this.boxGround = this.ajaxImgPath + 'default-90.png'
+    this.boxGround = '/wxapi/public/images/default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -167,7 +162,7 @@ export default {
     this.$refs.endScroll.style.marginTop = '5px'
     this.loadGallery(this.videoParams.camera_id, this.$refs.galScroller)
     // 进行局部对象定向绑定 => 绑定相关的列表数据框...
-    this.fastClick.attach(this.$refs.galScroller.$el)
+    this.$store.state.vux.fastClick.attach(this.$refs.galScroller.$el)
     // 创建汇报时钟，新增点击次数...
     this.buildClock()
   },
@@ -191,7 +186,7 @@ export default {
     doGetLiveAddr (inCameraID) {
       // 组合需要远程访问的地址...
       let that = this
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getHlsAddr/camera_id/' + inCameraID
+      let theUrl = '/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + inCameraID
       // 设置等待状态，发起异步命令...
       console.log('=== get hls address start ===')
       that.$store.commit('updateLoadingStatus', {isLoading: true})
@@ -205,7 +200,7 @@ export default {
           // 直接改变播放连接地址和海报地址...
           that.playerOptions.sources[0].type = that.liveParams.arrHlsAddr.hls_type
           that.playerOptions.sources[0].src = that.liveParams.arrHlsAddr.hls_url
-          that.playerOptions.poster = that.ajaxImgPath + 'live-on.png'
+          that.playerOptions.poster = '/wxapi/public/images/live-on.png'
           // 隐藏时间轴显示信息...
           that.playerOptions.controlBar.timeDivider = false
           that.playerOptions.controlBar.durationDisplay = false
@@ -252,7 +247,7 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/saveClick/type'
+      let theUrl = '/wxapi.php/MobileMonitor/saveClick/type'
       theUrl += this.isLive ? ('/live/camera_id/' + item.camera_id) : ('/vod/record_id/' + item.record_id)
       that.$root.$http.get(theUrl)
         .then((response) => {
@@ -273,7 +268,7 @@ export default {
       if (this.liveParams.arrHlsAddr.err_code) { return }
       // 通过ajax发送异步消息命令给转发服务器...
       let that = this
-      let theUrl = this.ajaxUrlPath + 'RTMP/verify'
+      let theUrl = '/wxapi.php/RTMP/verify'
       let theCamera = this.liveParams.arrHlsAddr.player_camera
       let thePlayID = this.liveParams.arrHlsAddr.player_id
       // axios的post数据，必须经过qs.stringify处理，否则在php端无法解析，同时，必须加上Content-Type...
@@ -300,7 +295,7 @@ export default {
     loadGallery (theCameraID, theScroller) {
       // 保存当前对象...
       let that = this
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID
+      let theUrl = '/wxapi.php/MobileMonitor/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID
       // 获取对应的科目数据...
       that.$root.$http.get(theUrl)
         .then((response) => {

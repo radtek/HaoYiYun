@@ -147,7 +147,7 @@ class MobileMonitorAction extends Action
   public function getSubject()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 筛选出所有的科目列表，在数组头部加入两个元素...
     $arrSubject = D('subject')->field('subject_id,subject_name')->order('subject_id ASC')->select();
     array_unshift($arrSubject, array('subject_id' => -1, 'subject_name' => '最新'), array('subject_id' => -2, 'subject_name' => '直播'));
@@ -165,7 +165,7 @@ class MobileMonitorAction extends Action
   public function getGallery()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 通过接口函数获取分页数据...
     $arrGallery = $this->fetchArrGallery();
     // 返回json编码数据包...
@@ -177,7 +177,7 @@ class MobileMonitorAction extends Action
   public function getSwiper()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 通过接口函数获取分页数据...
     $arrSwiper = $this->fetchArrSwiper();
     // 返回json编码数据包...
@@ -188,7 +188,7 @@ class MobileMonitorAction extends Action
   public function getRecord()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 得到每页条数...
     $pagePer = C('PAGE_PER');
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
@@ -211,7 +211,7 @@ class MobileMonitorAction extends Action
   public function saveClick()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 点播和直播的点击次数分开处理...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       $map['record_id'] = $_GET['record_id'];
@@ -238,7 +238,7 @@ class MobileMonitorAction extends Action
   public function getHlsAddr()
   {
     // 指定其它域名访问内容 => 跨域访问...
-    header('Access-Control-Allow-Origin:*');
+    //header('Access-Control-Allow-Origin:*');
     // 准备返回数据结构...
     $arrErr['err_code'] = false;
     $arrErr['err_msg'] = "OK";

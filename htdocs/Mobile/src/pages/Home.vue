@@ -25,10 +25,14 @@ import TabItem from 'vuxx-components/tab/tab-item'
 import Swiper from 'vuxx-components/swiper'
 import Loading from 'vuxx-components/loading'
 import Scroller from 'vuxx-components/scroller'
-
 import Galleray from '@/components/galleray'
 
-import { mapState } from 'vuex'
+/* import { mapState } from 'vuex'
+computed: {
+  ...mapState({
+    fastClick: state => state.vux.fastClick
+  })
+} */
 
 export default {
   components: {
@@ -41,7 +45,7 @@ export default {
   },
   data () {
     return {
-      boxGround: 'default-150.png',
+      boxGround: '',
       isDispGallery: true,
       isDispSwiper: true,
       isDispEnd: false,
@@ -105,7 +109,7 @@ export default {
     },
     doLivePage (item) {
       // 组合需要远程访问的地址...
-      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
+      let theUrl = '/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
       let that = this
       // 设置等待状态...
       that.isLoading = true
@@ -128,7 +132,7 @@ export default {
     refresh (theScroller) {
       let that = this
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
-      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getSwiper/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/MobileMonitor/getSwiper/subject_id/' + theSubjectID
       // 从服务器获取选中科目的最新5条记录数据...
       that.$root.$http.get(theUrl)
         .then((response) => {
@@ -165,7 +169,7 @@ export default {
       }
       // 当前页码小于或等于最大页码，继续根据页码请求数据...
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
-      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
       that.$root.$http.get(theUrl)
         .then((response) => {
           // 叠加记录...
@@ -192,17 +196,17 @@ export default {
       that.isDispEnd = false
       that.isDispSwiper = true
       that.isDispGallery = true
-      that.boxGround = that.ajaxImgPath + 'default-150.png'
+      that.boxGround = '/wxapi/public/images/default-150.png'
       that.$refs.endScroll.style.lineHeight = ''
       // 如果是直播，使用blank.gif...
       if (theSubjectID === -2) {
-        that.boxGround = that.ajaxImgPath + 'blank.gif'
+        that.boxGround = '/wxapi/public/images/blank.gif'
         that.isLive = true
       }
       // 这里必须让下拉滚动容器返回到顶部...
       that.$refs.galScroller._xscroll.scrollTop(0, 1000, 'ease-in-out')
       // 向服务器请求科目数据内容...
-      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getSubject/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/MobileMonitor/getSubject/subject_id/' + theSubjectID
       that.$root.$http.get(theUrl)
         .then((response) => {
           // 获取最大页码数量...
@@ -266,13 +270,6 @@ export default {
         })
     }
   },
-  computed: {
-    ...mapState({
-      fastClick: state => state.vux.fastClick,
-      ajaxUrlPath: state => state.vux.ajaxUrlPath,
-      ajaxImgPath: state => state.vux.ajaxImgPath
-    })
-  },
   mounted () {
     // 设置最后的滚动结束条的高度...
     this.$refs.endScroll.style.height = '80px'
@@ -281,7 +278,7 @@ export default {
     // 默认加载最新的数据...
     this.loadSubject(-1)
     // 进行局部对象定向绑定...
-    this.fastClick.attach(this.$refs.divHome)
+    this.$store.state.vux.fastClick.attach(this.$refs.divHome)
   },
   created () {
     console.log('home - created')
