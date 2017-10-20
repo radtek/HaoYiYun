@@ -61,8 +61,8 @@ export default {
     return {
       arrGallery: [],
       curGalPage: 1,
+      boxGround: '',
       isDispEnd: false,
-      boxGround: 'default-90.png',
       videoParams: this.$route.params,
       playerOptions: {
         autoplay: true,
@@ -97,6 +97,8 @@ export default {
     this.$destroy()
   },
   mounted () {
+    // 更新默认的背景小图片 => 加上访问路径...
+    this.boxGround = this.ajaxImgPath + 'default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -125,7 +127,9 @@ export default {
   },
   computed: {
     ...mapState({
-      fastClick: state => state.vux.fastClick
+      fastClick: state => state.vux.fastClick,
+      ajaxUrlPath: state => state.vux.ajaxUrlPath,
+      ajaxImgPath: state => state.vux.ajaxImgPath
     }),
     player () {
       return this.$refs.videoPlayer.player
@@ -143,7 +147,8 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/saveClick/type/vod/record_id/' + item.record_id)
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/saveClick/type/vod/record_id/' + item.record_id
+      that.$root.$http.get(theUrl)
         .then((response) => {
           console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
           item.clicks = response.data
@@ -158,8 +163,9 @@ export default {
     loadGallery (theSubjectID, theScroller) {
       // 保存当前对象...
       let that = this
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
       // 获取对应的科目数据...
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID)
+      that.$root.$http.get(theUrl)
         .then((response) => {
           // 首先，将获取的有效数据叠加起来，丢掉无效数据...
           if ((response.data instanceof Array) && (response.data.length > 0)) {

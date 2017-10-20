@@ -69,10 +69,10 @@ export default {
       player_clock: -1,
       arrGallery: [],
       arrHlsAddr: [],
+      boxGround: '',
       curGalPage: 1,
       isLive: true,
       isDispEnd: false,
-      boxGround: 'default-90.png',
       liveParams: this.$route.params,
       videoParams: this.$route.params,
       playerOptions: {
@@ -91,7 +91,8 @@ export default {
           remainingTimeDisplay: false
         },
         html5: {hls: {withCredentials: false}},
-        poster: '../../static/live-on.png'
+        poster: this.$store.state.vux.ajaxImgPath + 'live-on.png'
+        // 注意：这里不能用computed计算值，data() 先于computed()执行...
       },
       pullupConfig: {
         pullUpHeight: 245, // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
@@ -105,7 +106,9 @@ export default {
   },
   computed: {
     ...mapState({
-      fastClick: state => state.vux.fastClick
+      fastClick: state => state.vux.fastClick,
+      ajaxUrlPath: state => state.vux.ajaxUrlPath,
+      ajaxImgPath: state => state.vux.ajaxImgPath
     }),
     iconClass: function () {
       switch (this.videoParams.stream_prop) {
@@ -143,6 +146,8 @@ export default {
     this.$destroy()
   },
   mounted () {
+    // 更新默认的背景小图片 => 加上访问路径...
+    this.boxGround = this.ajaxImgPath + 'default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -186,7 +191,7 @@ export default {
     doGetLiveAddr (inCameraID) {
       // 组合需要远程访问的地址...
       let that = this
-      let theUrl = 'http://192.168.1.70/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + inCameraID
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getHlsAddr/camera_id/' + inCameraID
       // 设置等待状态，发起异步命令...
       console.log('=== get hls address start ===')
       that.$store.commit('updateLoadingStatus', {isLoading: true})
@@ -194,12 +199,13 @@ export default {
         .then((response) => {
           // 判断返回的hls地址是否有效...
           that.liveParams.arrHlsAddr = response.data
+          console.log(response.data.hls_url)
           // 保存当前数据对象...
           that.videoParams = that.liveParams
           // 直接改变播放连接地址和海报地址...
           that.playerOptions.sources[0].type = that.liveParams.arrHlsAddr.hls_type
           that.playerOptions.sources[0].src = that.liveParams.arrHlsAddr.hls_url
-          that.playerOptions.poster = '../../static/live-on.png'
+          that.playerOptions.poster = that.ajaxImgPath + 'live-on.png'
           // 隐藏时间轴显示信息...
           that.playerOptions.controlBar.timeDivider = false
           that.playerOptions.controlBar.durationDisplay = false
@@ -246,7 +252,7 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      let theUrl = 'http://192.168.1.70/wxapi.php/MobileMonitor/saveClick/type'
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/saveClick/type'
       theUrl += this.isLive ? ('/live/camera_id/' + item.camera_id) : ('/vod/record_id/' + item.record_id)
       that.$root.$http.get(theUrl)
         .then((response) => {
@@ -267,7 +273,7 @@ export default {
       if (this.liveParams.arrHlsAddr.err_code) { return }
       // 通过ajax发送异步消息命令给转发服务器...
       let that = this
-      let theUrl = 'http://192.168.1.70/wxapi.php/RTMP/verify'
+      let theUrl = this.ajaxUrlPath + 'RTMP/verify'
       let theCamera = this.liveParams.arrHlsAddr.player_camera
       let thePlayID = this.liveParams.arrHlsAddr.player_id
       // axios的post数据，必须经过qs.stringify处理，否则在php端无法解析，同时，必须加上Content-Type...
@@ -294,8 +300,9 @@ export default {
     loadGallery (theCameraID, theScroller) {
       // 保存当前对象...
       let that = this
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID
       // 获取对应的科目数据...
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID)
+      that.$root.$http.get(theUrl)
         .then((response) => {
           // 首先，将获取的有效数据叠加起来，丢掉无效数据...
           if ((response.data instanceof Array) && (response.data.length > 0)) {

@@ -105,7 +105,7 @@ export default {
     },
     doLivePage (item) {
       // 组合需要远程访问的地址...
-      let theUrl = 'http://192.168.1.70/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
+      let theUrl = this.ajaxUrlPath + 'MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
       let that = this
       // 设置等待状态...
       that.isLoading = true
@@ -114,6 +114,7 @@ export default {
           // 打印返回信息，关闭等待框...
           that.isLoading = false
           console.log('=== get hls address ===')
+          console.log(response.data.hls_url)
           // 判断返回的hls地址是否有效...
           item.arrHlsAddr = response.data
           // 根据路由名称跳转 => 不能在这里累加计数，因为页面不会重新加载...
@@ -127,8 +128,9 @@ export default {
     refresh (theScroller) {
       let that = this
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
+      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getSwiper/subject_id/' + theSubjectID
       // 从服务器获取选中科目的最新5条记录数据...
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getSwiper/subject_id/' + theSubjectID)
+      that.$root.$http.get(theUrl)
         .then((response) => {
           // 设置 swiper 标签数据 => 最新5个录像文件...
           that.arrSwiper = response.data
@@ -163,7 +165,8 @@ export default {
       }
       // 当前页码小于或等于最大页码，继续根据页码请求数据...
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID)
+      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
+      that.$root.$http.get(theUrl)
         .then((response) => {
           // 叠加记录...
           that.arrGallery = that.arrGallery.concat(response.data)
@@ -189,17 +192,18 @@ export default {
       that.isDispEnd = false
       that.isDispSwiper = true
       that.isDispGallery = true
-      that.boxGround = 'default-150.png'
+      that.boxGround = that.ajaxImgPath + 'default-150.png'
       that.$refs.endScroll.style.lineHeight = ''
       // 如果是直播，使用blank.gif...
       if (theSubjectID === -2) {
-        that.boxGround = 'blank.gif'
+        that.boxGround = that.ajaxImgPath + 'blank.gif'
         that.isLive = true
       }
       // 这里必须让下拉滚动容器返回到顶部...
       that.$refs.galScroller._xscroll.scrollTop(0, 1000, 'ease-in-out')
       // 向服务器请求科目数据内容...
-      that.$root.$http.get('http://192.168.1.70/wxapi.php/MobileMonitor/getSubject/subject_id/' + theSubjectID)
+      let theUrl = that.ajaxUrlPath + 'MobileMonitor/getSubject/subject_id/' + theSubjectID
+      that.$root.$http.get(theUrl)
         .then((response) => {
           // 获取最大页码数量...
           that.maxGalPage = response.data.maxGalPage
@@ -264,7 +268,9 @@ export default {
   },
   computed: {
     ...mapState({
-      fastClick: state => state.vux.fastClick
+      fastClick: state => state.vux.fastClick,
+      ajaxUrlPath: state => state.vux.ajaxUrlPath,
+      ajaxImgPath: state => state.vux.ajaxImgPath
     })
   },
   mounted () {

@@ -86,13 +86,23 @@
    D：（已完成）在切换直播时，重新获取hls地址，这样在任意时刻切换到直播都能正常观看；
    E：（已完成）点播和直播切换页面时，都要删除时钟，确保直播汇报时钟的重建；
    F：（已完成）移动端，录播模式下的hls播放计数问题；
+4.（未完成）移动端重新编译放置到生成环境当中测试：
+   A：（未完成）将ajax访问数据的网址放入vuex当中，可以做为数据随时调用；
+   B：（未完成）所有涉及到ajax调用的地方都需要重新整理，修改访问链接；
+   C：（未完成）重新编译Mobile模块，放到htdocs下面，供移动端调用；
+      1、编译方法：cnpm run build 或 webpack --config build/webpack.prod.conf.js
+      2、发行位置：assetsPublicPath: '/Mobile/'
+      3、静态图片，加上访问链接前缀，要不然会与发布子目录冲突，无法显示；http://192.168.1.70/wxapi/public/images/
+      4、静态图片，与ajax的访问前缀单独分开处理，因为是两个不同的访问地址；
 
 3.（未完成）采集端可以利用ffmpeg的sdk直接单帧解码，从而实现直播每隔一个分钟动态截图的功能；
 4.（已完成）采集端的通道注册管理还有问题，与网站端通道管理会有冲突，规则不清晰，尝试看能否将通道的添加、修改、删除操作都放到网站端进行，采集端就是启动时与网站逐个匹配，匹配失败，删除；匹配成功，更新；
    A：或者，继续沿用现在的方式，通道默认status为-1，每次RegisterGather时，直接将全部的通道状态都设置成-1，由此来判断通道是否注册，然后将通道是否删除的权限交给用户去处理；
    B：最终，采用的是上面的方案，这样简单明了；
 5.（已完成）移动端：在Windows进行调试，vue-cli+webpack+vux2.0
-   A：（已完成）Windows下安装、例子参考 => http://blog.csdn.net/u013182762/article/details/53021374
+   A：（已完成）Windows下安装、例子参考
+      1、Windows安装参考 => http://blog.csdn.net/u013182762/article/details/53021374
+      2、编译发行的参考 => http://blog.csdn.net/fungleo/article/details/77606216
    B：（已完成）放弃使用vux2.0的组件，有很多问题，无法使用，还是使用vuxx比较简单方便；一些特殊组件需要时可以参考 => https://vux.li
    C：（已完成）安装步骤如下 => https://jinhuiwong.gitbooks.io/vuxx/
       1、下载 nodejs 安装版

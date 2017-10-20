@@ -1,7 +1,7 @@
 <template>
   <div>
       <div class="list_media_box" v-for="(item, index) in list" @click="clickListItem(item)">
-        <div class="list_media_hd" :style="'background: url(../../static/' + boxGround + ') no-repeat center;'">
+        <div class="list_media_hd" :style="'background: url(' + boxGround + ') no-repeat center;'">
           <div class="c-time">
             <div class="thumb_back"></div>
             <div class="thumb_time">{{item.disptime}}</div>

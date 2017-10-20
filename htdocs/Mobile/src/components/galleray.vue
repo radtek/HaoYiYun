@@ -3,7 +3,7 @@
     <li v-for="(item, index) in list" @click="clickListItem(item)">
       <div class="am-gallery-item">
         <a href="javascript:">
-          <div class="am-gallery-box" :style="'background: url(../../static/' + boxGround + ') no-repeat center;'">
+          <div class="am-gallery-box" :style="'background: url(' + boxGround + ') no-repeat center;'">
             <div class="am-gallery-play" :style="{display: isLive ? 'none' : 'block'}"><i class="fa fa-play-circle"></i></div>
             <img class="am-gallery-img" v-lazy="item.image_fdfs + (isLive ? '' : '_240x140')" />
           </div>

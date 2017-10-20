@@ -34,7 +34,13 @@ store.registerModule('vux', {
   state: {
     isLoading: false,
     direction: 'forward',
-    fastClick: FastClick
+    fastClick: FastClick,
+    // build 发行版本需要的信息...
+    ajaxUrlPath: '/wxapi.php/',
+    ajaxImgPath: '/wxapi/public/images/'
+    // dev 本地调试版本需要的信息...
+    // ajaxUrlPath: 'http://192.168.1.70/wxapi.php/',
+    // ajaxImgPath: 'http://192.168.1.70/wxapi/public/images/'
   },
   mutations: {
     updateLoadingStatus (state, payload) {
