@@ -11,11 +11,11 @@ class IndexAction extends Action
     $this->m_detect = new Mobile_Detect();
     //////////////////////////////////////////////
     // 直接对页面进行跳转...
-    // 电脑终端 => Home/index
-    // 移动设备 => Mobile/index
+    // 移动设备 => /Mobile
+    // 电脑终端 => /wxapi.php/Home/index
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
-      header("location:".__APP__.'/Mobile/index');
+      header("location: /Mobile");
     } else {
       header("location:".__APP__.'/Home/index');
     }

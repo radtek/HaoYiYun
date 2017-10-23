@@ -19,8 +19,9 @@ class HomeAction extends Action
     // 移动端访问了电脑端页面，直接对页面进行跳转...
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
-      $strMobile = (($this->m_webType > 0) ? '/MobileMonitor/index' : '/MobileRecord/index');
-      header("location:" . __APP__ . $strMobile);
+      //$strMobile = (($this->m_webType > 0) ? '/MobileMonitor/index' : '/MobileRecord/index');
+      //header("location:" . __APP__ . $strMobile);
+      header("location: /Mobile");
     }
     // 确定是PC端访问，如果是监控模式，再次分发...
     if( $this->m_webType > 0 ) {
