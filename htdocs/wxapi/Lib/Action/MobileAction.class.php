@@ -4,7 +4,7 @@
 
 *************************************************************/
 
-class MobileMonitorAction extends Action
+class MobileAction extends Action
 {
   public function _initialize() {
     // 创建一个新的移动检测对象...
@@ -23,7 +23,7 @@ class MobileMonitorAction extends Action
   */
   public function index()
   {
-    echo "Mobile-Cloud-Monitor";
+    echo "== Mobile data interface for vue. ==";
   }
   //
   // 获取最大页码...

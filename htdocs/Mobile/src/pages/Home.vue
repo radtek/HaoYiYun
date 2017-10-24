@@ -109,7 +109,7 @@ export default {
     },
     doLivePage (item) {
       // 组合需要远程访问的地址...
-      let theUrl = '/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + item.camera_id
+      let theUrl = '/wxapi.php/Mobile/getHlsAddr/camera_id/' + item.camera_id
       let that = this
       // 设置等待状态...
       that.isLoading = true
@@ -132,7 +132,7 @@ export default {
     refresh (theScroller) {
       let that = this
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
-      let theUrl = '/wxapi.php/MobileMonitor/getSwiper/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/Mobile/getSwiper/subject_id/' + theSubjectID
       // 从服务器获取选中科目的最新5条记录数据...
       that.$root.$http.get(theUrl)
         .then((response) => {
@@ -169,7 +169,7 @@ export default {
       }
       // 当前页码小于或等于最大页码，继续根据页码请求数据...
       let theSubjectID = that.arrSubject[that.curSubject].subject_id
-      let theUrl = '/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/Mobile/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
       that.$root.$http.get(theUrl)
         .then((response) => {
           // 叠加记录...
@@ -206,7 +206,7 @@ export default {
       // 这里必须让下拉滚动容器返回到顶部...
       that.$refs.galScroller._xscroll.scrollTop(0, 1000, 'ease-in-out')
       // 向服务器请求科目数据内容...
-      let theUrl = '/wxapi.php/MobileMonitor/getSubject/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/Mobile/getSubject/subject_id/' + theSubjectID
       that.$root.$http.get(theUrl)
         .then((response) => {
           // 获取最大页码数量...

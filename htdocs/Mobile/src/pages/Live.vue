@@ -186,7 +186,7 @@ export default {
     doGetLiveAddr (inCameraID) {
       // 组合需要远程访问的地址...
       let that = this
-      let theUrl = '/wxapi.php/MobileMonitor/getHlsAddr/camera_id/' + inCameraID
+      let theUrl = '/wxapi.php/Mobile/getHlsAddr/camera_id/' + inCameraID
       // 设置等待状态，发起异步命令...
       console.log('=== get hls address start ===')
       that.$store.commit('updateLoadingStatus', {isLoading: true})
@@ -247,7 +247,7 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      let theUrl = '/wxapi.php/MobileMonitor/saveClick/type'
+      let theUrl = '/wxapi.php/Mobile/saveClick/type'
       theUrl += this.isLive ? ('/live/camera_id/' + item.camera_id) : ('/vod/record_id/' + item.record_id)
       that.$root.$http.get(theUrl)
         .then((response) => {
@@ -295,7 +295,7 @@ export default {
     loadGallery (theCameraID, theScroller) {
       // 保存当前对象...
       let that = this
-      let theUrl = '/wxapi.php/MobileMonitor/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID
+      let theUrl = '/wxapi.php/Mobile/getRecord/p/' + that.curGalPage + '/camera_id/' + theCameraID
       // 获取对应的科目数据...
       that.$root.$http.get(theUrl)
         .then((response) => {

@@ -141,7 +141,7 @@ export default {
     },
     doSaveClick (item) {
       let that = this
-      let theUrl = '/wxapi.php/MobileMonitor/saveClick/type/vod/record_id/' + item.record_id
+      let theUrl = '/wxapi.php/Mobile/saveClick/type/vod/record_id/' + item.record_id
       that.$root.$http.get(theUrl)
         .then((response) => {
           console.log('vod: record_id => %s, s_click => %d, c_click => %s)', item.record_id, response.data, item.clicks)
@@ -157,7 +157,7 @@ export default {
     loadGallery (theSubjectID, theScroller) {
       // 保存当前对象...
       let that = this
-      let theUrl = '/wxapi.php/MobileMonitor/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
+      let theUrl = '/wxapi.php/Mobile/getGallery/p/' + that.curGalPage + '/subject_id/' + theSubjectID
       // 获取对应的科目数据...
       that.$root.$http.get(theUrl)
         .then((response) => {
