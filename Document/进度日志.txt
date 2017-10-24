@@ -50,6 +50,14 @@
    E：HomeAction.class.php    => PC端云录播模式下前台网站页面；
    F：MonitorAction.class.php => PC端云监控模式下前台网站页面；
    G：MobileAction.class.php  => 移动端页面与网站通讯的接口；
+3.（未完成）编写一个脚本，在安装完毕之后，修改各个模块的配置，修改IP地址：
+   A：config.sh x.x.x.x => 用脚本修改IP地址；
+   B：找到一个，显示一个，修改一个；
+   C：/weike/srs/conf/srs.conf => web_addr 192.168.1.xx; => 重启srs
+   D：/etc/fdfs/client.conf => tracker_server=192.168.1.xx:22122 => 重启php
+   E：/etc/fdfs/storage.conf => tracker_server=192.168.1.xx:22122 => 重启storage
+   F：/etc/fdfs/mod_fastdfs.conf => tracker_server=192.168.1.xx:22122 => 重启nginx
+   G: curl http://localhost/wxapi.php/Index/config/tracker/x.x.x.x:22122/transmit/x.x.x.x:21001
 
 2017.09.19
 =========================================================================
