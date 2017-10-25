@@ -71,12 +71,9 @@ class MobileAction extends Action
       }
       // 重新组合swiper需要的数据内容 => 在线优先...
       foreach($arrSwiper as $key => &$dbItem) {
-        //$strLiveImg = (($dbItem['status'] <= 0) ? "wxapi/public/images/live-off.png" : "wxapi/public/images/live-on.png");
-        //$theImgUrl = sprintf("%s%s:%d/%s", $strAddr, $_SERVER['HTTP_HOST'], $_SERVER['SERVER_PORT'], $strLiveImg);
-        //$theTitle = sprintf("%s %s %s", $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name']);
-        //$arrNewVod[$key] = array('id' => $dbItem['camera_id'], 'url' => 'javascript:', 'img' => $theImgUrl, 'title' => $theTitle);
+        // 注意：$_SERVER['HTTP_HOST'] 自带访问端口，要去掉$_SERVER['SERVER_PORT']，否则会出错...
         $strLiveImg = (($dbItem['status'] <= 0) ? "wxapi/public/images/live-off.png" : "wxapi/public/images/live-on.png");
-        $dbItem['img'] = sprintf("%s%s:%d/%s", $strAddr, $_SERVER['HTTP_HOST'], $_SERVER['SERVER_PORT'], $strLiveImg);
+        $dbItem['img'] = sprintf("%s%s/%s", $strAddr, $_SERVER['HTTP_HOST'], $strLiveImg);
         $dbItem['title'] = sprintf("%s %s %s", $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name']);
       }
     } else {
@@ -86,9 +83,6 @@ class MobileAction extends Action
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
       // 重新组合swiper需要的数据内容...
       foreach($arrSwiper as $key => &$dbItem) {
-        //$theImgUrl = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
-        //$theTitle = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
-        //$arrNewVod[$key] = array('id' => $dbItem['record_id'], 'url' => 'javascript:', 'img' => $theImgUrl, 'title' => $theTitle);
         $dbItem['img'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
         $dbItem['title'] = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
         $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
@@ -122,8 +116,9 @@ class MobileAction extends Action
       // 获取直播分页数据，并对数据进行重新组合...
       $arrGallery = D('LiveView')->where($map)->limit($pageLimit)->order('Camera.status DESC, Camera.created DESC')->select();
       foreach($arrGallery as &$dbItem) {
+        // 注意：$_SERVER['HTTP_HOST'] 自带访问端口，要去掉$_SERVER['SERVER_PORT']，否则会出错...
         $strLiveImg = (($dbItem['status'] <= 0) ? "wxapi/public/images/live-off.png" : "wxapi/public/images/live-on.png");
-        $dbItem['image_fdfs'] = sprintf("%s%s:%d/%s", $strAddr, $_SERVER['HTTP_HOST'], $_SERVER['SERVER_PORT'], $strLiveImg);
+        $dbItem['image_fdfs'] = sprintf("%s%s/%s", $strAddr, $_SERVER['HTTP_HOST'], $strLiveImg);
         $dbItem['subject_name'] = $dbItem['grade_name'];
         $dbItem['teacher_name'] = $dbItem['camera_name'];
         $dbItem['title_name'] = $dbItem['school_name'];
