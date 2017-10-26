@@ -43,11 +43,17 @@ class IndexAction extends Action
       echo "== tracker or transmit must be set ===\n";
       exit;
     }
+    // 网站端口需要被设置...
+    if( !isset($_GET['webport']) ) {
+      echo "== webport must be set ==\n";
+      exit;
+    }
     // 获取系统配置记录...
     $dbSys = D('system')->field('system_id')->find();
     // 将获取到的数据组合成存盘数据...
     $dbSys['sys_site'] = "https://www.myhaoyi.com";
     $dbSys['web_tracker_addr'] = "http://" . $arrTracker[0];
+    $dbSys['web_tracker_port'] = $_GET['webport'];
     $dbSys['tracker_addr'] = $arrTracker[0];
     $dbSys['tracker_port'] = $arrTracker[1];
     $dbSys['transmit_addr'] = $arrTransmit[0];
