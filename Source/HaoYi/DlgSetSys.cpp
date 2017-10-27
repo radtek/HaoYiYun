@@ -3,11 +3,13 @@
 #include "HaoYi.h"
 #include "DlgSetSys.h"
 #include "XmlConfig.h"
+#include "HaoYiView.h"
 
 IMPLEMENT_DYNAMIC(CDlgSetSys, CDialogEx)
 
-CDlgSetSys::CDlgSetSys(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CDlgSetSys::IDD, pParent)
+CDlgSetSys::CDlgSetSys(CHaoYiView * pHaoYiView)
+	: CDialogEx(CDlgSetSys::IDD, (CWnd*)pHaoYiView)
+	, m_lpHaoYiVew(pHaoYiView)
 	, m_nWebPort(DEF_WEB_PORT)
 	, m_strWebAddr(DEF_WEB_ADDR)
 	, m_strMainName(DEF_MAIN_NAME)
@@ -18,6 +20,7 @@ CDlgSetSys::CDlgSetSys(CWnd* pParent /*=NULL*/)
 	, m_nRecSlice(DEF_REC_SLICE)
 	, m_bAutoLinkFDFS(false)
 	, m_bAutoLinkDVR(false)
+	, m_bWebChange(false)
 	, m_nMaxCamera(0)
 {
 }
@@ -116,7 +119,10 @@ void CDlgSetSys::OnBnClickedOK()
 	int oldWebPort = theConfig.GetWebPort();
 	// 设置Web地址是否发生变化...
 	if( m_strWebAddr.Compare(oldWebAddr.c_str()) != 0 || oldWebPort != m_nWebPort ) {
-		MessageBox("Web地址发生变化，重启采集端才能生效！", "提示", MB_ICONSTOP);
+		//MessageBox("Web地址发生变化，重启采集端才能生效！", "提示", MB_ICONSTOP);
+		//必须在地址存盘之前向网站发送命令，否则，就会向新网站发送命令...
+		m_lpHaoYiVew->doGatherLogout();
+		this->m_bWebChange = true;
 	}
 	theConfig.SetMainName(m_strMainName.GetString());
 	theConfig.SetAutoLinkDVR(m_bAutoLinkDVR);

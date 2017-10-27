@@ -67,6 +67,7 @@ protected:
 	afx_msg LRESULT	OnMsgEventSession(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgReloadView(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -90,6 +91,7 @@ public:
 		kSplitterWidth	= 3,							// 拖拉条宽度...
 	};
 public:
+	void			doGatherLogout();					// 处理采集端退出事件...
 	void			doUpdateFrameTitle();				// 更新主窗口标题名称...
 	DWORD			GetCurSendKbps();					// 得到当前发送码流Kbps...
 	LPCTSTR			GetCurSendFile();					// 得到当前发送文件名称...
@@ -132,7 +134,7 @@ private:
 	void			doRecStartCourse(int nCameraID, int nCourseID);
 	void			doRecStopCourse(int nCameraID, int nCourseID);
 
-	BOOL		doWebGatherConfig();
+	BOOL			doWebGatherConfig();
 	void			doCheckCourse();
 	void			doAnimateDVR();
 	void			doCheckFDFS();

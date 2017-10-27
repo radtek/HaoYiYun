@@ -50,6 +50,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_MESSAGE(WM_EVENT_SESSION_MSG, &CHaoYiView::OnMsgEventSession)
 	ON_MESSAGE(WM_FIND_HK_CAMERA, &CHaoYiView::OnMsgFindHKCamera)
 	ON_MESSAGE(WM_FOCUS_VIDEO, &CHaoYiView::OnMsgFocusVideo)
+	ON_MESSAGE(WM_RELOAD_VIEW, &CHaoYiView::OnMsgReloadView)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
 	ON_COMMAND(ID_SYS_SET, &CHaoYiView::OnSysSet)
@@ -98,9 +99,7 @@ BOOL CHaoYiView::doWebStatCamera(int nDBCamera, int nStatus)
 void CHaoYiView::OnDestroy()
 {
 	// 通知网站采集端退出...
-	if( m_lpWebThread != NULL ) {
-		m_lpWebThread->doWebGatherLogout();
-	}
+	this->doGatherLogout();
 	// 在窗口关闭之前，释放资源...
 	this->DestroyResource();
 	// 释放窗口句柄等资源...
@@ -879,7 +878,10 @@ void CHaoYiView::DestroyResource()
 		delete m_lpMidView;
 		m_lpMidView = NULL;
 	}
-	// 删除其它对象...
+	// 销毁右侧窗口里的按钮对象...
+	m_RightView.DestoryAllButton();
+	// 删除左侧节点内容...
+	m_DeviceTree.DeleteAllItems();
 	m_ImageList.DeleteImageList();
 	// 释放频道查询线程...
 	if( m_lpHKUdpThread != NULL ) {
@@ -890,6 +892,11 @@ void CHaoYiView::DestroyResource()
 	this->ClearFastThreads();
 	// 然后，释放所有的会话对象资源...
 	this->ClearFastSession();
+	// 重置一些全局变量...
+	m_bTreeKeydown = false;
+	m_nAnimateIndex = 0;
+	m_nFocusCamera = 0;
+	m_hRootItem = NULL;
 }
 //
 // 释放会话管理线程...
@@ -1503,7 +1510,39 @@ void CHaoYiView::OnSysSet()
 		this->DelByEventThread(m_lpStorageSession);
 		m_lpStorageSession = NULL;
 	}
+	// 如果网站地址或端口发生变化，需要向本窗口发送重建消息...
+	if( dlg.IsWebChange() ) {
+		this->PostMessage(WM_RELOAD_VIEW);
+	}
 	// 其它参数会自动通过调用更新...
+}
+//
+// 处理视图销毁事件...
+void CHaoYiView::doGatherLogout()
+{
+	// 通知网站采集端退出...
+	if( m_lpWebThread == NULL )
+		return;
+	ASSERT( m_lpWebThread != NULL );
+	m_lpWebThread->doWebGatherLogout();
+}
+//
+// 响应整个视图窗口的重建消息事件...
+LRESULT CHaoYiView::OnMsgReloadView(WPARAM wParam, LPARAM lParam)
+{
+	CRect rectMid;
+	// 获取中间视图的矩形区...
+	if( m_lpMidView != NULL ) {
+		m_lpMidView->GetWindowRect(rectMid);
+		this->ScreenToClient(rectMid);
+	}
+	// 重建所有的资源数据对象...
+	this->BuildResource();
+	// 调整中间视图的矩形位置...
+	if( m_lpMidView != NULL ) {
+		m_lpMidView->doMoveWindow(rectMid);
+	}
+	return S_OK;
 }
 //
 // 创建窗口之前的操作 => 修改窗口属性...

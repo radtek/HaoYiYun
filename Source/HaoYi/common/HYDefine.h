@@ -103,6 +103,7 @@ using namespace std;
 #define WM_WEB_LOAD_RESOURCE		(WM_USER + 108)
 #define	WM_WEB_UPDATE_NAME			(WM_USER + 109)
 #define	WM_WEB_AUTH_RESULT			(WM_USER + 110)
+#define	WM_RELOAD_VIEW				(WM_USER + 111)
 
 #define WM_ERR_TASK_MSG				(WM_USER + 501)			// 录像任务会话通知消息
 #define WM_ERR_PUSH_MSG				(WM_USER + 502)			// 拉转推会话通知消息

@@ -57,14 +57,13 @@ void CMidView::BuildResource()
 // 销毁资源...
 void CMidView::DestroyResource()
 {
-	// 删除所有视频窗口...
+	// 删除所有视频窗口 => 这里不能用clear，会出现内存泄漏...
 	GM_MapVideo::iterator itorItem = m_MapVideo.begin();
-	for( itorItem = m_MapVideo.begin(); itorItem != m_MapVideo.end(); ++itorItem) {
+	while( itorItem != m_MapVideo.end() ) {
 		CVideoWnd * lpVideo = itorItem->second;
 		delete lpVideo;	lpVideo = NULL;
+		m_MapVideo.erase(itorItem++);
 	}
-	m_MapVideo.clear();
-
 	// 删除按钮对象...
 	for(int i = 0; i < CVideoWnd::kBitNum; i++) {
 		if( m_BitArray[i] == NULL )

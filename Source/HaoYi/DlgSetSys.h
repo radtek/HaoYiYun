@@ -1,11 +1,12 @@
 
 #pragma once
 
+class CHaoYiView;
 class CDlgSetSys : public CDialogEx
 {
 	DECLARE_DYNAMIC(CDlgSetSys)
 public:
-	CDlgSetSys(CWnd* pParent = NULL);
+	CDlgSetSys(CHaoYiView * pHaoYiView);
 	virtual ~CDlgSetSys();
 	enum { IDD = IDD_SET_SYS };
 protected:
@@ -13,7 +14,10 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnBnClickedOK();
 	DECLARE_MESSAGE_MAP()
+public:
+	BOOL	IsWebChange() { return m_bWebChange; }
 private:
+	CHaoYiView * m_lpHaoYiVew;		// 父窗口对象...
 	CString		m_strMainName;		// 窗口标题名称
 	CString		m_strSavePath;		// 录像存放路径
 	int			m_nMaxCamera;		// 最大摄像头数目
@@ -25,4 +29,5 @@ private:
 	BOOL		m_bAutoLinkFDFS;	// 自动连接FDFS服务器 => 默认关闭
 	int			m_nWebPort;			// Web服务器端口
 	CString		m_strWebAddr;		// Web服务器地址
+	BOOL		m_bWebChange;		// Web地址发生变化
 };

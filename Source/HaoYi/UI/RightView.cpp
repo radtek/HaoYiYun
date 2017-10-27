@@ -22,6 +22,7 @@ IMPLEMENT_DYNAMIC(CRightView, CStatic)
 
 CRightView::CRightView(CHaoYiView * lpParent)
   : m_lpParentDlg(lpParent)
+  , m_bValidButton( false )
   , m_nCurAutoID(DEF_CAMERA_START_ID)
 {
 	ASSERT( m_lpParentDlg != NULL );
@@ -65,6 +66,10 @@ BOOL CRightView::OnEraseBkgnd(CDC* pDC)
 	this->GetClientRect(rcRect);
 	pDC->FillSolidRect(&rcRect, WND_BK_COLOR);
 	
+	// 如果按钮无效，直接返回...
+	if( !this->m_bValidButton )
+		return TRUE;
+
 	// 如果不是设备流，直接隐藏按钮，绘制基础文字信息...
 	if( lpCamera != NULL && !lpCamera->IsCameraDevice() ) {
 		this->ShowButton(false);
@@ -316,6 +321,43 @@ void CRightView::StateButton(BOOL bIsLogin)
 	m_btnSetCamera.EnableWindow(bIsLogin);
 }
 //
+// 销毁所有的按钮...
+void CRightView::DestoryAllButton()
+{
+	m_bValidButton = false;
+
+	m_editIPAddr.DestroyWindow();
+	m_editIPPort.DestroyWindow();
+	m_editUserName.DestroyWindow();
+	m_editPassWord.DestroyWindow();
+
+	m_btnLogin.DestroyWindow();
+	m_btnLogout.DestroyWindow();
+
+	m_btnYunAuto.DestroyWindow();
+	m_btnYunTop.DestroyWindow();
+	m_btnYunReset.DestroyWindow();
+	m_btnYunLeft.DestroyWindow();
+	m_btnYunBottom.DestroyWindow();
+	m_btnYunRight.DestroyWindow();
+	
+	m_btnJiaoMinus.DestroyWindow();
+	m_btnJiaoPlus.DestroyWindow();
+	m_btnFangMinus.DestroyWindow();
+	m_btnFangPlus.DestroyWindow();
+	m_btnQuanMinus.DestroyWindow();
+	m_btnQuanPlus.DestroyWindow();
+	
+	m_btnSetVPreview.DestroyWindow();
+	m_btnSetVParam.DestroyWindow();
+	m_btnSetRecord.DestroyWindow();
+	m_btnSetReview.DestroyWindow();
+	m_btnSetAlert.DestroyWindow();
+	m_btnSetCamera.DestroyWindow();
+
+	this->Invalidate(true);
+}
+//
 // 初始化各个操作按钮...
 BOOL CRightView::InitButton(CFont * lpFont)
 {
@@ -461,6 +503,8 @@ BOOL CRightView::InitButton(CFont * lpFont)
 	rcButton.right = rcButton.left  + kBtnSetWidth;
 	m_btnSetCamera.Create("硬件设置", WS_VISIBLE|WS_TABSTOP, rcButton, this, kButtonSetCamera);
 	m_btnSetCamera.SetFont(lpFont, true);
+
+	m_bValidButton = true;
 
 	return true;
 }
