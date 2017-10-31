@@ -47,6 +47,8 @@ class GatherAction extends Action
       // 将采集端下面所有的通道状态设置成-1...
       unset($map); $map['gather_id'] = $arrErr['gather_id'];
       D('camera')->where($map)->setField('status', -1);
+      // 获取采集端下面所有的通道编号列表...
+      $arrCamera = D('camera')->where($map)->field('camera_id')->select();
       // 读取系统配置表，返回给采集端...
       $dbSys = D('system')->find();
       // 如果节点网站的标记为空，生成一个新的，并存盘...
@@ -69,6 +71,7 @@ class GatherAction extends Action
       $arrErr['local_time'] = date('Y-m-d H:i:s');
       $arrErr['slice_val'] = strval($dbSys['slice_val']);
       $arrErr['inter_val'] = strval($dbSys['inter_val']);
+      $arrErr['camera'] = $arrCamera;
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);
@@ -126,10 +129,62 @@ class GatherAction extends Action
   }
   /**
   +----------------------------------------------------------
+  * 获取通道配置信息和录像配置...
+  +----------------------------------------------------------
+  */
+  public function getCamera()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    // 将获得的数据进行判断和处理...
+    $arrData = $_POST;
+    do {
+      // 判断输入数据是否有效...
+      if( !isset($arrData['gather_id']) || !isset($arrData['camera_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "采集端编号或通道编号为空！";
+        break;
+      }
+      // 根据通道编号获取通道配置...
+      $map['camera_id'] = $arrData['camera_id'];
+      $dbCamera = D('camera')->where($map)->find();
+      if( count($dbCamera) <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "没有找到指定通道的配置信息！";
+        break;
+      }
+      // 设置默认的扩展名称...
+      $dbCamera['grade_name'] = "";
+      $dbCamera['grade_type'] = "";
+      // 如果grade_id有效，则需要组合年级名称...
+      if( $dbCamera['grade_id'] > 0 ) {
+        $condition['grade_id'] = $dbCamera['grade_id'];
+        $dbGrade = D('grade')->where($condition)->field('grade_type,grade_name')->find();
+        $dbCamera['grade_name'] = $dbGrade['grade_name'];
+        $dbCamera['grade_type'] = $dbGrade['grade_type'];
+      }
+      // 将通道配置组合起来，反馈给采集端...
+      $arrErr['camera'] = $dbCamera;
+      // 读取该通道下的所有录像课程表，反馈给采集端...
+      $arrCourse = D('course')->where($map)->field('course_id,camera_id,subject_id,teacher_id,repeat_id,week_id,elapse_sec,start_time,end_time')->select();
+      // 将字符串时间转换成整数时间戳...
+      foreach($arrCourse as &$dbItem) {
+        $dbItem['start_time'] = strval(strtotime($dbItem['start_time']));
+        $dbItem['end_time'] = strval(strtotime($dbItem['end_time']));
+      }
+      // 将课程记录保存到返回队列当中...
+      $arrErr['course'] = $arrCourse;      
+    }while( false );
+    // 直接返回运行结果 => json...
+    echo json_encode($arrErr);
+  }
+  /**
+  +----------------------------------------------------------
   * 处理摄像头注册事件 => 添加或修改camera记录...
   +----------------------------------------------------------
   */
-  public function camera()
+  public function regCamera()
   {
     // 准备返回数据结构...
     $arrErr['err_code'] = false;
@@ -143,48 +198,24 @@ class GatherAction extends Action
         $arrErr['err_msg'] = "采集端编号或设备序列号为空！";
         break;
       }
-      // 根据设备序列号获取Camera记录信息...
+      // 根据采集端编号和设备序列号获取Camera记录信息...
+      $condition['gather_id'] = $arrData['gather_id'];
       $condition['device_sn'] = $arrData['device_sn'];
-      $dbCamera = D('camera')->where($condition)->find();
+      $dbCamera = D('camera')->where($condition)->field('camera_id')->find();
       if( count($dbCamera) <= 0 ) {
-        // 没有找到记录，直接创建一个新记录 => 返回camera_id和camera_name...
+        // 没有找到记录，直接创建一个新记录 => 返回camera_id...
         $dbCamera = $arrData;
         $dbCamera['created'] = date('Y-m-d H:i:s');
         $dbCamera['updated'] = date('Y-m-d H:i:s');
-        $arrErr['camera_name'] = $arrData['camera_name'];
         $arrErr['camera_id'] = strval(D('camera')->add($dbCamera));
       } else {
-        $dbSys = D('system')->field('web_type')->find();
-        if( $dbSys['web_type'] > 0 ) {
-          // 云监控模式 => 只需要通道名称...
-          $arrErr['camera_name'] = $dbCamera['camera_name'];
-        } else {
-          // 云录播模式 => 如果grade_id有效，则需要组合年级名称...
-          if( $dbCamera['grade_id'] > 0 ) {
-            $map['grade_id'] = $dbCamera['grade_id'];
-            $dbGrade = D('grade')->where($map)->field('grade_type,grade_name')->find();
-            $arrErr['camera_name'] = sprintf("%s %s %s", $dbGrade['grade_type'], $dbGrade['grade_name'], $dbCamera['camera_name']);
-          } else {
-            $arrErr['camera_name'] = $dbCamera['camera_name'];
-          }
-        }
-        // 找到了记录，直接更新记录 => 返回camera_id和camera_name...
+        // 找到了记录，直接更新记录 => 返回camera_id...
         $arrErr['camera_id'] = strval($dbCamera['camera_id']);
-        $arrData['camera_name'] = $dbCamera['camera_name'];
         $arrData['camera_id'] = $dbCamera['camera_id'];
         $arrData['updated'] = date('Y-m-d H:i:s');
         D('camera')->save($arrData);
       }
-      // 读取该通道下的所有录像课程表，反馈给采集端...
-      $newMap['camera_id'] = $arrErr['camera_id'];
-      $arrCourse = D('course')->where($newMap)->field('course_id,camera_id,subject_id,teacher_id,repeat_id,week_id,elapse_sec,start_time,end_time')->select();
-      // 将字符串时间转换成整数时间戳...
-      foreach($arrCourse as &$dbItem) {
-        $dbItem['start_time'] = strval(strtotime($dbItem['start_time']));
-        $dbItem['end_time'] = strval(strtotime($dbItem['end_time']));
-      }
-      // 将课程记录保存到返回队列当中...
-      $arrErr['course'] = $arrCourse;
+      // 这里不用返回课程列表内容 => 只返回camera_id...
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);

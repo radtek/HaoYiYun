@@ -66,7 +66,7 @@ public:
 public:
 	void	DestoryAllButton();
 	BOOL	InitButton(CFont * lpFont);
-	void	doFocusCamera(int nCameraID);
+	void	doFocusDBCamera(int nDBCameraID);
 	void	doAutoCheckDVR();					// 自动连接DVR...
 private:
 	void	ShowText(CDC * pDC, BOOL bFocus, CString & inLogStatus);
@@ -86,7 +86,7 @@ private:
 	void	doClickSetAlert();					// 点击报警布防
 	void	doClickSetCamera();					// 点击摄像头设置
 private:
-	int				m_nCurAutoID;				// 当前自动连接DVR编号...
+	int				m_nDBCurAutoID;				// 当前自动连接DVR编号...
 	BOOL			m_bValidButton;				// 按钮是否被初始化标志...
 
 	CHaoYiView	*	m_lpParentDlg;				// 父窗口对象...

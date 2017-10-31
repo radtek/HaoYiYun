@@ -112,7 +112,7 @@ using namespace std;
 #define WM_STOP_LIVE_PUSH_MSG		(WM_USER + 505)			// 停止流上传通知消息
 
 typedef	enum AUTH_STATE {
-	kAuthRegiter	= 1,		// 网站注册授权
+	kAuthRegister	= 1,		// 网站注册授权
 	kAuthExpired	= 2,		// 授权过期验证
 };
 

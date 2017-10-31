@@ -102,22 +102,22 @@ public:
 	void			OnRightSplitEnd(int nOffset);		// 拖拽分隔符停止...
 	BOOL			IsRightCanSplit(CPoint & point);	// 是否还能拖动...
 
-	CCamera		*	FindCameraByID(int nCameraID);		// 查找摄像头对象...
-	void			OnCreateCamera(int nCameraID, CString & strTitle);
-	void			doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType);
+	CCamera		*	FindDBCameraByID(int nDBCameraID);	// 查找摄像头对象...
+	void			OnCreateCamera(int nDBCameraID, CString & strTitle);
+	void			doMulticastData(GM_MapData & inNetData, CAMERA_TYPE inType);
 	BOOL			doWebRegCamera(GM_MapData & inData);// 向网站注册摄像头...
 	BOOL			doWebDelCamera(string & inDeviceSN);// 向网站删除摄像头...
 	BOOL			doWebStatCamera(int nDBCamera, int nStatus);
 
-	int				GetNextAutoID(int nCurCameraID);	// 得到下一个窗口编号...
-	int				GetCameraStatusByDBID(int nDBCameraID);
-	void			UpdateFocusTitle(int nLocalID, CString & strTitle);
-	void			doCourseChanged(int nOperateID, int nLocalID, GM_MapData & inData);
+	int				GetNextAutoID(int nCurDBCameraID);	// 得到下一个窗口编号...
+	int				GetDBCameraStatusByID(int nDBCameraID);
+	void			UpdateFocusTitle(int nDBCameraID, CString & strTitle);
+	void			doCourseChanged(int nOperateID, int nDBCameraID, GM_MapData & inData);
 public:
 	CMidView    *	GetMidView()     { return m_lpMidView; }
 	CTreeCtrl   &	GetTreeCtrl()	 { return m_DeviceTree; }
 	CRightView  &	GetRightView()	 { return m_RightView; }
-	int				GetFocusCamera() { return m_nFocusCamera; }
+	int				GetFocusDBCamera() { return m_nFocusDBCamera; }
 private:
 	BOOL			GetMacIPAddr();
 	void			BuildResource();					// 创建资源...
@@ -129,10 +129,10 @@ private:
 	GM_Error		DelByEventThread(CFastSession * lpSession);
 	GM_Error		AddToEventThread(CFastSession * lpSession);
 	void			OnOptDelSession(ULONG inUniqueID);
-	void			doDelTreeFocus(int nCameraID);
+	void			doDelTreeFocus(int nDBCameraID);
 
-	void			doRecStartCourse(int nCameraID, int nCourseID);
-	void			doRecStopCourse(int nCameraID, int nCourseID);
+	void			doRecStartCourse(int nDBCameraID, int nCourseID);
+	void			doRecStopCourse(int nDBCameraID, int nCourseID);
 
 	BOOL			doWebGatherConfig();
 	void			doCheckCourse();
@@ -170,7 +170,7 @@ private:
 	CQRStatic		m_QRStatic;							// 二维码显示区...
 	CRightView		m_RightView;						// 右侧显示区...
 	CMidView	*	m_lpMidView;						// 视频窗口管理器...
-	int				m_nFocusCamera;						// 视频焦点窗口编号...
+	int				m_nFocusDBCamera;					// 视频焦点窗口编号...
 
 	OSMutex			m_Mutex;							// 互斥对象
 	GM_ListData		m_HKListData;						// 海康网络数据队列...

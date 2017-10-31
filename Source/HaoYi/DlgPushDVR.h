@@ -5,7 +5,7 @@ class CDlgPushDVR : public CDialogEx
 {
 	DECLARE_DYNAMIC(CDlgPushDVR)
 public:
-	CDlgPushDVR(BOOL bIsEdit, int nCameraID, BOOL bIsLogin, CWnd* pParent = NULL);
+	CDlgPushDVR(BOOL bIsEdit, int nDBCameraID, BOOL bIsLogin, CWnd* pParent = NULL);
 	virtual ~CDlgPushDVR();
 	enum { IDD = IDD_PUSH_DVR };
 protected:
@@ -24,7 +24,7 @@ private:
 	BOOL		CheckRtspURL(LPCTSTR lpszFullURL);
 private:
 	GM_MapData			m_MapData;		// 存放通道配置信息
-	int					m_nCameraID;	// 修改时读取配置
+	int					m_nDBCameraID;	// 修改时读取配置
 	CString				m_strRtspURL;	// 拉流地址
 	CString				m_strMP4File;	// MP4文件
 	BOOL				m_bPushAuto;	// 断开自动推送

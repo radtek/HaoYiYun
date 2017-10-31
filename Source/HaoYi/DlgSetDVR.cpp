@@ -7,11 +7,10 @@
 
 IMPLEMENT_DYNAMIC(CDlgSetDVR, CDialogEx)
 
-CDlgSetDVR::CDlgSetDVR(int nCameraID, BOOL bIsLogin, CWnd* pParent /*=NULL*/)
+CDlgSetDVR::CDlgSetDVR(int nDBCameraID, BOOL bIsLogin, CWnd* pParent /*=NULL*/)
 	: CDialogEx(CDlgSetDVR::IDD, pParent)
-	, m_bNameChanged(false)
+	, m_nDBCameraID(nDBCameraID)
 	, m_bIsLogin(bIsLogin)
-	, m_nDVRID(nCameraID)
 	, m_strDVRName(_T(""))
 	, m_strDVRAddr(_T(""))
 	, m_strLoginUser(_T(""))
@@ -20,7 +19,7 @@ CDlgSetDVR::CDlgSetDVR(int nCameraID, BOOL bIsLogin, CWnd* pParent /*=NULL*/)
 	, m_bOpenOSD(true)
 	, m_nDVRPort(0)
 {
-	ASSERT( m_nDVRID > 0 );
+	ASSERT( m_nDBCameraID > 0 );
 }
 
 CDlgSetDVR::~CDlgSetDVR()
@@ -30,7 +29,7 @@ CDlgSetDVR::~CDlgSetDVR()
 void CDlgSetDVR::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Text(pDX, IDC_EDIT_DVR_ID, m_nDVRID);
+	DDX_Text(pDX, IDC_EDIT_DVR_ID, m_nDBCameraID);
 	DDX_Text(pDX, IDC_EDIT_DVR_NAME, m_strDVRName);
 	DDV_MaxChars(pDX, m_strDVRName, 32);
 	DDX_Text(pDX, IDC_EDIT_DVR_ADDR, m_strDVRAddr);
@@ -52,20 +51,20 @@ BOOL CDlgSetDVR::OnInitDialog()
 
 	SetIcon(AfxGetApp()->LoadIcon(IDR_MAINFRAME), FALSE);
 
-	ASSERT( m_nDVRID > 0 );
-	GM_MapData theDataLoc;
+	ASSERT( m_nDBCameraID > 0 );
+	GM_MapData theDataWeb;
 	TCHAR szDecodePass[MAX_PATH] = {0};
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nDVRID, theDataLoc);
-	string & strCmdPort = theDataLoc["CommandPort"];
-	string & strMirror = theDataLoc["OpenMirror"];
-	string & strOSD = theDataLoc["OpenOSD"];
-	string & strLoginPass = theDataLoc["LoginPass"];
+	theConfig.GetCamera(m_nDBCameraID, theDataWeb);
+	string & strCmdPort = theDataWeb["device_cmd_port"];
+	string & strMirror = theDataWeb["device_mirror"];
+	string & strOSD = theDataWeb["device_osd"];
+	string & strLoginPass = theDataWeb["device_pass"];
 	int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
-	m_strDVRName = theDataLoc["Name"].c_str();
-	m_strDVRAddr = theDataLoc["IPv4Address"].c_str();
+	m_strDVRName = theDataWeb["camera_name"].c_str();
+	m_strDVRAddr = theDataWeb["device_ip"].c_str();
 	m_nDVRPort = ((strCmdPort.size() > 0) ? atoi(strCmdPort.c_str()) : 8000);
-	m_strLoginUser = theDataLoc["LoginUser"].c_str();
+	m_strLoginUser = theDataWeb["device_user"].c_str();
 	m_strLoginPass = szDecodePass;
 	m_bOpenMirror = ((strMirror.size() > 0) ? atoi(strMirror.c_str()) : false);
 	m_bOpenOSD = ((strOSD.size() > 0) ? atoi(strOSD.c_str()) : true);
@@ -89,7 +88,7 @@ BOOL CDlgSetDVR::OnInitDialog()
 void CDlgSetDVR::OnBnClickedOK()
 {
 	// 更新数据到变量当中...
-	if( m_nDVRID <= 0 || !this->UpdateData(true) )
+	if( m_nDBCameraID <= 0 || !this->UpdateData(true) )
 		return;
 	// 判断输入数据的有效性...
 	if( m_strDVRName.IsEmpty() ) {
@@ -108,31 +107,24 @@ void CDlgSetDVR::OnBnClickedOK()
 		return;
 	}
 	// 将输入的数据直接存盘...
-	GM_MapData theMapLoc;
+	GM_MapData theDataWeb;
 	TCHAR szBuffer[MAX_PATH] = {0};
 	TCHAR szEncode[MAX_PATH] = {0};
 	int nEncLen = Base64encode(szEncode, m_strLoginPass, m_strLoginPass.GetLength());
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nDVRID, theMapLoc);
-	string strOldName = theMapLoc["Name"];
-	theMapLoc["Name"] = m_strDVRName;
-	theMapLoc["IPv4Address"] = m_strDVRAddr;
+	theConfig.GetCamera(m_nDBCameraID, theDataWeb);
+	theDataWeb["camera_name"] = m_strDVRName;
+	theDataWeb["device_ip"] = m_strDVRAddr;
 	sprintf(szBuffer, "%d", m_nDVRPort);
-	theMapLoc["CommandPort"] = szBuffer;
-	theMapLoc["LoginUser"] = m_strLoginUser;
-	theMapLoc["LoginPass"] = szEncode;
+	theDataWeb["device_cmd_port"] = szBuffer;
+	theDataWeb["device_user"] = m_strLoginUser;
+	theDataWeb["device_pass"] = szEncode;
 	sprintf(szBuffer, "%d", m_bOpenOSD);
-	theMapLoc["OpenOSD"] = szBuffer;
+	theDataWeb["device_osd"] = szBuffer;
 	sprintf(szBuffer, "%d", m_bOpenMirror);
-	theMapLoc["OpenMirror"] = szBuffer;
-	theConfig.SetCamera(m_nDVRID, theMapLoc);
-	theConfig.GMSaveConfig();
-
-	// 如果频道名称发生了改变，设置变化标志...
-	if( strOldName.compare(m_strDVRName) != 0 ) {
-		m_strDBCameraID = theMapLoc["DBCameraID"];
-		m_bNameChanged = true;
-	}
+	theDataWeb["device_mirror"] = szBuffer;
+	// 只需要将配置更新到内存当中就可以了...
+	theConfig.SetCamera(m_nDBCameraID, theDataWeb);
 
 	CDialogEx::OnOK();
 }

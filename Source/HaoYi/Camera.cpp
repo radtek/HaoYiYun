@@ -28,7 +28,7 @@ CCamera::CCamera(CVideoWnd * lpWndParent)
   , m_dwHKErrCode(0)
   , m_HKLoginID(-1)
   , m_HKPlayID(-1)
-  , m_nCameraID(0)
+  , m_nDBCameraID(0)
 {
 	ASSERT( m_lpVideoWnd != NULL );
 	memset(&m_HKDeviceInfo, 0, sizeof(m_HKDeviceInfo));
@@ -191,13 +191,11 @@ void CCamera::doWebStatCamera(int nStatus)
 // 设置流数据转发状态...
 void CCamera::doStreamStatus(LPCTSTR lpszStatus)
 {
-	GM_MapData theMapLoc;
 	CString strStatus = lpszStatus;
 	CRenderWnd * lpRenderWnd = m_lpVideoWnd->GetRenderWnd();
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	m_strLogStatus.Format("%s - %s", strStatus, theMapLoc["Name"].c_str());
+	m_strLogStatus.Format("%s - %s", strStatus, theConfig.GetDBCameraTitle(m_nDBCameraID));
 
 	lpRenderWnd->SetStreamStatus(strStatus);
 	lpRenderWnd->SetRenderText(m_strLogStatus);
@@ -209,10 +207,8 @@ void CCamera::doDeviceLogout()
 	// 释放建立的资源...
 	this->ClearResource();
 	// 复位登录状态信息...
-	GM_MapData   theMapLoc;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	m_strLogStatus.Format("未登录 - %s", theMapLoc["Name"].c_str());
+	m_strLogStatus.Format("未登录 - %s", theConfig.GetDBCameraTitle(m_nDBCameraID));
 	// 设置渲染窗口状态...
 	ASSERT( m_lpVideoWnd != NULL );
 	CString strStatus = "未连接...";
@@ -246,7 +242,7 @@ void CCamera::onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEI
 		m_dwHKErrCode = NET_DVR_GetLastError();
 		m_strLogStatus.Format("登录失败，错误：%s", NET_DVR_GetErrorMsg(&m_dwHKErrCode));
 		m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
-		::PostMessage(m_hWndRight, WM_DEVICE_LOGIN_RESULT, m_nCameraID, false);
+		::PostMessage(m_hWndRight, WM_DEVICE_LOGIN_RESULT, m_nDBCameraID, false);
 		// 通知网站将通道设置为等待状态 => 只有硬件设备会走这条路...
 		this->doWebStatCamera(kCameraWait);
 		// 释放该通道上的资源数据...
@@ -259,25 +255,23 @@ void CCamera::onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEI
 	this->m_HKLoginID = lUserID;
 	memcpy(&m_HKDeviceInfo, lpDeviceInfo, sizeof(NET_DVR_DEVICEINFO_V30));
 	// 记录登陆状态，返回正确结果...
-	GM_MapData   theMapLoc;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	m_strLogStatus.Format("已登录 - %s", theMapLoc["Name"].c_str());
+	m_strLogStatus.Format("已登录 - %s", theConfig.GetDBCameraTitle(m_nDBCameraID));
 	m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 	// 更新主窗口状态，通知主窗口，处理异步登录结果...
-	ASSERT( m_hWndRight != NULL && m_nCameraID > 0 );
-	::PostMessage(m_hWndRight, WM_DEVICE_LOGIN_RESULT, m_nCameraID, true);
+	ASSERT( m_hWndRight != NULL && m_nDBCameraID > 0 );
+	::PostMessage(m_hWndRight, WM_DEVICE_LOGIN_RESULT, m_nDBCameraID, true);
 	// 这里先不通知网站通道状态，因为，后面还有操作，也可能发生错误...
 }
 //
 // 执行DVR异步登录成功的消息事件...
 DWORD CCamera::onDeviceLoginSuccess()
 {
-	ASSERT( m_nCameraID > 0 );
+	ASSERT( m_nDBCameraID > 0 );
 	DWORD dwErr = GM_NoErr;
-	GM_MapData theMapLoc;
+	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
+	theConfig.GetCamera(m_nDBCameraID, theMapWeb);
 	ASSERT( m_HKPlayID < 0 && m_HKLoginID >= 0 );
 	do {
 		// DVR的第一个通道，一个DVR可能有多个通道...
@@ -361,7 +355,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 			break;
 		}
 		// 从通道配置文件中获取是否开启镜像...
-		string & strMirror = theMapLoc["OpenMirror"];
+		string & strMirror = theMapWeb["device_mirror"];
 		BOOL bOpenMirror = ((strMirror.size() > 0) ? atoi(strMirror.c_str()) : false);
 		// 对镜像模式进行处理 => 镜像：0 关闭;1 左右;2 上下;3 中间
 		dvrCCDParam.byMirror = (bOpenMirror ? 3 : 0);
@@ -378,7 +372,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 			break;
 		}
 		// 从通道配置文件中获取是否开启OSD...
-		string & strOSD = theMapLoc["OpenOSD"];
+		string & strOSD = theMapWeb["device_osd"];
 		BOOL bOpenOSD = ((strOSD.size() > 0) ? atoi(strOSD.c_str()) : true);
 		// 设置图像格式 => OSD | 坐标 | 日期 | 星期 | 字体 | 属性
 		//strcpy((char*)dvrPicV40.sChanName, "Camera"); // 通道名称...
@@ -447,7 +441,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 		return dwErr;
 	}
 	// 记录登陆状态，返回正确结果...
-	m_strLogStatus.Format("已登录 - %s", theMapLoc["Name"].c_str());
+	m_strLogStatus.Format("已登录 - %s", theConfig.GetDBCameraTitle(m_nDBCameraID));
 	m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 	// 通知网站将通道设置为运行状态 => 只有硬件设备走这条路...
 	this->doWebStatCamera(kCameraRun);
@@ -458,7 +452,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 	// 准备rtsp链接地址 => 主码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/101
 	CString strRtspUrl;
 	string strStreamUrl, strStreamMP4;
-	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
+	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapWeb["device_ip"].c_str(), m_nRtspPort);
 	strStreamUrl.assign(strRtspUrl);
 	// 创建流转发、推流线程对象，并立即启动...
 	m_lpPushThread = new CPushThread(m_lpVideoWnd->m_hWnd, this);
@@ -737,40 +731,39 @@ DWORD CCamera::doDeviceLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LP
 		return dwErr;
 	}
 	// 记录登陆状态，返回正确结果...
-	GM_MapData   theMapLoc;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	m_strLogStatus.Format("正在登录 - %s", theMapLoc["Name"].c_str());
+	CString strTitle = theConfig.GetDBCameraTitle(m_nDBCameraID);
+	m_strLogStatus.Format("正在登录 - %s", strTitle);
 	m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 	return GM_NoErr;
 }
 //
 // 初始化摄像头...
-BOOL CCamera::InitCamera(GM_MapData & inMapLoc)
+BOOL CCamera::InitCamera(GM_MapData & inMapWeb)
 {
 	// 保存摄像头类型...
-	string & strType = inMapLoc["CameraType"];
+	string & strType = inMapWeb["camera_type"];
 	if( strType.size() > 0 ) {
 		m_nCameraType = (CAMERA_TYPE)atoi(strType.c_str());
 	}
-	string & strStream = inMapLoc["StreamProp"];
+	string & strStream = inMapWeb["stream_prop"];
 	if( strStream.size() > 0 ) {
 		m_nStreamProp = (STREAM_PROP)atoi(strStream.c_str());
 	}
 	// 保存设备序列号，保存登录状态...
-	m_strDeviceSN = inMapLoc["DeviceSN"];
-	m_strLogStatus.Format("未登录 - %s", inMapLoc["Name"].c_str());
-	// 将监控通道配置，直接写入配置文件当中...
+	m_strDeviceSN = inMapWeb["device_sn"];
+	// 将监控通道配置，直接写入配置当中...
 	ASSERT( m_lpVideoWnd != NULL );
-	m_nCameraID = m_lpVideoWnd->GetCameraID();
+	m_nDBCameraID = m_lpVideoWnd->GetDBCameraID();
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.SetCamera(m_nCameraID, inMapLoc);
-	//return theConfig.GMSaveConfig();
+	CString strTitle = theConfig.GetDBCameraTitle(m_nDBCameraID);
+	// 这里不用存盘，因为，本地不再存放配置，都在内存当中...
+	m_strLogStatus.Format("未登录 - %s", strTitle);
 	return true;
 }
 //
 // 处理获取到的摄像机配置信息...
-GM_Error CCamera::ForUDPData(GM_MapData & inNetData)
+/*GM_Error CCamera::ForDeviceUDPData(GM_MapData & inNetData)
 {
 	// 已有的配置与输入的一致，直接返回...
 	if( m_MapNetConfig == inNetData )
@@ -788,44 +781,30 @@ GM_Error CCamera::ForUDPData(GM_MapData & inNetData)
 	m_MapNetConfig = inNetData;
 	// 获取当前摄像头存放的配置...
 	ASSERT( m_lpVideoWnd != NULL );
-	GM_MapData theMapLoc;
-	int nCameraID = m_lpVideoWnd->GetCameraID();
+	GM_MapData theMapWeb;
+	int nDBCameraID = m_lpVideoWnd->GetDBCameraID();
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nCameraID, theMapLoc);
-	ASSERT( theMapLoc.size() > 0 );
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
+	ASSERT( theMapWeb.size() > 0 );
 	// 如果本摄像头IP地址发生了改变，通知上层处理，通道会自行检测...
-	//if( theMapLoc["IPv4Address"] != inNetData["IPv4Address"] ) {
+	//if( theMapWeb["IPv4Address"] != inNetData["IPv4Address"] ) {
 	//}
 	// 更新已经存在的配置信息...
-	theMapLoc["DeviceType"] = inNetData["DeviceType"];
-	theMapLoc["DeviceDescription"] = inNetData["DeviceDescription"];
-	theMapLoc["DeviceSN"] = inNetData["DeviceSN"];
-	theMapLoc["CommandPort"] = inNetData["CommandPort"];
-	theMapLoc["HttpPort"] = inNetData["HttpPort"];
-	theMapLoc["MAC"] = inNetData["MAC"];
-	theMapLoc["IPv4Address"] = inNetData["IPv4Address"];
-	theMapLoc["BootTime"] = inNetData["BootTime"];
-	theMapLoc["DigitalChannelNum"] = inNetData["DigitalChannelNum"];
-	theMapLoc["DiskNumber"] = inNetData["DiskNumber"];
+	theMapWeb["DeviceType"] = inNetData["DeviceType"];
+	theMapWeb["DeviceDescription"] = inNetData["DeviceDescription"];
+	theMapWeb["DeviceSN"] = inNetData["DeviceSN"];
+	theMapWeb["CommandPort"] = inNetData["CommandPort"];
+	theMapWeb["HttpPort"] = inNetData["HttpPort"];
+	theMapWeb["MAC"] = inNetData["MAC"];
+	theMapWeb["IPv4Address"] = inNetData["IPv4Address"];
+	theMapWeb["BootTime"] = inNetData["BootTime"];
+	theMapWeb["DigitalChannelNum"] = inNetData["DigitalChannelNum"];
+	theMapWeb["DiskNumber"] = inNetData["DiskNumber"];
 	// 将获取的更新数据直接存盘...
-	theConfig.SetCamera(nCameraID, theMapLoc);
+	theConfig.SetCamera(nDBCameraID, theMapWeb);
 	theConfig.GMSaveConfig();
 	return GM_NoErr;
-}
-//
-// 得到数据库里的摄像头编号...
-int	CCamera::GetDBCameraID()
-{
-	if( m_nCameraID <= 0 )
-		return -1;
-	GM_MapData theMapLoc;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	if( theMapLoc.find("DBCameraID") == theMapLoc.end() )
-		return -1;
-	string & strDBCameraID = theMapLoc["DBCameraID"];
-	return atoi(strDBCameraID.c_str());
-}
+}*/
 //
 // 更新窗口标题名称...
 void CCamera::UpdateWndTitle(STREAM_PROP inPropType, CString & strTitle)
@@ -948,24 +927,25 @@ GM_Error CCamera::doStreamLogin()
 	// 设置异步登录标志...
 	m_bStreamLogin = true;
 	// 获取当前摄像头存放的配置...
-	GM_MapData theMapLoc;
+	GM_MapData theMapWeb;
 	ASSERT( m_lpVideoWnd != NULL );
-	int nCameraID = m_lpVideoWnd->GetCameraID();
+	int nDBCameraID = m_lpVideoWnd->GetDBCameraID();
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nCameraID, theMapLoc);
-	ASSERT( theMapLoc.size() > 0 );
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
+	ASSERT( theMapWeb.size() > 0 );
 	// 获取需要的流转发参数信息...
-	string & strStreamMP4 = theMapLoc["StreamMP4"];
-	string & strStreamUrl = theMapLoc["StreamUrl"];
-	//BOOL bStreamAuto = atoi(theMapLoc["StreamAuto"].c_str());
-	//BOOL bStreamLoop = atoi(theMapLoc["StreamLoop"].c_str());
+	string & strStreamMP4 = theMapWeb["stream_mp4"];
+	string & strStreamUrl = theMapWeb["stream_url"];
+	//BOOL bStreamAuto = atoi(theMapLoc["stream_auto"].c_str());
+	//BOOL bStreamLoop = atoi(theMapLoc["stream_loop"].c_str());
 	BOOL bFileMode = ((m_nStreamProp == kStreamMP4File) ? true : false);
 	// 只启动数据流部分，不进行rtmp推流处理...
 	m_lpPushThread = new CPushThread(m_lpVideoWnd->m_hWnd, this);
 	m_lpPushThread->StreamInitThread(bFileMode, strStreamUrl, strStreamMP4);
 	// 更新登录状态...
 	CString strStatus = "正在链接";
-	m_strLogStatus.Format("%s - %s", strStatus, theMapLoc["Name"].c_str());
+	CString strTitle = theConfig.GetDBCameraTitle(nDBCameraID);
+	m_strLogStatus.Format("%s - %s", strStatus, strTitle);
 	m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 	m_lpVideoWnd->GetRenderWnd()->SetStreamStatus(strStatus);
 	return GM_NoErr;

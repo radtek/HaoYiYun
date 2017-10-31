@@ -143,11 +143,11 @@ void CVideoWnd::GetStreamPullUrl(CString & outPullUrl)
 {
 	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
 		return;
-	GM_MapData theMapLoc;
+	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(this->GetCameraID(), theMapLoc);
-	string & strStreamMP4 = theMapLoc["StreamMP4"];
-	string & strStreamUrl = theMapLoc["StreamUrl"];
+	theConfig.GetCamera(this->GetDBCameraID(), theMapWeb);
+	string & strStreamMP4 = theMapWeb["stream_mp4"];
+	string & strStreamUrl = theMapWeb["stream_url"];
 	if( m_lpCamera->GetStreamProp() == kStreamMP4File ) {
 		outPullUrl = strStreamMP4.c_str();
 	} else {
@@ -322,19 +322,20 @@ void CVideoWnd::doDrawRecStatus()
 	this->ReleaseDC(pDC);
 }
 
-BOOL CVideoWnd::BuildCamera(GM_MapData & inMapLoc)
+BOOL CVideoWnd::BuildCamera(GM_MapData & inMapWeb)
 {
 	// 开启一个截图时钟...
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	int nSnapStep = theConfig.GetSnapStep();
-
+	//CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	//int nSnapStep = theConfig.GetSnapStep();
 	//this->SetTimer(kSnapTimerID, nSnapStep * 1000, NULL);
+
+	// 开启一个状态更新时钟...
 	this->SetTimer(kStatusTimerID, 1 * 1000, NULL);
 
 	// 创建一个DVR通道...
 	ASSERT( m_lpCamera == NULL );
 	m_lpCamera = new CCamera(this);
-	return m_lpCamera->InitCamera(inMapLoc);
+	return m_lpCamera->InitCamera(inMapWeb);
 }
 
 BOOL CVideoWnd::Create(UINT wStyle, const CRect & rect, CWnd * pParentWnd)
@@ -746,7 +747,7 @@ void CVideoWnd::SetDispTitleText(CString & inTitle)
 	if( m_lpCamera != NULL ) {
 		int nDBCameraID = m_lpCamera->GetDBCameraID();
 		if( nDBCameraID > 0 ) {
-			m_strDispTitle.Format("通道%d - %s", nDBCameraID, inTitle);
+			m_strDispTitle.Format("ID: %d - %s", nDBCameraID, inTitle);
 		}
 	}
 	(this->m_hWnd != NULL) ? this->Invalidate() : NULL;

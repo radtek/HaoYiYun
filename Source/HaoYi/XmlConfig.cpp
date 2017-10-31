@@ -15,11 +15,14 @@ CXmlConfig::CXmlConfig(void)
   , m_strMainName(DEF_MAIN_NAME)
   , m_strWebAddr(DEF_WEB_ADDR)
   , m_nWebPort(DEF_WEB_PORT)
+  , m_nDBHaoYiGatherID(-1)
   , m_strTrackerAddr("")
   , m_strRemoteAddr("")
   , m_nTrackerPort(0)
+  , m_nDBGatherID(-1)
   , m_nRemotePort(0)
   , m_strWebName("")
+  , m_strWebTag("")
   , m_nWebType(-1)
 {
 	CString strVersion;
@@ -62,7 +65,6 @@ BOOL CXmlConfig::GMLoadConfig()
 	BOOL			bLoadOK = true;
 	TiXmlDocument	theDoc;
 	TiXmlElement  * lpRootElem = NULL;
-	TiXmlElement  * lpTrackElem = NULL;
 	TiXmlElement  * lpCommElem = NULL;
 	TiXmlElement  * lpAboutElem = NULL;
 	TiXmlElement  * lpChildElem = NULL;
@@ -81,7 +83,6 @@ BOOL CXmlConfig::GMLoadConfig()
 		}
 		// 读取关于节点/公共节点/监控节点...
 		lpCommElem = lpRootElem->FirstChildElement("Common");
-		lpTrackElem = lpRootElem->FirstChildElement("Track");
 		lpAboutElem = lpRootElem->FirstChildElement("About");
 		// 没有关于节点或没有公共节点，重新构建...
 		if( lpCommElem == NULL || lpAboutElem == NULL ) {
@@ -162,8 +163,9 @@ BOOL CXmlConfig::GMLoadConfig()
 		}
 		lpChildElem = lpChildElem->NextSiblingElement();
 	}
+	// 2017.10.27 - by jackey => 通道配置，全部放置到网站端...
 	// 接着，读取频道配置节点信息...
-	TiXmlElement * lpCameraElem = ((lpTrackElem != NULL) ? lpTrackElem->FirstChildElement() : NULL);
+	/*TiXmlElement * lpCameraElem = ((lpTrackElem != NULL) ? lpTrackElem->FirstChildElement() : NULL);
 	while( lpCameraElem != NULL ) {
 		TiXmlElement * lpElemID = lpCameraElem->FirstChildElement("ID");
 		if( lpElemID == NULL ) {
@@ -196,7 +198,7 @@ BOOL CXmlConfig::GMLoadConfig()
 		// 保存配置，下一个监控通道节点...
 		m_MapNodeCamera[nCameraID] = theData;
 		lpCameraElem = lpCameraElem->NextSiblingElement();
-	}
+	}*/
 	return true;
 }
 
@@ -208,7 +210,6 @@ BOOL CXmlConfig::GMSaveConfig()
 	TiXmlDocument	theDoc;
 	TiXmlElement	rootElem("Config");
 	TiXmlElement	commElem("Common");
-	TiXmlElement	trackElem("Track");
 	TiXmlElement	aboutElem("About");
 	TiXmlElement	theElem("None");
 	// 构造文件头...
@@ -251,8 +252,9 @@ BOOL CXmlConfig::GMSaveConfig()
 	aboutElem.InsertEndChild(theElem);
 	theElem = this->BuildXmlElem("Address", CUtilTool::ANSI_UTF8(m_strAddress.c_str()));
 	aboutElem.InsertEndChild(theElem);
+	// 2017.10.27 - by jackey => 通道配置全部放置到网站端，不存盘到本地...
 	// 开始保存监控通道列表...
-	GM_MapNodeCamera::iterator itorData;
+	/*GM_MapNodeCamera::iterator itorData;
 	for(itorData = m_MapNodeCamera.begin(); itorData != m_MapNodeCamera.end(); ++itorData) {
 		TiXmlElement theCamera("Camera");
 		GM_MapData & theData = itorData->second;
@@ -273,11 +275,10 @@ BOOL CXmlConfig::GMSaveConfig()
 
 		// 将监控节点加入到主节点当中...
 		trackElem.InsertEndChild(theCamera);
-	}
+	}*/
 	// 组合节点列表...
 	rootElem.InsertEndChild(commElem);
 	rootElem.InsertEndChild(aboutElem);
-	rootElem.InsertEndChild(trackElem);
 	theDoc.InsertEndChild(rootElem);
 	// 最后，进行存盘处理...
 	return theDoc.SaveFile(m_strXMLFile);
@@ -301,17 +302,17 @@ TiXmlElement CXmlConfig::BuildXmlElem(const string & strNode, const string & str
 }
 //
 // 课程表是动态存储，不会存到本地...
-void CXmlConfig::SetCourse(int nCameraID, GM_MapCourse & inMapCourse)
+void CXmlConfig::SetCourse(int nDBCameraID, GM_MapCourse & inMapCourse)
 {
 	OSMutexLocker theLock(&m_MutexCourse);
-	m_MapNodeCourse[nCameraID] = inMapCourse;
+	m_MapNodeCourse[nDBCameraID] = inMapCourse;
 }
 //
 // 课程表是动态存储，不会存到本地...
-void CXmlConfig::GetCourse(int nCameraID, GM_MapCourse & outMapCourse)
+void CXmlConfig::GetCourse(int nDBCameraID, GM_MapCourse & outMapCourse)
 {
 	OSMutexLocker theLock(&m_MutexCourse);
-	outMapCourse = m_MapNodeCourse[nCameraID];
+	outMapCourse = m_MapNodeCourse[nDBCameraID];
 }
 //
 // 课程表是动态存储，不会存到本地...
@@ -321,33 +322,30 @@ GM_MapNodeCourse & CXmlConfig::GetNodeCourse()
 	return m_MapNodeCourse;
 }
 //
-// 通过数据库编号获取本地编号...
-void CXmlConfig::GetDBCameraID(int nDBCameraID, int & outLocalID)
+// 通过通道编号获取通道名称...
+CString CXmlConfig::GetDBCameraTitle(int nDBCameraID)
 {
-	// 设置初始值...
-	outLocalID = -1;
-	// 如果找到了对应的编号，直接赋值，返回...
-	if( m_MapDBCamera.find(nDBCameraID) != m_MapDBCamera.end() ) {
-		outLocalID = m_MapDBCamera[nDBCameraID];
+	CString strTitle;
+	GM_MapNodeCamera::iterator itorItem = m_MapNodeCamera.find(nDBCameraID);
+	if( itorItem != m_MapNodeCamera.end() ) {
+		GM_MapData & theMapWeb = itorItem->second;
+		if( this->m_nWebType != kCloudMonitor ) {
+			strTitle.Format("%s %s %s", theMapWeb["grade_type"].c_str(), theMapWeb["grade_name"].c_str(), theMapWeb["camera_name"].c_str());
+		} else {
+			strTitle = theMapWeb["camera_name"].c_str();
+		}
 	}
+	return strTitle;
 }
 //
 // 发起删除指定通道的操作...
-void CXmlConfig::doDelDVR(int nCameraID)
+void CXmlConfig::doDelDVR(int nDBCameraID)
 {
 	// 删除对应的录像课程记录...
 	OSMutexLocker theLock(&m_MutexCourse);
-	m_MapNodeCourse.erase(nCameraID);
-	// 先找到对应的 DBCameraID，然后删除记录...
-	GM_MapData & theData = m_MapNodeCamera[nCameraID];
-	if( theData.find("DBCameraID") != theData.end() ) {
-		int nDBCameraID = atoi(theData["DBCameraID"].c_str());
-		m_MapDBCamera.erase(nDBCameraID);
-	}
+	m_MapNodeCourse.erase(nDBCameraID);
 	// 删除对应的配置文件记录...
-	m_MapNodeCamera.erase(nCameraID);
-	// 最后，将结果存盘到xml配置当中...
-	this->GMSaveConfig();
+	m_MapNodeCamera.erase(nDBCameraID);
 }
 
 #define DEF_PER_WAIT_MS		50	// 每次等待毫秒数

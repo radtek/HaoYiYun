@@ -65,7 +65,7 @@ public:
 	CMidView	*	GetRealParent()							{ return m_lpMidView; }
 	CRenderWnd	*	GetRenderWnd()							{ return m_lpRenderWnd; }
 	CCamera		*	GetCamera()								{ return m_lpCamera; }
-	int				GetCameraID()							{ return m_nWndIndex; }
+	int				GetDBCameraID()							{ return m_nWndIndex; }
 
 	CString		&	GetWebTitleText()						{ return m_strWebTitle; }
 	void			SetWebTitleText(CString & szTitle)		{ m_strWebTitle = szTitle; }
@@ -79,7 +79,7 @@ public:
 	void			OnFlyToFixState();
 	
 	BOOL			Create(UINT wStyle, const CRect & rect, CWnd * pParentWnd);
-	BOOL			BuildCamera(GM_MapData & inMapLoc);
+	BOOL			BuildCamera(GM_MapData & inMapWeb);
 
 	int				GetRecvPullKbps();
 	int				GetSendPushKbps();

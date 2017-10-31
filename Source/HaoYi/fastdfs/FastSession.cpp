@@ -881,15 +881,15 @@ GM_Error CRemoteSession::doPHPCameraOperate(LPCTSTR lpData, int nSize, BOOL bIsS
 	// 获取通道的数据库编号...
 	int nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
 	// 开始查找对应的摄像头本地编号...
-	int nLocalID = -1;
+	/*int nLocalID = -1;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
-	}
+	}*/
 	// 根据本地编号获取摄像头对象...
-	CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL || lpCamera->GetVideoWnd() == NULL ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
@@ -944,15 +944,15 @@ GM_Error CRemoteSession::doCmdLiveVary(LPCTSTR lpData, int nSize)
 		return GM_NoErr;
 	ASSERT( nUserCount <= 0 );
 	// 开始查找对应的摄像头本地编号...
-	int nLocalID = -1;
+	/*int nLocalID = -1;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
-	}
+	}*/
 	// 根据本地编号获取摄像头对象...
-	CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
@@ -1006,16 +1006,15 @@ GM_Error CRemoteSession::doCmdPlayLogin(string & inData)
 			nUserCount = theUserCount.asInt();
 		}
 		// 开始查找对应的摄像头本地编号...
-		int nLocalID = -1;
+		/*int nLocalID = -1;
 		CXmlConfig & theConfig = CXmlConfig::GMInstance();
 		theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 		if(  nLocalID <= 0  ) {
 			MsgLogGM(theErr);
 			break;
-		}
-		ASSERT( nLocalID > 0 );
+		}*/
 		// 根据本地编号获取摄像头对象...
-		CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+		CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 		if( lpCamera == NULL ) {
 			MsgLogGM(theErr);
 			break;
@@ -1104,30 +1103,28 @@ GM_Error CRemoteSession::doPHPSetCameraName(LPCTSTR lpData, int nSize)
 		return GM_NoErr;
 	}
 	// 开始查找对应的摄像头本地编号...
-	int nLocalID = -1;
+	/*int nLocalID = -1;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  )
 		return GM_NoErr;
-	ASSERT( nLocalID > 0 );
+	ASSERT( nLocalID > 0 );*/
 	// 根据本地编号获取摄像头对象...
-	CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL )
 		return GM_NoErr;
 	ASSERT( lpCamera != NULL );
 	// 将获取的摄像头名称更新到配置文件当中...
-	GM_MapData theMapLoc;
+	/*GM_MapData theMapLoc;
 	theConfig.GetCamera(nLocalID, theMapLoc);
 	theMapLoc["Name"] = strDBCameraName;
-	theConfig.SetCamera(nLocalID, theMapLoc);
+	theConfig.SetCamera(nLocalID, theMapLoc);*/
 	// 将获取的摄像头名称更新到摄像头窗口对象当中...
 	CString strTitleName = strDBCameraName.c_str();
 	STREAM_PROP theProp = lpCamera->GetStreamProp();
 	lpCamera->UpdateWndTitle(theProp, strTitleName);
 	// 调用父窗口接口，更新右侧和左侧焦点窗口的摄像头名称...
-	m_lpHaoYiView->UpdateFocusTitle(nLocalID, strTitleName);
-	// 将获取的摄像头名称保存到系统配置文件当中...
-	theConfig.GMSaveConfig();
+	m_lpHaoYiView->UpdateFocusTitle(nDBCameraID, strTitleName);
 	return GM_NoErr;
 }
 //
@@ -1163,11 +1160,12 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 	string & strDBCameraID = CUtilTool::getJsonString(value["camera_id"]);
 	int nDBCameraID = atoi(strDBCameraID.c_str());
 	// 开始查找对应的摄像头本地编号...
-	int nLocalID = -1;
+	/*int nLocalID = -1;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  )
 		return GM_NoErr;
+	*/
 	// 解析 Course 记录...
 	Json::Value arrayObj = value["data"];
 	for (unsigned int i = 0; i < arrayObj.size(); i++)
@@ -1214,8 +1212,8 @@ GM_Error CRemoteSession::doPHPSetCourseOpt(LPCTSTR lpData, int nSize)
 		if( nCourseID <= 0 || nOperate <= 0 || nWeekID < 0 )
 			continue;
 		// 通知父窗口课表记录发生了变化...
-		ASSERT( nCourseID > 0 && nOperate > 0 && nLocalID > 0 );
-		m_lpHaoYiView->doCourseChanged(nOperate, nLocalID, theMapData);
+		ASSERT( nCourseID > 0 && nOperate > 0 && nDBCameraID > 0 );
+		m_lpHaoYiView->doCourseChanged(nOperate, nDBCameraID, theMapData);
 	}
 	return GM_NoErr;
 }
@@ -1311,14 +1309,14 @@ GM_Error CRemoteSession::doPHPGetCourseRecord(string & inData)
 		return GM_NoErr;
 	}
 	// 开始查找对应的摄像头本地编号...
-	int nLocalID = -1;
+	/*int nLocalID = -1;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
 	if(  nLocalID <= 0  )
 		return GM_NoErr;
-	ASSERT( nLocalID > 0 );
+	ASSERT( nLocalID > 0 );*/
 	// 根据本地编号获取摄像头对象...
-	CCamera * lpCamera = m_lpHaoYiView->FindCameraByID(nLocalID);
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL )
 		return GM_NoErr;
 	ASSERT( lpCamera != NULL );

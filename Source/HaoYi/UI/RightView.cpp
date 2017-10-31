@@ -23,7 +23,7 @@ IMPLEMENT_DYNAMIC(CRightView, CStatic)
 CRightView::CRightView(CHaoYiView * lpParent)
   : m_lpParentDlg(lpParent)
   , m_bValidButton( false )
-  , m_nCurAutoID(DEF_CAMERA_START_ID)
+  , m_nDBCurAutoID(DEF_CAMERA_START_ID)
 {
 	ASSERT( m_lpParentDlg != NULL );
 	m_strYunTitle = "云台";
@@ -57,8 +57,8 @@ BOOL CRightView::OnEraseBkgnd(CDC* pDC)
 {
 	// 获取当前的焦点通道编号...
 	ASSERT( m_lpParentDlg != NULL );
-	int nFocusCameraID = m_lpParentDlg->GetFocusCamera();
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nFocusCameraID);
+	int nFocusDBCameraID = m_lpParentDlg->GetFocusDBCamera();
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nFocusDBCameraID);
 	CString & strLogStatus = ((lpCamera != NULL) ? lpCamera->GetLogStatus() : "登录");
 
 	// 绘制整个背景区域...
@@ -70,16 +70,18 @@ BOOL CRightView::OnEraseBkgnd(CDC* pDC)
 	if( !this->m_bValidButton )
 		return TRUE;
 
-	// 如果不是设备流，直接隐藏按钮，绘制基础文字信息...
-	if( lpCamera != NULL && !lpCamera->IsCameraDevice() ) {
+	// 如果焦点对象无效，或者不是设备流，直接隐藏按钮，绘制基础文字信息...
+	if( lpCamera == NULL || !lpCamera->IsCameraDevice() ) {
 		this->ShowButton(false);
 		this->DrawStreamText(pDC);
 		return TRUE;
 	}
+	// 获取的焦点对象一定有效...
+	ASSERT( lpCamera != NULL );
 	// 显示或隐藏按钮对象...
-	this->ShowButton((nFocusCameraID <= 0) ? false : true);
+	this->ShowButton(true);
 	// 显示相关的文字信息...
-	this->ShowText(pDC, (nFocusCameraID <= 0) ? false : true, strLogStatus);
+	this->ShowText(pDC, true, strLogStatus);
 
 	return TRUE;
 }
@@ -239,24 +241,22 @@ void CRightView::ShowButton(BOOL bDispFlag)
 }
 //
 // 响应视频焦点窗口编号...
-void CRightView::doFocusCamera(int nCameraID)
+void CRightView::doFocusDBCamera(int nDBCameraID)
 {
 	// 获取 CCamera 对象...
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nCameraID);
-	if( lpCamera == NULL )
-		return;
-	ASSERT( lpCamera != NULL );
-	// 如果不是摄像头设备，直接重绘客户区...
-	if( !lpCamera->IsCameraDevice() ) {
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nDBCameraID);
+	// 如果焦点无效，或者不是摄像头设备，直接重绘客户区...
+	if( lpCamera == NULL || !lpCamera->IsCameraDevice() ) {
 		this->Invalidate(true);
 		return;
 	}
 	// 从配置文件中获取原始标题栏...
+	ASSERT( lpCamera != NULL );
 	ASSERT( m_lpParentDlg != NULL );
-	GM_MapData theMapLoc;
+	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nCameraID, theMapLoc);
-	string & strName = theMapLoc["Name"];
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
+	string strName = theConfig.GetDBCameraTitle(nDBCameraID);
 	// 重新组合标题栏名称...
 	m_strYunTitle.Format("云台 - %s", strName.c_str());
 	m_strSetTitle.Format("设置 - %s", strName.c_str());
@@ -270,10 +270,10 @@ void CRightView::doFocusCamera(int nCameraID)
 	this->StateButton(lpCamera->IsLogin());
 	// 把IP地址/端口/用户名/密码，显示在Edit框中...
 	TCHAR szDecodePass[MAX_PATH] = {0};
-	string & strIPAddr = theMapLoc["IPv4Address"];
-	string & strCmdPort = theMapLoc["CommandPort"];
-	string & strLoginUser = theMapLoc["LoginUser"];
-	string & strLoginPass = theMapLoc["LoginPass"];
+	string & strIPAddr = theMapWeb["device_ip"];
+	string & strCmdPort = theMapWeb["device_cmd_port"];
+	string & strLoginUser = theMapWeb["device_user"];
+	string & strLoginPass = theMapWeb["device_pass"];
 	int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
 	m_editIPAddr.SetWindowText(strIPAddr.c_str());
 	m_editIPPort.SetWindowText(strCmdPort.c_str());
@@ -555,7 +555,7 @@ LRESULT	CRightView::OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam)
 	// 针对频道编号有效时的处理...
 	ASSERT( wParam > 0 );
 	DWORD dwReturn = GM_NoErr;
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(wParam);
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(wParam);
 	if( lpCamera == NULL ) {
 		this->Invalidate(true);
 		return S_OK;
@@ -563,7 +563,7 @@ LRESULT	CRightView::OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam)
 	// 异步登录失败的处理过程...
 	if( lParam <= 0 || !lpCamera->IsLogin() ) {
 		// 焦点窗口与登录窗口是一致的，更新按钮状态和文字状态...
-		if( wParam == m_lpParentDlg->GetFocusCamera() ) {
+		if( wParam == m_lpParentDlg->GetFocusDBCamera() ) {
 			this->StateButton(lpCamera->IsLogin());
 			this->Invalidate(true);
 		}
@@ -574,12 +574,12 @@ LRESULT	CRightView::OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam)
 	ASSERT( lParam > 0 && lpCamera->IsLogin() );
 	dwReturn = lpCamera->onDeviceLoginSuccess();
 	// 焦点窗口与登录窗口不一致，直接返回...
-	if( wParam != m_lpParentDlg->GetFocusCamera() ) {
+	if( wParam != m_lpParentDlg->GetFocusDBCamera() ) {
 		this->Invalidate(true);
 		return S_OK;
 	}
 	// 焦点窗口与登录窗口一致...
-	ASSERT( wParam == m_lpParentDlg->GetFocusCamera() );
+	ASSERT( wParam == m_lpParentDlg->GetFocusDBCamera() );
 	if( dwReturn != GM_NoErr ) {
 		// 登录失败的处理过程...
 		m_editIPAddr.SetReadOnly(false);
@@ -600,11 +600,11 @@ LRESULT	CRightView::OnMsgDeviceLoginResult(WPARAM wParam, LPARAM lParam)
 void CRightView::doAutoCheckDVR()
 {
 	// 判断马上登录的DVR是否就是焦点DVR...
-	int  nCameraID = m_nCurAutoID;
-	BOOL bIsFocusCamera = ((m_lpParentDlg->GetFocusCamera() == nCameraID) ? true : false);
+	int  nDBCameraID = m_nDBCurAutoID;
+	BOOL bIsFocusCamera = ((m_lpParentDlg->GetFocusDBCamera() == nDBCameraID) ? true : false);
 	do {
 		// 查找ID对应的DVR对象...
-		CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nCameraID);
+		CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nDBCameraID);
 		if( lpCamera == NULL || lpCamera->IsLogin() )
 			break;
 		ASSERT( !lpCamera->IsLogin() );
@@ -615,14 +615,14 @@ void CRightView::doAutoCheckDVR()
 			if( dwErrCode == NET_DVR_PASSWORD_ERROR || dwErrCode == NET_DVR_USER_LOCKED )
 				break;
 			// 进行摄像机连接数据的准备工作...
-			GM_MapData theMapLoc;
+			GM_MapData theMapWeb;
 			CXmlConfig & theConfig = CXmlConfig::GMInstance();
-			theConfig.GetCamera(nCameraID, theMapLoc);
+			theConfig.GetCamera(nDBCameraID, theMapWeb);
 			TCHAR szDecodePass[MAX_PATH] = {0};
-			string & strIPAddr = theMapLoc["IPv4Address"];
-			string & strCmdPort = theMapLoc["CommandPort"];
-			string & strLoginUser = theMapLoc["LoginUser"];
-			string & strLoginPass = theMapLoc["LoginPass"];
+			string & strIPAddr = theMapWeb["device_ip"];
+			string & strCmdPort = theMapWeb["device_cmd_port"];
+			string & strLoginUser = theMapWeb["device_user"];
+			string & strLoginPass = theMapWeb["device_pass"];
 			int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
 			int nCmdPort = ((strCmdPort.size() <= 0) ? 0 : atoi(strCmdPort.c_str()));
 			// 焦点窗口 => 将所有的登录区按钮置为只读或灰色...
@@ -665,7 +665,7 @@ void CRightView::doAutoCheckDVR()
 		}
 	}while( false );
 	// 自动累加DVR编号，注意编号回滚...
-	m_nCurAutoID = m_lpParentDlg->GetNextAutoID(nCameraID);
+	m_nDBCurAutoID = m_lpParentDlg->GetNextAutoID(nDBCameraID);
 }
 //
 // 点击摄像头设备登录事件...
@@ -699,22 +699,25 @@ void CRightView::doDeviceLogin()
 	TCHAR szEncode[MAX_PATH] = {0};
 	int nEncLen = Base64encode(szEncode, strLoginPass, strLoginPass.GetLength());
 	// 获取有效的DVR对象...
-	GM_MapData theMapLoc;
-	int nCameraID = m_lpParentDlg->GetFocusCamera();
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nCameraID);
+	GM_MapData theMapWeb;
+	int nDBCameraID = m_lpParentDlg->GetFocusDBCamera();
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nDBCameraID);
 	// 如果已经处于登录状态，直接返回...
 	if( lpCamera == NULL || lpCamera->IsLogin() )
 		return;
 	ASSERT( lpCamera != NULL && !lpCamera->IsLogin() );
 	// 保存这些已经验证过的有效参数...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nCameraID, theMapLoc);
-	theMapLoc["IPv4Address"] = strIPAddr;
-	theMapLoc["CommandPort"] = strCmdPort;
-	theMapLoc["LoginUser"] = strLoginUser;
-	theMapLoc["LoginPass"] = szEncode;
-	theConfig.SetCamera(nCameraID, theMapLoc);
-	theConfig.GMSaveConfig();
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
+	theMapWeb["device_ip"] = strIPAddr;
+	theMapWeb["device_cmd_port"] = strCmdPort;
+	theMapWeb["device_user"] = strLoginUser;
+	theMapWeb["device_pass"] = szEncode;
+	// 本地没有通道配置了，不用存盘了，需要向网站汇报...
+	theConfig.SetCamera(nDBCameraID, theMapWeb);
+	// 用更新后的数据，向网站汇报最新配置...
+	if( !m_lpParentDlg->doWebRegCamera(theMapWeb) ) 
+		return;
 	// 将所有的按钮置为只读或灰色...
 	m_editIPAddr.SetReadOnly(true);
 	m_editIPPort.SetReadOnly(true);
@@ -742,17 +745,17 @@ void CRightView::doDeviceLogin()
 void CRightView::doDeviceLogout()
 {
 	// 获取有效的DVR对象...
-	int nCameraID = m_lpParentDlg->GetFocusCamera();
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nCameraID);
+	int nDBCameraID = m_lpParentDlg->GetFocusDBCamera();
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL )
 		return;
 	ASSERT( lpCamera != NULL );
 	// 调用DVR退出接口函数...
 	lpCamera->doDeviceLogout();
 	// 获取DVR的当前配置信息...
-	GM_MapData   theMapLoc;
+	GM_MapData   theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nCameraID, theMapLoc);
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
 	// 设置按钮和文字状态...
 	this->StateButton(lpCamera->IsLogin());
 	// 重新刷新背景区域...
@@ -765,8 +768,8 @@ void CRightView::doClickBtnPTZ(DWORD dwPTZCmd, BOOL bStop)
 	//TRACE("Command = %lu, Stop = %lu\n", dwPTZCmd, bStop);
 
 	// 获取有效的DVR对象...
-	int nCameraID = m_lpParentDlg->GetFocusCamera();
-	CCamera * lpCamera = m_lpParentDlg->FindCameraByID(nCameraID);
+	int nDBCameraID = m_lpParentDlg->GetFocusDBCamera();
+	CCamera * lpCamera = m_lpParentDlg->FindDBCameraByID(nDBCameraID);
 	if( lpCamera == NULL )
 		return;
 	ASSERT( lpCamera != NULL );

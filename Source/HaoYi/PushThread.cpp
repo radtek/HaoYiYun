@@ -1194,18 +1194,18 @@ BOOL CPushThread::BeginRecSlice()
 	CString strTimeMicro;
 	ULARGE_INTEGER	llTimCountCur = {0};
 	int nCourseID = m_lpCamera->GetRecCourseID();
-	int nLocalCameraID = m_lpCamera->GetLocalCameraID();
+	int nDBCameraID = m_lpCamera->GetDBCameraID();
 	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
 	strTimeMicro.Format("%I64d", llTimCountCur.QuadPart);
 	md5.update(strTimeMicro, strTimeMicro.GetLength());
 	strUniqid = md5.toString();
 	// 准备录像需要的信息...
-	GM_MapData theMapLoc;
+	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nLocalCameraID, theMapLoc);
+	theConfig.GetCamera(nDBCameraID, theMapWeb);
 	CString  strMP4Path;
 	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapLoc["DBCameraID"];
+	string & strDBCameraID = theMapWeb["camera_id"];
 	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
 	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
 	// 2017.08.10 - by jackey => 新增创建时间戳字段...

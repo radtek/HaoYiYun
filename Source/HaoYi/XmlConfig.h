@@ -4,9 +4,8 @@
 #include "tinyxml.h"
 #include "OSMutex.h"
 
-typedef map<int, GM_MapData>	GM_MapNodeCamera;	// int => 是指本地ID
-typedef map<int, GM_MapCourse>  GM_MapNodeCourse;	// int => 是指本地ID
-typedef map<int, int>			GM_MapDBCamera;		// DBCameraID => LocalID
+typedef map<int, GM_MapData>	GM_MapNodeCamera;	// int => 是指数据库DBCameraID
+typedef map<int, GM_MapCourse>  GM_MapNodeCourse;	// int => 是指数据库DBCameraID
 
 class CXmlConfig
 {
@@ -20,7 +19,7 @@ public:
 	BOOL	 GMSaveConfig();
 	BOOL	 GMLoadConfig();
 
-	void	doDelDVR(int nCameraID);
+	void	doDelDVR(int nDBCameraID);
 
 	string & GetCopyRight() { return m_strCopyRight; }
 	string & GetVersion() { return m_strVersion; }
@@ -45,6 +44,7 @@ public:
 	/////////////////////////////////////////////////////////////
 	// 这几个地址和端口是动态获取的，不会存入xml当中...
 	/////////////////////////////////////////////////////////////
+	string & GetWebTag()  { return m_strWebTag; }
 	string & GetWebName() { return m_strWebName; }
 	int		 GetWebType() { return m_nWebType; }
 	string & GetRemoteAddr() { return m_strRemoteAddr; }
@@ -53,14 +53,19 @@ public:
 	int		 GetTrackerPort() { return m_nTrackerPort; }
 	int		 GetSliceVal() { return m_nSliceVal; }
 	int		 GetInterVal() { return m_nInterVal; }
+	int      GetDBGatherID() { return m_nDBGatherID; }
+	int      GetDBHaoYiGatherID() { return m_nDBHaoYiGatherID; }
 	void	 SetRemoteAddr(const string & strAddr) { m_strRemoteAddr = strAddr; }
 	void     SetRemotePort(int nPort) { m_nRemotePort = nPort; }
 	void	 SetTrackerAddr(const string & strAddr) { m_strTrackerAddr = strAddr; }
 	void     SetTrackerPort(int nPort) { m_nTrackerPort = nPort; }
 	void	 SetWebType(int nWebType) { m_nWebType = nWebType; }
 	void	 SetWebName(const string & strWebName) { m_strWebName = strWebName; }
+	void	 SetWebTag(const string & strWebTag) { m_strWebTag = strWebTag; }
 	void	 SetSliceVal(int nSliceVal) { m_nSliceVal = nSliceVal; }
 	void	 SetInterVal(int nInterVal) { m_nInterVal = nInterVal; }
+	void	 SetDBGatherID(int nDBGatherID) { m_nDBGatherID = nDBGatherID; }
+	void     SetDBHaoYiGatherID(int nDBHaoYiID) { m_nDBHaoYiGatherID = nDBHaoYiID; }
 
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
 	void	 SetMainName(const string & strName) { m_strMainName = strName; }
@@ -74,16 +79,15 @@ public:
 	void	 SetSnapStep(int nStep) { m_nSnapStep = nStep; }
 	void     SetRecSlice(int nSlice) { m_nRecSlice = nSlice; }
 
-	void	 SetCamera(int nCameraID, GM_MapData & inMapData) { m_MapNodeCamera[nCameraID] = inMapData; }
-	void	 GetCamera(int nCameraID, GM_MapData & outMapData) { outMapData = m_MapNodeCamera[nCameraID]; }
+	void	 SetCamera(int nDBCameraID, GM_MapData & inMapData) { m_MapNodeCamera[nDBCameraID] = inMapData; }
+	void	 GetCamera(int nDBCameraID, GM_MapData & outMapData) { outMapData = m_MapNodeCamera[nDBCameraID]; }
 	GM_MapNodeCamera & GetNodeCamera() { return m_MapNodeCamera; }
 
-	void	 SetCourse(int nCameraID, GM_MapCourse & inMapCourse);
-	void	 GetCourse(int nCameraID, GM_MapCourse & outMapCourse);
+	void	 SetCourse(int nDBCameraID, GM_MapCourse & inMapCourse);
+	void	 GetCourse(int nDBCameraID, GM_MapCourse & outMapCourse);
 	GM_MapNodeCourse & GetNodeCourse();
 
-	void	SetDBCameraID(int nDBCameraID, int inLocalID) { m_MapDBCamera[nDBCameraID] = inLocalID; }
-	void	GetDBCameraID(int nDBCameraID, int & outLocalID);
+	CString  GetDBCameraTitle(int nDBCameraID);
 
 	BOOL	StreamSnapJpeg(const CString & inSrcMP4File, const CString & inDestJpgName, int nRecSec);
 private:
@@ -112,7 +116,8 @@ private:
 	BOOL				m_bAutoLinkFDFS;				// 自动重连FDFS服务器...
 	string				m_strWebAddr;					// Web的IP地址...
 	int					m_nWebPort;						// Web的端口地址...
-
+	
+	string				m_strWebTag;					// 注册时获取的网站标志
 	string				m_strWebName;					// 注册时获取的网站名称
 	int					m_nWebType;						// 注册时获取的网站类型
 	string				m_strRemoteAddr;				// 远程中转服务器的IP地址...
@@ -121,12 +126,13 @@ private:
 	int					m_nTrackerPort;					// FDFS-Tracker的端口地址...
 	int					m_nSliceVal;					// 录像切片时间(1~30分钟)
 	int					m_nInterVal;					// 切片交错关键帧(1~3个)
+	int                 m_nDBGatherID;					// 数据库中采集端编号...
+	int                 m_nDBHaoYiGatherID;				// 在中心服务器上的采集端编号...
 
 	int					m_nMaxCamera;					// 能够支持的最大摄像头数（默认为16个）
-	GM_MapNodeCamera	m_MapNodeCamera;				// 监控通道配置信息(从1开始)
-	GM_MapNodeCourse	m_MapNodeCourse;				// 监控通道课表记录(数据库ID)
+	GM_MapNodeCamera	m_MapNodeCamera;				// 监控通道配置信息(数据库CameraID）
+	GM_MapNodeCourse	m_MapNodeCourse;				// 监控通道课表记录(数据库CourseID)
 	OSMutex				m_MutexCourse;					// 专门用于课程表的互斥对象
-	GM_MapDBCamera		m_MapDBCamera;					// 摄像头数据编号与本地编号对应映射...
 
 	friend class CHaoYiView;
 };

@@ -237,6 +237,6 @@ GM_Error CHKUdpThread::ForRead()
 	}
 	// 通知管理层，发现一个摄像头，需要进行事件处理...
 	ASSERT( m_lpHaoYiView != NULL );
-	m_lpHaoYiView->doCameraUDPData(theMapData, kCameraHK);
+	m_lpHaoYiView->doMulticastData(theMapData, kCameraHK);
 	return GM_NoErr;
 }
