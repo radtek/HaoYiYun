@@ -98,3 +98,7 @@ body .layui-layout-admin .footer-demo {
   background-repeat:no-repeat;
   background-position:center;
 }
+.btn-add {
+  float: left;
+  margin: 10px 15px 10px 0px;
+}

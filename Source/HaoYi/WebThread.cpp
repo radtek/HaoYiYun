@@ -503,8 +503,7 @@ BOOL CWebThread::doWebGetCamera(int nDBCameraID)
 			const char * theKey = itorItem.memberName();
 			// 包含中文的Key需要进行UTF8格式转换...
 			if( stricmp(theKey, "stream_url") == 0 || stricmp(theKey, "stream_mp4") == 0 || 
-				stricmp(theKey, "camera_name") == 0 || stricmp(theKey, "grade_type") == 0 ||
-				stricmp(theKey, "grade_name") == 0 || stricmp(theKey, "device_user") == 0 ) {
+				stricmp(theKey, "camera_name") == 0 || stricmp(theKey, "device_user") == 0 ) {
 				dbMapCamera[theKey] = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(theDBCamera[theKey]).c_str());
 			} else {
 				dbMapCamera[theKey] = CUtilTool::getJsonString(theDBCamera[theKey]);
@@ -535,7 +534,9 @@ BOOL CWebThread::doWebGetCamera(int nDBCameraID)
 	theConfig.SetCamera(nDBCameraID, dbMapCamera);
 	// 将获取得到的录像课程表存放起来，直接覆盖原来的记录，用数据库编号定位...
 	// 录像课程表都是记录到内存当中，不存入Config.xml当中...
-	theConfig.SetCourse(nDBCameraID, dbMapCourse);
+	if( dbMapCourse.size() > 0 ) {
+		theConfig.SetCourse(nDBCameraID, dbMapCourse);
+	}
 	// 注册摄像头成功，摄像头累加计数...
 	++m_nCurCameraCount;
 	return true;
@@ -588,7 +589,7 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s&device_user=%s&"
 			"device_pass=%s&device_cmd_port=%s&deive_http_port=%s&device_mirror=%s&device_osd=%s&device_desc=%s&device_channel=%s&device_boot=%s",
 			nDBGatherID, nStreamProp, inData["camera_type"].c_str(), szEncName, inData["device_sn"].c_str(), 
-			inData["device_ip"].c_str(), inData["devic_mac"].c_str(), inData["device_type"].c_str(),
+			inData["device_ip"].c_str(), inData["device_mac"].c_str(), inData["device_type"].c_str(),
 			szDeviceUser, szDevicePass, inData["device_cmd_port"].c_str(), inData["device_http_port"].c_str(),
 			inData["device_mirror"].c_str(), inData["device_osd"].c_str(), inData["device_desc"].c_str(),
 			inData["device_channel"].c_str(), inData["device_boot"].c_str());
@@ -722,7 +723,7 @@ BOOL CWebThread::doWebDelCamera(string & inDeviceSN)
 }
 //
 // 向网站汇报通道的运行状态 => 0(等待) 1(运行) 2(录像)...
-BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
+BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode/* = 0*/, LPCTSTR lpszErrMsg/* = NULL*/)
 {
 	// 获取网站配置信息...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -737,7 +738,10 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus)
 	m_strUTF8Data.clear();
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
-	strPost.Format("camera_id=%d&status=%d", nDBCamera, nStatus);
+	TCHAR szErrMsg[MAX_PATH] = {0};
+	string strUTF8Err = ((lpszErrMsg != NULL) ? CUtilTool::ANSI_UTF8(lpszErrMsg) : "");
+	StringParser::EncodeURI(strUTF8Err.c_str(), strUTF8Err.size(), szErrMsg, MAX_PATH);
+	strPost.Format("camera_id=%d&status=%d&err_code=%d&err_msg=%s", nDBCamera, nStatus, nErrCode, szErrMsg);
 	// 组合访问链接地址...
 	strUrl.Format("%s:%d/wxapi.php/Gather/saveCamera", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报摄像头数据...

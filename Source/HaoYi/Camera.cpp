@@ -172,7 +172,7 @@ DWORD CCamera::doDevicePTZCmd(DWORD dwPTZCmd, BOOL bStop)
 }
 //
 // 通知网站通道状态...
-void CCamera::doWebStatCamera(int nStatus)
+void CCamera::doWebStatCamera(int nStatus, int nErrCode/* = 0*/, LPCTSTR lpszErrMsg/* = NULL*/)
 {
 	// 判断 VideoWnd 是否为空...
 	if( m_lpVideoWnd == NULL )
@@ -185,7 +185,7 @@ void CCamera::doWebStatCamera(int nStatus)
 	ASSERT( lpMidView != NULL );
 	// 通过本地编号获取数据库编号...
 	int nDBCameraID = this->GetDBCameraID();
-	lpMidView->doWebStatCamera(nDBCameraID, nStatus);
+	lpMidView->doWebStatCamera(nDBCameraID, nStatus, nErrCode, lpszErrMsg);
 }
 //
 // 设置流数据转发状态...
@@ -244,7 +244,7 @@ void CCamera::onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEI
 		m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 		::PostMessage(m_hWndRight, WM_DEVICE_LOGIN_RESULT, m_nDBCameraID, false);
 		// 通知网站将通道设置为等待状态 => 只有硬件设备会走这条路...
-		this->doWebStatCamera(kCameraWait);
+		this->doWebStatCamera(kCameraWait, m_dwHKErrCode, NET_DVR_GetErrorMsg(&m_dwHKErrCode));
 		// 释放该通道上的资源数据...
 		this->ClearResource();
 		MsgLogGM(m_dwHKErrCode);
@@ -268,7 +268,7 @@ void CCamera::onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEI
 DWORD CCamera::onDeviceLoginSuccess()
 {
 	ASSERT( m_nDBCameraID > 0 );
-	DWORD dwErr = GM_NoErr;
+	LONG dwErr = GM_NoErr;
 	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetCamera(m_nDBCameraID, theMapWeb);
@@ -437,7 +437,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 		m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 		this->ClearResource();
 		// 通知网站将通道设置为等待状态 => 只有硬件设备走这条路...
-		this->doWebStatCamera(kCameraWait);
+		this->doWebStatCamera(kCameraWait, dwErr, NET_DVR_GetErrorMsg(&dwErr));
 		return dwErr;
 	}
 	// 记录登陆状态，返回正确结果...

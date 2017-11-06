@@ -1,6 +1,7 @@
 
 <volist name="my_live" id="vo">
-<tr height="50px" onclick="doTrClick({{$vo.camera_id}},{{$vo.gather_id}},this);">
+<tr height="50px" onclick="doTrClick({{$vo.camera_id}},{{$vo.gather_id}},{{$vo.stream_prop}},this);" title="ID: {{$vo.camera_id}}">
+  <td><input id="c_{{$vo.camera_id}}" type="checkbox" lay-skin="primary"></td>
   <td>
     <gt name="vo.status" value="0">
       <i class="fa fa-tv fa-run">&nbsp;运行中</i>
@@ -8,14 +9,11 @@
       <i class="fa fa-power-off fa-wait">&nbsp;等待中</i>
     </gt>
   </td>
+  <td title="{{$vo.ip_addr}}">{{$vo.name_pc}}</td>
   <eq name='my_web_type' value='0'>
-  <td title="{{$vo.school_name}}">{{$vo.school_name|msubstr=0,10}}</td>
-  <td>{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}</td>
-  <else/>
-  <td align="right">{{$vo.clicks}}&nbsp;次</td>
+  <td>{{$vo.grade_type}}{{$vo.grade_name}}</td>
   </eq>
-  <td align="center">{{$vo.camera_name}}</td>
-  <td>通道{{$vo.camera_id}}</td>
+  <td>{{$vo.camera_name}}</td>
   <td>
     <switch name="vo.stream_prop">
       <case value="0">摄像头</case>

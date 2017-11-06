@@ -34,9 +34,10 @@ public:
 	BOOL			ChangeFullScreen(BOOL bFullScreen);	// 设置全屏模式...
 	CCamera     *	FindDBCameraByID(int nDBCameraID);
 	CCamera		*	FindDBCameraBySN(string & inDeviceSN);
+	CCamera		*	BuildWebCamera(GM_MapData & inWebData);
 	GM_Error		AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType, int & outDBCameraID);
 	GM_Error		doCameraUDPData(GM_MapData & inNetData, CAMERA_TYPE inType, int & outDBCameraID);
-	BOOL			doWebStatCamera(int nDBCamera, int nStatus);
+	BOOL			doWebStatCamera(int nDBCamera, int nStatus, int nErrCode, LPCTSTR lpszErrMsg);
 	string			GetDefaultCameraName();				// 获取默认通道名称...
 private:
 	void			FixVideoWnd();						// 锁定窗口...
@@ -44,7 +45,6 @@ private:
 	void			DestroyResource();					// 销毁资源...
 	void			DrawNotice(CDC * pDC);				// 打印警告...
 	void			DrawBackLine(CDC * pDC);			// 绘制线框...
-	CCamera		*	BuildWebCamera(GM_MapData & inWebData);
 private:
 	CRect			m_rcOrigin;							// 原始矩形区
 	BOOL			m_bIsFullScreen;					// 全屏标志

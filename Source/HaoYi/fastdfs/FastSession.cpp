@@ -834,7 +834,9 @@ GM_Error CRemoteSession::ForRead()
 		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Start_Camera:		  theErr = this->doPHPCameraOperate(lpDataPtr, lpCmdHeader->m_pkg_len, true); break;
 		case kCmd_PHP_Stop_Camera:		  theErr = this->doPHPCameraOperate(lpDataPtr, lpCmdHeader->m_pkg_len, false); break;
-		case kCmd_PHP_Set_Camera_Name:    theErr = this->doPHPSetCameraName(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Set_Camera_Add:     theErr = this->doPHPSetCameraAdd(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Set_Camera_Mod:     theErr = this->doPHPSetCameraMod(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_PHP_Set_Camera_Del:     theErr = this->doPHPSetCameraDel(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Set_Course_Mod:     theErr = this->doPHPSetCourseOpt(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Get_Course_Record:  theErr = this->doPHPGetCourseRecord(m_strRecv); break;
 		//case kCmd_PHP_Set_Course_Add:     theErr = this->doPHPSetCourseOpt(CHaoYiView::kAddCourse, lpDataPtr, lpCmdHeader->m_pkg_len); break;
@@ -1054,11 +1056,116 @@ GM_Error CRemoteSession::doCmdPlayLogin(string & inData)
 	// 调用统一的发送接口...
 	return this->SendData(szSendBuf, nSendSize);
 }*/
+
+GM_Error CRemoteSession::doPHPSetCameraAdd(LPCTSTR lpData, int nSize)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strANSIData;
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	strANSIData = CUtilTool::UTF8_ANSI(strUTF8Data.c_str());
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strANSIData, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 判断获取数据的有效性...
+	if( !value.isMember("camera_id") ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取通道编号...
+	int nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
+	// 判断获取数据的有效性...
+	if( nDBCameraID <= 0 ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 根据本地编号获取摄像头对象...
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
+	if( lpCamera != NULL ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	ASSERT( lpCamera == NULL );
+	// 获取通道下已有的配置...
+	GM_MapData	dbMapCamera;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	// 算子itorItem必须放在内部定义，否则，会出现越界问题...
+	for(Json::Value::iterator itorItem = value.begin(); itorItem != value.end(); ++itorItem) {
+		const char * theKey = itorItem.memberName();
+		// 去掉无用的数据...
+		if( stricmp(theKey, "mac_addr") == 0 )
+			continue;
+		// 包含中文的Key需要进行UTF8格式转换...
+		if( stricmp(theKey, "stream_url") == 0 || stricmp(theKey, "stream_mp4") == 0 || 
+			stricmp(theKey, "camera_name") == 0 || stricmp(theKey, "device_user") == 0 ) {
+			dbMapCamera[theKey] = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value[theKey]).c_str());
+		} else {
+			dbMapCamera[theKey] = CUtilTool::getJsonString(value[theKey]);
+		}
+	}
+	// 将新的通道配置直接更新到内存当中...
+	theConfig.SetCamera(nDBCameraID, dbMapCamera);
+	// 通过消息发起添加操作...
+	m_lpHaoYiView->PostMessage(WM_ADD_BY_TRANSMIT_MSG, nDBCameraID);
+	return GM_NoErr;
+}
+
+GM_Error CRemoteSession::doPHPSetCameraDel(LPCTSTR lpData, int nSize)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strANSIData;
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	strANSIData = CUtilTool::UTF8_ANSI(strUTF8Data.c_str());
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strANSIData, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 判断获取数据的有效性...
+	if( !value.isMember("camera_id") ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取通道编号...
+	int nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
+	// 判断获取数据的有效性...
+	if( nDBCameraID <= 0 ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 根据本地编号获取摄像头对象...
+	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
+	if( lpCamera == NULL ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	ASSERT( lpCamera != NULL );
+	// 为了保险起见，通过消息删除通道...
+	m_lpHaoYiView->PostMessage(WM_DEL_BY_TRANSMIT_MSG, nDBCameraID);
+	return GM_NoErr;
+}
 //
 // 处理PHP客服端发送的设置摄像头名称命令...
 // 数据格式 => Cmd_Header + JSON...
 // JSON格式 => camera_id: xxx, camera_name: xxx...
-GM_Error CRemoteSession::doPHPSetCameraName(LPCTSTR lpData, int nSize)
+GM_Error CRemoteSession::doPHPSetCameraMod(LPCTSTR lpData, int nSize)
 {
 	// 判断输入数据的有效性...
 	if( nSize <= 0 || lpData == NULL )
@@ -1083,45 +1190,42 @@ GM_Error CRemoteSession::doPHPSetCameraName(LPCTSTR lpData, int nSize)
 		return GM_NoErr;
 	}
 	// 获取通道编号...
-	int nDBCameraID = 0;
-	Json::Value & theDBCameraID = value["camera_id"];
-	if( theDBCameraID.isString() ) {
-		nDBCameraID = atoi(theDBCameraID.asString().c_str());
-	} else if( theDBCameraID.isInt() ) {
-		nDBCameraID = theDBCameraID.asInt();
-	}
-	// 获取通道名称...
-	string strDBCameraName;
-	Json::Value & theCameraName = value["camera_name"];
-	if( theCameraName.isString() ) {
-		string & strName = theCameraName.asString();
-		strDBCameraName = CUtilTool::UTF8_ANSI(strName.c_str());
-	}
+	int nDBCameraID = atoi(CUtilTool::getJsonString(value["camera_id"]).c_str());
 	// 判断获取数据的有效性...
-	if( nDBCameraID <= 0 || strDBCameraName.size() <= 0 ) {
+	if( nDBCameraID <= 0 ) {
 		MsgLogGM(theErr);
 		return GM_NoErr;
 	}
-	// 开始查找对应的摄像头本地编号...
-	/*int nLocalID = -1;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetDBCameraID(nDBCameraID, nLocalID);
-	if(  nLocalID <= 0  )
-		return GM_NoErr;
-	ASSERT( nLocalID > 0 );*/
 	// 根据本地编号获取摄像头对象...
 	CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
-	if( lpCamera == NULL )
+	if( lpCamera == NULL ) {
+		MsgLogGM(theErr);
 		return GM_NoErr;
+	}
 	ASSERT( lpCamera != NULL );
-	// 将获取的摄像头名称更新到配置文件当中...
-	/*GM_MapData theMapLoc;
-	theConfig.GetCamera(nLocalID, theMapLoc);
-	theMapLoc["Name"] = strDBCameraName;
-	theConfig.SetCamera(nLocalID, theMapLoc);*/
+	// 获取通道下已有的配置...
+	GM_MapData	dbMapCamera;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(nDBCameraID, dbMapCamera);
+	// 算子itorItem必须放在内部定义，否则，会出现越界问题...
+	for(Json::Value::iterator itorItem = value.begin(); itorItem != value.end(); ++itorItem) {
+		const char * theKey = itorItem.memberName();
+		// 去掉无用的数据...
+		if( stricmp(theKey, "mac_addr") == 0 )
+			continue;
+		// 包含中文的Key需要进行UTF8格式转换...
+		if( stricmp(theKey, "stream_url") == 0 || stricmp(theKey, "stream_mp4") == 0 || 
+			stricmp(theKey, "camera_name") == 0 || stricmp(theKey, "device_user") == 0 ) {
+			dbMapCamera[theKey] = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value[theKey]).c_str());
+		} else {
+			dbMapCamera[theKey] = CUtilTool::getJsonString(value[theKey]);
+		}
+	}
+	// 将新的通道配置直接更新到内存当中...
+	theConfig.SetCamera(nDBCameraID, dbMapCamera);
 	// 将获取的摄像头名称更新到摄像头窗口对象当中...
-	CString strTitleName = strDBCameraName.c_str();
-	STREAM_PROP theProp = lpCamera->GetStreamProp();
+	CString strTitleName = dbMapCamera["camera_name"].c_str();
+	STREAM_PROP theProp = (STREAM_PROP)atoi(dbMapCamera["stream_prop"].c_str());
 	lpCamera->UpdateWndTitle(theProp, strTitleName);
 	// 调用父窗口接口，更新右侧和左侧焦点窗口的摄像头名称...
 	m_lpHaoYiView->UpdateFocusTitle(nDBCameraID, strTitleName);

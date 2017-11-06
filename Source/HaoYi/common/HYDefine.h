@@ -110,6 +110,8 @@ using namespace std;
 #define WM_REC_SLICE_MSG			(WM_USER + 503)			// 录像切片通知消息
 #define WM_EVENT_SESSION_MSG		(WM_USER + 504)			// 事件会话通知消息
 #define WM_STOP_LIVE_PUSH_MSG		(WM_USER + 505)			// 停止流上传通知消息
+#define	WM_DEL_BY_TRANSMIT_MSG		(WM_USER + 506)			// 中转服务器发起的删除通道指令
+#define	WM_ADD_BY_TRANSMIT_MSG		(WM_USER + 507)			// 中转服务器发起的添加通道指令
 
 typedef	enum AUTH_STATE {
 	kAuthRegister	= 1,		// 网站注册授权

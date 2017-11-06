@@ -243,7 +243,7 @@ string CMidView::GetDefaultCameraName()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	switch( theConfig.GetWebType() )
 	{
-	case kCloudRecorder: strDefName = "直播通道"; break;
+	case kCloudRecorder: strDefName = "一班"; break;
 	case kCloudMonitor:	 strDefName = "监控通道"; break;
 	default:			 strDefName = "直播通道"; break;
 	}
@@ -410,6 +410,7 @@ void CMidView::DrawNotice(CDC * pDC)
 	CRect   rcRect;
 	CFont   fontLogo;
 	CFont * pOldFont = NULL;
+	// 只要有子窗口存在就不绘制...
 	if( m_MapVideo.size() > 0 )
 		return;
 	ASSERT( m_MapVideo.size() <= 0 );
@@ -606,9 +607,9 @@ BOOL CMidView::ChangeFullScreen( BOOL bFullScreen )
 	return TRUE;
 }
 
-BOOL CMidView::doWebStatCamera(int nDBCamera, int nStatus)
+BOOL CMidView::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode, LPCTSTR lpszErrMsg)
 {
 	if( m_lpParentDlg == NULL ) 
 		return false;
-	return m_lpParentDlg->doWebStatCamera(nDBCamera, nStatus);
+	return m_lpParentDlg->doWebStatCamera(nDBCamera, nStatus, nErrCode, lpszErrMsg);
 }

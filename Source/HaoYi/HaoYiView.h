@@ -68,6 +68,8 @@ protected:
 	afx_msg LRESULT OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgReloadView(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgDelByTransmit(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgAddByTransmit(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -107,7 +109,7 @@ public:
 	void			doMulticastData(GM_MapData & inNetData, CAMERA_TYPE inType);
 	BOOL			doWebRegCamera(GM_MapData & inData);// 向网站注册摄像头...
 	BOOL			doWebDelCamera(string & inDeviceSN);// 向网站删除摄像头...
-	BOOL			doWebStatCamera(int nDBCamera, int nStatus);
+	BOOL			doWebStatCamera(int nDBCamera, int nStatus, int nErrCode = 0, LPCTSTR lpszErrMsg = NULL);
 
 	int				GetNextAutoID(int nCurDBCameraID);	// 得到下一个窗口编号...
 	int				GetDBCameraStatusByID(int nDBCameraID);

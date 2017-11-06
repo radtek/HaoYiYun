@@ -154,8 +154,8 @@ class GatherAction extends Action
         $arrErr['err_msg'] = "没有找到指定通道的配置信息！";
         break;
       }
-      // 设置默认的扩展名称...
-      $dbCamera['grade_name'] = "";
+      // 2017.11.02 - by jackey => 去掉了年级信息...
+      /*$dbCamera['grade_name'] = "";
       $dbCamera['grade_type'] = "";
       // 如果grade_id有效，则需要组合年级名称...
       if( $dbCamera['grade_id'] > 0 ) {
@@ -163,7 +163,13 @@ class GatherAction extends Action
         $dbGrade = D('grade')->where($condition)->field('grade_type,grade_name')->find();
         $dbCamera['grade_name'] = $dbGrade['grade_name'];
         $dbCamera['grade_type'] = $dbGrade['grade_type'];
-      }
+      }*/
+      // 去掉一些采集端不需要的字段，减少数据量...
+      unset($dbCamera['err_code']);
+      unset($dbCamera['err_msg']);
+      unset($dbCamera['created']);
+      unset($dbCamera['updated']);
+      unset($dbCamera['clicks']);
       // 将通道配置组合起来，反馈给采集端...
       $arrErr['camera'] = $dbCamera;
       // 读取该通道下的所有录像课程表，反馈给采集端...
@@ -227,6 +233,9 @@ class GatherAction extends Action
   */
   public function delCamera()
   {
+    ////////////////////////////////////////////////////
+    // 注意：用device_sn有点麻烦，最好改成camera_id...
+    ////////////////////////////////////////////////////
     // 准备返回数据结构...
     $arrErr['err_code'] = false;
     $arrErr['err_msg'] = "OK";
@@ -243,6 +252,16 @@ class GatherAction extends Action
       D('camera')->where($map)->delete();
       // 这里还需要删除对应的录像课程表记录...
       D('course')->where($dbCamera)->delete();
+      // 删除通道下面所有的录像文件和截图...
+      $arrList = D('RecordView')->where($dbCamera)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs')->select();
+      foreach ($arrList as &$dbVod) {
+        // 删除图片和视频文件，逐一删除...
+        fastdfs_storage_delete_file1($dbVod['file_fdfs']);
+        fastdfs_storage_delete_file1($dbVod['image_fdfs']);
+        // 删除图片记录和视频记录...
+        D('record')->delete($dbVod['record_id']);
+        D('image')->delete($dbVod['image_id']);
+      }
       // 返回摄像头在数据库中的编号...
       $arrErr['camera_id'] = $dbCamera['camera_id'];
     }while( false );

@@ -19,7 +19,7 @@
         </fieldset>
         <span class="layui-breadcrumb">
           <a><cite>录像列表</cite></a>
-          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+          <a><cite id="myTotal">共 {{$my_total_num}} 条记录</cite></a>
         </span>
         <div class="layui-form" style="margin-top:10px;width:100%">
           <table class="layui-table">
@@ -253,6 +253,8 @@ function doDelVod() {
         // 解析返回的当前页码和总页面数...
         var arrJson = $.parseJSON(ajaxData);
         doGetPageVod(arrJson.curr, arrJson.total);
+        // 更新删除后的记录总数...
+        $('#myTotal').text("共 "+arrJson.total+" 条记录");
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
@@ -262,7 +264,7 @@ function doDelVod() {
   });
 }
 //
-// 处理 layui 过程...
+// 处理 layui 过程 => checkbox 必须配合 layui-form 使用...
 layui.use(['element','laypage','layer','form'], function(){
   var total_num = {{$my_total_num}};
   var form = layui.form;

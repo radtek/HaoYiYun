@@ -51,7 +51,7 @@ public:
 	void		doPostStopLiveMsg();
 	void		doDeletePushThread();
 
-	void		doWebStatCamera(int nStatus);
+	void		doWebStatCamera(int nStatus, int nErrCode = 0, LPCTSTR lpszErrMsg = NULL);
 private:
 	static void CALLBACK DeviceLoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
 private:

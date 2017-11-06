@@ -127,9 +127,10 @@ private:
 	GM_Error    doCmdPlayLogin(string & inData);
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);
 	GM_Error	doPHPSetCourseOpt(LPCTSTR lpData, int nSize);
-	GM_Error	doPHPSetCameraName(LPCTSTR lpData, int nSize);
+	GM_Error	doPHPSetCameraAdd(LPCTSTR lpData, int nSize);
+	GM_Error	doPHPSetCameraMod(LPCTSTR lpData, int nSize);
+	GM_Error	doPHPSetCameraDel(LPCTSTR lpData, int nSize);
 	GM_Error	doPHPCameraOperate(LPCTSTR lpData, int nSize, BOOL bIsStart);
-	//GM_Error	doPHPGetCameraStatus(string & inData);
 	GM_Error	doPHPGetCourseRecord(string & inData);
 	GM_Error	SendData(LPCTSTR lpDataPtr, int nDataSize);
 	GM_Error	SendLoginCmd();

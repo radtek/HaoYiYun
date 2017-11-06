@@ -838,21 +838,6 @@ class AdminAction extends Action
   // 获取摄像头详情数据...
   public function getCamera()
   {
-    /*$this->assign('my_title', $this->m_webTitle . " - 摄像头");
-    $this->assign('my_command', 'gather');
-    // 获取传递过来的参数信息...
-    $theCameraID = $_GET['camera_id'];
-    if( $theCameraID > 0 ) {
-      $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-      $map['camera_id'] = $theCameraID;
-      $dbCamera = D('camera')->where($map)->find();
-      $this->assign('my_camera', $dbCamera);
-      $this->assign('my_new_title', "修改 - 摄像头");
-      $this->assign('my_list_grade', $arrGrade);
-      $this->display();
-    } else {
-      echo '摄像头不能通过网站添加！';
-    }*/
     $map['camera_id'] = $_GET['camera_id'];
     $dbCamera = D('camera')->where($map)->find();
     // 获取年级列表 => 云录播模式...
@@ -864,59 +849,167 @@ class AdminAction extends Action
     echo $this->display();
   }
   //
-  // 保存修改后的摄像头数据...
-  public function saveCamera()
+  // 获取新通道页面...
+  public function getLiveCamera()
   {
+    // 获取采集端列表...
+    $arrGather = D('gather')->field('gather_id,name_pc,ip_addr')->order('gather_id DESC')->select();
+    // 没有采集端，返回错误...
+    if( count($arrGather) < 0 ) {
+      $this->assign('my_msg_title', '没有【采集端】，无法添加直播通道！');
+      echo $this->fetch('Common:error_page');
+      return;
+    }
+    $this->assign('my_list_gather', $arrGather);
+    // 获取年级列表...
+    $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
+    $this->assign('my_list_grade', $arrGrade);
+    // 设置默认的采集端、流类型、年级...
+    $dbCamera['stream_prop'] = 1;
+    $dbCamera['grade_id'] = $arrGrade[0]['grade_id'];
+    $dbCamera['gather_id'] = $arrGather[0]['gather_id'];
+    $this->assign('my_live', $dbCamera);
+    // 返回构造好的数据...
+    echo $this->fetch('liveCamera');
+  }
+  //
+  // 添加直播通道...
+  public function addCamera()
+  {
+    // 先将数据存盘...
+    $dbCamera = $_POST;
+    $dbCamera['created'] = date('Y-m-d H:i:s');
+    $dbCamera['updated'] = date('Y-m-d H:i:s');
+    // 计算device_sn标识符号 => 使用多重操作...
+    //list($msec, $sec) = explode(' ', microtime());
+    //$msectime = (float)sprintf('%.0f', (floatval($msec) + floatval($sec)) * 10000);
+    $dbCamera['device_sn'] = md5(uniqid(md5(microtime(true)),true));
+    $dbCamera['camera_id'] = D('camera')->add($dbCamera);
+
+    // 获取采集端的mac_addr地址...
+    $condition['gather_id'] = $dbCamera['gather_id'];
+    $dbGather = D('gather')->where($condition)->field('mac_addr')->find();
+    $dbCamera['mac_addr'] = $dbGather['mac_addr'];
+    // 连接中转服务器...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 连接成功，执行中转命令...
+    if( $transmit ) {
+      // 将参数转换成json数据包，发起添加命令...
+      $saveJson = json_encode($dbCamera);
+      $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Add, $transmit, $saveJson);
+      logdebug($json_data);
+      // 关闭中转服务器链接...
+      transmit_disconnect_server($transmit);
+    }
+  }
+  //
+  // 删除直播通道列表...
+  public function delCamera()
+  {
+    //////////////////////////////////
+    // 下面是针对采集端的删除操作...
+    //////////////////////////////////
+    // 组合通道查询条件...
+    $map['camera_id'] = array('in', $_POST['list']);
+    // 连接中转服务器...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 连接成功，执行中转命令...
+    if( $transmit ) {
+      // 查询通道列表...
+      $arrLive = D('LiveView')->where($map)->field('camera_id,gather_id,mac_addr')->select();
+      // 遍历每一个通道，发起删除指令...
+      foreach($arrLive as &$dbItem) {
+        $saveJson = json_encode($dbItem);
+        $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Del, $transmit, $saveJson);
+      }
+      // 关闭中转服务器链接...
+      transmit_disconnect_server($transmit);
+    }
+    ///////////////////////////////////
+    // 下面是针对数据库的删除操作...
+    ///////////////////////////////////
+    // 1. 删除该通道下对应的录像课程表...
+    D('course')->where($map)->delete();
+    // 2. 删除该通道下对应的录像文件、录像图片...
+    $arrList = D('RecordView')->where($map)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs')->select();
+    foreach ($arrList as &$dbVod) {
+      // 删除图片和视频文件，逐一删除...
+      fastdfs_storage_delete_file1($dbVod['file_fdfs']);
+      fastdfs_storage_delete_file1($dbVod['image_fdfs']);
+      // 删除图片记录和视频记录...
+      D('record')->delete($dbVod['record_id']);
+      D('image')->delete($dbVod['image_id']);
+    }
+    // 3. 直接删除通道列表数据...
+    D('camera')->where($map)->delete();
+    ///////////////////////////////////
+    // 下面是重新获取新的分页数据...
+    ///////////////////////////////////
+    // 得到每页条数，总记录数，计算总页数...
+    $pagePer = C('PAGE_PER');
+    $totalNum = D('camera')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 重新计算当前页面编号，总页面数...
+    if( $max_page <= 0 ) {
+      $arrJson['curr'] = 0;
+      $arrJson['pages'] = 0;
+      $arrJson['total'] = $totalNum;
+    } else {
+      $nCurPage = (($_POST['page'] > $max_page) ? $max_page : $_POST['page']);
+      $arrJson['curr'] = $nCurPage;
+      $arrJson['pages'] = $max_page;
+      $arrJson['total'] = $totalNum;
+    }
+    // 返回json数据包...
+    echo json_encode($arrJson);
+  }
+  //
+  // 保存修改后的摄像头数据...
+  public function modCamera()
+  {
+    // 准备返回数据...
+    $arrData['err_code'] = false;
+    $arrData['err_msg'] = 'OK';
+
+    // 对device_pass进行base64处理...
+    if( isset($_POST['device_pass']) ) {
+      $_POST['device_pass'] = base64_encode($_POST['device_pass']);
+    }
+
     // 先将摄像头信息存入数据库当中...
     $_POST['updated'] = date('Y-m-d H:i:s');
-    // 云监控模式下，删除变量...
-    if( $this->m_webType > 0 ) {
-      unset($_POST['grade_id']);
-      unset($_POST['grade_name']);
-    }
     D('camera')->save($_POST);
 
     // 再将摄像头名称转发给对应的采集端...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
     
-    /*// 获取转发节点的MAC地址...
+    // 通过php扩展插件连接中转服务器 => 性能高...
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    if( !$transmit ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '无法连接中转服务器。';
+      echo json_encode($arrData);
+      return;
+    }
+    // 转发设置摄像头配置到采集端...
+    // 获取转发节点的MAC地址...
     $map['gather_id'] = $_POST['gather_id'];
     $dbGather = D('gather')->where($map)->field('mac_addr')->find();
     // 组合摄像头数据成JSON...
-    $dbCamera['camera_id'] = $_POST['camera_id'];
-    $dbCamera['camera_name'] = sprintf("%s %s", $_POST['grade_name'], $_POST['camera_name']);
+    $dbCamera = $_POST;
+    unset($dbCamera['updated']);
     $dbCamera['mac_addr'] = $dbGather['mac_addr'];
     $saveJson = json_encode($dbCamera);
     // 发送转发命令...
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Set_Camera_Name, $saveJson);
+    $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Mod, $transmit, $saveJson);
+    // 关闭中转服务器链接...
+    transmit_disconnect_server($transmit);
     // 反馈转发结果...
-    echo $json_data;*/
-
-    // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    // 转发设置摄像头名称命令...
-    if( $transmit ) {
-      // 获取转发节点的MAC地址...
-      $map['gather_id'] = $_POST['gather_id'];
-      $dbGather = D('gather')->where($map)->field('mac_addr')->find();
-      // 组合摄像头数据成JSON...
-      $dbCamera['camera_id'] = $_POST['camera_id'];
-      if( $this->m_webType > 0 ) {
-        // 云监控模式...
-        $dbCamera['camera_name'] = $_POST['camera_name'];
-      } else {
-        // 云录播模式...
-        $dbCamera['camera_name'] = sprintf("%s %s", $_POST['grade_name'], $_POST['camera_name']);
-      }
-      $dbCamera['mac_addr'] = $dbGather['mac_addr'];
-      $saveJson = json_encode($dbCamera);
-      // 发送转发命令...
-      $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Name, $transmit, $saveJson);
-      // 关闭中转服务器链接...
-      transmit_disconnect_server($transmit);
-      // 反馈转发结果...
-      echo $json_data;
-    }
+    echo $json_data;
   }
   //
   // 操作指定通道 => 启动或停止...
@@ -957,13 +1050,13 @@ class AdminAction extends Action
     // 将数组再次转换成json返回...
     echo json_encode($arrData);
   }
-    //
+  //
   // 读取通道的运行状态...
   public function getCameraStatus()
   {
     $map['camera_id'] = $_GET['camera_id'];
-    $dbCamera = D('camera')->where($map)->field('camera_id,status')->find();
-    echo $dbCamera['status'];
+    $dbCamera = D('camera')->where($map)->field('camera_id,status,err_code,err_msg')->find();
+    echo json_encode($dbCamera);
   }
   //
   // 获取编辑时间对话框...
@@ -1472,6 +1565,7 @@ class AdminAction extends Action
     // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
     $map['camera_id'] = $_GET['camera_id'];
     $dbCamera = D('camera')->where($map)->find();
+    $dbCamera['device_pass'] = base64_decode($dbCamera['device_pass']);
     $this->assign('my_live', $dbCamera);
     // 获取年级列表 => 云录播模式...
     if( $this->m_webType <= 0 ) {
@@ -1575,9 +1669,9 @@ class AdminAction extends Action
   // 删除点播文件列表...
   public function delVod()
   {
-    // 通过ID编号列表获取路线记录
+    // 通过ID编号列表获取录像记录
     $map['record_id'] = array('in', $_POST['list']);
-    $arrList = D('RecordView')->where($map)->field('record_id,file_fdfs,image_id,image_fdfs')->select();
+    $arrList = D('RecordView')->where($map)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs')->select();
     foreach ($arrList as &$dbItem) {
       // 删除图片和视频文件，逐一删除...
       fastdfs_storage_delete_file1($dbItem['file_fdfs']);

@@ -45,6 +45,8 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE_DEVICE, &CHaoYiView::OnSelchangedTreeDevice)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
+	ON_MESSAGE(WM_ADD_BY_TRANSMIT_MSG, &CHaoYiView::OnMsgAddByTransmit)
+	ON_MESSAGE(WM_DEL_BY_TRANSMIT_MSG, &CHaoYiView::OnMsgDelByTransmit)
 	ON_MESSAGE(WM_WEB_LOAD_RESOURCE,&CHaoYiView::OnMsgWebLoadResource)
 	ON_MESSAGE(WM_WEB_AUTH_RESULT,&CHaoYiView::OnMsgWebAuthResult)
 	ON_MESSAGE(WM_EVENT_SESSION_MSG, &CHaoYiView::OnMsgEventSession)
@@ -89,11 +91,11 @@ CHaoYiView::~CHaoYiView()
 {
 }
 
-BOOL CHaoYiView::doWebStatCamera(int nDBCamera, int nStatus)
+BOOL CHaoYiView::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode/* = 0*/, LPCTSTR lpszErrMsg/* = NULL*/)
 {
 	if( m_lpWebThread == NULL )
 		return false;
-	return m_lpWebThread->doWebStatCamera(nDBCamera, nStatus);
+	return m_lpWebThread->doWebStatCamera(nDBCamera, nStatus, nErrCode, lpszErrMsg);
 }
 
 void CHaoYiView::OnDestroy()
@@ -1400,6 +1402,46 @@ void CHaoYiView::OnAddDVR()
 	m_RightView.doFocusDBCamera(outDBCameraID);
 	// 添加成功，直接运行...
 	this->OnLoginDVR();
+}
+//
+// 网络命令发起的添加操作...
+LRESULT CHaoYiView::OnMsgAddByTransmit(WPARAM wParam, LPARAM lParam)
+{
+	//////////////////////////////////////////////////////
+	// 注意：由于是网站发起的指令，不用向网站汇报了...
+	//////////////////////////////////////////////////////
+	int nDBCameraID = wParam;
+	GM_MapData theWebData;
+	CCamera * lpCamera = NULL;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.GetCamera(nDBCameraID, theWebData);
+	lpCamera = m_lpMidView->BuildWebCamera(theWebData);
+	if( lpCamera == NULL )
+		return S_OK;
+	// 必须先保存焦点，否则会发生定位错误...
+	m_nFocusDBCamera = nDBCameraID;
+	m_lpMidView->doLeftFocus(nDBCameraID);
+	m_RightView.doFocusDBCamera(nDBCameraID);
+	// 添加成功，直接运行...
+	this->OnLoginDVR();
+	return S_OK;
+}
+//
+// 网络命令发起的删除操作...
+LRESULT CHaoYiView::OnMsgDelByTransmit(WPARAM wParam, LPARAM lParam)
+{
+	//////////////////////////////////////////////////////
+	// 注意：由于是网站发起的指令，不用向网站汇报了...
+	//////////////////////////////////////////////////////
+	int nDBCameraID = wParam;
+	// 左侧窗口发起删除操作...
+	this->doDelTreeFocus(nDBCameraID);
+	// 中间窗口发起删除操作...
+	m_lpMidView->doDelDVR(nDBCameraID);
+	// 配置文件发起删除操作...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.doDelDVR(nDBCameraID);
+	return S_OK;
 }
 //
 // 点击菜单 => 删除通道...
