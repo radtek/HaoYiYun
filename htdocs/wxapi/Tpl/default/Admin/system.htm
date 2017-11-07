@@ -7,17 +7,10 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - <eq name='my_web_type' value='0'>云录播模式<else/>云监控模式</eq></i></legend>
+          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - 云录播模式</i></legend>
         </fieldset>
         <div class="layui-field-box" style="padding: 0px 0px; width: 50%;">
           <form class="layui-form layui-form-pane" action="">
-            <div class="layui-form-item" pane>
-              <label class="layui-form-label">模式选择</label>
-              <div class="layui-input-block">
-                <input type="radio" lay-filter="modeType" name="myWebType" value="0" title="录播模式" <eq name='my_web_type' value='0'>checked</eq> >
-                <input type="radio" lay-filter="modeType" name="myWebType" value="1" title="监控模式" <eq name='my_web_type' value='1'>checked</eq> >
-              </div>
-            </div>
             <div class="layui-form-item">
               <label class="layui-form-label">本站标记</label>
               <div class="layui-input-block">
@@ -36,7 +29,7 @@
                 <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_sys.sys_site}}">
               </div>
             </div>
-            <div id="recSlice" <eq name='my_web_type' value='0'>style="display:none"<else/>style="display:block"</eq> >
+            <div id="recSlice">
               <div class="layui-form-item">
                 <label class="layui-form-label">录像切片</label>
                 <div class="layui-input-inline" style="width:100px;">
@@ -87,7 +80,6 @@ layui.use(['element','layer','form'], function(){
     var theInterVal = parseInt(data.field.myInterVal);
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
-    var theType = data.field.myWebType;
     // 判读切片时间、切片交错的有效性 => 必须是数字...
     if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
       layer.msg('请输入 0 ~ 30 之间的整数！', {anim: 6});
@@ -105,7 +97,7 @@ layui.use(['element','layer','form'], function(){
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_type: theType, web_title: theTitle, sys_site: theSite, slice_val: theSliceVal, inter_val: theInterVal},
+      data: {operate: 'save', web_title: theTitle, sys_site: theSite, slice_val: theSliceVal, inter_val: theInterVal},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');

@@ -8,34 +8,27 @@ class HomeAction extends Action
 {
   public function _initialize()
   {
-    // 获取系统配置，根据配置设置相关变量...
+    // 获取系统配置，根据配置设置相关变量 => 强制配置成云录播...
     $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
-    $this->m_webType = $dbSys['web_type'];
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_sysSite = $dbSys['sys_site'];
+    $this->m_webType = kCloudRecorder;
     // 创建一个新的移动检测对象...
     $this->m_detect = new Mobile_Detect();
     //////////////////////////////////////////////
     // 移动端访问了电脑端页面，直接对页面进行跳转...
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
-      //$strMobile = (($this->m_webType > 0) ? '/MobileMonitor/index' : '/MobileRecord/index');
-      //header("location:" . __APP__ . $strMobile);
       header("location: /Mobile");
-    }
-    // 确定是PC端访问，如果是监控模式，再次分发...
-    if( $this->m_webType > 0 ) {
-      header("location:" . __APP__ . '/Monitor/index');
     }
     // 如果是录播模式，设置常量信息...
     $this->m_webAction = "Home";
     $this->m_webLogo = "default";
-    $this->m_webName = "云录播";
     // 直接给模板变量赋值...
     $this->assign('my_web_action', $this->m_webAction);
     $this->assign('my_web_logo', $this->m_webLogo);
-    $this->assign('my_web_name', $this->m_webName);
     $this->assign('my_sys_site', $this->m_sysSite);
+    $this->assign('my_web_title', $this->m_webTitle);
   }
   //
   // 点击查看用户登录信息...

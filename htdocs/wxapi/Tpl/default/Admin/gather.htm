@@ -22,7 +22,7 @@
               <col width="80">
               <col width="100">
               <col width="100">
-              <col width="100">
+              <!--<col width="100">-->
             </colgroup>
             <thead>
               <tr>
@@ -31,12 +31,8 @@
                 <th>机器名</th>
                 <th>MAC地址</th>
                 <th>最大通道数</th>
-                <eq name='my_web_type' value='0'>
                 <th>所在学校</th>
-                <else/>
-                <th>名称标识</th>
-                </eq>
-                <th>操作</th>
+                <!--<th>操作</th>-->
               </tr> 
             </thead>
             <tbody class="js_gather">
@@ -58,7 +54,6 @@ var siteurl="{{:__APP__}}";
 function doModify(inGatherID, objTr)
 {
   // 向服务器发送直播状态查看命令...
-  var nWebType = {{$my_web_type}};
   var index = layer.load(2);
   var $ = layui.jquery;
   // 先将背景色进行修改...
@@ -84,19 +79,13 @@ function doModify(inGatherID, objTr)
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formGather)', function(data) {
-            var theSchoolID = 0, theSchoolName = "", theNameSet = "";
-            if( nWebType > 0 ) {
-              // 云监控模式...
-              theNameSet = data.field.myNameSet;
-            } else {
-              // 云录播模式...
-              theSchoolID = data.field.mySchool;
-              theSchoolName = $("select[name='mySchool']").find("option:selected").text();
-              // 判断输入数据的有效性...
-              if( theSchoolID <= 0 ) {
-                layer.msg('【所在学校】不能为空，请更正！', {icon: 2});
-                return false;
-              }
+            // 云录播模式...
+            var theSchoolID = data.field.mySchool;
+            var theSchoolName = $("select[name='mySchool']").find("option:selected").text();
+            // 判断输入数据的有效性...
+            if( theSchoolID <= 0 ) {
+              layer.msg('【所在学校】不能为空，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2});
+              return false;
             }
             // 通过ajax异步发送存盘命令...
             layer.load(2);
@@ -104,18 +93,11 @@ function doModify(inGatherID, objTr)
               type: "post",
               async: true,
               url: siteurl+"/Admin/saveGather",
-              data: {gather_id: inGatherID, school_id: theSchoolID, name_set: theNameSet},
+              data: {gather_id: inGatherID, school_id: theSchoolID},
               success: function(ajaxData) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
-                  //location.href = siteurl+"/Admin/gather";
-                  if( nWebType > 0 ) {
-                    // 云监控模式...
-                    $(objTr).children('td').eq(5).text(theNameSet);
-                  } else {
-                    // 云录播模式...
-                    $(objTr).children('td').eq(5).text(theSchoolName);
-                  }
+                  $(objTr).children('td').eq(5).text(theSchoolName);
                   layer.closeAll('page');
                 });
               },
@@ -142,12 +124,12 @@ function doModify(inGatherID, objTr)
 }
 //
 // 打开摄像头页面...
-function doCamera(inGatherID)
+/*function doCamera(inGatherID)
 {
   // 需要兼容IE8...
   stopPropagation(event);
-  location.href = siteurl+"/Admin/camera/gather_id/"+inGatherID;
-}
+  location.href = siteurl+"/Admin/live/gather_id/"+inGatherID;
+}*/
 //
 // 处理 layui 过程...
 layui.use(['element','laypage','layer','form'], function(){

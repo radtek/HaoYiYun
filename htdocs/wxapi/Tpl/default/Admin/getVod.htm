@@ -12,7 +12,6 @@
 
 <div class="layui-field-box">
   <form class="layui-form layui-form-pane" action="">
-    <eq name='my_web_type' value='0'>
     <div class="layui-form-item">
       <label class="layui-form-label">科目</label>
       <div class="layui-input-block">
@@ -41,34 +40,6 @@
         </label>
       </div>
     </div>
-    <else/>
-    <div class="layui-form-item">
-      <label class="layui-form-label">所在通道</label>
-      <div class="layui-input-block">
-        <select name="myCamera" lay-verify="required" lay-search="">
-          <volist name="my_list_camera" id="itemCamera">
-          <option value="{{$itemCamera.camera_id}}">通道{{$itemCamera.camera_id}} - {{$itemCamera.camera_name}}</option>
-          </volist>
-        </select>
-      </div>
-    </div>
-    <div class="layui-form-item">
-      <label class="layui-form-label">播放时长</label>
-      <div class="layui-input-block">
-        <label class="layui-form-label" style="width:100%">
-        {{$my_vod.disptime}}
-        </label>
-      </div>
-    </div>
-    <div class="layui-form-item">
-      <label class="layui-form-label">录制时间</label>
-      <div class="layui-input-block">
-        <label class="layui-form-label" style="width:100%">
-        {{$my_vod.created}}
-        </label>
-      </div>
-    </div>
-    </eq>
     <div class="layui-form-item">
       <label class="layui-form-label">文件标识</label>
       <div class="layui-input-block">
@@ -89,10 +60,6 @@
 
 <script>
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
-<eq name='my_web_type' value='0'>
 document.getElementsByName('mySubject')[0].value = {{$my_vod.subject_id|default=0}};
 document.getElementsByName('myTeacher')[0].value = {{$my_vod.teacher_id|default=0}};
-<else/>
-document.getElementsByName('myCamera')[0].value = {{$my_vod.camera_id|default=0}};
-</eq>
 </script>

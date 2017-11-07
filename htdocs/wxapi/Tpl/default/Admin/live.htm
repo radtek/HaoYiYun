@@ -30,12 +30,8 @@
               <col width="30">
               <col width="80">
               <col width="80">
-              <eq name='my_web_type' value='0'>
               <col width="80">
               <col width="80">
-              <else/>
-              <col width="80">
-              </eq>
               <col width="80">
               <col width="100">
               <col width="100">
@@ -45,12 +41,8 @@
                 <th><input id="myAll" type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th>状态</th>
                 <th>采集端</th>
-                <eq name='my_web_type' value='0'>
                 <th>年级</th>
                 <th>班级</th>
-                <else/>
-                <th>名称</th>
-                </eq>
                 <th>类型</th>
                 <th>数据源</th>
                 <th>操作</th>
@@ -86,7 +78,6 @@ var g_stream_type = new Array("摄像头","MP4文件","流转发");
 function doTrClick(inLiveID, inGatherID, inStreamProp, objTr) {
   // 为了兼容IE8，只能用srcElement获取对象信息...
   // 如果是第一个td或者是td里的checkbox，直接返回...
-  var nWebType = {{$my_web_type}};
   var $ = layui.jquery;
   if( $(event.srcElement).hasClass('layui-icon') || event.srcElement.cellIndex == 0 ) {
     return false;
@@ -108,7 +99,7 @@ function doTrClick(inLiveID, inGatherID, inStreamProp, objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['530px', (nWebType == 0) ? '450px' : '400px'],
+        area: ['530px', '450px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 直播通道 - " + g_stream_type[inStreamProp],
         content: ajaxData,
         success: function() {

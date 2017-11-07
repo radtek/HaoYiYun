@@ -32,7 +32,7 @@ class IndexAction extends Action
     //print_r($_COOKIE); exit;
   }
   //
-  // 处理配置存盘接口...
+  // 处理配置存盘接口 => 安装脚本会调用...
   // tracker/x.x.x.x:22122/transmit/x.x.x.x:21001
   public function config()
   {
