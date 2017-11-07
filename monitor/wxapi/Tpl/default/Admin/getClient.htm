@@ -1,0 +1,26 @@
+
+<blockquote class="layui-elem-quote" style="margin-top:10px;margin-left:10px;">
+  温馨提示：【中转客户端】是指正在与中转服务器交互的终端，便于分析中转服务器状态。<br>
+  终端说明：1(PHP终端)，2(采集终端)，3(直播终端)，4(播放终端)
+</blockquote>
+
+<div class="layui-field-box" style="padding-left:0px;margin-top:10px;width:50%;">
+  <form class="layui-form" action="">
+    <gt name="my_err" value="0"> 
+      <div style="text-align:center;font-size:30px;color:red;margin-top:30px;">
+        <i class="fa fa-frown-o">&nbsp;</i>没有在线的中转客户端!
+      </div>
+    <else/>
+      <volist name="my_list" id="vo">
+      <div class="layui-form-item">
+        <label class="layui-form-label">终 端<!--{{$key+1}}--></label>
+        <div class="layui-input-block">
+          <label class="status-form-label" style="text-align:left;font-weight:bold;">
+            <span style="color:green;">ACTIVE</span> : {{$vo}}
+          </label>
+        </div>
+      </div>
+      </volist>
+    </gt>
+  </form>
+</div>

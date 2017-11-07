@@ -1,0 +1,79 @@
+
+<style>
+.layui-form-item { margin-bottom: 5px; }
+</style>
+
+<div class="layui-field-box" style="margin-top: 10px;">
+  <form class="layui-form layui-form-pane" action="">
+    <eq name='my_web_type' value='0'>
+    <div class="layui-form-item">
+      <label class="layui-form-label">所在学校</label>
+      <div class="layui-input-block">
+        <select name="mySchool" lay-verify="required" lay-search="">
+          <volist name="my_list_school" id="vo">
+          <option value="{{$vo.school_id}}">{{$vo.name}}</option>
+          </volist>
+        </select>
+      </div>
+    </div>
+    <else/>
+    <div class="layui-form-item">
+      <label class="layui-form-label">名称标识</label>
+      <div class="layui-input-block">
+        <input type="text" name="myNameSet" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_gather.name_set}}">
+      </div>
+    </div>    
+    </eq>
+    <div class="layui-form-item">
+      <label class="layui-form-label">机器名称</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.name_pc}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">操作系统</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.os_name}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">MAC地址</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.mac_addr}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">IP地址</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.ip_addr}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label" title="该采集端能够支持的通道数">最大通道</label>
+      <div class="layui-input-block">
+        <label class="layui-form-label" style="width:100%">
+        {{$my_gather.max_camera}}
+        </label>
+      </div>
+    </div>
+    <div class="layui-form-item" style="margin-bottom:10px;margin-top:20px;text-align:center;">
+      <button class="layui-btn" lay-submit lay-filter="formGather">立即保存</button>&nbsp;
+      <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+<eq name='my_web_type' value='0'>
+document.getElementsByName('mySchool')[0].value = {{$my_gather.school_id}};
+</eq>
+</script>

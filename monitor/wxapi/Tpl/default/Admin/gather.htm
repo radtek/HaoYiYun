@@ -1,0 +1,185 @@
+
+<include file = "Common:admin_header" />
+
+<!-- 中心数据区 -->
+<div class="layui-tab layui-tab-brief">
+  <div class="layui-body layui-tab-content site-demo">
+    <div class="layui-tab-item layui-show">
+      <div class="layui-main">
+        <fieldset class="layui-elem-field layui-field-title">
+          <legend><i class="fa fa-cloud-upload">&nbsp;&nbsp;采集端管理</i></legend>
+        </fieldset>
+        <span class="layui-breadcrumb">
+          <a><cite>采集端列表</cite></a>
+          <a><cite>共 {{$my_total_num}} 条记录</cite></a>
+        </span>
+        <div style="width:100%">
+          <table class="layui-table">
+            <colgroup>
+              <col width="50">
+              <col width="80">
+              <col width="80">
+              <col width="80">
+              <col width="100">
+              <col width="100">
+              <col width="100">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>状态</th>
+                <th>IP地址</th>
+                <th>机器名</th>
+                <th>MAC地址</th>
+                <th>最大通道数</th>
+                <eq name='my_web_type' value='0'>
+                <th>所在学校</th>
+                <else/>
+                <th>名称标识</th>
+                </eq>
+                <th>操作</th>
+              </tr> 
+            </thead>
+            <tbody class="js_gather">
+            </tbody>
+          </table>
+          <div id="myPage"></div>
+        </div>        
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+//
+// 执行修改操作...
+function doModify(inGatherID, objTr)
+{
+  // 向服务器发送直播状态查看命令...
+  var nWebType = {{$my_web_type}};
+  var index = layer.load(2);
+  var $ = layui.jquery;
+  // 先将背景色进行修改...
+  $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
+  // 异步获取通道信息...
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Admin/getGather/gather_id/"+inGatherID,
+    success: function(ajaxData) {
+      layer.closeAll('loading');
+      layer.open({
+        type: 1, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+        closeBtn: 1,
+        fixed: true,
+        shadeClose: false,
+        area: ['450px', '400px'],
+        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;编辑 - 采集端</i>",
+        content: ajaxData,
+        success: function() {
+          var form = layui.form;
+          form.render();
+          // 这里必须调用render才能显示select...
+          form.on('submit(formGather)', function(data) {
+            var theSchoolID = 0, theSchoolName = "", theNameSet = "";
+            if( nWebType > 0 ) {
+              // 云监控模式...
+              theNameSet = data.field.myNameSet;
+            } else {
+              // 云录播模式...
+              theSchoolID = data.field.mySchool;
+              theSchoolName = $("select[name='mySchool']").find("option:selected").text();
+              // 判断输入数据的有效性...
+              if( theSchoolID <= 0 ) {
+                layer.msg('【所在学校】不能为空，请更正！', {icon: 2});
+                return false;
+              }
+            }
+            // 通过ajax异步发送存盘命令...
+            layer.load(2);
+            $.ajax({
+              type: "post",
+              async: true,
+              url: siteurl+"/Admin/saveGather",
+              data: {gather_id: inGatherID, school_id: theSchoolID, name_set: theNameSet},
+              success: function(ajaxData) {
+                layer.closeAll('loading');
+                layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
+                  //location.href = siteurl+"/Admin/gather";
+                  if( nWebType > 0 ) {
+                    // 云监控模式...
+                    $(objTr).children('td').eq(5).text(theNameSet);
+                  } else {
+                    // 云录播模式...
+                    $(objTr).children('td').eq(5).text(theSchoolName);
+                  }
+                  layer.closeAll('page');
+                });
+              },
+              error: function(e) {
+                layer.closeAll('loading');
+                layer.alert(e, {icon: 2});
+              }
+            });
+            // 否则，form会自动跳转...
+            return false;
+          });
+          // 点击取消操作...
+          $('.js_form_close').unbind("click").click( function() {
+            layer.closeAll('page');
+          });
+        }
+      });
+    },
+    error: function(e) {
+      layer.closeAll('loading');
+      layer.alert(e, {icon: 2});
+    }
+  });
+}
+//
+// 打开摄像头页面...
+function doCamera(inGatherID)
+{
+  // 需要兼容IE8...
+  stopPropagation(event);
+  location.href = siteurl+"/Admin/camera/gather_id/"+inGatherID;
+}
+//
+// 处理 layui 过程...
+layui.use(['element','laypage','layer','form'], function(){
+  var laypage = layui.laypage;
+  var layer = layui.layer;
+  var $ = layui.jquery;
+  laypage.render({
+    count: {{$my_total_num}}, // 总记录数...
+    elem: 'myPage',           // 分页对象...
+    groups: 5,                // 连续显示分页数
+    jump: function(obj, first) {
+      // 向服务器发送分页命令...
+      var index = layer.load(2);
+      $.ajaxSetup({ cache:false });
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Admin/pageGather/p/"+obj.curr,
+        success: function(ajaxData) {
+          layer.closeAll('loading');
+          $('.js_gather').html(ajaxData);
+          $('tbody tr').css('cursor','pointer');
+        },
+        error: function(e) {
+          layer.closeAll('loading');
+          layer.alert(e, {icon: 2});
+        }
+      });    
+    }
+  });
+});
+
+</script>
+
+<include file = "Common:admin_footer" />

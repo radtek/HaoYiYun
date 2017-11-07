@@ -1,0 +1,194 @@
+
+<include file = "Common:home_header" />
+
+<include file = "Common:home_nav" />
+
+<script src="/wxapi/public/js/jquery.royalslider.js"></script>
+<link href="/wxapi/public/css/royalslider.css" rel="stylesheet">
+<link href="/wxapi/public/css/play.css" rel="stylesheet">
+
+<style>
+.vod-back { background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png); }
+</style>
+
+<section class="content-wrap">
+  <div class="container">
+    <div class="row">
+      <article class="base">
+        <div class="base_info">
+          <h1 class="base_title">
+            <notempty name='my_base.subject_id'>
+            <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
+            </notempty>
+            <notempty>
+              <switch name="my_base.stream_prop">
+                <case value="0"><i class="fa fa-camera" title="摄像头"></i></case>
+                <case value="1"><i class="fa fa-file-video-o" title="MP4文件"></i></case>
+                <case value="2"><i class="fa fa-arrow-circle-o-down" title="流转发"></i></case>
+              </switch>&nbsp;
+            </notempty>
+            <span class="js_title">{{$my_base.play_title}}</span>
+          </h1>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+      <article style="margin-bottom:20px;">
+        <div id="video-gallery" class="royalSlider videoGallery rsDefault">
+          <volist name="my_play" id="vo">
+          <notempty name='vo.record_id'>
+          <a class="rsImg" data-clicks="{{$vo.clicks}}" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover vod-back">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+                <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
+              </div>
+              <div class="headline">{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}}&nbsp;{{$vo.teacher_name}}&nbsp;{{$vo.title_name}}&nbsp;{{$vo.created}}</div>
+              <div class="status">
+                <span id="vod_{{$vo.record_id}}">{{$vo.clicks}}次播放</span>
+              </div>
+            </div>
+          </a>
+          <else/>
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="/wxapi/public/images/{{$vo.image}}">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover">
+                <img src="/wxapi/public/images/{{$vo.image}}" onerror="doErrHead();">
+              </div>
+              <div class="headline">
+                {{$vo.school_name}} - {{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}} - 
+                <switch name="vo.stream_prop">
+                  <case value="0">摄像头</case>
+                  <case value="1">MP4文件</case>
+                  <case value="2">流转发</case>
+                </switch>
+              </div>
+              <div class="status">
+                <span>
+                <switch name="vo.stream_prop">
+                  <case value="0"><i class="fa fa-camera"></i></case>
+                  <case value="1"><i class="fa fa-file-video-o"></i></case>
+                  <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
+                </switch>
+                实时直播</span>
+                <span style="margin-left: 10px">
+                  <i class="fa fa-play-circle-o" id="live_{{$vo.camera_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                </span>
+              </div>
+            </div>
+          </a>
+          </notempty>
+          </volist>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+      <article style="height:130px;margin-bottom:20px;"></article>
+    </div>
+  </div>
+</section>
+
+<script>
+
+// 处理缩略图无法加载的问题...
+function doErrHead() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+// 由子窗口调用的播放结束事件接口...
+function doEndedEvent() {
+  // 直接得到slider对象，调用next接口...
+  var slider = $(".royalSlider").data('royalSlider');
+  slider.next();
+}
+
+// 由子窗口调用的修改点击播放次数的接口...
+function doClicks(inItemID, inClicks, isVod) {
+  if( isVod ) {
+    $('#'+inItemID).html(inClicks + "次播放");
+  } else {
+    $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
+  }
+}
+
+$(document).ready( function () {
+  // 视频集合窗口的处理 => 初始化卡片参数...
+  $('#video-gallery').royalSlider({
+    arrowsNav: false,
+    fadeinLoadedSlide: true,
+    controlNavigationSpacing: 0,
+    controlNavigation: 'thumbnails',
+    thumbs: {
+      autoCenter: false,
+      fitInViewport: true,
+      orientation: 'vertical',
+      spacing: 0,
+      paddingBottom: 0
+    },
+    keyboardNavEnabled: true,
+    imageScaleMode: 'fill',
+    imageAlignCenter:true,
+    slidesSpacing: 0,
+    loop: false,
+    loopRewind: true,
+    numImagesToPreload: 3,
+    video: {
+      autoHideArrows:true,
+      autoHideControlNav:false,
+      autoHideBlocks: true
+    }, 
+    autoScaleSlider: true, 
+    autoScaleSliderWidth: 960,     
+    autoScaleSliderHeight: 450,
+    imgWidth: 640,
+    imgHeight: 360
+  });
+  /////////////////////////////////////////////////
+  // 注册slider的相关事件，方便自定义过程处理...
+  /////////////////////////////////////////////////
+  var slider = $(".royalSlider").data('royalSlider');
+  // 注册slider切换前事件 => 停止上一个视频对象...
+  slider.ev.on('rsBeforeMove', function(event, type, userAction ) {
+    this.stopVideo();
+  });
+  // 注册slider切换后事件 => 启动当前视频对象...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    this.playVideo();
+  });
+  // 当slider发生变化之后的事件响应...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    // 直接用jquery的样式特征定位比较简单，然后给标题赋值...
+    var theHeadLine = $('.rsNav .rsNavSelected .headline').html();
+    //$('.rsNav .rsNavSelected .status').children(":first");
+    $('.js_title').html(theHeadLine);
+  });
+  // 第一个视频在0.5秒之后自动播放...
+  setTimeout(function() {
+    slider.toggleVideo();
+  }, 500);
+  // 注册窗口的滚动条函数...
+	$(window).scroll(function() {
+		if( $(this).scrollTop() > 100 ) {
+			$('#back-to-top').fadeIn();
+		} else {
+			$('#back-to-top').fadeOut();
+		}
+	});
+  // 设置点击back-to-top事件...
+	$('#back-to-top').on('click', function(e){
+		e.preventDefault();
+		$('html, body').animate({scrollTop : 0},1000);
+		return false;
+	});
+});
+</script>
+
+<include file = "Common:home_footer" />

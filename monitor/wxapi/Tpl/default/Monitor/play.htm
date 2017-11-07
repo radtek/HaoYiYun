@@ -1,0 +1,300 @@
+
+<include file = "Common:home_header" />
+
+<include file = "Common:monitor_nav" />
+
+<script src="/wxapi/public/js/jquery.royalslider.js" language="javascript"></script>
+<script src="/wxapi/public/js/jquery.jedate.js" language="javascript"></script>
+
+<link href="/wxapi/public/css/royalslider.css" type="text/css" rel="stylesheet">
+<link href="/wxapi/public/css/jedate.css" type="text/css" rel="stylesheet">
+<link href="/wxapi/public/css/play.css" type="text/css" rel="stylesheet">
+
+<style>
+.vod-back { background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png); }
+.base .base_right { padding: 13px 0 17px 20px; }
+.base .base_info { width: 850px; }
+.js_title { margin-left: 10px; }
+.headline { top: 18px; }
+.status { top: 48px; }
+.tline {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e67e22;
+}
+.datainp {
+  border:1px #A5D2EC solid;
+}
+.wicon {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAQCAYAAADj5tSrAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABZ0RVh0Q3JlYXRpb24gVGltZQAwNi8xNS8xNGnF/oAAAAAcdEVYdFNvZnR3YXJlAEFkb2JlIEZpcmV3b3JrcyBDUzVxteM2AAAAoElEQVQ4jWPceOnNfwYqAz9dYRQ+E7UtwAaGjyUsDAyYYUgJ2HT5LXZLcEmSCnA6duOlN///////H0bDALl8dPH/////Z8FuNW6Qtvw2nL3lyjsGBgYGhlmRqnj1kGwJuqHIlhJlCXq8EOITEsdqCXLEbbr8FisfFkTo+vBZRFZwERNEFFkCiw90nxJtCalxQmzegltCzVyP1RJq5HZ8AABuNZr0628DMwAAAABJRU5ErkJggg==");
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+.workinput {
+  width: 150px;
+  line-height: 25px;
+  border: 1px #A5D2EC solid;
+  border-radius: 4px;
+  font-size: 16px;
+  padding: 2px 5px;
+}
+</style>
+
+<section class="content-wrap">
+  <div class="container">
+    <div class="row">
+      <article class="base">
+        <div class="base_info">
+          <h1 class="base_title">
+            <span>
+              <switch name="my_camera.stream_prop">
+                <case value="0"><i class="fa fa-camera"></i></case>
+                <case value="1"><i class="fa fa-file-video-o"></i></case>
+                <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
+              </switch>
+              &nbsp;通道{{$my_camera.camera_id}} - 
+              <switch name="my_camera.stream_prop">
+                <case value="0">摄像头</case>
+                <case value="1">MP4文件</case>
+                <case value="2">流转发</case>
+              </switch>
+              - {{$my_camera.camera_name}}
+            </span>
+            <span class="js_title"></span>
+          </h1>
+        </div>
+        <div class="base_right">
+          <h1 class="base_title">
+            <span style="margin-left:10px;">筛选录制日期：</span>
+            <input id="myRecDate" type="text" class="workinput datainp wicon" value="{{$my_init_date}}" readonly>
+          </h1>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+      <article style="margin-bottom:20px;">
+        <div id="video-gallery" class="royalSlider videoGallery rsDefault">
+          <volist name="my_play" id="vo">
+          <notempty name='vo.record_id'>
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover vod-back">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+                <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
+              </div>
+              <div class="headline">{{$vo.created}}</div>
+              <div class="status">
+                <span><i class="fa fa-file-video-o"></i>&nbsp;{{$vo['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</span>
+                <span style="margin-left: 10px">
+                  <i class="fa fa-play-circle-o" id="vod_{{$vo.record_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                </span>
+              </div>
+            </div>
+          </a>
+          <else/>
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" href="/wxapi/public/images/{{$vo.image}}">
+            <div class="rsTmb">
+              <div class="serial">
+                <span class="fa fa-play"></span>
+              </div>
+              <div class="cover">
+                <img src="/wxapi/public/images/{{$vo.image}}" onerror="doErrHead();">
+              </div>
+              <div class="headline">
+              通道{{$vo.camera_id}} - 
+              <switch name="vo.stream_prop">
+                <case value="0">摄像头</case>
+                <case value="1">MP4文件</case>
+                <case value="2">流转发</case>
+              </switch>
+              - {{$vo.camera_name}}</div>
+              <div class="status">
+                <span>
+                <switch name="vo.stream_prop">
+                  <case value="0"><i class="fa fa-camera"></i></case>
+                  <case value="1"><i class="fa fa-file-video-o"></i></case>
+                  <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
+                </switch>
+                实时直播</span>
+                <span style="margin-left: 10px">
+                  <i class="fa fa-play-circle-o" id="live_{{$vo.camera_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                </span>
+              </div>
+            </div>
+          </a>
+          </notempty>
+          </volist>
+        </div>
+      </article>
+    </div>
+    <div class="row">
+     <article class="post" style="padding:15px 0px 5px 20px;">
+       <h4 class="title">
+         <span class="tline">相关通道，总共 {{$my_total_num}} 路，在线 {{$my_online_num}} 路</span>
+       </h4>
+       <div id="myView"></div>
+     </article>
+    </div>
+    <!--<div class="row">
+      <article style="height:130px;margin-bottom:20px;"></article>
+    </div>-->
+  </div>
+</section>
+
+<script>
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
+
+// 处理缩略图无法加载的问题...
+function doErrHead() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+// 由子窗口调用的播放结束事件接口...
+function doEndedEvent() {
+  // 直接得到slider对象，调用next接口...
+  var slider = $(".royalSlider").data('royalSlider');
+  slider.next();
+}
+
+// 由子窗口调用的修改点击播放次数的接口...
+function doClicks(inItemID, inClicks) {
+  $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
+}
+
+// 处理 layui 过程...
+layui.use(['flow','layer'], function(){
+  var nFocusCamera = {{$my_camera.camera_id}};
+  var max_page = {{$max_page}};
+  var flow = layui.flow;
+  // 流加载过程，不用弹等待框...
+  flow.load({
+    elem: '#myView',
+    isLazyimg: false,
+    done: function(page, next){
+      // 设置IE8兼容性，加载分页数据...
+      $.ajaxSetup({ cache:false });
+      $.ajax({
+        type: "get",
+        async: true,
+        url: siteurl+"/Monitor/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
+        success: function(ajaxData) {
+          next(ajaxData, page < max_page);
+          // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
+          // <article>不是标准html标签，必须在外面增加一层<div>...
+          // 分页单独懒加载，否则，每次都要全部懒加载...
+          $("#page_"+page+" img.lazy").lazyload({
+            effect : "fadeIn"
+          });
+          // 查找焦点通道，并设置边框颜色为橘红色...
+          $("#page_"+page+" .thumb").each(function(){
+            if( $(this).attr('id').split('_')[1] == nFocusCamera ) {
+              $(this).css('border-color', '#e67e22');
+              return false;
+            }
+          });
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
+          layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+        }
+      });
+    }
+  });
+});
+
+$(document).ready( function () {
+  // 记录跳转滑块索引编号 => 从0开始...
+  var nCameraID = {{$my_camera.camera_id}};
+  var nGoToID = {{$my_goto}};
+  // 更新录制筛选日期...
+  $('#myRecDate').jeDate({
+    zIndex: 3000,
+    isinitVal: false,
+    format: "YYYY-MM-DD",
+    marks: [{{$my_rec_marks}}],
+    choosefun:function(elem, val, date) {
+      location.href = siteurl+"/Monitor/play/camera_id/"+nCameraID+"/date/"+val;
+    },
+    okfun:function(elem, val, date) {
+      location.href = siteurl+"/Monitor/play/camera_id/"+nCameraID+"/date/"+val;
+    },
+  });
+  // 视频集合窗口的处理 => 初始化卡片参数...
+  $('#video-gallery').royalSlider({
+    arrowsNav: false,
+    fadeinLoadedSlide: true,
+    controlNavigationSpacing: 0,
+    controlNavigation: 'thumbnails',
+    thumbs: {
+      autoCenter: false,
+      fitInViewport: true,
+      orientation: 'vertical',
+      spacing: 0,
+      paddingBottom: 0
+    },
+    keyboardNavEnabled: true,
+    imageScaleMode: 'fill',
+    imageAlignCenter:true,
+    slidesSpacing: 0,
+    loop: false,
+    loopRewind: true,
+    numImagesToPreload: 3,
+    video: {
+      autoHideArrows:true,
+      autoHideControlNav:false,
+      autoHideBlocks: true
+    }, 
+    autoScaleSlider: true, 
+    autoScaleSliderWidth: 960,     
+    autoScaleSliderHeight: 450,
+    imgWidth: 640,
+    imgHeight: 360
+  });
+  /////////////////////////////////////////////////
+  // 注册slider的相关事件，方便自定义过程处理...
+  /////////////////////////////////////////////////
+  var slider = $(".royalSlider").data('royalSlider');
+  // 注册slider切换前事件 => 停止上一个视频对象...
+  slider.ev.on('rsBeforeMove', function(event, type, userAction ) {
+    this.stopVideo();
+  });
+  // 注册slider切换后事件 => 启动当前视频对象...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    this.playVideo();
+  });
+  // 当slider发生变化之后的事件响应...
+  slider.ev.on('rsAfterSlideChange', function(event) {
+    if( this.currSlideId > 0 ) {
+      var theHeadLine = $('.rsNav .rsNavSelected .headline').html();
+      $('.js_title').html("录制回放，录制时间："+theHeadLine);
+    } else {
+      $('.js_title').html("实时直播");
+    }
+  });
+  // 第一个视频在0.5秒之后自动播放...
+  setTimeout(function() {
+    $('.js_title').html("实时直播");
+    ((nGoToID > 0) ? slider.goTo(nGoToID) : slider.toggleVideo());
+  }, 500);
+  // 注册窗口的滚动条函数...
+	$(window).scroll(function() {
+		if( $(this).scrollTop() > 100 ) {
+			$('#back-to-top').fadeIn();
+		} else {
+			$('#back-to-top').fadeOut();
+		}
+	});
+  // 设置点击back-to-top事件...
+	$('#back-to-top').on('click', function(e){
+		e.preventDefault();
+		$('html, body').animate({scrollTop : 0},1000);
+		return false;
+	});
+});
+</script>
+
+<include file = "Common:home_footer" />
