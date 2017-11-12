@@ -599,6 +599,32 @@ BOOL CUtilTool::CreateDir(LPCTSTR lpszPath)
 	}
 	return Result;	
 }
+
+HCURSOR	CUtilTool::GetSysHandCursor()
+{
+	TCHAR		strWinDir[MAX_PATH] = {0};
+	HCURSOR		hHandCursor			= NULL;
+	hHandCursor = ::LoadCursor(NULL, MAKEINTRESOURCE(32649));
+	
+	// Still no cursor handle - load the WinHelp hand cursor
+	if( hHandCursor == NULL )
+	{
+		GetWindowsDirectory(strWinDir, MAX_PATH);
+		strcat(strWinDir, _T("\\winhlp32.exe"));
+		
+		// This retrieves cursor #106 from winhlp32.exe, which is a hand pointer
+		HMODULE hModule = ::LoadLibrary(strWinDir);
+		DWORD	dwErr = GetLastError();
+		if( hModule != NULL )
+		{
+			HCURSOR	 hTempCur = ::LoadCursor(hModule, MAKEINTRESOURCE(106));
+			hHandCursor = (hTempCur != NULL) ? CopyCursor(hTempCur) : NULL;
+			FreeLibrary(hModule);
+		}
+	}
+	return hHandCursor;
+}
+
 //
 // 代替日志插件的日志单键实现...
 //

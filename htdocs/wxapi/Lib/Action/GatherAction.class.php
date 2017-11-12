@@ -33,33 +33,46 @@ class GatherAction extends Action
       $dbGather = D('gather')->where($map)->find();
       if( count($dbGather) <= 0 ) {
         // 没有找到记录，直接创建一个新记录...
-        $dbGather = $arrData;
-        $dbGather['created'] = date('Y-m-d H:i:s');
-        $dbGather['updated'] = date('Y-m-d H:i:s');
-        $arrErr['gather_id'] = D('gather')->add($dbGather);
+        $arrData['status']  = 1;
+        $arrData['created'] = date('Y-m-d H:i:s');
+        $arrData['updated'] = date('Y-m-d H:i:s');
+        $arrErr['gather_id'] = D('gather')->add($arrData);
+        // 从数据库中再次获取新增的采集端记录...
+        $condition['gather_id'] = $arrErr['gather_id'];
+        $dbGather = D('gather')->where($condition)->find();
       } else {
         // 找到了记录，直接更新记录...
-        $arrErr['gather_id'] = $dbGather['gather_id'];
+        $arrData['status']  = 1;
         $arrData['gather_id'] = $dbGather['gather_id'];
         $arrData['updated'] = date('Y-m-d H:i:s');
         D('gather')->save($arrData);
+        // 准备需要返回的采集端编号...
+        $arrErr['gather_id'] = $dbGather['gather_id'];
       }
       // 将采集端下面所有的通道状态设置成-1...
-      unset($map); $map['gather_id'] = $arrErr['gather_id'];
-      D('camera')->where($map)->setField('status', -1);
+      $condition['gather_id'] = $arrErr['gather_id'];
+      D('camera')->where($condition)->setField('status', -1);
       // 获取采集端下面所有的通道编号列表...
-      $arrCamera = D('camera')->where($map)->field('camera_id')->select();
+      $arrCamera = D('camera')->where($condition)->field('camera_id')->select();
       // 读取系统配置表，返回给采集端...
       $dbSys = D('system')->find();
       // 如果节点网站的标记为空，生成一个新的，并存盘...
       if( !$dbSys['web_tag'] ) {
         $dbSys['web_type'] = kCloudRecorder;
         $dbSys['web_tag'] = uniqid();
-        $dbSys['web_title'] = "云录播";
+        $dbSys['web_title'] = "浩一云";
         $dbSave['system_id'] = $dbSys['system_id'];
         $dbSave['web_tag'] = $dbSys['web_tag'];
         D('system')->save($dbSave);
       }
+      // 返回新增的采集端字段信息...
+      $arrErr['name_set'] = $dbGather['name_set'];
+      $arrErr['main_rate'] = $dbGather['main_rate'];
+      $arrErr['sub_rate'] = $dbGather['sub_rate'];
+      $arrErr['slice_val'] = $dbGather['slice_val'];
+      $arrErr['inter_val'] = $dbGather['inter_val'];
+      $arrErr['auto_dvr'] = $dbGather['auto_dvr'];
+      $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
       // 返回采集端需要的参数配置信息...
       $arrErr['web_tag'] = $dbSys['web_tag'];
       $arrErr['web_type'] = $dbSys['web_type'];
@@ -69,8 +82,6 @@ class GatherAction extends Action
       $arrErr['transmit_addr'] = $dbSys['transmit_addr'];
       $arrErr['transmit_port'] = strval($dbSys['transmit_port']);
       $arrErr['local_time'] = date('Y-m-d H:i:s');
-      $arrErr['slice_val'] = strval($dbSys['slice_val']);
-      $arrErr['inter_val'] = strval($dbSys['inter_val']);
       $arrErr['camera'] = $arrCamera;
     }while( false );
     // 直接返回运行结果 => json...
@@ -81,7 +92,7 @@ class GatherAction extends Action
   * 处理采集端获取配置 => 采集端在网站里的通用配置信息...
   +----------------------------------------------------------
   */
-  public function getConfig()
+  /*public function getConfig()
   {
     // 准备返回数据结构...
     $arrErr['err_code'] = false;
@@ -112,10 +123,10 @@ class GatherAction extends Action
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);
-  }
+  }*/
   /**
   +----------------------------------------------------------
-  * 处理采集端退出 => 将所有采集端下面的通知状态设置为0...
+  * 处理采集端退出 => 将所有采集端下面的通道状态和采集端自己状态设置为0...
   +----------------------------------------------------------
   */
   public function logout()
@@ -126,6 +137,8 @@ class GatherAction extends Action
     // 将所有该采集端下面的通道状态设置为0...
     $map['gather_id'] = $_POST['gather_id'];
     D('camera')->where($map)->setField('status', 0);
+    // 将采集端自己的状态设置为0...
+    D('gather')->where($map)->setField('status', 0);
   }
   /**
   +----------------------------------------------------------

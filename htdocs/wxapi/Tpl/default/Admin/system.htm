@@ -29,7 +29,7 @@
                 <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_sys.sys_site}}">
               </div>
             </div>
-            <div id="recSlice">
+            <!--<div id="recSlice">
               <div class="layui-form-item">
                 <label class="layui-form-label">录像切片</label>
                 <div class="layui-input-inline" style="width:100px;">
@@ -44,7 +44,7 @@
                 </div>
                 <div class="layui-form-mid layui-word-aux">(每个新切片文件交错0~3个关键帧，0表示不交错)</div>
               </div>
-            </div>
+            </div>-->
             <div class="layui-form-item" style="margin-top:30px;text-align:center;">
               <button class="layui-btn" lay-submit lay-filter="formSystem">立即保存</button>&nbsp;
               <button type="reset" class="layui-btn layui-btn-primary">重置还原</button>
@@ -70,18 +70,18 @@ layui.use(['element','layer','form'], function(){
   var form = layui.form;
   var $ = layui.jquery;
   // 处理切片参数的显示或隐藏...
-  form.on('radio(modeType)', function(data) {
+  /*form.on('radio(modeType)', function(data) {
     $('#recSlice').css('display', ((data.value > 0) ? 'block' : 'none'));
-  });
+  });*/
   // 响应保存设置对话框...
   form.on('submit(formSystem)', function(data) {
     // 获取输入数据，调用接口立即存盘...
-    var theSliceVal = parseInt(data.field.mySliceVal);
-    var theInterVal = parseInt(data.field.myInterVal);
+    //var theSliceVal = parseInt(data.field.mySliceVal);
+    //var theInterVal = parseInt(data.field.myInterVal);
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
     // 判读切片时间、切片交错的有效性 => 必须是数字...
-    if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
+    /*if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
       layer.msg('请输入 0 ~ 30 之间的整数！', {anim: 6});
       $("input[name='mySliceVal']").focus();
       return false;
@@ -90,19 +90,19 @@ layui.use(['element','layer','form'], function(){
       layer.msg('请输入 0 ~ 3 之间的整数！', {anim: 6});
       $("input[name='myInterVal']").focus();
       return false;
-    }
+    }*/
     // 发送异步请求 => 兼容IE8...
     $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_title: theTitle, sys_site: theSite, slice_val: theSliceVal, inter_val: theInterVal},
+      data: {operate: 'save', web_title: theTitle, sys_site: theSite},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');
-        $("input[name='mySliceVal']").val(theSliceVal);
-        $("input[name='myInterVal']").val(theInterVal);
+        //$("input[name='mySliceVal']").val(theSliceVal);
+        //$("input[name='myInterVal']").val(theInterVal);
         $("input[name='myWebTitle']").val(theTitle);
         $("input[name='mySysSite']").val(theSite);
         layer.msg('恭喜！保存成功！', {icon: 1});

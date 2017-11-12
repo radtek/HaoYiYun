@@ -11,6 +11,7 @@ public:
 	static string		GetCHSDate();				// Get CHS Current Date.
 
 	static string		GetSystemVer();
+	static HCURSOR		GetSysHandCursor();
 	static HMODULE		GetSelfModuleHandle();
 	static string		GetExePath(HINSTANCE hInstance);
 	static void			GetExePath(LPSTR outPath);

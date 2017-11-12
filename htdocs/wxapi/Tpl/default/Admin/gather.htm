@@ -30,7 +30,7 @@
                 <th>IP地址</th>
                 <th>机器名</th>
                 <th>MAC地址</th>
-                <th>最大通道数</th>
+                <th>操作系统</th>
                 <th>所在学校</th>
                 <!--<th>操作</th>-->
               </tr> 
@@ -51,7 +51,7 @@
 var siteurl="{{:__APP__}}";
 //
 // 执行修改操作...
-function doModify(inGatherID, objTr)
+function doModify(inGatherID, inMacAddr, objTr)
 {
   // 向服务器发送直播状态查看命令...
   var index = layer.load(2);
@@ -71,8 +71,8 @@ function doModify(inGatherID, objTr)
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['450px', '400px'],
-        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;编辑 - 采集端</i>",
+        area: ['500px', '480px'],
+        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;配置 - 采集端</i>",
         content: ajaxData,
         success: function() {
           var form = layui.form;
@@ -80,20 +80,67 @@ function doModify(inGatherID, objTr)
           // 这里必须调用render才能显示select...
           form.on('submit(formGather)', function(data) {
             // 云录播模式...
+            var theNameSet = data.field.myNameSet;
+            var theAutoDVR = (data.field.myAutoDVR == "on" ? 1 : 0);
+            var theAutoFDFS = (data.field.myAutoFDFS == "on" ? 1 : 0);
+            // 判断输入数据的有效性...
             var theSchoolID = data.field.mySchool;
             var theSchoolName = $("select[name='mySchool']").find("option:selected").text();
-            // 判断输入数据的有效性...
             if( theSchoolID <= 0 ) {
               layer.msg('【所在学校】不能为空，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2});
               return false;
             }
+            var theMainRate = data.field.myMainRate;
+            var theSubRate = data.field.mySubRate;
+            if( isNaN(theMainRate) || theMainRate < 32 || theMainRate > 8192 ) {
+              layer.msg('【录像码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='myMainRate']").addClass('layui-form-danger');
+                $("input[name='myMainRate']").focus();
+              });
+              return false;
+            }
+            if( isNaN(theSubRate) || theSubRate < 32 || theSubRate > 8192 ) {
+              layer.msg('【直播码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='mySubRate']").addClass('layui-form-danger');
+                $("input[name='mySubRate']").focus();
+              });
+              return false;
+            }
+            var theSliceVal = data.field.mySliceVal;
+            var theInterVal = data.field.myInterVal;
+            if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
+              layer.msg('【录像切片】有效区间[0,30]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='mySliceVal']").addClass('layui-form-danger');
+                $("input[name='mySliceVal']").focus();
+              });
+              return false;
+            }
+            if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
+              layer.msg('【切片交错】有效区间[0,3]，请更正！',  {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='myInterVal']").addClass('layui-form-danger');
+                $("input[name='myInterVal']").focus();
+              });
+              return false;
+            }
+            // 定义post需要的数组...
+            var arrData = new Object();
+            arrData['mac_addr'] = inMacAddr;
+            arrData['gather_id'] = inGatherID;
+            arrData['school_id'] = theSchoolID;
+            arrData['name_set'] = theNameSet;
+            arrData['main_rate'] = theMainRate;
+            arrData['sub_rate'] = theSubRate;
+            arrData['auto_dvr'] = theAutoDVR;
+            arrData['auto_fdfs'] = theAutoFDFS;
+            arrData['slice_val'] = theSliceVal;
+            arrData['inter_val'] = theInterVal;
             // 通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({
               type: "post",
               async: true,
+              data: arrData,
               url: siteurl+"/Admin/saveGather",
-              data: {gather_id: inGatherID, school_id: theSchoolID},
               success: function(ajaxData) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {

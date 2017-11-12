@@ -12,16 +12,15 @@ CDlgSetSys::CDlgSetSys(CHaoYiView * pHaoYiView)
 	, m_lpHaoYiVew(pHaoYiView)
 	, m_nWebPort(DEF_WEB_PORT)
 	, m_strWebAddr(DEF_WEB_ADDR)
-	, m_strMainName(DEF_MAIN_NAME)
 	, m_strSavePath(DEF_REC_PATH)
+	, m_strMainName(DEF_MAIN_NAME)
 	, m_nRecRate(DEF_MAIN_KBPS)
 	, m_nLiveRate(DEF_SUB_KBPS)
-	, m_nSnapStep(DEF_SNAP_STEP)
-	, m_nRecSlice(DEF_REC_SLICE)
 	, m_bAutoLinkFDFS(false)
 	, m_bAutoLinkDVR(false)
 	, m_bWebChange(false)
-	, m_nMaxCamera(0)
+	, m_nInterVal(0)
+	, m_nSliceVal(0)
 {
 }
 
@@ -38,17 +37,15 @@ void CDlgSetSys::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxInt(pDX, m_nRecRate, 200, 4096);
 	DDX_Text(pDX, IDC_EDIT_LIVE_RATE, m_nLiveRate);
 	DDV_MinMaxInt(pDX, m_nLiveRate, 100, 4096);
-	DDX_Text(pDX, IDC_EDIT_SNAP_STEP, m_nSnapStep);
-	DDV_MinMaxInt(pDX, m_nSnapStep, 1, 600);
-	DDX_Text(pDX, IDC_EDIT_REC_SLICE, m_nRecSlice);
-	DDV_MinMaxInt(pDX, m_nRecSlice, 30, 3600);
+	DDX_Text(pDX, IDC_EDIT_REC_SLICE, m_nSliceVal);
+	DDV_MinMaxInt(pDX, m_nSliceVal, 0, 30);
+	DDX_Text(pDX, IDC_EDIT_REC_INTER, m_nInterVal);
+	DDV_MinMaxInt(pDX, m_nInterVal, 0, 3);
 	DDX_Check(pDX, IDC_CHECK_AUTO_DVR, m_bAutoLinkDVR);
 	DDX_Check(pDX, IDC_CHECK_AUTO_FDFS, m_bAutoLinkFDFS);
 	DDX_Text(pDX, IDC_EDIT_WEB_ADDR, m_strWebAddr);
 	DDX_Text(pDX, IDC_EDIT_WEB_PORT, m_nWebPort);
 	DDV_MinMaxInt(pDX, m_nWebPort, 1, 65535);
-	DDX_Text(pDX, IDC_EDIT_MAX_CAMERA, m_nMaxCamera);
-	DDV_MinMaxInt(pDX, m_nMaxCamera, 1, 36);
 }
 
 BEGIN_MESSAGE_MAP(CDlgSetSys, CDialogEx)
@@ -60,18 +57,23 @@ BOOL CDlgSetSys::OnInitDialog()
 	//CDialogEx::OnInitDialog();
 
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	m_strMainName = theConfig.GetMainName().c_str();
-	m_strSavePath = theConfig.GetSavePath().c_str();
-	m_nRecRate = theConfig.GetMainKbps();
-	m_nLiveRate = theConfig.GetSubKbps();
-	m_nSnapStep = theConfig.GetSnapStep();
-	m_nRecSlice = theConfig.GetRecSlice();
-	m_nMaxCamera = theConfig.GetMaxCamera();
-	m_bAutoLinkDVR = theConfig.GetAutoLinkDVR();
-	m_bAutoLinkFDFS = theConfig.GetAutoLinkFDFS();
+	// 网站端口、网站地址、存盘路径 是本地配置...
 	m_nWebPort = theConfig.GetWebPort();
 	m_strWebAddr = theConfig.GetWebAddr().c_str();
+	m_strSavePath = theConfig.GetSavePath().c_str();
+	// 已经注册成功，从系统配置当中获取...
+	if( theConfig.GetDBHaoYiGatherID() > 0 ) {
+		m_strMainName = theConfig.GetMainName().c_str();
+		m_nRecRate = theConfig.GetMainKbps();
+		m_nLiveRate = theConfig.GetSubKbps();
+		m_nSliceVal = theConfig.GetSliceVal();
+		m_nInterVal = theConfig.GetInterVal();
+		m_bAutoLinkDVR = theConfig.GetAutoLinkDVR();
+		m_bAutoLinkFDFS = theConfig.GetAutoLinkFDFS();
+	}
+	// 如果没有注册成功，直接使用系统默认值...
 
+	// 将配置写入界面当中...
 	this->UpdateData(false);
 
 	return TRUE;
@@ -124,18 +126,9 @@ void CDlgSetSys::OnBnClickedOK()
 		m_lpHaoYiVew->doGatherLogout();
 		this->m_bWebChange = true;
 	}
-	theConfig.SetMainName(m_strMainName.GetString());
-	theConfig.SetAutoLinkDVR(m_bAutoLinkDVR);
-	theConfig.SetAutoLinkFDFS(m_bAutoLinkFDFS);
+	// 存放保存在本地的配置...
 	theConfig.SetWebAddr(m_strWebAddr.GetString());
 	theConfig.SetWebPort(m_nWebPort);
-	theConfig.SetSavePath(m_strSavePath.GetString());
-	theConfig.SetMaxCamera(m_nMaxCamera);
-	theConfig.SetMainKbps(m_nRecRate);
-	theConfig.SetSubKbps(m_nLiveRate);
-	theConfig.SetSnapStep(m_nSnapStep);
-	theConfig.SetRecSlice(m_nRecSlice);
-	theConfig.GMSaveConfig();
-	// 关闭对话框...
+	// 注意：其它配置由网站服务器授权，不能改变...
 	CDialogEx::OnOK();
 }

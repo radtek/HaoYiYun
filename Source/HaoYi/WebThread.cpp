@@ -108,9 +108,9 @@ BOOL CWebThread::RegisterHaoYi()
 	string	strUTF8Web = CUtilTool::ANSI_UTF8(strWebName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s&node_name=%s&os_name=%s", 
-					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS, _T(SZ_VERSION_NAME), strWebTag.c_str(),
-					nWebType,  theConfig.GetWebAddr().c_str(), szWebName, CUtilTool::GetServerOS());
+	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_name=%s&os_name=%s", 
+					strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebTag.c_str(), nWebType, strWebAddr.c_str(),
+					theConfig.GetWebPort(), szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
 	// 调用Curl接口，汇报采集端信息...
@@ -144,10 +144,14 @@ BOOL CWebThread::RegisterHaoYi()
 		return false;
 	}
 	// 解析JSON成功，进一步解析数据...
+	int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
 	int nHaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
+	string strExpired = CUtilTool::getJsonString(value["auth_expired"]);
 	// 通知主窗口授权过期验证结果...
 	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((nHaoYiGatherID > 0) ? true : false));
 	// 存放到配置对象，返回授权验证结果...
+	theConfig.SetAuthExpired(strExpired);
+	theConfig.SetMaxCamera(nMaxCameraNum);
 	theConfig.SetDBHaoYiGatherID(nHaoYiGatherID);
 	return ((nHaoYiGatherID > 0) ? true : false);
 }
@@ -179,8 +183,8 @@ BOOL CWebThread::RegisterGather()
 	string  strDNSName = CUtilTool::GetServerDNSName();
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&max_camera=%d&name_pc=%s&os_name=%s", 
-					strMacAddr, strIPAddr, theConfig.GetMaxCamera(), szDNS, CUtilTool::GetServerOS());
+	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&os_name=%s", 
+					strMacAddr, strIPAddr, szDNS, CUtilTool::GetServerOS());
 	strUrl.Format("%s:%d/wxapi.php/Gather/index", strWebAddr.c_str(), nWebPort);
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;
@@ -215,13 +219,18 @@ BOOL CWebThread::RegisterGather()
 		m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthRegister, false);
 		return false;
 	}
-	// 正在处理注册采集端过程...
-	int nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
-	// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
-	Json::Value & theLocalTime   = value["local_time"];
-	int nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
+	// 处理新增的配置内容 => name_set | web_name 需要转换成ANSI格式...
+	string strMainName = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value["name_set"]).c_str());
+	if( strMainName.size() <= 0 ) { strMainName = DEF_MAIN_NAME; }
+	int nMainKbps = atoi(CUtilTool::getJsonString(value["main_rate"]).c_str());
+	int nSubKbps = atoi(CUtilTool::getJsonString(value["sub_rate"]).c_str());
 	int nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
 	int nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
+	BOOL bAutoLinkDVR = atoi(CUtilTool::getJsonString(value["auto_dvr"]).c_str());
+	BOOL bAutoLinkFDFS = atoi(CUtilTool::getJsonString(value["auto_fdfs"]).c_str());
+	// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
+	int nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
+	int nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
 	string strRemoteAddr = CUtilTool::getJsonString(value["transmit_addr"]);
 	int nRemotePort = atoi(CUtilTool::getJsonString(value["transmit_port"]).c_str());
 	string strTrackerAddr = CUtilTool::getJsonString(value["tracker_addr"]);
@@ -243,6 +252,7 @@ BOOL CWebThread::RegisterGather()
 	}
 	// 同步网站服务器时钟...
 #ifndef _DEBUG
+	Json::Value & theLocalTime = value["local_time"];
 	if( theLocalTime.isString() ) {
 		COleDateTime theDate;
 		SYSTEMTIME   theST = {0};
@@ -279,6 +289,11 @@ BOOL CWebThread::RegisterGather()
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}
+	// 主码流和子码流必须有效...
+	if( nMainKbps <= 0 || nSubKbps <= 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
 	// 存放到配置文件，但并不存盘...
 	theConfig.SetDBGatherID(nDBGatherID);
 	theConfig.SetWebTag(strWebTag);
@@ -288,45 +303,45 @@ BOOL CWebThread::RegisterGather()
 	theConfig.SetRemotePort(nRemotePort);
 	theConfig.SetTrackerAddr(strTrackerAddr);
 	theConfig.SetTrackerPort(nTrackerPort);
+	// 存放新增的采集端配置信息...
+	theConfig.SetMainName(strMainName);
+	theConfig.SetMainKbps(nMainKbps);
+	theConfig.SetSubKbps(nSubKbps);
 	theConfig.SetInterVal(nInterVal);
 	theConfig.SetSliceVal(nSliceVal);
+	theConfig.SetAutoLinkFDFS(bAutoLinkFDFS);
+	theConfig.SetAutoLinkDVR(bAutoLinkDVR);
 	// 注意：已经获取了通道编号列表...
 	return true;
 }
 //
-// 备注：这个地方由于牵涉到多个采集端，因此，采用了被动接收的方式...
-// 注意：这里还需要动态获取更多其它配置...
-BOOL CWebThread::doWebGatherConfig()
+// 采集端从中心退出...
+BOOL CWebThread::LogoutHaoYi()
 {
-	// 获取网站配置信息...
+	// 获取网站配置信息 => GatherID是中心服务器中的编号...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	int nWebPort = theConfig.GetWebPort();
-	int nDBGatherID = theConfig.GetDBGatherID();
-	string & strWebAddr = theConfig.GetWebAddr();
-	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
-	if( nDBGatherID <= 0 || strMacAddr.GetLength() <= 0 || nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+	int nDBHaoYiGatherID = theConfig.GetDBHaoYiGatherID();
+	if( nDBHaoYiGatherID <= 0  ) {
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}
 	// 先设置当前状态信息...
-	m_eRegState = kGatherConfig;
+	m_eRegState = kGatherLogout;
 	m_strUTF8Data.clear();
 	// 准备需要的汇报数据 => POST数据包...
 	CString strPost, strUrl;
-	strPost.Format("gather_id=%d&mac_addr=%s", nDBGatherID, strMacAddr);
-	// 组合访问链接地址...
-	strUrl.Format("%s:%d/wxapi.php/Gather/getConfig", strWebAddr.c_str(), nWebPort);
-	// 调用Curl接口，读取网站配置信息...
+	strPost.Format("gather_id=%d", nDBHaoYiGatherID);
+	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
+	strUrl.Format("https://%s/wxapi.php/Gather/logout", "www.myhaoyi.com");
+	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
 	do {
 		if( curl == NULL )
 			break;
 		// 如果是https://协议，需要新增参数...
-		if( theConfig.IsWebHttps() ) {
-			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-		}
+		res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+		res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 		// 设定curl参数，采用post模式...
 		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
@@ -335,36 +350,20 @@ BOOL CWebThread::doWebGatherConfig()
 		res = curl_easy_setopt(curl, CURLOPT_POST, true);
 		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
 		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
-		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
-		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		// 这里不需要处理网站返回的数据...
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		//res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
 		res = curl_easy_perform(curl);
 	}while( false );
 	// 释放资源...
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
-	Json::Value value;
-	// 解析JSON失败，通知界面层...
-	if( !this->parseJson(value) ) {
-		MsgLogGM(GM_NotImplement);
-		return false;
-	}
-	// 返回录像切片配置信息...
-	int nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
-	int nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
-	// 录像切片、切片交错，可以为0，0表示不切片，不交错...
-	if( nInterVal < 0 || nSliceVal < 0 ) {
-		MsgLogGM(GM_NotImplement);
-		return false;
-	}
-	// 存放到配置文件，但并不存盘...
-	theConfig.SetInterVal(nInterVal);
-	theConfig.SetSliceVal(nSliceVal);
 	return true;
 }
 //
-// 采集端退出汇报...
-BOOL CWebThread::doWebGatherLogout()
+// 采集端从节点退出...
+BOOL CWebThread::LogoutGather()
 {
 	// 获取网站配置信息...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -411,6 +410,14 @@ BOOL CWebThread::doWebGatherLogout()
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	return true;
+}
+//
+// 采集端退出汇报...
+BOOL CWebThread::doWebGatherLogout()
+{
+	this->LogoutGather();
+	this->LogoutHaoYi();
 	return true;
 }
 //

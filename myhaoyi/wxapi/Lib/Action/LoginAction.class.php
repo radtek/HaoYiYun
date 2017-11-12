@@ -31,7 +31,7 @@ class LoginAction extends Action
         $strError = 'error: node_tag is null';
         break;
       }
-      // 保存截取之后的数据...
+      // 保存截取之后的数据 => node_addr 已经带了端口信息...
       $strBackUrl = sprintf("http://%s%s", $arrJson['node_addr'], $arrJson['node_url']);
       $strNodeName = $arrJson['node_name'];
       $strNodeAddr = $arrJson['node_addr'];

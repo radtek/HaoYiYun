@@ -302,6 +302,9 @@
     <ClInclude Include="librtmp\srs_librtmp.h">
       <Filter>librtmp</Filter>
     </ClInclude>
+    <ClInclude Include="UI\HyperLink.h">
+      <Filter>ui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -1002,6 +1005,9 @@
     </ClCompile>
     <ClCompile Include="librtmp\srs_librtmp.cpp">
       <Filter>librtmp</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\HyperLink.cpp">
+      <Filter>ui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

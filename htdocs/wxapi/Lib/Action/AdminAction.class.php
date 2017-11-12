@@ -606,29 +606,12 @@ class AdminAction extends Action
     $this->display();
   }
   //
-  // 获取采集端在线状态标志...
-  private function getGatherStatusFromTransmit(&$arrGather)
+  // (这个接口已经废弃不使用了）获取采集端在线状态标志...
+  // 2017.11.12 - by jackey => 采集端状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
+  /*private function getGatherStatusFromTransmit(&$arrGather)
   {
     // 尝试链接中转服务器...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
-    /*// 循环查询所有的采集端状态...
-    foreach($arrGather as &$dbItem) {
-      // 设置采集端默认状态...
-      $dbItem['status'] = 0;
-      // 准备需要的数据参数...
-      $dbJson['mac_addr'] = $dbItem['mac_addr'];
-      $saveJson = json_encode($dbJson);
-      // 获取采集端在线状态 => 通过php socket直接跟中转服务器通信...
-      $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Get_Gather_Status, $saveJson);
-      if( $json_data ) {
-        // 获取的JSON数据有效，转成数组，并判断错误码...
-        $arrData = json_decode($json_data, true);
-        if( $arrData['err_code'] == ERR_OK ) {
-          $dbItem['status'] = $arrData['err_status'];
-        }
-      }
-    }*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
@@ -653,7 +636,7 @@ class AdminAction extends Action
     if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
-  }
+  }*/
   //
   // 获取采集端分页数据...
   public function pageGather()
@@ -664,10 +647,11 @@ class AdminAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 查询分页数据，准备中转查询数据，设置默认状态...
     $arrGather = D('GatherView')->limit($pageLimit)->order('gather_id DESC')->select();
-    // 获取采集端在线状态标志，设置模板参数 => 有记录才查询...
+    // 2017.11.12 - by jackey => 采集端状态直接从数据库当中读取，不从中转服务器读取...
+    /*// 获取采集端在线状态标志，设置模板参数 => 有记录才查询...
     if( count($arrGather) > 0 ) {
       $this->getGatherStatusFromTransmit($arrGather);
-    }
+    }*/
     $this->assign('my_gather', $arrGather);
     echo $this->fetch('pageGather');
   }
@@ -675,19 +659,6 @@ class AdminAction extends Action
   // 获取采集端详情数据...
   public function getGather()
   {
-    /*$this->assign('my_title', $this->m_webTitle . " - 采集端管理");
-    $this->assign('my_command', 'gather');
-    $theID = $_GET['gather_id'];
-    if( $theID > 0 ) {
-      $arrSchool = D('school')->field('school_id,name')->select();
-      $dbGather = D('gather')->where('gather_id='.$theID)->find();
-      $this->assign('my_gather', $dbGather);
-      $this->assign('my_new_title', "修改 - 采集端");
-      $this->assign('my_list_school', $arrSchool);
-      $this->display();
-    } else {
-      echo '采集端不能通过网站添加！';
-    }*/
     $map['gather_id'] = $_GET['gather_id'];
     $dbGather = D('gather')->where($map)->find();
     // 云录播模式 => 获取学校列表...
@@ -700,10 +671,24 @@ class AdminAction extends Action
   // 保存修改后的采集端数据...
   public function saveGather()
   {
+    // 现将数据直接存放到数据库当中...
     $_POST['updated'] = date('Y-m-d H:i:s');
-    unset($_POST['name_set']);
     D('gather')->save($_POST);
-    echo $_POST['gather_id'];
+    // 专门判断mac_addr是否有效...
+    if( !isset($_POST['mac_addr']) ) {
+      echo '没有设置mac_addr，无法中转命令！';
+      return;
+    }
+    // 将数据转发给指定的采集端...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 连接成功，执行中转命令...
+    if( $transmit ) {
+      $saveJson = json_encode($_POST);
+      $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Gather_SYS, $transmit, $saveJson);
+      transmit_disconnect_server($transmit);
+      echo $json_data;
+    }
   }
   //
   // 添加直播通道...
@@ -731,9 +716,10 @@ class AdminAction extends Action
       // 将参数转换成json数据包，发起添加命令...
       $saveJson = json_encode($dbCamera);
       $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Add, $transmit, $saveJson);
-      logdebug($json_data);
       // 关闭中转服务器链接...
       transmit_disconnect_server($transmit);
+      // 返回转发结果...
+      echo $json_data;
     }
   }
   //

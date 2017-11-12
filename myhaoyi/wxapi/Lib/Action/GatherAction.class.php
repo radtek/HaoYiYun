@@ -44,11 +44,11 @@ class GatherAction extends Action
         break;
       }
       // 根据节点标记获取或创建一条新记录...
+      // 注意：node_addr已经包含了端口信息...
       $map['node_tag'] = $arrData['node_tag'];
       $dbNode = D('node')->where($map)->find();
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
-        $dbNode['os_name'] = $arrData['os_name'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
@@ -57,7 +57,6 @@ class GatherAction extends Action
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
       } else {
-        $dbNode['os_name'] = $arrData['os_name'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
@@ -79,10 +78,17 @@ class GatherAction extends Action
       if( count($dbGather) <= 0 ) {
         // 没有找到记录，直接创建一个新记录 => 默认授权30天...
         $dbGather = $arrData;
+        $dbGather['status'] = 1;
         $dbGather['created'] = date('Y-m-d H:i:s');
         $dbGather['updated'] = date('Y-m-d H:i:s');
         $dbGather['expired'] = date("Y-m-d H:i:s", strtotime("+30 days"));
         $arrErr['gather_id'] = D('gather')->add($dbGather);
+        // 获取数据库设置的默认最大通道数...
+        $condition['gather_id'] = $arrErr['gather_id'];
+        $dbItem = D('gather')->where($condition)->field('max_camera')->find();
+        // 准备返回数据 => 最大通道数、授权有效期...
+        $arrErr['auth_expired'] = $dbGather['expired'];
+        $arrErr['max_camera'] = $dbItem['max_camera'];
       } else {
         // 查看用户授权是否已经过期 => 当前时间 与 过期时间 比较...
         $nDiffSecond = $this->diffSecond(date("Y-m-d H:i:s"), $dbGather['expired']);
@@ -91,15 +97,33 @@ class GatherAction extends Action
           $arrErr['err_msg'] = "授权已过期！";
           break;
         }
-        // 授权有效，直接更新记录...
+        // 授权有效，返回最大通道数和授权有效期...
+        $arrErr['auth_expired'] = $dbGather['expired'];
+        $arrErr['max_camera'] = $dbGather['max_camera'];
         $arrErr['gather_id'] = $dbGather['gather_id'];
+        // 授权有效，将记录更新到数据库...
         $arrData['gather_id'] = $dbGather['gather_id'];
         $arrData['updated'] = date('Y-m-d H:i:s');
+        $arrData['status'] = 1;
         D('gather')->save($arrData);
       }
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);
+  }
+  /**
+  +--------------------------------------------------------------------
+  * 处理采集端退出事件...
+  +--------------------------------------------------------------------
+  */
+  public function logout()
+  {
+    // 判断输入的采集端编号是否有效...
+    if( !isset($_POST['gather_id']) )
+      return;
+    // 将采集端自己的状态设置为0...
+    $map['gather_id'] = $_POST['gather_id'];
+    D('gather')->where($map)->setField('status', 0);
   }
 }
 ?>

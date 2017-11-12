@@ -6,6 +6,7 @@
 #include "HaoYiView.h"
 #include "UtilTool.h"
 #include "XmlConfig.h"
+#include "HyperLink.h"
 
 #include "HCNetSDK.h"
 #include "OSThread.h"
@@ -196,22 +197,26 @@ class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
-	enum { IDD = IDD_ABOUTBOX };
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);
 	virtual BOOL OnInitDialog();
 protected:
 	DECLARE_MESSAGE_MAP()
 public:
+	enum { IDD = IDD_ABOUTBOX };
+	CHyperLink	m_ctrlHome;
+	HCURSOR		m_hHandCur;
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(CAboutDlg::IDD)
 {
+	m_hHandCur = CUtilTool::GetSysHandCursor();
 }
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_ABOUT_WEBSITE, m_ctrlHome);
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
@@ -224,13 +229,14 @@ void CHaoYiApp::OnAppAbout()
 	aboutDlg.DoModal();
 }
 
-
 BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	CString strTitle;
+	CString strTitle, strAuthorize;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nMaxCamera = theConfig.GetMaxCamera();
+	string & strAuthExpired = theConfig.GetAuthExpired();
 	string & strMainName = theConfig.GetMainName();
 	string & strCopyRight = theConfig.GetCopyRight();
 	string & strPhone = theConfig.GetPhone();
@@ -243,6 +249,18 @@ BOOL CAboutDlg::OnInitDialog()
 	GetDlgItem(IDC_ABOUT_WEBSITE)->SetWindowText(strWebSite.c_str());
 	GetDlgItem(IDC_ABOUT_ADDRESS)->SetWindowText(strAddress.c_str());
 
+	// 设置访问连接地址...
+	m_ctrlHome.SetUnderline(TRUE);
+	m_ctrlHome.SetURL(strWebSite.c_str());
+	m_ctrlHome.SetWindowText(strWebSite.c_str());
+	m_ctrlHome.SetLinkCursor(this->m_hHandCur);
+	m_ctrlHome.SetAutoSize();
+
+	// 设置授权信息...
+	strAuthorize.Format("最大通道数【%d 路】，有效期【%s】", nMaxCamera, strAuthExpired.c_str());
+	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowTextA(strAuthorize);
+
+	// 设置标题信息...
 	strTitle.Format("关于 - %s", strMainName.c_str());
 	this->SetWindowText(strTitle);
 

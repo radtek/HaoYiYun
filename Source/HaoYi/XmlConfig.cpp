@@ -7,8 +7,6 @@ CXmlConfig::CXmlConfig(void)
   : m_nMaxCamera(DEF_MAX_CAMERA)
   , m_nMainKbps(DEF_MAIN_KBPS)
   , m_nSubKbps(DEF_SUB_KBPS)
-  , m_nSnapStep(DEF_SNAP_STEP)
-  , m_nRecSlice(DEF_REC_SLICE)
   , m_bAutoLinkFDFS(false)
   , m_bAutoLinkDVR(false)
   , m_strSavePath(DEF_REC_PATH)
@@ -24,14 +22,16 @@ CXmlConfig::CXmlConfig(void)
   , m_strWebName("")
   , m_strWebTag("")
   , m_nWebType(-1)
+  , m_nSliceVal(0)
+  , m_nInterVal(0)
 {
 	CString strVersion;
-	strVersion.Format("版 本：V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
+	strVersion.Format("V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
 	m_strVersion = strVersion;
-	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2016-2020";
-	m_strPhone = "电 话：15010119735";
-	m_strWebSite = "网 站：https://www.myhaoyi.com";	
-	m_strAddress = "地 址：北京市海淀区北四环西路68号6层C16";
+	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2017-2020";
+	m_strPhone = "15010119735";
+	m_strWebSite = "https://www.myhaoyi.com";	
+	m_strAddress = "北京市海淀区北四环西路68号6层C16";
 }
 
 CXmlConfig::~CXmlConfig(void)
@@ -140,27 +140,23 @@ BOOL CXmlConfig::GMLoadConfig()
 		const string & strValue = lpChildElem->ValueStr();
 		if( strValue == "SavePath" ) {
 			m_strSavePath = ((lpszText != NULL && strlen(lpszText) > 0 ) ? CUtilTool::UTF8_ANSI(lpszText) : DEF_REC_PATH);
-		} else if( strValue == "MainName" ) {
+		} else if( strValue == "WebAddr" ) {
+			m_strWebAddr = ((lpszText != NULL && strlen(lpszText) > 0 ) ? lpszText : DEF_WEB_ADDR);
+		} else if( strValue == "WebPort" ) {
+			m_nWebPort = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_WEB_PORT);
+		}/* else if( strValue == "MainName" ) {
 			m_strMainName = ((lpszText != NULL && strlen(lpszText) > 0 ) ? CUtilTool::UTF8_ANSI(lpszText) : DEF_MAIN_NAME);
 		} else if( strValue == "MainKbps" ) {
 			m_nMainKbps = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_MAIN_KBPS);
 		} else if( strValue == "SubKbps" ) {
 			m_nSubKbps = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_SUB_KBPS);
-		} else if( strValue == "SnapStep" ) {
-			m_nSnapStep = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_SNAP_STEP);
-		} else if( strValue == "RecSlice" ) {
-			m_nRecSlice = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_REC_SLICE);
 		} else if( strValue == "AutoLinkDVR" ) {
 			m_bAutoLinkDVR = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : false);
 		} else if( strValue == "AutoLinkFDFS" ) {
 			m_bAutoLinkFDFS = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : false);
-		} else if( strValue == "WebAddr" ) {
-			m_strWebAddr = ((lpszText != NULL && strlen(lpszText) > 0 ) ? lpszText : DEF_WEB_ADDR);
-		} else if( strValue == "WebPort" ) {
-			m_nWebPort = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_WEB_PORT);
 		} else if( strValue == "MaxCamera" ) {
 			m_nMaxCamera = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_MAX_CAMERA);
-		}
+		}*/
 		lpChildElem = lpChildElem->NextSiblingElement();
 	}
 	// 2017.10.27 - by jackey => 通道配置，全部放置到网站端...
@@ -219,7 +215,12 @@ BOOL CXmlConfig::GMSaveConfig()
 		theElem = this->BuildXmlElem("SavePath", CUtilTool::ANSI_UTF8(m_strSavePath.c_str()));
 		commElem.InsertEndChild(theElem);
 	}
-	// 更行主窗口标题名称...
+	// 只保存网站地址和端口，其它存放到内存和数据库当中...
+	theElem = this->BuildXmlElem("WebAddr", m_strWebAddr);
+	commElem.InsertEndChild(theElem);
+	theElem = this->BuildXmlElem("WebPort", m_nWebPort);
+	commElem.InsertEndChild(theElem);
+	/*// 更行主窗口标题名称...
 	theElem = this->BuildXmlElem("MainName", CUtilTool::ANSI_UTF8(m_strMainName.c_str()));
 	commElem.InsertEndChild(theElem);
 	// 更新主码流和子码流配置信息...
@@ -235,12 +236,8 @@ BOOL CXmlConfig::GMSaveConfig()
 	commElem.InsertEndChild(theElem);
 	theElem = this->BuildXmlElem("AutoLinkFDFS", m_bAutoLinkFDFS);
 	commElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("WebAddr", m_strWebAddr);
-	commElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("WebPort", m_nWebPort);
-	commElem.InsertEndChild(theElem);
 	theElem = this->BuildXmlElem("MaxCamera", m_nMaxCamera);
-	commElem.InsertEndChild(theElem);
+	commElem.InsertEndChild(theElem);*/
 	// 保存关于配置节点信息...
 	theElem = this->BuildXmlElem("CopyRight", CUtilTool::ANSI_UTF8(m_strCopyRight.c_str()));
 	aboutElem.InsertEndChild(theElem);

@@ -53,6 +53,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_MESSAGE(WM_FIND_HK_CAMERA, &CHaoYiView::OnMsgFindHKCamera)
 	ON_MESSAGE(WM_FOCUS_VIDEO, &CHaoYiView::OnMsgFocusVideo)
 	ON_MESSAGE(WM_RELOAD_VIEW, &CHaoYiView::OnMsgReloadView)
+	ON_MESSAGE(WM_SYS_CONFIG, &CHaoYiView::OnMsgSysConfig)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
 	ON_COMMAND(ID_SYS_SET, &CHaoYiView::OnSysSet)
@@ -381,18 +382,12 @@ LRESULT CHaoYiView::OnMsgWebAuthResult(WPARAM wParam, LPARAM lParam)
 // 更新主窗口标题名称...
 void CHaoYiView::doUpdateFrameTitle()
 {
-	CString strTitle, strWebType;
+	CString strTitle;
 	CMainFrame * lpFrame = (CMainFrame*)AfxGetMainWnd();
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strMainName = theConfig.GetMainName();
 	string & strWebName = theConfig.GetWebName();
-	switch( theConfig.GetWebType() )
-	{
-	case kCloudRecorder: strWebType = "云录播";	break;
-	case kCloudMonitor:	 strWebType = "云监控";	break;
-	default:			 strWebType = "未知";	break;
-	}
-	strTitle.Format("%s - %s", strWebType, strMainName.c_str());
+	strTitle.Format("%s - %s", strWebName.c_str(), strMainName.c_str());
 	lpFrame->SetWindowText(strTitle);
 }
 //
@@ -424,7 +419,6 @@ LRESULT CHaoYiView::OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam)
 	this->SetTimer(kTimerCheckDVR, 2 * 1000, NULL);
 	this->SetTimer(kTimerAnimateDVR, 1 * 1000, NULL);
 	this->SetTimer(kTimerCheckCourse, 500, NULL);
-	this->SetTimer(kTimerWebGatherConfig, 180 * 1000, NULL);
 	return S_OK;
 }
 
@@ -436,7 +430,6 @@ void CHaoYiView::OnTimer(UINT_PTR nIDEvent)
 	case kTimerCheckDVR:		this->doCheckDVR();			break;
 	case kTimerAnimateDVR:		this->doAnimateDVR();		break;
 	case kTimerCheckCourse:		this->doCheckCourse();		break;
-	case kTimerWebGatherConfig: this->doWebGatherConfig();	break;
 	default:					/*-- do nothing --*/		break;
 	}
 	CFormView::OnTimer(nIDEvent);
@@ -863,7 +856,6 @@ void CHaoYiView::DestroyResource()
 	this->KillTimer(kTimerCheckDVR);
 	this->KillTimer(kTimerCheckCourse);
 	this->KillTimer(kTimerAnimateDVR);
-	this->KillTimer(kTimerWebGatherConfig);
 	// 释放web线程...
 	if( m_lpWebThread != NULL ) {
 		delete m_lpWebThread;
@@ -1225,12 +1217,12 @@ LRESULT	CHaoYiView::OnMsgFindHKCamera(WPARAM wParam, LPARAM lParam)
 }
 //
 // 向网站获取采集端配置...
-BOOL CHaoYiView::doWebGatherConfig()
+/*BOOL CHaoYiView::doWebGatherConfig()
 {
 	if( m_lpWebThread == NULL )
 		return false;
 	return m_lpWebThread->doWebGatherConfig();
-}
+}*/
 //
 // 向网站注册摄像头...
 BOOL CHaoYiView::doWebRegCamera(GM_MapData & inData)
@@ -1553,6 +1545,18 @@ void CHaoYiView::OnSysSet()
 	CDlgSetSys dlg(this);
 	if( IDOK != dlg.DoModal() )
 		return;
+	// 响应系统配置发生变化的处理...
+	this->doSysConfigChanged();
+	// 如果网站地址或端口发生变化，需要向本窗口发送重建消息...
+	if( dlg.IsWebChange() ) {
+		this->PostMessage(WM_RELOAD_VIEW);
+	}
+	// 其它参数会自动通过调用更新...
+}
+//
+// 通用的系统配置发生变化需要处理的过程...
+void CHaoYiView::doSysConfigChanged()
+{
 	// 更新标题栏名称...
 	this->doUpdateFrameTitle();
 	// 不连接存储服务器，但是会话有效，则立即删除会话对象...
@@ -1563,11 +1567,6 @@ void CHaoYiView::OnSysSet()
 		this->DelByEventThread(m_lpStorageSession);
 		m_lpStorageSession = NULL;
 	}
-	// 如果网站地址或端口发生变化，需要向本窗口发送重建消息...
-	if( dlg.IsWebChange() ) {
-		this->PostMessage(WM_RELOAD_VIEW);
-	}
-	// 其它参数会自动通过调用更新...
 }
 //
 // 处理视图销毁事件...
@@ -1595,6 +1594,14 @@ LRESULT CHaoYiView::OnMsgReloadView(WPARAM wParam, LPARAM lParam)
 	if( m_lpMidView != NULL ) {
 		m_lpMidView->doMoveWindow(rectMid);
 	}
+	return S_OK;
+}
+//
+// 响应网站端发起的系统配置发生变化的事件通知...
+LRESULT CHaoYiView::OnMsgSysConfig(WPARAM wParam, LPARAM lParam)
+{
+	// 响应系统配置发生变化的操作...
+	this->doSysConfigChanged();
 	return S_OK;
 }
 //

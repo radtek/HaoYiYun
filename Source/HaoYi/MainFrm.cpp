@@ -121,8 +121,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		MsgLogGM(GM_Err_Config);
 		return -1;
 	}
-	// 手动调整一些测试参数...
-	theConfig.SetRecSlice(30);
 
 	// 设置最大的剩余磁盘为录像盘符...
 	this->MakeGMSavePath();

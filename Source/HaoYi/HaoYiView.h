@@ -70,6 +70,7 @@ protected:
 	afx_msg LRESULT OnMsgReloadView(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgDelByTransmit(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMsgAddByTransmit(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMsgSysConfig(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	enum {
@@ -87,7 +88,6 @@ public:
 		kTimerCheckDVR		  = 2,						// 每隔2秒轮询检测 => 跟实际配置的DVR数量有关...
 		kTimerAnimateDVR	  = 3,						// 每隔1秒显示DVR动画...
 		kTimerCheckCourse	  = 4,						// 每隔半秒检测课程表...
-		kTimerWebGatherConfig = 5,						// 每隔3分钟获取网站端采集端配置...
 	};
 	enum {
 		kSplitterWidth	= 3,							// 拖拉条宽度...
@@ -132,11 +132,11 @@ private:
 	GM_Error		AddToEventThread(CFastSession * lpSession);
 	void			OnOptDelSession(ULONG inUniqueID);
 	void			doDelTreeFocus(int nDBCameraID);
+	void			doSysConfigChanged();
 
 	void			doRecStartCourse(int nDBCameraID, int nCourseID);
 	void			doRecStopCourse(int nDBCameraID, int nCourseID);
 
-	BOOL			doWebGatherConfig();
 	void			doCheckCourse();
 	void			doAnimateDVR();
 	void			doCheckFDFS();

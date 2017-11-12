@@ -20,11 +20,10 @@ private:
 	CHaoYiView * m_lpHaoYiVew;		// 父窗口对象...
 	CString		m_strMainName;		// 窗口标题名称
 	CString		m_strSavePath;		// 录像存放路径
-	int			m_nMaxCamera;		// 最大摄像头数目
 	int			m_nRecRate;			// 录像码流 => Kbps
 	int			m_nLiveRate;		// 直播码流 => Kbps
-	int			m_nSnapStep;		// 截图间隔 => 秒
-	int			m_nRecSlice;		// 录像切片 => 秒
+	int			m_nSliceVal;		// 切片时间间隔 => 0,30
+	int			m_nInterVal;		// 切片交错帧 => 0,3
 	BOOL		m_bAutoLinkDVR;		// 自动连接DVR设备 => 默认关闭
 	BOOL		m_bAutoLinkFDFS;	// 自动连接FDFS服务器 => 默认关闭
 	int			m_nWebPort;			// Web服务器端口

@@ -65,12 +65,10 @@ using namespace std;
 #define DEF_SAVE_PATH				"GMSave"				// 默认的存盘路径
 #define DEF_MAIN_KBPS				1024					// 默认的主码流Kbps => 录像和截图
 #define DEF_SUB_KBPS				512						// 默认的子码流Kbps => 实时直播上传
-#define DEF_SNAP_STEP				5						// 默认的截图间隔秒数 => .jpg
-#define DEF_REC_SLICE				10 * 60					// 默认的录像切片秒数 => .mp4
 #define DEF_NETSESSION_TIMEOUT		2						// 默认网络会话超时时间(分钟)
 #define DEF_CAMERA_START_ID			1						// 默认摄像头开始ID
-#define DEF_MAX_CAMERA              16						// 默认最大摄像头数目
-#define DEF_WEB_ADDR				"http://192.168.1.180"	// Web默认地址 => 必须包含 http:// 或 https:// 协议前缀
+#define DEF_MAX_CAMERA              8						// 默认最大摄像头数目
+#define DEF_WEB_ADDR				"https://www.ihaoyi.cn"	// Web默认地址 => 必须包含 http:// 或 https:// 协议前缀
 #define DEF_WEB_PORT				80						// Web默认端口 
 
 #define VIDEO_TIME_SCALE			90000					// 视频时间刻度，刻度越大好像越精确???
@@ -104,6 +102,7 @@ using namespace std;
 #define	WM_WEB_UPDATE_NAME			(WM_USER + 109)
 #define	WM_WEB_AUTH_RESULT			(WM_USER + 110)
 #define	WM_RELOAD_VIEW				(WM_USER + 111)
+#define WM_SYS_CONFIG				(WM_USER + 112)
 
 #define WM_ERR_TASK_MSG				(WM_USER + 501)			// 录像任务会话通知消息
 #define WM_ERR_PUSH_MSG				(WM_USER + 502)			// 拉转推会话通知消息

@@ -273,6 +273,7 @@
     <ClInclude Include="UI\BCMenu.h" />
     <ClInclude Include="UI\BitItem.h" />
     <ClInclude Include="UI\BitWnd.h" />
+    <ClInclude Include="UI\HyperLink.h" />
     <ClInclude Include="UI\RenderWnd.h" />
     <ClInclude Include="UI\MidView.h" />
     <ClInclude Include="UI\RightView.h" />
@@ -1418,6 +1419,7 @@
     <ClCompile Include="UI\BCMenu.cpp" />
     <ClCompile Include="UI\BitItem.cpp" />
     <ClCompile Include="UI\BitWnd.cpp" />
+    <ClCompile Include="UI\HyperLink.cpp" />
     <ClCompile Include="UI\RenderWnd.cpp" />
     <ClCompile Include="UI\MidView.cpp" />
     <ClCompile Include="UI\RightView.cpp" />
