@@ -16,23 +16,23 @@
         <div style="width:100%">
           <table class="layui-table">
             <colgroup>
-              <col width="50">
-              <col width="80">
-              <col width="80">
-              <col width="80">
-              <col width="100">
-              <col width="100">
-              <!--<col width="100">-->
+              <col width="8%">
+              <col width="10%">
+              <col width="12%">
+              <col width="12%">
+              <col width="15%">
+              <col width="22%">
+              <col>
             </colgroup>
             <thead>
               <tr>
                 <th>状态</th>
+                <th>标题名称</th>
                 <th>IP地址</th>
                 <th>机器名</th>
                 <th>MAC地址</th>
                 <th>操作系统</th>
                 <th>所在学校</th>
-                <!--<th>操作</th>-->
               </tr> 
             </thead>
             <tbody class="js_gather">
@@ -144,7 +144,8 @@ function doModify(inGatherID, inMacAddr, objTr)
               success: function(ajaxData) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
-                  $(objTr).children('td').eq(5).text(theSchoolName);
+                  $(objTr).children('td').eq(1).text(theNameSet);
+                  $(objTr).children('td').eq(6).text(theSchoolName);
                   layer.closeAll('page');
                 });
               },
