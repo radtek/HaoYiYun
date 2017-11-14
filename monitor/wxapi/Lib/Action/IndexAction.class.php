@@ -12,12 +12,12 @@ class IndexAction extends Action
     //////////////////////////////////////////////
     // 直接对页面进行跳转...
     // 移动设备 => /Mobile
-    // 电脑终端 => /wxapi.php/Home/index
+    // 电脑终端 => /wxapi.php/Monitor/index
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
       header("location: /Mobile");
     } else {
-      header("location:".__APP__.'/Home/index');
+      header("location:".__APP__.'/Monitor/index');
     }
   }
   /**
@@ -32,7 +32,7 @@ class IndexAction extends Action
     //print_r($_COOKIE); exit;
   }
   //
-  // 处理配置存盘接口...
+  // 处理配置存盘接口 => 安装脚本会调用...
   // tracker/x.x.x.x:22122/transmit/x.x.x.x:21001
   public function config()
   {

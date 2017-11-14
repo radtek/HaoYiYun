@@ -690,47 +690,19 @@ size_t procCurlPost(void *ptr, size_t size, size_t nmemb, void *stream)
 	return size * nmemb;
 }
 //
-// 返回一个json数据包...
+// 将每次反馈的数据进行累加 => 有可能一次请求的数据是分开发送的...
 void CStorageSession::doCurlPost(char * pData, size_t nSize)
 {
-	string strUTF8Data;
-	string strANSIData;
-	Json::Reader reader;
-	Json::Value  value;
-	// 将UTF8网站数据转换成ANSI格式...
-	strUTF8Data.assign(pData, nSize);
-	strANSIData = CUtilTool::UTF8_ANSI(strUTF8Data.c_str());
-	// 解析转换后的json数据包...
-	if( !reader.parse(strANSIData, value) ) {
-		MsgLogGM(GM_Err_Json);
-		return;
-	}
-	// 获取返回的采集端编号和错误信息...
-	if( value.isMember("err_code") && value["err_code"].asBool() ) {
-		string & strData = value["err_msg"].asString();
-		string & strMsg = CUtilTool::UTF8_ANSI(strData.c_str());
-		MsgLogINFO(strMsg.c_str());
-		return;
-	}
-	// 返回数据库里记录的编号，不用，直接丢弃...
-	/*int nRetID = 0;
-	Json::Value theID;
-	if( value.isMember("image_id") ) {
-		theID = value["image_id"];
-	} else if( value.isMember("record_id") ) {
-		theID = value["record_id"];
-	}
-	// 需要根据类型分别转换...
-	if( theID.isInt() ) {
-		nRetID = theID.asInt();
-	} else if( theID.isString() ) {
-		nRetID = atoi(theID.asString().c_str());
-	}*/
+	m_strUTF8Data.append(pData, nSize);
+	//TRACE("Curl: %s\n", pData);
+	//TRACE输出有长度限制，太长会截断...
 }
 //
 // 在网站上保存FDFS文件记录...
 BOOL CStorageSession::doWebSaveFDFS(CString & strPathFile, CString & strFileFDFS, ULONGLONG llFileSize)
 {
+	// 先将返回缓冲清空...
+	m_strUTF8Data.clear();
 	// 判断数据是否有效...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strWebAddr = theConfig.GetWebAddr();
@@ -779,6 +751,31 @@ BOOL CStorageSession::doWebSaveFDFS(CString & strPathFile, CString & strFileFDFS
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	// 判断获取的数据是否有效...
+	if( m_strUTF8Data.size() <= 0 ) {
+		MsgLogGM(GM_Err_Json);
+		return false;
+	}
+	// 定义需要的解析变量...
+	Json::Value  value;
+	Json::Reader reader;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	string strANSIData = CUtilTool::UTF8_ANSI(m_strUTF8Data.c_str());
+	// 解析转换后的json数据包...
+	if( !reader.parse(strANSIData, value) ) {
+		MsgLogGM(GM_Err_Json);
+		return false;
+	}
+	// 获取返回的错误信息...
+	if( value.isMember("err_code") && value["err_code"].asBool() ) {
+		string & strData = value["err_msg"].asString();
+		string & strMsg = CUtilTool::UTF8_ANSI(strData.c_str());
+		MsgLogINFO(strMsg.c_str());
+		return false;
+	}
+	// 返回数据库里记录的编号，目前不用，直接丢弃...
+	//int nImageID = atoi(CUtilTool::getJsonString(value["image_id"]).c_str());
+	//int nRecordID = atoi(CUtilTool::getJsonString(value["record_id"]).c_str());
 	return true;
 }
 //////////////////////////////////////////////////

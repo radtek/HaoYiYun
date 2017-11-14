@@ -16,17 +16,7 @@
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">所在年级</label>
-      <div class="layui-input-block">
-        <select name="myCameraGrade" lay-verify="required" lay-search="">
-          <volist name="my_list_grade" id="vo">
-          <option value="{{$vo.grade_id}}">{{$vo.grade_type}} {{$vo.grade_name}}</option>
-          </volist>
-        </select>
-      </div>
-    </div>
-    <div class="layui-form-item">
-      <label class="layui-form-label">所在班级</label>
+      <label class="layui-form-label">通道名称</label>
       <div class="layui-input-block">
         <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_live.camera_name}}">
       </div>
@@ -60,5 +50,4 @@
 <script>
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
 document.getElementsByName('myCameraGather')[0].value = {{$my_live.gather_id}};
-document.getElementsByName('myCameraGrade')[0].value = {{$my_live.grade_id}};
 </script>

@@ -9,14 +9,13 @@ class LoginAction extends Action
   // 初始化页面的默认操作...
   public function _initialize()
   {
-    // 获取系统配置，根据配置设置相关变量...
+    // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
     $dbSys = D('system')->field('web_type,web_title')->find();
-    $this->m_webType = $dbSys['web_type'];
     $this->m_webTitle = $dbSys['web_title'];
-    $this->m_webName = (($this->m_webType > 0) ? "云监控" : "云录播");
+    $this->m_webType = kCloudMonitor;
     // 直接给模板变量赋值...
+    $this->assign('my_web_title', $this->m_webTitle);
     $this->assign('my_login_title', $this->m_webTitle . " - 微信登录");
-    $this->assign('my_web_name', $this->m_webName);
   }
   //
   // 显示微信登录的二维码...
@@ -105,7 +104,7 @@ class LoginAction extends Action
         header("location:".$strJump);
       } else {
         // 不一致，跳转到首页...
-        A('Home')->index();
+        A('Monitor')->index();
       }
       return;
     }
@@ -147,7 +146,7 @@ class LoginAction extends Action
     // 注意：$_SERVER['HTTP_HOST'] 自带访问端口...
     // 拼接当前访问页面的完整链接地址 => 登录服务器会反向调用 => 前后端跳转地址不一样...
     $dbJson['node_addr'] = $_SERVER['HTTP_HOST'];
-    $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Home/login");
+    $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Monitor/login");
     $dbJson['node_tag'] = $dbSys['web_tag'];
     $dbJson['node_type'] = $dbSys['web_type'];
     $dbJson['node_name'] = $dbSys['web_title'];
@@ -155,13 +154,13 @@ class LoginAction extends Action
     // 对链接地址进行base64加密...
     $state = urlsafe_b64encode($state);
 
-    // 给模板设定数据 => default/Login/login.htm => default/Home/login.htm
+    // 给模板设定数据 => default/Login/login.htm => default/Monitor/login.htm
     $this->assign('my_state', $state);
     $this->assign('my_scope', $this->m_weLogin['scope']);
     $this->assign('my_appid', $this->m_weLogin['appid']);
     //$this->assign('my_href', $this->m_weLogin['href']);
     $this->assign('my_redirect_uri', urlencode($this->m_weLogin['redirect_uri']));
-    $this->display($bIsAdmin ? "Login:login" : "Home:login");
+    $this->display($bIsAdmin ? "Login:login" : "Monitor:login");
   }
   //
   // 显示错误模板信息...

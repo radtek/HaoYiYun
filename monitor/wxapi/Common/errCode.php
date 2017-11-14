@@ -66,6 +66,7 @@ define('kCmd_Live_Vary',             16);
 define('kCmd_Live_Quit',             17);
 define('kCmd_Play_Login',            18);
 define('kCmd_Play_Verify',           19);
+define('kCmd_PHP_Set_Gather_SYS',    20);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...

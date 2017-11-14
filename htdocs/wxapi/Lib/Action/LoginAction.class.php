@@ -13,10 +13,9 @@ class LoginAction extends Action
     $dbSys = D('system')->field('web_type,web_title')->find();
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_webType = kCloudRecorder;
-    $this->m_webName = "云录播";
     // 直接给模板变量赋值...
+    $this->assign('my_web_title', $this->m_webTitle);
     $this->assign('my_login_title', $this->m_webTitle . " - 微信登录");
-    $this->assign('my_web_name', $this->m_webName);
   }
   //
   // 显示微信登录的二维码...

@@ -16,27 +16,21 @@
         <div style="width:100%">
           <table class="layui-table">
             <colgroup>
-              <col width="50">
-              <col width="80">
-              <col width="80">
-              <col width="80">
-              <col width="100">
-              <col width="100">
-              <col width="100">
+              <col width="8%">
+              <col width="10%">
+              <col width="12%">
+              <col width="12%">
+              <col width="15%">
+              <col>
             </colgroup>
             <thead>
               <tr>
                 <th>状态</th>
+                <th>标题名称</th>
                 <th>IP地址</th>
                 <th>机器名</th>
                 <th>MAC地址</th>
-                <th>最大通道数</th>
-                <eq name='my_web_type' value='0'>
-                <th>所在学校</th>
-                <else/>
-                <th>名称标识</th>
-                </eq>
-                <th>操作</th>
+                <th>操作系统</th>
               </tr> 
             </thead>
             <tbody class="js_gather">
@@ -55,10 +49,9 @@
 var siteurl="{{:__APP__}}";
 //
 // 执行修改操作...
-function doModify(inGatherID, objTr)
+function doModify(inGatherID, inMacAddr, objTr)
 {
   // 向服务器发送直播状态查看命令...
-  var nWebType = {{$my_web_type}};
   var index = layer.load(2);
   var $ = layui.jquery;
   // 先将背景色进行修改...
@@ -76,46 +69,76 @@ function doModify(inGatherID, objTr)
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['450px', '400px'],
-        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;编辑 - 采集端</i>",
+        area: ['500px', '440px'],
+        title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;配置 - 采集端</i>",
         content: ajaxData,
         success: function() {
           var form = layui.form;
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formGather)', function(data) {
-            var theSchoolID = 0, theSchoolName = "", theNameSet = "";
-            if( nWebType > 0 ) {
-              // 云监控模式...
-              theNameSet = data.field.myNameSet;
-            } else {
-              // 云录播模式...
-              theSchoolID = data.field.mySchool;
-              theSchoolName = $("select[name='mySchool']").find("option:selected").text();
-              // 判断输入数据的有效性...
-              if( theSchoolID <= 0 ) {
-                layer.msg('【所在学校】不能为空，请更正！', {icon: 2});
-                return false;
-              }
+            // 云监控模式，没有学校字段...
+            var theNameSet = data.field.myNameSet;
+            var theAutoDVR = (data.field.myAutoDVR == "on" ? 1 : 0);
+            var theAutoFDFS = (data.field.myAutoFDFS == "on" ? 1 : 0);
+            var theMainRate = data.field.myMainRate;
+            var theSubRate = data.field.mySubRate;
+            // 判断主码流是否有效...
+            if( isNaN(theMainRate) || theMainRate < 32 || theMainRate > 8192 ) {
+              layer.msg('【录像码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='myMainRate']").addClass('layui-form-danger');
+                $("input[name='myMainRate']").focus();
+              });
+              return false;
             }
+            // 判断子码流是否有效...
+            if( isNaN(theSubRate) || theSubRate < 32 || theSubRate > 8192 ) {
+              layer.msg('【直播码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='mySubRate']").addClass('layui-form-danger');
+                $("input[name='mySubRate']").focus();
+              });
+              return false;
+            }
+            // 判断切片时间是否有效...
+            var theSliceVal = data.field.mySliceVal;
+            var theInterVal = data.field.myInterVal;
+            if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
+              layer.msg('【录像切片】有效区间[0,30]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='mySliceVal']").addClass('layui-form-danger');
+                $("input[name='mySliceVal']").focus();
+              });
+              return false;
+            }
+            // 判断切片间隔是否有效...
+            if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
+              layer.msg('【切片交错】有效区间[0,3]，请更正！',  {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='myInterVal']").addClass('layui-form-danger');
+                $("input[name='myInterVal']").focus();
+              });
+              return false;
+            }
+            // 定义post需要的数组...
+            var arrData = new Object();
+            arrData['mac_addr'] = inMacAddr;
+            arrData['gather_id'] = inGatherID;
+            arrData['name_set'] = theNameSet;
+            arrData['main_rate'] = theMainRate;
+            arrData['sub_rate'] = theSubRate;
+            arrData['auto_dvr'] = theAutoDVR;
+            arrData['auto_fdfs'] = theAutoFDFS;
+            arrData['slice_val'] = theSliceVal;
+            arrData['inter_val'] = theInterVal;
             // 通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({
               type: "post",
               async: true,
+              data: arrData,
               url: siteurl+"/Admin/saveGather",
-              data: {gather_id: inGatherID, school_id: theSchoolID, name_set: theNameSet},
               success: function(ajaxData) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
-                  //location.href = siteurl+"/Admin/gather";
-                  if( nWebType > 0 ) {
-                    // 云监控模式...
-                    $(objTr).children('td').eq(5).text(theNameSet);
-                  } else {
-                    // 云录播模式...
-                    $(objTr).children('td').eq(5).text(theSchoolName);
-                  }
+                  $(objTr).children('td').eq(1).text(theNameSet);
                   layer.closeAll('page');
                 });
               },
@@ -142,12 +165,12 @@ function doModify(inGatherID, objTr)
 }
 //
 // 打开摄像头页面...
-function doCamera(inGatherID)
+/*function doCamera(inGatherID)
 {
   // 需要兼容IE8...
   stopPropagation(event);
-  location.href = siteurl+"/Admin/camera/gather_id/"+inGatherID;
-}
+  location.href = siteurl+"/Admin/live/gather_id/"+inGatherID;
+}*/
 //
 // 处理 layui 过程...
 layui.use(['element','laypage','layer','form'], function(){

@@ -12,36 +12,6 @@
 
 <div class="layui-field-box">
   <form class="layui-form layui-form-pane" action="">
-    <eq name='my_web_type' value='0'>
-    <div class="layui-form-item">
-      <label class="layui-form-label">科目</label>
-      <div class="layui-input-block">
-        <select name="mySubject" lay-verify="required" lay-search="">
-          <volist name="my_list_subject" id="itemSubject">
-          <option value="{{$itemSubject.subject_id}}">{{$itemSubject.subject_name}}</option>
-          </volist>
-        </select>
-      </div>
-    </div>
-    <div class="layui-form-item">
-      <label class="layui-form-label">教师</label>
-      <div class="layui-input-block">
-        <select name="myTeacher" lay-verify="required" lay-search="">
-          <volist name="my_list_teacher" id="itemTeacher">
-          <option value="{{$itemTeacher.teacher_id}}">{{$itemTeacher.teacher_name}}&nbsp;{{$itemTeacher.title_name}}</option>
-          </volist>
-        </select>
-      </div>
-    </div>
-    <div class="layui-form-item">
-      <label class="layui-form-label">所在班级</label>
-      <div class="layui-input-block">
-        <label class="layui-form-label" style="width:100%">
-        {{$my_vod.grade_type}}&nbsp;{{$my_vod.grade_name}}&nbsp;{{$my_vod.camera_name}}
-        </label>
-      </div>
-    </div>
-    <else/>
     <div class="layui-form-item">
       <label class="layui-form-label">所在通道</label>
       <div class="layui-input-block">
@@ -68,7 +38,6 @@
         </label>
       </div>
     </div>
-    </eq>
     <div class="layui-form-item">
       <label class="layui-form-label">文件标识</label>
       <div class="layui-input-block">
@@ -89,10 +58,5 @@
 
 <script>
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
-<eq name='my_web_type' value='0'>
-document.getElementsByName('mySubject')[0].value = {{$my_vod.subject_id|default=0}};
-document.getElementsByName('myTeacher')[0].value = {{$my_vod.teacher_id|default=0}};
-<else/>
 document.getElementsByName('myCamera')[0].value = {{$my_vod.camera_id|default=0}};
-</eq>
 </script>

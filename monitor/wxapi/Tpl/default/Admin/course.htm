@@ -99,11 +99,7 @@
         <fieldset class="layui-elem-field layui-field-title">
           <legend>
             <i class="fa fa-list-alt">&nbsp;录像计划表
-            <eq name='my_web_type' value='0'>
-             - {{$my_grade.grade_type}}&nbsp;{{$my_grade.grade_name}}&nbsp;{{$my_grade.camera_name}} - live{{$my_grade.camera_id}}
-            <else/>
-             - {{$my_grade.camera_name}} - live{{$my_grade.camera_id}}
-            </eq>
+             - {{$my_camera.camera_name}} - live{{$my_camera.camera_id}}
             </i>
           </legend>
         </fieldset>

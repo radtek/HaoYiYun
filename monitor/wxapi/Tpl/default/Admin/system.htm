@@ -7,17 +7,10 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - <eq name='my_web_type' value='0'>云录播模式<else/>云监控模式</eq></i></legend>
+          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - 云监控模式</i></legend>
         </fieldset>
         <div class="layui-field-box" style="padding: 0px 0px; width: 50%;">
           <form class="layui-form layui-form-pane" action="">
-            <div class="layui-form-item" pane>
-              <label class="layui-form-label">模式选择</label>
-              <div class="layui-input-block">
-                <input type="radio" lay-filter="modeType" name="myWebType" value="0" title="录播模式" <eq name='my_web_type' value='0'>checked</eq> >
-                <input type="radio" lay-filter="modeType" name="myWebType" value="1" title="监控模式" <eq name='my_web_type' value='1'>checked</eq> >
-              </div>
-            </div>
             <div class="layui-form-item">
               <label class="layui-form-label">本站标记</label>
               <div class="layui-input-block">
@@ -34,22 +27,6 @@
               <label class="layui-form-label">官网地址</label>
               <div class="layui-input-block">
                 <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_sys.sys_site}}">
-              </div>
-            </div>
-            <div id="recSlice" <eq name='my_web_type' value='0'>style="display:none"<else/>style="display:block"</eq> >
-              <div class="layui-form-item">
-                <label class="layui-form-label">录像切片</label>
-                <div class="layui-input-inline" style="width:100px;">
-                  <input type="text" name="mySliceVal" maxlength="2" lay-verify="required" autocomplete="off" placeholder="请输入切片时间" class="layui-input" value="{{$my_sys.slice_val}}">
-                </div>
-                <div class="layui-form-mid layui-word-aux">(每隔0~30分钟产生新切片文件，0表示不切片)</div>
-              </div>
-              <div class="layui-form-item">
-                <label class="layui-form-label">切片交错</label>
-                <div class="layui-input-inline" style="width:100px;">
-                  <input type="text" name="myInterVal" maxlength="1" lay-verify="required" autocomplete="off" placeholder="请输入关键帧个数" class="layui-input" value="{{$my_sys.inter_val}}">
-                </div>
-                <div class="layui-form-mid layui-word-aux">(每个新切片文件交错0~3个关键帧，0表示不交错)</div>
               </div>
             </div>
             <div class="layui-form-item" style="margin-top:30px;text-align:center;">
@@ -76,27 +53,19 @@ layui.use(['element','layer','form'], function(){
   var element = layui.element;
   var form = layui.form;
   var $ = layui.jquery;
-  // 处理切片参数的显示或隐藏...
-  form.on('radio(modeType)', function(data) {
-    $('#recSlice').css('display', ((data.value > 0) ? 'block' : 'none'));
-  });
   // 响应保存设置对话框...
   form.on('submit(formSystem)', function(data) {
     // 获取输入数据，调用接口立即存盘...
-    var theSliceVal = parseInt(data.field.mySliceVal);
-    var theInterVal = parseInt(data.field.myInterVal);
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
-    var theType = data.field.myWebType;
-    // 判读切片时间、切片交错的有效性 => 必须是数字...
-    if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
-      layer.msg('请输入 0 ~ 30 之间的整数！', {anim: 6});
-      $("input[name='mySliceVal']").focus();
-      return false;
-    }
-    if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
-      layer.msg('请输入 0 ~ 3 之间的整数！', {anim: 6});
-      $("input[name='myInterVal']").focus();
+    // 判断连接地址是否正确 => 先去掉左右的空格字符...
+    theSite = theSite.replace(/(^\s*)|(\s*$)/g, "");
+    var reg = /^([hH][tT][tT][pP]:\/\/|[hH][tT][tT][pP][sS]:\/\/)(.)+$/;
+    if( !reg.test(theSite) ) {
+      layer.msg('【官网地址】格式错误<br>必须是有效的http://或https://，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+        $("input[name='mySysSite']").addClass('layui-form-danger');
+        $("input[name='mySysSite']").focus();
+      });
       return false;
     }
     // 发送异步请求 => 兼容IE8...
@@ -105,12 +74,10 @@ layui.use(['element','layer','form'], function(){
     $.ajax({
       type: "post",
       url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_type: theType, web_title: theTitle, sys_site: theSite, slice_val: theSliceVal, inter_val: theInterVal},
+      data: {operate: 'save', web_title: theTitle, sys_site: theSite},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');
-        $("input[name='mySliceVal']").val(theSliceVal);
-        $("input[name='myInterVal']").val(theInterVal);
         $("input[name='myWebTitle']").val(theTitle);
         $("input[name='mySysSite']").val(theSite);
         layer.msg('恭喜！保存成功！', {icon: 1});

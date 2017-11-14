@@ -76,21 +76,18 @@ layui.use(['element','layer','form'], function(){
   // 响应保存设置对话框...
   form.on('submit(formSystem)', function(data) {
     // 获取输入数据，调用接口立即存盘...
-    //var theSliceVal = parseInt(data.field.mySliceVal);
-    //var theInterVal = parseInt(data.field.myInterVal);
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
-    // 判读切片时间、切片交错的有效性 => 必须是数字...
-    /*if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
-      layer.msg('请输入 0 ~ 30 之间的整数！', {anim: 6});
-      $("input[name='mySliceVal']").focus();
+    // 判断连接地址是否正确 => 先去掉左右的空格字符...
+    theSite = theSite.replace(/(^\s*)|(\s*$)/g, "");
+    var reg = /^([hH][tT][tT][pP]:\/\/|[hH][tT][tT][pP][sS]:\/\/)(.)+$/;
+    if( !reg.test(theSite) ) {
+      layer.msg('【官网地址】格式错误<br>必须是有效的http://或https://，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+        $("input[name='mySysSite']").addClass('layui-form-danger');
+        $("input[name='mySysSite']").focus();
+      });
       return false;
     }
-    if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
-      layer.msg('请输入 0 ~ 3 之间的整数！', {anim: 6});
-      $("input[name='myInterVal']").focus();
-      return false;
-    }*/
     // 发送异步请求 => 兼容IE8...
     $.ajaxSetup({ cache:false });
     layer.load(2);

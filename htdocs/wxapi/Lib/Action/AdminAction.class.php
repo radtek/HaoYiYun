@@ -280,13 +280,8 @@ class AdminAction extends Action
     // 获取传递过来的参数...
     $theOperate = $_POST['operate'];
     if( $theOperate == 'save' ) {
-      // 追加 http:// 符号...
+      // http:// 符号已经在前端输入时处理完毕了...
       $_POST['sys_site'] = trim(strtolower($_POST['sys_site']));
-      if( (strncasecmp($_POST['sys_site'], "http://", strlen("http://")) != 0) && 
-          (strncasecmp($_POST['sys_site'], "https://", strlen("https://")) != 0) )
-      {
-        $_POST['sys_site'] = sprintf("http://%s", $_POST['sys_site']);
-      }
       // 更新数据库记录，直接存POST数据...
       $_POST['system_id'] = $dbSys['system_id'];
       D('system')->save($_POST);
@@ -888,8 +883,6 @@ class AdminAction extends Action
     $arrSubject = D('subject')->field('subject_id,subject_name')->select();
     $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
     // 设置模版参数...
-    $this->assign('my_web_logo', $this->m_webLogo);
-    $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_list_teacher', $arrTeacher);
     $this->assign('my_list_subject', $arrSubject);
     // 根据网站类型，传递不同数据...
@@ -952,7 +945,6 @@ class AdminAction extends Action
     $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
     // 设置需要的模板参数信息...
     $this->assign('my_total_num', count($arrCourse));
-    $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('my_nav_type', $theNavType);

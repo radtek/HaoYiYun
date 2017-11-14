@@ -9,18 +9,12 @@ class AdminAction extends Action
   // 调用本模块之前需要调用的接口...
   public function _initialize()
   {
-    // 获取系统配置，根据配置设置相关变量...
+    // 获取系统配置，根据配置设置相关变量 => 强制设置成云监控...
     $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
-    $this->m_webType = $dbSys['web_type'];
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_sysSite = $dbSys['sys_site'];
-    if( $this->m_webType > 0 ) {
-      $this->m_webLogo = "monitor";
-      $this->m_webName = "云监控";
-    } else {
-      $this->m_webLogo = "default";
-      $this->m_webName = "云录播";
-    }
+    $this->m_webType = kCloudMonitor;
+    $this->m_webLogo = "default";
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
@@ -33,8 +27,8 @@ class AdminAction extends Action
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
     $this->assign('my_web_logo', $this->m_webLogo);
-    $this->assign('my_web_name', $this->m_webName);
     $this->assign('my_sys_site', $this->m_sysSite);
+    $this->assign('my_web_title', $this->m_webTitle);
   }
   //
   // 接口 => 根据cookie判断用户是否已经处于登录状态...
@@ -127,7 +121,7 @@ class AdminAction extends Action
     // 获取用户标识信息，如果不是管理员，直接跳转到前端首页...
     $strTicker = Cookie::get('wx_ticker');
     if( strcmp($strTicker, USER_ADMIN_TICK) != 0 ) {
-      header("location:".__APP__.'/Home/index');
+      header("location:".__APP__.'/Monitor/index');
       exit; // 注意：这里最好用exit，终止后续代码的执行...
     }
     // 重定向到默认的系统页面...
@@ -286,13 +280,8 @@ class AdminAction extends Action
     // 获取传递过来的参数...
     $theOperate = $_POST['operate'];
     if( $theOperate == 'save' ) {
-      // 追加 http:// 符号...
+      // http:// 符号已经在前端输入时处理完毕了...
       $_POST['sys_site'] = trim(strtolower($_POST['sys_site']));
-      if( (strncasecmp($_POST['sys_site'], "http://", strlen("http://")) != 0) && 
-          (strncasecmp($_POST['sys_site'], "https://", strlen("https://")) != 0) )
-      {
-        $_POST['sys_site'] = sprintf("http://%s", $_POST['sys_site']);
-      }
       // 更新数据库记录，直接存POST数据...
       $_POST['system_id'] = $dbSys['system_id'];
       D('system')->save($_POST);
@@ -612,29 +601,12 @@ class AdminAction extends Action
     $this->display();
   }
   //
-  // 获取采集端在线状态标志...
-  private function getGatherStatusFromTransmit(&$arrGather)
+  // (这个接口已经废弃不使用了）获取采集端在线状态标志...
+  // 2017.11.12 - by jackey => 采集端状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
+  /*private function getGatherStatusFromTransmit(&$arrGather)
   {
     // 尝试链接中转服务器...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
-    /*// 循环查询所有的采集端状态...
-    foreach($arrGather as &$dbItem) {
-      // 设置采集端默认状态...
-      $dbItem['status'] = 0;
-      // 准备需要的数据参数...
-      $dbJson['mac_addr'] = $dbItem['mac_addr'];
-      $saveJson = json_encode($dbJson);
-      // 获取采集端在线状态 => 通过php socket直接跟中转服务器通信...
-      $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Get_Gather_Status, $saveJson);
-      if( $json_data ) {
-        // 获取的JSON数据有效，转成数组，并判断错误码...
-        $arrData = json_decode($json_data, true);
-        if( $arrData['err_code'] == ERR_OK ) {
-          $dbItem['status'] = $arrData['err_status'];
-        }
-      }
-    }*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
@@ -659,21 +631,25 @@ class AdminAction extends Action
     if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
-  }
+  }*/
   //
   // 获取采集端分页数据...
   public function pageGather()
   {
+    // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
+    //Load('extend');
+    
     // 准备需要的分页参数...
     $pagePer = C('PAGE_PER'); // 每页显示的条数...
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 查询分页数据，准备中转查询数据，设置默认状态...
-    $arrGather = D('GatherView')->limit($pageLimit)->order('gather_id DESC')->select();
-    // 获取采集端在线状态标志，设置模板参数 => 有记录才查询...
+    $arrGather = D('gather')->limit($pageLimit)->order('gather_id DESC')->select();
+    // 2017.11.12 - by jackey => 采集端状态直接从数据库当中读取，不从中转服务器读取...
+    /*// 获取采集端在线状态标志，设置模板参数 => 有记录才查询...
     if( count($arrGather) > 0 ) {
       $this->getGatherStatusFromTransmit($arrGather);
-    }
+    }*/
     $this->assign('my_gather', $arrGather);
     echo $this->fetch('pageGather');
   }
@@ -681,26 +657,9 @@ class AdminAction extends Action
   // 获取采集端详情数据...
   public function getGather()
   {
-    /*$this->assign('my_title', $this->m_webTitle . " - 采集端管理");
-    $this->assign('my_command', 'gather');
-    $theID = $_GET['gather_id'];
-    if( $theID > 0 ) {
-      $arrSchool = D('school')->field('school_id,name')->select();
-      $dbGather = D('gather')->where('gather_id='.$theID)->find();
-      $this->assign('my_gather', $dbGather);
-      $this->assign('my_new_title', "修改 - 采集端");
-      $this->assign('my_list_school', $arrSchool);
-      $this->display();
-    } else {
-      echo '采集端不能通过网站添加！';
-    }*/
     $map['gather_id'] = $_GET['gather_id'];
     $dbGather = D('gather')->where($map)->find();
-    if( $this->m_webType <= 0 ) {
-      // 云录播模式 => 获取学校列表...
-      $arrSchool = D('school')->field('school_id,name')->select();
-      $this->assign('my_list_school', $arrSchool);
-    }
+    // 云监控模式 => 不用获取学校列表...
     $this->assign('my_gather', $dbGather);
     echo $this->display();
   }
@@ -708,169 +667,24 @@ class AdminAction extends Action
   // 保存修改后的采集端数据...
   public function saveGather()
   {
+    // 现将数据直接存放到数据库当中...
     $_POST['updated'] = date('Y-m-d H:i:s');
-    if( $this->m_webType > 0 ) {
-      // 云监控模式...
-      unset($_POST['school_id']);
-    } else {
-      // 云录播模式...
-      unset($_POST['name_set']);
-    }
     D('gather')->save($_POST);
-    echo $_POST['gather_id'];
-  }
-  //
-  // 获取采集端下面的摄像头列表...
-  public function camera()
-  {
-    $this->assign('my_title', $this->m_webTitle . " - 摄像头");
-    $this->assign('my_command', 'gather');
-    // 得到每页条数，总记录数，计算总页数...
-    $pagePer = C('PAGE_PER');
-    $map['gather_id'] = $_GET['gather_id'];
-    $dbGather = D('gather')->where($map)->find();
-    $totalNum = D('camera')->where($map)->count();
-    $max_page = intval($totalNum / $pagePer);
-    // 判断是否是整数倍的页码...
-    $max_page += (($totalNum % $pagePer) ? 1 : 0);
-    // 设置最大页数，设置模板参数...
-    $this->assign('my_total_num', $totalNum);
-    $this->assign('my_gather', $dbGather);
-    $this->assign('max_page', $max_page);
-    $this->display();
-  }
-  //
-  // 获取摄像头在线状态标志...
-  // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
-  /*private function getCameraStatusFromTransmit($strMacAddr, &$arrCamera)
-  {
-    // 尝试链接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();*/
-    
-    /*// 先获取摄像头编号列表，并设置初始状态...
-    foreach($arrCamera as &$dbItem) {
-      $arrIDS[] = $dbItem['camera_id'];
-      $dbItem['status'] = 0;
-    }
-    // 转换成JSON数据...
-    $arrIDS["mac_addr"] = $strMacAddr;
-    $saveJson = json_encode($arrIDS);
-    // 查询指定摄像头列表的在线状态...
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, kCmd_PHP_Get_Camera_Status, $saveJson);
-    if( $json_data ) {
-      // 获取的JSON数据有效，转成数组，并判断有没有错误码...
-      $arrData = json_decode($json_data, true);
-      if( is_array($arrData) && !isset($arrData['err_code']) ) {
-        // 数组是有效的状态列表，将状态设置到对应的摄像头对象下面...
-        foreach($arrCamera as &$dbItem) {
-          foreach($arrData as $key => $value) {
-            if( $dbItem['camera_id'] == $key ) {
-              $dbItem['status'] = $value;
-              break;
-            }
-          }
-        }
-      }
-    }*/
-    
-    // 通过php扩展插件连接中转服务器 => 性能高...
-    /*$transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    // 先获取摄像头编号列表，并设置初始状态...
-    foreach($arrCamera as &$dbItem) {
-      $arrIDS[] = $dbItem['camera_id'];
-      $dbItem['status'] = 0;
-    }
-    // 转换成JSON数据...
-    $arrIDS["mac_addr"] = $strMacAddr;
-    $saveJson = json_encode($arrIDS);
-    // 查询指定摄像头列表的在线状态...
-    if( $transmit ) {
-      $json_data = transmit_command(kClientPHP, kCmd_PHP_Get_Camera_Status, $transmit, $saveJson);
-      if( $json_data ) {
-        // 获取的JSON数据有效，转成数组，并判断有没有错误码...
-        $arrData = json_decode($json_data, true);
-        if( is_array($arrData) && !isset($arrData['err_code']) ) {
-          // 数组是有效的状态列表，将状态设置到对应的摄像头对象下面...
-          foreach($arrCamera as &$dbItem) {
-            foreach($arrData as $key => $value) {
-              if( $dbItem['camera_id'] == $key ) {
-                $dbItem['status'] = $value;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-    // 关闭中转服务器链接...
-    if( $transmit ) {
-      transmit_disconnect_server($transmit);
-    }
-  }*/
-  //
-  // 获取摄像头分页数据...
-  public function pageCamera()
-  {
-    // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
-    Load('extend');
-    
-    // 准备需要的分页参数...
-    $pagePer = C('PAGE_PER'); // 每页显示的条数...
-    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
-    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
-    // 获取采集端的MAC地址，以便查询状态...
-    $map['gather_id'] = $_GET['gather_id'];
-    $dbGather = D('gather')->where($map)->field('mac_addr')->find();
-    // 设置查询条件，查询分页数据，设置模板...
-    unset($map['gather_id']);
-    $map['Camera.gather_id'] = $_GET['gather_id'];
-    $arrCamera = D('CameraView')->where($map)->limit($pageLimit)->order('camera_id DESC')->select();
-
-    // 获取摄像头在线状态标志...
-    // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
-    //$this->getCameraStatusFromTransmit($dbGather['mac_addr'], $arrCamera);
-
-    // 设置模板参数，返回模板数据...
-    $this->assign('my_camera', $arrCamera);
-    echo $this->fetch('pageCamera');
-  }
-  //
-  // 获取摄像头详情数据...
-  public function getCamera()
-  {
-    $map['camera_id'] = $_GET['camera_id'];
-    $dbCamera = D('camera')->where($map)->find();
-    // 获取年级列表 => 云录播模式...
-    if( $this->m_webType <= 0 ) {
-      $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-      $this->assign('my_list_grade', $arrGrade);
-    }
-    $this->assign('my_camera', $dbCamera);
-    echo $this->display();
-  }
-  //
-  // 获取新通道页面...
-  public function getLiveCamera()
-  {
-    // 获取采集端列表...
-    $arrGather = D('gather')->field('gather_id,name_pc,ip_addr')->order('gather_id DESC')->select();
-    // 没有采集端，返回错误...
-    if( count($arrGather) < 0 ) {
-      $this->assign('my_msg_title', '没有【采集端】，无法添加直播通道！');
-      echo $this->fetch('Common:error_page');
+    // 专门判断mac_addr是否有效...
+    if( !isset($_POST['mac_addr']) ) {
+      echo '没有设置mac_addr，无法中转命令！';
       return;
     }
-    $this->assign('my_list_gather', $arrGather);
-    // 获取年级列表...
-    $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-    $this->assign('my_list_grade', $arrGrade);
-    // 设置默认的采集端、流类型、年级...
-    $dbCamera['stream_prop'] = 1;
-    $dbCamera['grade_id'] = $arrGrade[0]['grade_id'];
-    $dbCamera['gather_id'] = $arrGather[0]['gather_id'];
-    $this->assign('my_live', $dbCamera);
-    // 返回构造好的数据...
-    echo $this->fetch('liveCamera');
+    // 将数据转发给指定的采集端...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 连接成功，执行中转命令...
+    if( $transmit ) {
+      $saveJson = json_encode($_POST);
+      $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Gather_SYS, $transmit, $saveJson);
+      transmit_disconnect_server($transmit);
+      echo $json_data;
+    }
   }
   //
   // 添加直播通道...
@@ -898,9 +712,10 @@ class AdminAction extends Action
       // 将参数转换成json数据包，发起添加命令...
       $saveJson = json_encode($dbCamera);
       $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Camera_Add, $transmit, $saveJson);
-      logdebug($json_data);
       // 关闭中转服务器链接...
       transmit_disconnect_server($transmit);
+      // 返回转发结果...
+      echo $json_data;
     }
   }
   //
@@ -1062,14 +877,6 @@ class AdminAction extends Action
   // 获取编辑时间对话框...
   public function getClock()
   {
-    // 读取科目列表，读取教师列表...
-    $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
-    // 设置模版参数...
-    $this->assign('my_web_logo', $this->m_webLogo);
-    $this->assign('my_web_type', $this->m_webType);
-    $this->assign('my_list_teacher', $arrTeacher);
-    $this->assign('my_list_subject', $arrSubject);
     // 根据网站类型，传递不同数据...
     $arrJson['week'] = date('w');
     $arrJson['webType'] = $this->m_webType;
@@ -1121,16 +928,15 @@ class AdminAction extends Action
     // 需要根据类型不同，设置不同的焦点类型...
     $this->assign('my_title', $this->m_webTitle . " - 课程表");
     $this->assign('my_command', (($theNavType == 'camera') ? 'gather' : 'live'));
-    // 获取班级年级或通道信息...
+    // 获取通道信息...
     $map['camera_id'] = $theCameraID;
-    $dbGrade = D('CameraView')->where($map)->find();
-    $this->assign('my_grade', $dbGrade);
+    $dbCamera = D('camera')->where($map)->field('camera_id,camera_name')->find();
+    $this->assign('my_camera', $dbCamera);
     // 获取通道下所有的录像任务...
     $arrCourse = D('course')->where($map)->select();
     $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
     // 设置需要的模板参数信息...
     $this->assign('my_total_num', count($arrCourse));
-    $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('my_nav_type', $theNavType);
@@ -1567,29 +1373,29 @@ class AdminAction extends Action
     $dbCamera = D('camera')->where($map)->find();
     $dbCamera['device_pass'] = base64_decode($dbCamera['device_pass']);
     $this->assign('my_live', $dbCamera);
-    // 获取年级列表 => 云录播模式...
-    if( $this->m_webType <= 0 ) {
-      $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-      $this->assign('my_list_grade', $arrGrade);
-    }
     // 返回构造好的数据...
     echo $this->fetch('liveStatus');
-    
-    /*/ 查询通道记录...
-    $map['camera_id'] = $_GET['camera_id'];
-    $arrCamera = D('camera')->where($map)->select();
-    // 获取采集端的MAC地址，以便查询状态...
-    unset($map);
-    $map['gather_id'] = $arrCamera[0]['gather_id'];
-    $dbGather = D('gather')->where($map)->field('mac_addr')->find();
-    // 查询直播通道的状态 => 内部会自动设置默认值...
-    $this->getCameraStatusFromTransmit($dbGather['mac_addr'], $arrCamera);
-    $this->assign('my_live', $arrCamera[0]);
-    // 获取年级列表...
-    $arrGrade = D('grade')->field('grade_id,grade_type,grade_name')->order('grade_id ASC')->select();
-    $this->assign('my_list_grade', $arrGrade);
+  }
+  //
+  // 获取新通道页面...
+  public function getLiveCamera()
+  {
+    // 获取采集端列表...
+    $arrGather = D('gather')->field('gather_id,name_pc,ip_addr')->order('gather_id DESC')->select();
+    // 没有采集端，返回错误...
+    if( count($arrGather) < 0 ) {
+      $this->assign('my_msg_title', '没有【采集端】，无法添加直播通道！');
+      echo $this->fetch('Common:error_page');
+      return;
+    }
+    // 设置采集端列表...
+    $this->assign('my_list_gather', $arrGather);
+    // 设置默认的采集端、流类型、年级...
+    $dbCamera['stream_prop'] = 1;
+    $dbCamera['gather_id'] = $arrGather[0]['gather_id'];
+    $this->assign('my_live', $dbCamera);
     // 返回构造好的数据...
-    echo $this->fetch('liveStatus');*/
+    echo $this->fetch('liveCamera');
   }
   //
   // 获取点播管理页面...
@@ -1629,17 +1435,9 @@ class AdminAction extends Action
   // 获取点播详情页面...
   public function getVod()
   {
-    if( $this->m_webType ) {
-      // 云监控 => 读取通道列表...
-      $arrCamera = D('camera')->field('camera_id,camera_name')->select();
-      $this->assign('my_list_camera', $arrCamera);
-    } else {
-      // 云录播 => 读取科目列表，读取教师列表...
-      $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-      $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
-      $this->assign('my_list_teacher', $arrTeacher);
-      $this->assign('my_list_subject', $arrSubject);
-    }
+    // 云监控 => 读取通道列表...
+    $arrCamera = D('camera')->field('camera_id,camera_name')->select();
+    $this->assign('my_list_camera', $arrCamera);
     // 获取录像记录需要的信息 => web_tracker_addr 已经自带了协议头 http://或https://
     $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     $map['record_id'] = $_GET['record_id'];
@@ -1653,16 +1451,10 @@ class AdminAction extends Action
   // 保存点播信息...
   public function saveVod()
   {
+    // 云监控模式...
     $dbSave['updated'] = date('Y-m-d H:i:s');
     $dbSave['record_id'] = $_POST['record_id'];
-    if( $this->m_webType ) {
-      // 云监控模式...
-      $dbSave['camera_id'] = $_POST['camera_id'];
-    } else {
-      // 云录播模式...
-      $dbSave['subject_id'] = $_POST['subject_id'];
-      $dbSave['teacher_id'] = $_POST['teacher_id'];
-    }
+    $dbSave['camera_id'] = $_POST['camera_id'];
     D('record')->save($dbSave);
   }
   //
