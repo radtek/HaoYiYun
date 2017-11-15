@@ -186,11 +186,12 @@ class GatherAction extends Action
       // 将通道配置组合起来，反馈给采集端...
       $arrErr['camera'] = $dbCamera;
       // 读取该通道下的所有录像课程表，反馈给采集端...
-      $arrCourse = D('course')->where($map)->field('course_id,camera_id,subject_id,teacher_id,repeat_id,week_id,elapse_sec,start_time,end_time')->select();
+      $arrCourse = D('course')->where($map)->select();
       // 将字符串时间转换成整数时间戳...
       foreach($arrCourse as &$dbItem) {
         $dbItem['start_time'] = strval(strtotime($dbItem['start_time']));
         $dbItem['end_time'] = strval(strtotime($dbItem['end_time']));
+        unset($dbItem['created']); unset($dbItem['updated']);
       }
       // 将课程记录保存到返回队列当中...
       $arrErr['course'] = $arrCourse;      

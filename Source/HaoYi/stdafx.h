@@ -45,6 +45,19 @@
 // 加入自定义的参数文件...
 #include "HYDefine.h"
 #include <afxhtml.h>
+#include <stdint.h>
 
 typedef	map<string, string>		GM_MapData;
 typedef	map<int, GM_MapData>	GM_MapCourse;
+
+typedef struct
+{
+	string		strData;			// 帧数据
+    int			typeFlvTag;			// FLV_TAG_TYPE_AUDIO or FLV_TAG_TYPE_VIDEO
+    bool		is_keyframe;		// 是否是关键帧
+	uint32_t	dwSendTime;			// 发送时间(毫秒)
+	uint32_t	dwRenderOffset;		// 时间戳偏移值
+}FMS_FRAME;
+
+// 定义按时间排序的可以重复的帧队列(音视频混合队列)...
+typedef	multimap<uint32_t, FMS_FRAME>	KH_MapFrame;

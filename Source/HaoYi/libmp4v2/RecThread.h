@@ -6,60 +6,65 @@
 #include "..\myRTSPClient.h"
 
 class LibMP4;
-class LibRtmp;
+class CCamera;
 class CRecThread : public OSThread
 {
 public:
 	CRecThread();
 	virtual ~CRecThread();
 public:
-	virtual bool	InitThread(int nTaskID, LPCTSTR lpszURL, LPCTSTR lpszPath) = 0;
-	virtual void	doErrNotify() = 0;
-	virtual	void	Entry() = 0;
+	virtual BOOL	InitThread(LPCTSTR lpszRtspUrl) = 0;
 public:
-	bool			WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame);
-	bool			CreateAudioTrack(int nAudioSampleRate, int nAudioChannel);
-	bool			CreateVideoTrack(string & strSPS, string & strPPS);
-	float			GetRecSizeM();
+	BOOL			IsRecFinished() { return m_bFinished; }
+	void			StoreVideoHeader(string & inSPS, string & inPPS);
+	void			StoreAudioHeader(int inAudioRate, int inAudioChannel);
+	BOOL			StreamBeginRecord();
+	BOOL			StreamWriteRecord(FMS_FRAME & inFrame);
+	BOOL			StreamEndRecord();
 protected:
-	OSMutex			m_Mutex;			// 互斥对象
-	int				m_nTaskID;			// 录像任务编号
-	string			m_strURL;			// rtmp拉流地址
-	string			m_strMP4Path;		// mp4存盘路径(UTF-8)
-	HWND			m_hWndParent;		// 父窗口对象
+	BOOL			MP4CreateVideoTrack();
+	BOOL			MP4CreateAudioTrack();
+	void			doStreamSnapJPG(int nRecSecond);
+	void			dropSliceKeyFrame();
+	void			doSaveInterFrame();
+	BOOL			BeginRecSlice();
+	BOOL			EndRecSlice();
+protected:
+	string			m_strAudioAES;			// 音频扩展缓存
+	int				m_audio_sample_rate;	// 音频采样率
+	int				m_audio_rate_index;		// 音频索引编号
+	int				m_audio_channel_num;	// 音频声道数
+	int				m_nVideoWidth;			// 视频宽度
+	int				m_nVideoHeight;			// 视频高度
+	string			m_strSPS;				// SPS
+	string			m_strPPS;				// PPS
+
+	BOOL			m_bFinished;		// 网络流是否结束了
+	CCamera		*	m_lpCamera;			// IPC上层对象
 	LibMP4		*	m_lpLibMP4;			// mp4录像对象...
+	DWORD			m_dwRecCTime;		// mp4开始录像时间 => 单位(秒)...
 	DWORD			m_dwWriteSize;		// 写入文件长度...
 	DWORD			m_dwWriteRecMS;		// 已经写入的毫秒数...
-	DWORD			m_dwRecSliceMS;		// 预算的录像切片毫秒数(0表示不切片)...
+	string			m_strUTF8MP4;		// mp4存盘路径(UTF-8)，带.tmp扩展名...
+	CString			m_strMP4Name;		// MP4文件名(不带扩展名)...
+	CString			m_strJpgName;		// JPG文件名(全路径)...
+
+	KH_MapFrame		m_MapMonitor;		// 云监控切片交错缓存区...
+	int				m_nKeyMonitor;		// 云监控已缓存交错关键帧个数...
 };
 
-class CRtmpRecThread : public CRecThread
-{
-public:
-	CRtmpRecThread(HWND hWndParent);
-	virtual ~CRtmpRecThread();
-public:
-	virtual bool	InitThread(int nTaskID, LPCTSTR lpszURL, LPCTSTR lpszPath);
-	virtual	void	Entry();
-	virtual void	doErrNotify();
-private:
-	LibRtmp		*	m_lpRtmp;			// rtmp拉流对象
-};
-
-class CCamera;
 class CRtspRecThread : public CRecThread
 {
 public:
-	CRtspRecThread(HWND hWndParent, CCamera * lpCamera, DWORD dwRecSliceMS);
+	CRtspRecThread(CCamera * lpCamera);
 	virtual ~CRtspRecThread();
 public:
-	virtual bool	InitThread(int nTaskID, LPCTSTR lpszURL, LPCTSTR lpszPath);
-	virtual	void	Entry();
-	virtual void	doErrNotify();
-public:
 	void			ResetEventLoop() { m_rtspEventLoopWatchVariable = 1; }
+public:
+	virtual BOOL	InitThread(LPCTSTR lpszRtspUrl);
+	virtual	void	Entry();
 private:
-	CCamera * m_lpCamera;					// IPC对象
+	string	m_strRtspUrl;					// rtsp连接地址
 	TaskScheduler * m_scheduler_;			// rtsp需要的任务对象
 	UsageEnvironment * m_env_;				// rtsp需要的环境
 	ourRTSPClient * m_rtspClient_;			// rtsp对象

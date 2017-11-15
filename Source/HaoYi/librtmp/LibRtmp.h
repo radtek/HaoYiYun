@@ -2,12 +2,11 @@
 #pragma once
 
 typedef void* srs_rtmp_t;
-class CRtmpRecThread;
 class CRtmpThread;
 class LibRtmp
 {
 public:
-    LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread, CRtmpRecThread * lpRecThread);
+    LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread);
     ~LibRtmp();
 
     bool Open(const char* url);
@@ -39,5 +38,4 @@ private:
 
 	BOOL			  m_bPushStartOK;	// 是否已经启动线程...
 	CRtmpThread	   *  m_lpRtmpThread;	// 外部线程对象...
-	CRtmpRecThread *  m_lpRecThread;	// 外部录像线程对象...
 };

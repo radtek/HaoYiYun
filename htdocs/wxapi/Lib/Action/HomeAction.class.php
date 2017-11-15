@@ -462,9 +462,10 @@ class HomeAction extends Action
       $map['record_id'] = $_GET['record_id'];
       $dbVod = D('record')->where($map)->field('record_id,file_fdfs,clicks')->find();
       $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      // 设置播放页面需要的数据内容...
-      $dbShow['url'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
-      $dbShow['type'] = "video/mp4";
+      // 设置播放页面需要的数据内容 => 这里为source做特殊处理...
+      $arrSource[0]['src'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
+      $arrSource[0]['type'] = "video/mp4";
+      $dbShow['source'] = json_encode($arrSource);
       // 为了与直播兼容设置的数据...
       $dbShow['player_id'] = -1;
       $dbShow['player_vod'] = 1;
@@ -498,10 +499,11 @@ class HomeAction extends Action
         return;
       }
       // 连接中转服务器成功 => 设置rtmp地址和hls地址，播放器编号...
-      $dbShow['url'] = $dbResult['rtmp_url'];
-      $dbShow['type'] = $dbResult['rtmp_type'];
-      $dbShow['hls_url'] = $dbResult['hls_url'];
-      $dbShow['hls_type'] = $dbResult['hls_type'];
+      $arrSource[0]['src'] = $dbResult['rtmp_url'];
+      $arrSource[0]['type'] = $dbResult['rtmp_type'];
+      $arrSource[1]['src'] = $dbResult['hls_url'];
+      $arrSource[1]['type'] = $dbResult['hls_type'];
+      $dbShow['source'] = json_encode($arrSource);
       // 这3个参数是直播播放器汇报时需要的数据...
       $dbShow['player_camera'] = $dbCamera['camera_id'];
       $dbShow['player_id'] = $dbResult['player_id'];

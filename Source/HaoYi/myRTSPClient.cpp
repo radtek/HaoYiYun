@@ -203,6 +203,9 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 				break;
 			}
 			ASSERT( m_strSPS.size() > 0 && m_strPPS.size() > 0 );
+			//////////////////////////////////////////////////////////////////////////////
+			// 注意：这时的PPS、SPS有可能是错误的，只有在数据区获取的才是最真实的...
+			//////////////////////////////////////////////////////////////////////////////
 			// 通知rtsp线程，格式头已经准备好了...
 			/*if( m_lpRtspThread != NULL ) {
 				m_lpRtspThread->WriteAVCSequenceHeader(strSPS, strPPS);
@@ -321,14 +324,16 @@ BOOL ourRTSPClient::doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsF
 	}
 	// 通知录像线程，格式头已经准备好了...
 	if( m_lpRecThread != NULL ) {
-		// 创建视频轨道对象...
+		// 保存视频格式头信息...
 		if( m_strSPS.size() > 0 && m_strPPS.size() > 0 ) {
-			m_lpRecThread->CreateVideoTrack(m_strSPS, m_strPPS);
+			m_lpRecThread->StoreVideoHeader(m_strSPS, m_strPPS);
 		}
-		// 创建音频轨道对象...
+		// 保存音频格式头信息...
 		if( m_audio_channels > 0 && m_audio_rate > 0 ) {
-			m_lpRecThread->CreateAudioTrack(m_audio_rate, m_audio_channels);
+			m_lpRecThread->StoreAudioHeader(m_audio_rate, m_audio_channels);
 		}
+		// 正式启动录像过程...
+		m_lpRecThread->StreamBeginRecord();
 	}
 	// 启动成功，返回结果...
 	m_bHasStart = true;
@@ -338,19 +343,19 @@ BOOL ourRTSPClient::doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsF
 // 进行数据帧的处理...
 void ourRTSPClient::WriteSample(bool bIsVideo, string & inFrame, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame)
 {
+	// 构造音视频数据帧...
+	FMS_FRAME	theFrame;
+	theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
+	theFrame.dwSendTime = inTimeStamp;
+	theFrame.dwRenderOffset = inRenderOffset;
+	theFrame.is_keyframe = bIsKeyFrame;
+	theFrame.strData = inFrame;
 	// 通知录像线程，保存一帧数据包...
 	if( m_lpRecThread != NULL ) {
-		m_lpRecThread->WriteSample(bIsVideo, (BYTE*)inFrame.c_str(), inFrame.size(), inTimeStamp, inRenderOffset, bIsKeyFrame);
+		m_lpRecThread->StreamWriteRecord(theFrame);
 	}
-	// 构造音视频数据帧，推送给rtsp线程...
+	// 推送给rtsp线程...
 	if( m_lpRtspThread != NULL ) {
-		FMS_FRAME	theFrame;
-		theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
-		theFrame.dwSendTime = inTimeStamp;
-		theFrame.dwRenderOffset = inRenderOffset;
-		theFrame.is_keyframe = bIsKeyFrame;
-		theFrame.strData = inFrame;
-		// 推送数据帧给rtsp线程...
 		m_lpRtspThread->PushFrame(theFrame);
 	}
 }
@@ -665,22 +670,6 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 	if( fRtspClient != NULL && fRtspClient->IsHasStart() ) {
 		fRtspClient->WriteSample(bIsVideo, strFrame, dwTimeStamp, 0, bIsKeyFrame);
 	}
-	// 通知录像线程，保存一帧数据包...
-	/*if( fRecThread != NULL ) {
-		fRecThread->WriteSample(bIsVideo, (BYTE*)strFrame.c_str(), strFrame.size(), dwTimeStamp, 0, bIsKeyFrame);
-	}
-	// 构造音视频数据帧，推送给rtsp线程...
-	if( fRtspThread != NULL ) {
-		FMS_FRAME	theFrame;
-		theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
-		theFrame.dwSendTime = dwTimeStamp;
-		theFrame.dwRenderOffset = 0;
-		theFrame.is_keyframe = bIsKeyFrame;
-		theFrame.strData = strFrame;
-		// 推送数据帧给rtsp线程...
-		fRtspThread->PushFrame(theFrame);
-	}*/
-
 	// 处理下一帧的数据...
 	this->continuePlaying();
 }

@@ -1,11 +1,11 @@
 
 <style>
-.layui-form-item { margin-bottom: 15px; }
+.layui-form-item { margin-top: 10px; }
 </style>
 
-<div class="layui-field-box" style="margin-top: 10px">
+<div class="layui-field-box">
   <form class="layui-form layui-form-pane" action="">
-    <div class="layui-form-item">
+    <div class="layui-form-item" style="margin-top: 5px;margin-bottom: 0px;">
       <label class="layui-form-label">所在年级</label>
       <div class="layui-input-block">
         <select name="myCameraGrade" lay-verify="required" lay-search="">
@@ -15,14 +15,14 @@
         </select>
       </div>
     </div>
-    <div class="layui-form-item">
+    <div class="layui-form-item" style="margin-top: 10px;margin-bottom: 0px;">
       <label class="layui-form-label">所在班级</label>
       <div class="layui-input-block">
         <input type="text" name="myCameraName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_live.camera_name}}">
       </div>
     </div>
     <eq name='my_live.stream_prop' value='0'>
-    <div class="layui-form-item">
+    <div class="layui-form-item" style="margin-top: 5px;margin-bottom: 0px;">
       <div class="layui-inline">
         <label class="layui-form-label">登录地址</label>
         <div class="layui-input-block" style="width: 130px;">
@@ -36,7 +36,7 @@
         </div>
       </div>
     </div>
-    <div class="layui-form-item">
+    <div class="layui-form-item" style="margin-top: 0px;margin-bottom: 0px;">
       <div class="layui-inline">
         <label class="layui-form-label">登录用户</label>
         <div class="layui-input-block" style="width: 130px;">
@@ -50,19 +50,26 @@
         </div>
       </div>
     </div>
-    <div class="layui-form-item">
-      <div class="layui-inline">
-        <label class="layui-form-label">显示OSD</label>
-        <div class="layui-input-block" style="width: 130px;">
-          <input type="checkbox" name="myDeviceOSD" <eq name='my_live.device_osd' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
-        </div>
+    <div class="layui-form-item" style="margin-top: 0px;margin-bottom: 0px;">
+      <label class="layui-form-label">显示OSD</label>
+      <div class="layui-input-inline" style="width: 75px;margin-right:0px;">
+        <input type="checkbox" name="myDeviceOSD" <eq name='my_live.device_osd' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
       </div>
-      <div class="layui-inline">
-        <label class="layui-form-label">镜像模式</label>
-        <div class="layui-input-block" style="width: 130px;">
-          <input type="checkbox" name="myDeviceMirror" <eq name='my_live.device_mirror' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
-        </div>
+      <div class="layui-form-mid" style="color: #555">(是否开启画面上显示时间信息)</div>
+    </div>
+    <div class="layui-form-item" style="margin-top: 5px;margin-bottom: 0px;">
+      <label class="layui-form-label">镜像模式</label>
+      <div class="layui-input-inline" style="width: 75px;margin-right:0px;">
+        <input type="checkbox" name="myDeviceMirror" <eq name='my_live.device_mirror' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
       </div>
+      <div class="layui-form-mid" style="color: #555">(是否开启显示画面倒置模式)</div>
+    </div>
+    <div class="layui-form-item" style="margin-top: 5px;margin-bottom: 0px;">
+      <label class="layui-form-label">双流模式</label>
+      <div class="layui-input-inline" style="width: 75px;margin-right:0px;">
+        <input type="checkbox" name="myDeviceTwice" <eq name='my_live.device_twice' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
+      </div>
+      <div class="layui-form-mid" style="color: #555;margin-right:0px;">(主码流录像，子码流直播；若关闭，都用主码流)</div>
     </div>
     <else/>
     <div class="layui-form-item" pane>
@@ -85,7 +92,7 @@
       </div>
     </div>
     </eq>
-    <div class="layui-form-item" style="margin-bottom:10px;margin-top:40px;text-align:center;">
+    <div class="layui-form-item" style="margin-top:20px;text-align:center;">
       <button class="layui-btn" lay-submit lay-filter="formCamera">立即保存</button>&nbsp;
       <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
     </div>

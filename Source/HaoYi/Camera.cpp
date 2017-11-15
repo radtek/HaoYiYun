@@ -22,6 +22,8 @@ CCamera::CCamera(CVideoWnd * lpWndParent)
   , m_nRecCourseID(-1)
   , m_hWndRight(NULL)
   , m_lpPushThread(NULL)
+  , m_lpDeviceMainRec(NULL)
+  , m_bIsTwiceMode(false)
   , m_bStreamLogin(false)
   , m_bIsExiting(false)
   , m_HKLoginIng(false)
@@ -110,18 +112,23 @@ BOOL CCamera::IsPublishing()
 // 返回是否正在录像状态标志...
 BOOL CCamera::IsRecording()
 {
+	// 如果是摄像头设备，并且是双流模式...
+	if( this->IsCameraDevice() && this->m_bIsTwiceMode ) {
+		// 如果录像有效，但已经结束了， 删除录像对象...
+		if( m_lpDeviceMainRec != NULL && m_lpDeviceMainRec->IsRecFinished() ) {
+			// 停止并删除主流录像对象...
+			this->DeviceStopMainRec();
+			// 将正在运行的录像记录编号复位...
+			m_nRecCourseID = -1;
+			return false;
+		}
+		// 其它状态，通过验证录像对象返回结果...
+		return ((m_lpDeviceMainRec != NULL) ? true : false);
+	}
+	// 如果是其它模式，调用推流线程...
 	if( m_lpPushThread == NULL )
 		return false;
 	return m_lpPushThread->IsRecording();
-	// 如果是流转发模式...
-	/*if( m_nStreamProp != kStreamDevice ) {
-		if( m_lpPushThread == NULL )
-			return false;
-		return m_lpPushThread->IsRecording();
-	}
-	// 如果是摄像头设备模式 => 录像线程是否有效...
-	ASSERT( m_nStreamProp == kStreamDevice );
-	return ((m_lpRecThread != NULL) ? true : false);*/
 }
 
 //
@@ -139,11 +146,8 @@ void CCamera::ClearResource()
 		m_HKLoginID = -1;
 		memset(&m_HKDeviceInfo, 0, sizeof(m_HKDeviceInfo));
 	}
-	// 释放自定义rtsp录像对象...
-	/*if( m_lpRecThread != NULL ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}*/
+	// 释放摄像头双流模式录像对象...
+	this->DeviceStopMainRec();
 	// 释放自定义直播上传对象...
 	this->doDeletePushThread();
 	// 设置录像任务为无效...
@@ -450,10 +454,15 @@ DWORD CCamera::onDeviceLoginSuccess()
 	// 启动rtsp拉流线程，只拉流不录像，录像由录像命令触发...
 	/////////////////////////////////////////////////////////////////////////////////////
 	// 准备rtsp链接地址 => 主码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/101
-	CString strRtspUrl;
+	// 准备rtsp链接地址 => 子码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/102
+	m_strRtspMainUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapWeb["device_ip"].c_str(), m_nRtspPort);
+	m_strRtspSubUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/102", m_strLoginUser, m_strLoginPass, theMapWeb["device_ip"].c_str(), m_nRtspPort);
+	// 获取当前通道启动时刻点的双流模式标志，并保存起来，不要动态获取，否则，录像的开始和停止可能会造成标志不一样....
+	string & strTwice = theMapWeb["device_twice"];
+	m_bIsTwiceMode = ((strTwice.size() > 0) ? atoi(strTwice.c_str()) : false);
+	// 若开启双流模式，使用子码流直播、主码流录像；不开启使用主码流直播、主码流录像...
 	string strStreamUrl, strStreamMP4;
-	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapWeb["device_ip"].c_str(), m_nRtspPort);
-	strStreamUrl.assign(strRtspUrl);
+	strStreamUrl.assign(m_bIsTwiceMode ? m_strRtspSubUrl : m_strRtspMainUrl);
 	// 创建流转发、推流线程对象，并立即启动...
 	m_lpPushThread = new CPushThread(m_lpVideoWnd->m_hWnd, this);
 	m_lpPushThread->StreamInitThread(false, strStreamUrl, strStreamMP4);
@@ -563,6 +572,27 @@ DWORD CCamera::onDeviceLoginSuccess()
 	return GM_NoErr;
 }*/
 //
+// 开启设备主码流录像...
+BOOL CCamera::DeviceStartMainRec()
+{
+	// 首先，关闭主码流录像对象...
+	this->DeviceStopMainRec();
+	ASSERT( m_lpDeviceMainRec == NULL );
+	// 新建一个主码流录像对象...
+	m_lpDeviceMainRec = new CRtspRecThread(this);
+	return m_lpDeviceMainRec->InitThread(m_strRtspMainUrl);
+}
+//
+// 关闭设备主码流录像...
+BOOL CCamera::DeviceStopMainRec()
+{
+	if( m_lpDeviceMainRec != NULL ) {
+		delete m_lpDeviceMainRec;
+		m_lpDeviceMainRec = NULL;
+	}
+	return true;
+}
+//
 // 启动任务录像 => 同一时间只能有一个录像...
 void CCamera::doRecStartCourse(int nCourseID)
 {
@@ -575,81 +605,19 @@ void CCamera::doRecStartCourse(int nCourseID)
 	ASSERT( m_nRecCourseID != nCourseID );
 	// 先保存当前课程编号，推流对象会用到...
 	m_nRecCourseID = nCourseID;
+	// 如果是摄像头设备，并且是双流模式，使用单独的主码流录像...
+	if( this->IsCameraDevice() && this->m_bIsTwiceMode ) {
+		this->DeviceStartMainRec();
+		return;
+	}
+	////////////////////////////////////////////////////////////
+	// 如果是单流模式或转发模式 => 直接用转发线程录像...
+	////////////////////////////////////////////////////////////
 	// 推流线程一定有效 => IsPlaying() 可以保证...
 	ASSERT( m_lpPushThread != NULL );
 	// 调用推流线程的录像接口...
 	m_lpPushThread->StreamBeginRecord();
 	return;
-	// 获取唯一的文件名...
-	/*MD5	    md5;
-	string  strUniqid;
-	CString strTimeMicro;
-	ULARGE_INTEGER	llTimCountCur = {0};
-	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
-	strTimeMicro.Format("%I64d", llTimCountCur.QuadPart);
-	md5.update(strTimeMicro, strTimeMicro.GetLength());
-	strUniqid = md5.toString();
-	// 准备录像需要的信息...
-	GM_MapData theMapLoc;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	CString  strMP4Path;
-	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapLoc["DBCameraID"];
-	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
-	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
-	// 2017.08.10 - by jackey => 新增创建时间戳字段...
-	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID
-	DWORD dwCreate = (DWORD)::time(NULL);
-	m_strMP4Name.Format("%s\\%s_%s_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str(), dwCreate, nCourseID);
-	// 录像时使用.tmp，避免没有录像完就被上传...
-	strMP4Path.Format("%s.tmp", m_strMP4Name);
-	// 如果是流转发模式 => 直接用转发线程录像...
-	if( !this->IsCameraDevice() ) {
-		// 先保存当前课程编号，推流对象会用到...
-		m_nRecCourseID = nCourseID;
-		// 推流线程一定有效 => IsPlaying() 可以保证...
-		ASSERT( m_lpPushThread != NULL );
-		// 调用推流线程的录像接口...
-		m_lpPushThread->StreamBeginRecord();
-		return;
-	}
-	// 如果是摄像头设备 => 判断录像线程是否启动...
-	if( m_lpRecThread == NULL ) {
-		MsgLogGM(GM_NotImplement);
-		return;
-	}
-	// 录像线程一定是在设备登录成功之后，已经启动了主码流...
-	ASSERT( m_lpRecThread != NULL );*/
-	/*// 如果是摄像头设备 => 启动专门的 rtsp 录像线程...
-	ASSERT( this->IsCameraDevice() );
-	// 删除之前正在录像的对象...
-	if( m_lpRecThread != NULL ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}
-	// 生成一个截图文件 => 如果截图失败，直接返回...
-	CString  strRtspUrl;
-	GM_Error theErr = GM_NoErr;
-	theErr = this->doDeviceSnapJPG(m_strJpgName);
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
-		return;
-	}
-	// 如果是摄像头设备 => 使用 rtsp 链接单独录像...
-	// 准备rtsp链接地址 => 主码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/101
-	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
-	// 创建 rtsp 录像线程对象...
-	ASSERT( m_lpWndParent != NULL && m_lpWndParent->m_hWnd != NULL );
-	m_lpRecThread = new CRtspRecThread(m_lpWndParent->m_hWnd, this, 0);
-	// 创建成功，直接初始化录像线程 => 一定会启动成功...
-	if( !m_lpRecThread->InitThread(nCourseID, strRtspUrl, strMP4Path) ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-		return;
-	}
-	// 开启录像全部完成，保存当前课程编号...
-	m_nRecCourseID = nCourseID;*/
 }
 //
 // 停止任务录像 => 同一时间只能有一个录像...
@@ -666,25 +634,10 @@ void CCamera::doRecStopCourse(int nCourseID)
 	if( m_lpPushThread != NULL ) {
 		m_lpPushThread->StreamEndRecord();
 	}
+	// 直接调用接口，停止主码流录像...
+	this->DeviceStopMainRec();
 	// 将正在运行的记录编号复位...
 	m_nRecCourseID = -1;
-	
-	/*// 如果是流转发模式 => 调用接口停止录像...
-	if( !this->IsCameraDevice() ) {
-		ASSERT( m_lpPushThread != NULL );
-		m_lpPushThread->StreamEndRecord();
-		// 将正在运行的记录编号复位...
-		m_nRecCourseID = -1;
-		return;
-	}
-	// 如果是摄像头设备 => 直接删除正在录像的线程对象...
-	ASSERT( this->IsCameraDevice() );
-	if( m_lpRecThread != NULL ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}
-	// 将正在运行的记录编号复位...
-	m_nRecCourseID = -1;*/
 }
 //
 // 执行DVR登录操作...
@@ -828,8 +781,6 @@ void CCamera::doDeletePushThread()
 		delete m_lpPushThread;
 		m_lpPushThread = NULL;
 	}
-	// 将延时转发信息复位...
-	m_strRtmpUrl.clear();
 }
 //
 // 处理来自播放器退出引发的删除上传直播通知...

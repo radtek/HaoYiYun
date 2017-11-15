@@ -7,6 +7,12 @@
   <!-- If you'd like to support IE8 -->
   <script src='/wxapi/public/js/videojs-ie8.min.js'></script>
 </head>
+<style>
+.video-js {
+  width: {{$my_show.width}}px;
+  height: {{$my_show.height}}px;
+}
+</style>
 <body style="margin: 1px 1px;">
   <div>
     <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" data-setup="{}">
@@ -64,16 +70,10 @@
       });
     }
     // 初始化videojs对象 => 直接设置多个源，让videojs自动匹配...
+    var strJson = '{{$my_show.source}}';
+    var arrSource = $.parseJSON(strJson);
     var player = videojs("my-video", {
-      width: "{{$my_show.width}}",
-      height: "{{$my_show.height}}",
-      sources: [{
-        type: "{{$my_show.type}}",
-        src: "{{$my_show.url}}"
-      }, {
-        type: "{{$my_show.hls_type}}",
-        src: "{{$my_show.hls_url}}"
-      }],
+      sources: arrSource,
       controlBar: {
         currentTimeDisplay: true,
         audioTrackButton: false

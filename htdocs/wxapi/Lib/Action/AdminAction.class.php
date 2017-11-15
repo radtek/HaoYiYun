@@ -1415,7 +1415,7 @@ class AdminAction extends Action
   // 获取点播管理页面...
   public function vod()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 点播管理");
+    $this->assign('my_title', $this->m_webTitle . " - 录像管理");
     $this->assign('my_command', 'vod');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');

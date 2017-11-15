@@ -1449,7 +1449,7 @@ void CHaoYiView::OnDelDVR()
 	int nDBCameraID = m_nFocusDBCamera;
 	string strDeviceSN = lpCamera->GetDeviceSN();
 	// 删除之前的询问...
-	if( ::MessageBox(this->m_hWnd, "确实要删除当前选中的通道吗？", "确认", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL )
+	if( ::MessageBox(this->m_hWnd, "该通道下所有的录像和配置都会被删除！\n确实要删除当前选中的通道吗？", "确认", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL )
 		return;
 	// 左侧窗口发起删除操作...
 	this->doDelTreeFocus(nDBCameraID);

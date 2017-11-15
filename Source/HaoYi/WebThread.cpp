@@ -594,12 +594,12 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		StringParser::EncodeURI(strUTF8Pass.c_str(), strUTF8Pass.size(), szDevicePass, MAX_PATH);
 		// 处理通道是摄像头的情况...
 		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s&device_user=%s&"
-			"device_pass=%s&device_cmd_port=%s&deive_http_port=%s&device_mirror=%s&device_osd=%s&device_desc=%s&device_channel=%s&device_boot=%s",
+			"device_pass=%s&device_cmd_port=%s&deive_http_port=%s&device_mirror=%s&device_osd=%s&device_desc=%s&device_twice=%s&device_boot=%s",
 			nDBGatherID, nStreamProp, inData["camera_type"].c_str(), szEncName, inData["device_sn"].c_str(), 
 			inData["device_ip"].c_str(), inData["device_mac"].c_str(), inData["device_type"].c_str(),
 			szDeviceUser, szDevicePass, inData["device_cmd_port"].c_str(), inData["device_http_port"].c_str(),
 			inData["device_mirror"].c_str(), inData["device_osd"].c_str(), inData["device_desc"].c_str(),
-			inData["device_channel"].c_str(), inData["device_boot"].c_str());
+			inData["device_twice"].c_str(), inData["device_boot"].c_str());
 	} else {
 		// 对需要的数据进行编码处理 => 这里需要注意文件名过长时的内存溢出问题...
 		TCHAR  szMP4File[MAX_PATH * 3] = {0};

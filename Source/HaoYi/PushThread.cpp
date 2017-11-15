@@ -728,7 +728,7 @@ BOOL CRtmpThread::InitRtmp(CPushThread * inPushThread, string & strRtmpUrl)
 	m_strRtmpUrl = strRtmpUrl;
 
 	// 创建rtmp对象，注意是拉数据...
-	m_lpRtmp = new LibRtmp(false, false, this, NULL);
+	m_lpRtmp = new LibRtmp(false, false, this);
 	ASSERT( m_lpRtmp != NULL );
 
 	//启动rtmp检测线程...
@@ -1047,9 +1047,9 @@ BOOL CPushThread::StreamStartLivePush(string & strRtmpUrl)
 	m_strRtmpUrl = strRtmpUrl;
 	ASSERT( strRtmpUrl.size() > 0 );
 	// 创建rtmp上传对象...
-	m_lpRtmpPush = new LibRtmp(false, true, NULL, NULL);
+	m_lpRtmpPush = new LibRtmp(false, true, NULL);
 	ASSERT( m_lpRtmpPush != NULL );
-	// 理解启动上传线程...
+	// 立即启动推流线程...
 	this->Start();
 	return true;
 }
@@ -1716,9 +1716,10 @@ int CPushThread::SendOneDataPacket()
 	if( this->IsDataFinished() )
 		return -1;
 	// 如果数据还没有结束，则需要有一定缓存，以便音视频能够自动排序，然后再发送数据包...
-	if( m_MapFrame.size() < 100 )
+	// 这里以前设定是100个数据包，为了降低延时，调整为20个数据包...
+	if( m_MapFrame.size() < 20 )
 		return 0;
-	ASSERT( !this->IsDataFinished() && m_MapFrame.size() >= 100 );
+	ASSERT( !this->IsDataFinished() && m_MapFrame.size() >= 20 );
 
 	bool is_ok = false;
 	ASSERT( m_MapFrame.size() > 0 );

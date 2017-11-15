@@ -233,7 +233,7 @@ $(document).ready(function() {
     var strEnd = item.end_time.split(' ')[1];
     var nSecFrom = $bar.data("float-options").timeToSec(((strStart == "23:59:59") ? "24:00:00" : strStart));
     var nSecTo = $bar.data("float-options").timeToSec(((strEnd == "23:59:59") ? "24:00:00" : strEnd));
-    var range = { start: nSecFrom, end: nSecTo, courseID: item.course_id, teacherID: item.teacher_id, subjectID: item.subject_id };
+    var range = { start: nSecFrom, end: nSecTo, courseID: item.course_id, teacherID: 1, subjectID: 1 };
     $bar.rangebar('addFloatRange', range);
   }
 });

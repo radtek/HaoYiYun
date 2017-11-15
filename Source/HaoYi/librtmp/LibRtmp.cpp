@@ -5,7 +5,6 @@
 #include "AmfByteStream.h"
 #include "..\ReadSPS.h"
 #include "..\PushThread.h"
-#include "..\libmp4v2\RecThread.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -60,10 +59,9 @@ uint32_t _bs_read( bs_t *s, int i_count )
 	return( i_result );
 }
 
-LibRtmp::LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread, CRtmpRecThread * lpRecThread)
+LibRtmp::LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread)
 {
 	// 保存rtmp拉流对象和rtmp录像对象...
-	m_lpRecThread = lpRecThread;
 	m_lpRtmpThread = lpPullThread;
 	m_bPushStartOK = false;
 	m_lpSRSRtmp = NULL;
@@ -197,18 +195,16 @@ bool LibRtmp::doAudio(DWORD dwTimeStamp, char * lpData, int nSize)
 	ASSERT( thePackType > 0 );
 
 	// 如果外部录像线程有效，则组帧向外通知...
-	if( m_lpRecThread != NULL ) {
+	/*if( m_lpRecThread != NULL ) {
 		// 先去掉外层的数据壳...
 		BOOL   bWriteFlag = false;
 		BYTE * lpFrame = (BYTE*)lpData + 2;
 		int    nDataSize = nSize - 2;
-
 		// 存储音频数据帧...
 		bWriteFlag = m_lpRecThread->WriteSample(false, lpFrame, nDataSize, dwTimeStamp, 0, true);
-
 		// 打印调试信息...
 		//TRACE("Audio, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
-	}
+	}*/
 	
 	// 如果外部拉流线程有效，则组帧向外通知...
 	if( m_lpRtmpThread != NULL ) {
@@ -253,7 +249,7 @@ bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
 	ASSERT( thePackType > 0 );
 
 	// 如果外部录像线程有效，则组帧向外通知...
-	if( m_lpRecThread != NULL ) {
+	/*if( m_lpRecThread != NULL ) {
 		// 获取外层壳的数据...
 		BYTE nFlag = BytesToUI08(lpData);
 		BYTE nType = BytesToUI08(lpData+1);
@@ -263,13 +259,11 @@ bool LibRtmp::doVideo(DWORD dwTimeStamp, char * lpData, int nSize)
 		BYTE * lpFrame = (BYTE*)lpData + 5;
 		int    nDataSize = nSize - 5;
 		BOOL   bKeyFrame = ((lpData[0] == 0x17) ? true : false);
-
 		// 存储视频数据帧...
 		bWriteFlag = m_lpRecThread->WriteSample(true, lpFrame, nDataSize, dwTimeStamp, nOffset, bKeyFrame);
-
 		// 打印调试信息...
 		//TRACE("Video, Size = %d, Time = %d\r\n", nSize, dwTimeStamp);
-	}
+	}*/
 
 	// 如果外部拉流线程有效，则组帧向外通知...
 	if( m_lpRtmpThread != NULL ) {
@@ -353,9 +347,9 @@ void LibRtmp::ParseAACSequence(char * inBuf, int nSize)
 	}
 
 	// 通知录像模块音频头到达了...
-	if( m_lpRecThread != NULL ) {
+	/*if( m_lpRecThread != NULL ) {
 		m_lpRecThread->CreateAudioTrack(audio_sample_rate, source_channel_);
-	}
+	}*/
 
 	// 通知上层音频头到达了...
 	if( m_lpRtmpThread != NULL ) {
@@ -397,9 +391,9 @@ void LibRtmp::ParseAVCSequence(char * inBuf, int nSize)
 	m_strPPS.assign((char*)s.p, pps_size_);
 
 	// 通知上层视频头到达了...
-	if( m_lpRecThread != NULL ) {
+	/*if( m_lpRecThread != NULL ) {
 		m_lpRecThread->CreateVideoTrack(m_strSPS, m_strPPS);
-	}
+	}*/
 
 	// 通知上层视频头到达了...
 	if( m_lpRtmpThread != NULL ) {

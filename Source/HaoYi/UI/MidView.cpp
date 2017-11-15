@@ -294,15 +294,17 @@ GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType, int 
 		theMapLoc["device_mac"] = inNetData["MAC"];
 		theMapLoc["device_ip"] = inNetData["IPv4Address"];
 		theMapLoc["device_boot"] = inNetData["BootTime"];
-		theMapLoc["device_channel"] = inNetData["DigitalChannelNum"];
+		// 去掉硬件的通道汇报，换成了device_twice模式...
+		//theMapLoc["device_channel"] = inNetData["DigitalChannelNum"];
 		// 设置默认的用户名和密码(base64)...
 		TCHAR szEncode[MAX_PATH] = {0};
 		int nEncLen = Base64encode(szEncode, DEF_LOGIN_PASS_HK, strlen(DEF_LOGIN_PASS_HK));
 		theMapLoc["device_user"] = DEF_LOGIN_USER_HK;
 		theMapLoc["device_pass"] = szEncode;
-		// 默认开启OSD和开启镜像...
+		// 默认开启OSD、关闭镜像、关闭双流模式...
 		theMapLoc["device_osd"] = "1";
-		theMapLoc["device_mirror"] = "1";
+		theMapLoc["device_mirror"] = "0";
+		theMapLoc["device_twice"] = "0";
 	}
 	// 向网站注册摄像头，注册成功才能创建...
 	// 注意：注册之后，会将camera_id更新...

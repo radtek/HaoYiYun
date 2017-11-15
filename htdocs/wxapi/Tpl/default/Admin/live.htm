@@ -131,6 +131,7 @@ function doTrClick(inLiveID, inGatherID, inStreamProp, objTr) {
               arrData['device_pass'] = data.field.myDevicePass;
               arrData['device_osd'] = (data.field.myDeviceOSD == "on" ? 1 : 0);
               arrData['device_mirror'] = (data.field.myDeviceMirror == "on" ? 1: 0);
+              arrData['device_twice'] = (data.field.myDeviceTwice == "on" ? 1 : 0);
             } else {
               // 需要根据类型单独验证输入数据的有效性...
               var theStreamProp = parseInt(data.field.myStreamProp);
