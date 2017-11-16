@@ -60,7 +60,6 @@ class GatherAction extends Action
       if( !$dbSys['web_tag'] ) {
         $dbSys['web_type'] = kCloudRecorder;
         $dbSys['web_tag'] = uniqid();
-        $dbSys['web_title'] = "浩一云";
         $dbSave['system_id'] = $dbSys['system_id'];
         $dbSave['web_tag'] = $dbSys['web_tag'];
         D('system')->save($dbSave);
