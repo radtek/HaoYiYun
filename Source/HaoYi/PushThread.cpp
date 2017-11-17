@@ -937,6 +937,11 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
 	m_dwRecCTime = 0;
 	m_dwWriteSize = 0;
 	m_dwWriteRecMS = 0;
+
+#ifdef _SAVE_H264_
+	m_bSave_sps = true;
+	m_lpH264File = fopen("c:\\test.h264", "wb+");
+#endif
 }
 
 CPushThread::~CPushThread()
@@ -975,6 +980,12 @@ CPushThread::~CPushThread()
 	m_bIsPublishing = false;
 	m_bStreamPlaying = false;
 	TRACE("[~CPushThread Thread] - Exit\n");
+
+	// 释放存盘文件...
+#ifdef _SAVE_H264_
+	fclose(m_lpH264File);
+	m_lpH264File = NULL;
+#endif
 }
 //
 // 处理摄像头设备的线程初始化...
@@ -1537,7 +1548,33 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	// 累加接收数据包的字节数，加入缓存队列...
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
-	
+
+#ifdef _SAVE_H264_
+	DWORD dwTag = 0x01000000;
+	if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO && m_lpH264File != NULL ) {
+		if( m_bSave_sps ) {
+			string strSPS, strPPS;
+			if( m_lpRtspThread != NULL ) {
+				strSPS = m_lpRtspThread->GetVideoSPS();
+				strPPS = m_lpRtspThread->GetVideoPPS();
+			} else if( m_lpRtmpThread != NULL ) {
+				strSPS = m_lpRtmpThread->GetVideoSPS();
+				strPPS = m_lpRtmpThread->GetVideoPPS();
+			} else if( m_lpMP4Thread != NULL ) {
+				strSPS = m_lpMP4Thread->GetVideoSPS();
+				strPPS = m_lpMP4Thread->GetVideoPPS();
+			}
+			m_bSave_sps = false;
+			fwrite(&dwTag, sizeof(DWORD), 1, m_lpH264File);
+			fwrite(strSPS.c_str(), strSPS.size(), 1, m_lpH264File);
+			fwrite(&dwTag, sizeof(DWORD), 1, m_lpH264File);
+			fwrite(strPPS.c_str(), strPPS.size(), 1, m_lpH264File);
+		}
+		fwrite(&dwTag, sizeof(DWORD), 1, m_lpH264File);
+		fwrite(inFrame.strData.c_str()+sizeof(DWORD), inFrame.strData.size()-sizeof(DWORD), 1, m_lpH264File);
+	}
+#endif
+
 	/*// 如果是摄像头，不进行关键帧计数和丢帧处理...
 	if( this->IsCameraDevice() ) {
 		return m_MapFrame.size();

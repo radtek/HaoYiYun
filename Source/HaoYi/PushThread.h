@@ -6,6 +6,8 @@
 #include "mp4v2.h"
 #include "myRTSPClient.h"
 
+//#define _SAVE_H264_
+
 class LibRtmp;
 class CCamera;
 class CPushThread;
@@ -254,6 +256,11 @@ private:
 
 	KH_MapFrame		m_MapMonitor;		// ÔÆ¼à¿ØÇÐÆ¬½»´í»º´æÇø...
 	int				m_nKeyMonitor;		// ÔÆ¼à¿ØÒÑ»º´æ½»´í¹Ø¼üÖ¡¸öÊý...
+
+#ifdef _SAVE_H264_
+	bool			m_bSave_sps;
+	FILE		*	m_lpH264File;
+#endif
 
 	friend class CCamera;
 };
