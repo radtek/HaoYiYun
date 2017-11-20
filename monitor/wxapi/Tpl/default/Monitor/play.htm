@@ -10,7 +10,6 @@
 <link href="/wxapi/public/css/play.css" type="text/css" rel="stylesheet">
 
 <style>
-.vod-back { background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png); }
 .base .base_right { padding: 13px 0 17px 20px; }
 .base .base_info { width: 850px; }
 .js_title { margin-left: 10px; }
@@ -74,13 +73,13 @@
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
-              <div class="cover vod-back">
-                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+              <div class="cover">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrVod();">
                 <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
               </div>
               <div class="headline">{{$vo.created}}</div>
@@ -93,13 +92,13 @@
             </div>
           </a>
           <else/>
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" href="/wxapi/public/images/{{$vo.image}}">
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" href="{{$vo.image_snap}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
               <div class="cover">
-                <img src="/wxapi/public/images/{{$vo.image}}" onerror="doErrHead();">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrLive();">
               </div>
               <div class="headline">
               通道{{$vo.camera_id}} - 
@@ -146,10 +145,17 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 
-// 处理缩略图无法加载的问题...
-function doErrHead() {
+// 处理点播缩略图无法加载的问题...
+function doErrVod() {
   var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.src  = "/wxapi/public/images/default-90.png"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+// 处理直播缩略图无法加载的问题...
+function doErrLive() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/snap.png"; 
   img.onerror = null; // 控制不要一直跳动
 }
 
@@ -187,7 +193,8 @@ layui.use(['flow','layer'], function(){
           // <article>不是标准html标签，必须在外面增加一层<div>...
           // 分页单独懒加载，否则，每次都要全部懒加载...
           $("#page_"+page+" img.lazy").lazyload({
-            effect : "fadeIn"
+            effect : "fadeIn",
+            placeholder: "/wxapi/public/images/snap.png"
           });
           // 查找焦点通道，并设置边框颜色为橘红色...
           $("#page_"+page+" .thumb").each(function(){

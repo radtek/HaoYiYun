@@ -10,6 +10,12 @@
 #include "tinyxml.h"
 #include <curl.h>
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 CWebThread::CWebThread(CHaoYiView * lpView)
   : m_eRegState(kRegHaoYi)
   , m_lpHaoYiView(lpView)
@@ -226,6 +232,7 @@ BOOL CWebThread::RegisterGather()
 	int nSubKbps = atoi(CUtilTool::getJsonString(value["sub_rate"]).c_str());
 	int nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
 	int nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
+	int nSnapVal = atoi(CUtilTool::getJsonString(value["snap_val"]).c_str());
 	BOOL bAutoLinkDVR = atoi(CUtilTool::getJsonString(value["auto_dvr"]).c_str());
 	BOOL bAutoLinkFDFS = atoi(CUtilTool::getJsonString(value["auto_fdfs"]).c_str());
 	// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
@@ -294,6 +301,9 @@ BOOL CWebThread::RegisterGather()
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}
+	// 设置默认的截图时间间隔 => 不要超过10分钟...
+	nSnapVal = ((nSnapVal <= 0) ? 2 : nSnapVal);
+	nSnapVal = ((nSnapVal >= 10) ? 10 : nSnapVal);
 	// 存放到配置文件，但并不存盘...
 	theConfig.SetDBGatherID(nDBGatherID);
 	theConfig.SetWebTag(strWebTag);
@@ -309,6 +319,7 @@ BOOL CWebThread::RegisterGather()
 	theConfig.SetSubKbps(nSubKbps);
 	theConfig.SetInterVal(nInterVal);
 	theConfig.SetSliceVal(nSliceVal);
+	theConfig.SetSnapVal(nSnapVal);
 	theConfig.SetAutoLinkFDFS(bAutoLinkFDFS);
 	theConfig.SetAutoLinkDVR(bAutoLinkDVR);
 	// 注意：已经获取了通道编号列表...
@@ -781,56 +792,6 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode/* = 0*
 	}
 	return true;
 }
-//
-// 在网站上更新摄像头名称...
-/*BOOL CWebThread::doSaveCameraName(string & strDBCameraID, CString & strCameraName)
-{
-	// 获取网站配置信息...
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	int nWebPort = theConfig.GetWebPort();
-	string & strWebAddr = theConfig.GetWebAddr();
-	if( nWebPort <= 0 || strWebAddr.size() <= 0 )
-		return false;
-	// 先设置当前状态信息...
-	m_eRegState = kSaveName;
-	// 准备需要的汇报数据 => POST数据包...
-	CString strPost, strUrl;
-	TCHAR	szEncName[MAX_PATH] = {0};
-	// 先对频道名称进行UTF8转换，再进行URI编码...
-	string  strUTF8Name = CUtilTool::ANSI_UTF8(strCameraName);
-	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szEncName, MAX_PATH);
-	strPost.Format("camera_id=%s&camera_name=%s", strDBCameraID.c_str(), szEncName);
-	strUrl.Format("http://%s:%d/wxapi.php/Gather/saveCameraName", strWebAddr.c_str(), nWebPort);
-	// 调用Curl接口，汇报摄像头数据...
-	CURLcode res = CURLE_OK;
-	CURL  *  curl = curl_easy_init();
-	do {
-		if( curl == NULL )
-			break;
-		// 如果是https://协议，需要新增参数...
-		if( theConfig.IsWebHttps() ) {
-			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-		}
-		// 设定curl参数，采用post模式...
-		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
-		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
-		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
-		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
-		res = curl_easy_setopt(curl, CURLOPT_POST, true);
-		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
-		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
-		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
-		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
-		res = curl_easy_perform(curl);
-	}while( false );
-	// 释放资源...
-	if( curl != NULL ) {
-		curl_easy_cleanup(curl);
-	}
-	// 直接返回...
-	return true;
-}*/
 
 void CWebThread::Entry()
 {

@@ -7,6 +7,8 @@
 typedef map<int, GM_MapData>	GM_MapNodeCamera;	// int => 是指数据库DBCameraID
 typedef map<int, GM_MapCourse>  GM_MapNodeCourse;	// int => 是指数据库DBCameraID
 
+struct AVCodecContext;
+struct AVFrame;
 class CXmlConfig
 {
 public:
@@ -41,6 +43,7 @@ public:
 	int      GetSubKbps()  { return m_nSubKbps; }
 	int		 GetSliceVal() { return m_nSliceVal; }
 	int		 GetInterVal() { return m_nInterVal; }
+	int		 GetSnapVal()  { return m_nSnapVal; }
 	BOOL	 GetAutoLinkDVR() { return m_bAutoLinkDVR; }
 	BOOL	 GetAutoLinkFDFS() { return m_bAutoLinkFDFS; }
 	int		 GetMaxCamera() { return m_nMaxCamera; }
@@ -70,6 +73,7 @@ public:
 	void     SetSubKbps(int nSubKbps) { m_nSubKbps = nSubKbps; }
 	void	 SetSliceVal(int nSliceVal) { m_nSliceVal = nSliceVal; }
 	void	 SetInterVal(int nInterVal) { m_nInterVal = nInterVal; }
+	void	 SetSnapVal(int nSnapVal)   { m_nSnapVal = nSnapVal; }
 	void	 SetAutoLinkDVR(BOOL bAutoLinkDVR) { m_bAutoLinkDVR = bAutoLinkDVR; }
 	void	 SetAutoLinkFDFS(BOOL bAutoLinkFDFS) { m_bAutoLinkFDFS = bAutoLinkFDFS; }
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
@@ -88,8 +92,10 @@ public:
 
 	CString  GetDBCameraTitle(int nDBCameraID);
 
+	BOOL	FFmpegSnapJpeg(const string & inSrcFrame, const CString & inDestJpgName);
 	BOOL	StreamSnapJpeg(const CString & inSrcMP4File, const CString & inDestJpgName, int nRecSec);
 private:
+	BOOL	FFmpegSaveJpeg(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame, LPCTSTR lpszJpgName);
 	BOOL	GenerateJpegFromMediaFile(const CString & inMP4File, int nPosSec, int nFrames);
 	void	SendMPlayerCmd(const CString &cmdLine);
 	void    ReadHolePipe(HANDLE hStdOut, string & strPipe);
@@ -109,8 +115,9 @@ private:
 	string				m_strSavePath;					// 录像或截图存放路径...
 	int					m_nMainKbps;					// 主码流大小...
 	int					m_nSubKbps;						// 子码流大小...
-	int					m_nSliceVal;					// 录像切片时间(1~30分钟)
-	int					m_nInterVal;					// 切片交错关键帧(1~3个)
+	int					m_nSliceVal;					// 录像切片时间(0~30分钟)
+	int					m_nInterVal;					// 切片交错关键帧(0~3个)
+	int				    m_nSnapVal;						// 通道截图间隔(1~10分钟)
 	BOOL				m_bAutoLinkDVR;					// 自动重连DVR摄像头...
 	BOOL				m_bAutoLinkFDFS;				// 自动重连FDFS服务器...
 	string				m_strWebAddr;					// Web的IP地址...

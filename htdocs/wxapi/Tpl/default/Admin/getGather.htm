@@ -50,6 +50,13 @@
       <div class="layui-form-mid" style="color: #555">(每个新切片交错0~3个关键帧，0表示不交错)</div>
     </div>
     <div class="layui-form-item">
+      <label class="layui-form-label">通道截图</label>
+      <div class="layui-input-inline" style="width:60px">
+        <input type="text" name="mySnapVal" maxlength="2" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_gather.snap_val}}">
+      </div>
+      <div class="layui-form-mid" style="color: #555">(每隔1分钟~10分钟，启动中的通道自动截图)</div>
+    </div>
+    <div class="layui-form-item">
       <label class="layui-form-label" style="width:170px">自动重连网络摄像机</label>
       <div class="layui-input-inline" style="width:75px">
         <input type="checkbox" name="myAutoDVR" <eq name='my_gather.auto_dvr' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">

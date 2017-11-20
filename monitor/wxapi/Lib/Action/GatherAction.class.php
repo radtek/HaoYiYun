@@ -70,6 +70,7 @@ class GatherAction extends Action
       $arrErr['sub_rate'] = $dbGather['sub_rate'];
       $arrErr['slice_val'] = $dbGather['slice_val'];
       $arrErr['inter_val'] = $dbGather['inter_val'];
+      $arrErr['snap_val'] = $dbGather['snap_val'];
       $arrErr['auto_dvr'] = $dbGather['auto_dvr'];
       $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
       // 返回采集端需要的参数配置信息...
@@ -344,26 +345,57 @@ class GatherAction extends Action
       // jpg => uniqid_DBCameraID
       // mp4 => uniqid_DBCameraID_CreateTime_CourseID_Duration
       if( (strcasecmp($arrData['ext'], ".jpg") == 0) || (strcasecmp($arrData['ext'], ".jpeg") == 0) ) {
-        // 查找截图记录...
-        $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->find();
-        if( is_array($dbImage) ) {
-          // 更新截图记录...
-          $dbImage['camera_id'] = $arrData['camera_id'];
-          $dbImage['file_fdfs'] = $arrData['file_fdfs'];
-          $dbImage['file_size'] = $arrData['file_size'];
-          $dbImage['updated'] = $arrData['updated'];
-          D('image')->save($dbImage);
-          $arrErr['image_id'] = $dbImage['image_id'];
+        // 如果是直播截图，进行特殊处理...
+        if( strcasecmp($arrData['file_src'], "live") == 0 ) {
+          $map['camera_id'] = $arrData['camera_id'];
+          // 找到该通道下的截图路径和截图编号...
+          $dbLive = D('LiveView')->where($map)->field('camera_id,image_id,image_fdfs')->find();
+          // 如果找到了有效通道...
+          if( is_array($dbLive) ) {
+            if( $dbLive['image_id'] > 0 ) {
+              // 通道下的截图是有效的，先删除这个截图的物理存在...
+              if( isset($dbLive['image_fdfs']) && strlen($dbLive['image_fdfs']) > 0 ) { 
+                fastdfs_storage_delete_file1($dbLive['image_fdfs']);
+              }
+              // 将新的截图存储路径更新到截图表当中...
+              $dbImage['image_id'] = $dbLive['image_id'];
+              $dbImage['file_fdfs'] = $arrData['file_fdfs'];
+              $dbImage['file_size'] = $arrData['file_size'];
+              $dbImage['updated'] = $arrData['updated'];
+              D('image')->save($dbImage);
+              // 返回这个有效的图像记录编号...
+              $arrErr['image_id'] = $dbImage['image_id'];
+            } else {
+              // 通道下的截图是无效的，创建新的截图记录...
+              $arrErr['image_id'] = D('image')->add($arrData);
+              $dbLive['image_id'] = $arrErr['image_id'];
+              // 将新的截图记录更新到通道表中...
+              D('camera')->save($dbLive);
+            }
+          }
         } else {
-          // 新增截图记录...
-          $arrErr['image_id'] = D('image')->add($arrData);
-        }
-        // 在录像表中查找file_src，找到了，则更新image_id，截图匹配...
-        $dbRec = D('record')->where('file_src="'.$arrData['file_src'].'"')->field('record_id,image_id')->find();
-        if( is_array($dbRec) ) {
-          $dbRec['image_id'] = $arrErr['image_id'];
-          $dbRec['updated'] = $arrData['updated'];
-          D('record')->save($dbRec);
+          // 是录像截图，查找截图记录...
+          $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->find();
+          if( is_array($dbImage) ) {
+            // 更新截图记录...
+            $dbImage['camera_id'] = $arrData['camera_id'];
+            $dbImage['file_fdfs'] = $arrData['file_fdfs'];
+            $dbImage['file_size'] = $arrData['file_size'];
+            $dbImage['updated'] = $arrData['updated'];
+            D('image')->save($dbImage);
+            // 返回这个有效的图像记录编号...
+            $arrErr['image_id'] = $dbImage['image_id'];
+          } else {
+            // 新增截图记录...
+            $arrErr['image_id'] = D('image')->add($arrData);
+          }
+          // 在录像表中查找file_src，找到了，则更新image_id，截图匹配...
+          $dbRec = D('record')->where('file_src="'.$arrData['file_src'].'"')->field('record_id,image_id')->find();
+          if( is_array($dbRec) ) {
+            $dbRec['image_id'] = $arrErr['image_id'];
+            $dbRec['updated'] = $arrData['updated'];
+            D('record')->save($dbRec);
+          }
         }
       } else if( strcasecmp($arrData['ext'], ".mp4") == 0 ) {
         // 保存录像时长(秒)，初始化image_id...

@@ -29,7 +29,7 @@
             skip_invisible  : false,
             appear          : null,
             load            : null,
-            //placeholder   : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC"
+            placeholder   : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC"
         };
 
         function update() {
@@ -89,12 +89,11 @@
             self.loaded = false;
 
             /* If no src attribute given use data:uri. */
-            // 2017-04-09 - by jackey...
-            /*if ($self.attr("src") === undefined || $self.attr("src") === false) {
+            if ($self.attr("src") === undefined || $self.attr("src") === false) {
                 if ($self.is("img")) {
                     $self.attr("src", settings.placeholder);
                 }
-            }*/
+            }
 
             /* When appear is triggered load original image. */
             $self.one("appear", function() {

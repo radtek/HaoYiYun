@@ -932,6 +932,7 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
 	m_nRecvKbps = 0;
 	m_nCurRecvByte = 0;
 	m_dwRecvTimeMS = 0;
+	m_dwSnapTimeMS = 0;
 
 	m_lpRecMP4 = NULL;
 	m_dwRecCTime = 0;
@@ -1038,10 +1039,14 @@ BOOL CPushThread::StreamInitThread(BOOL bFileMode, string & strStreamUrl, string
 			m_lpRtmpThread->InitRtmp(this, strStreamUrl);
 		}
 	}
+	// 记录当前时间，单位（毫秒）...
+	DWORD dwInitTimeMS = ::GetTickCount();
 	// 初始化接收码流时间起点 => 每隔1秒钟复位...
-	m_dwRecvTimeMS = ::GetTickCount();
+	m_dwRecvTimeMS = dwInitTimeMS;
 	// 初始化接收数据超时时间记录起点 => 超过 3 分钟无数据接收，则判定为超时...
-	m_dwTimeOutMS = ::GetTickCount();
+	m_dwTimeOutMS = dwInitTimeMS;
+	// 记录通道截图间隔时间，单位（毫秒）...
+	m_dwSnapTimeMS = dwInitTimeMS;
 	return true;
 }
 //
@@ -1211,18 +1216,15 @@ BOOL CPushThread::BeginRecSlice()
 	md5.update(strTimeMicro, strTimeMicro.GetLength());
 	strUniqid = md5.toString();
 	// 准备录像需要的信息...
-	GM_MapData theMapWeb;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nDBCameraID, theMapWeb);
 	CString  strMP4Path;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapWeb["camera_id"];
 	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
-	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
+	m_strJpgName.Format("%s\\%s_%d.jpg", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID);
 	// 2017.08.10 - by jackey => 新增创建时间戳字段...
 	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID
 	m_dwRecCTime = (DWORD)::time(NULL);
-	m_strMP4Name.Format("%s\\%s_%s_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str(), m_dwRecCTime, nCourseID);
+	m_strMP4Name.Format("%s\\%s_%d_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID, m_dwRecCTime, nCourseID);
 	// 录像时使用.tmp，避免没有录像完就被上传...
 	strMP4Path.Format("%s.tmp", m_strMP4Name);
 	m_strUTF8MP4 = CUtilTool::ANSI_UTF8(strMP4Path);
@@ -1268,6 +1270,49 @@ void CPushThread::doStreamSnapJPG(int nRecSecond)
 	// 直接对文件进行更改操作，并记录失败的日志...
 	if( !MoveFile(strMP4Temp, strMP4File) ) {
 		MsgLogGM(::GetLastError());
+	}
+}
+//
+// 使用ffmpeg进行数据帧动态截图...
+void CPushThread::doFFmpegSnapJPG()
+{
+	// 判断通道对象是否有效...
+	if( m_lpCamera == NULL || m_strSnapFrame.size() <= 0 )
+		return;
+	ASSERT( m_lpCamera != NULL );
+	ASSERT( m_strSnapFrame.size() > 0 );
+	// 获取路径相关信息...
+	CString strJPGFile;
+	int nDBCameraID = m_lpCamera->GetDBCameraID();
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	string & strSavePath = theConfig.GetSavePath();
+	// 准备JPG截图文件 => PATH + live + DBCameraID + .jpg
+	strJPGFile.Format("%s\\live_%d.jpg", strSavePath.c_str(), nDBCameraID);
+	// 准备截图需要的sps和pps...
+	string strSPS, strPPS, strSnapData;
+	DWORD dwTag = 0x01000000;
+	if( m_lpRtspThread != NULL ) {
+		strSPS = m_lpRtspThread->GetVideoSPS();
+		strPPS = m_lpRtspThread->GetVideoPPS();
+	} else if( m_lpRtmpThread != NULL ) {
+		strSPS = m_lpRtmpThread->GetVideoSPS();
+		strPPS = m_lpRtmpThread->GetVideoPPS();
+	} else if( m_lpMP4Thread != NULL ) {
+		strSPS = m_lpMP4Thread->GetVideoSPS();
+		strPPS = m_lpMP4Thread->GetVideoPPS();
+	}
+	// 必须先写入sps，再写如pps...
+	strSnapData.append((char*)&dwTag, sizeof(DWORD));
+	strSnapData.append(strSPS);
+	strSnapData.append((char*)&dwTag, sizeof(DWORD));
+	strSnapData.append(strPPS);
+	// 最后写入关键帧，起始码已经更新...
+	strSnapData.append(m_strSnapFrame);
+	// 调用截图接口进行动态截图...
+	if( !theConfig.FFmpegSnapJpeg(strSnapData, strJPGFile) ) {
+		MsgLogGM(GM_Snap_Jpg_Err);
+	} else {
+		TRACE("== ffmpeg snap jpg(%d) ==\n", nDBCameraID);
 	}
 }
 //
@@ -1548,6 +1593,29 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	// 累加接收数据包的字节数，加入缓存队列...
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
+	// 如果是新的视频数据帧是关键帧，丢弃已缓存的，存放新的关键帧，以便截图使用...
+	if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
+		// 修改视频帧的起始码 => 0x00000001
+		string strCurFrame = inFrame.strData;
+		char * lpszSrc = (char*)strCurFrame.c_str();
+		memset((void*)lpszSrc, 0, sizeof(DWORD));
+		lpszSrc[3] = 0x01;
+		// 如果是新关键帧，清空之前的缓存...
+		if( inFrame.is_keyframe ) {
+			m_strSnapFrame.clear();
+		}
+		// 将新的数据帧追加到后面，直到下一个关键帧出现...
+		m_strSnapFrame.append(strCurFrame);
+	}
+	// 如果时间间隔超过了截图间隔，发起截图操作 => 使用ffmpeg动态截图...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nSnapSec = theConfig.GetSnapVal() * 60;
+	// 计算能否截图标志，时间间隔由网站后台设定...
+	bool bIsCanSnap = (((dwCurTimeMS - m_dwSnapTimeMS) >= nSnapSec * 1000) ? true : false);
+	if( m_strSnapFrame.size() > 0 && bIsCanSnap ) {
+		m_dwSnapTimeMS = dwCurTimeMS;
+		this->doFFmpegSnapJPG();
+	}
 
 #ifdef _SAVE_H264_
 	DWORD dwTag = 0x01000000;

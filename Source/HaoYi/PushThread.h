@@ -211,6 +211,7 @@ private:
 	void			dropToKeyFrame();
 	void			doErrPushNotify();
 
+	void			doFFmpegSnapJPG();
 	void			doStreamSnapJPG(int nRecSecond);
 	void			dropSliceKeyFrame();
 	void			doSaveInterFrame();
@@ -229,7 +230,10 @@ private:
 	BOOL			m_bIsPublishing;	// 是否处于直播发布状态...
 	BOOL			m_bStreamPlaying;	// 是否处于流数据正常状态...
 
-	DWORD			m_dwRecvTimeMS;		// 接收计时时间
+	string			m_strSnapFrame;		// 已经存放的截图视频缓冲区 => 关键帧开头，累加，直到新关键帧出现...
+	DWORD			m_dwSnapTimeMS;		// 通道截图时间 => 单位（毫秒）=> 存放两个关键帧最保险，目前存放的是一个...
+
+	DWORD			m_dwRecvTimeMS;		// 接收计时时间 => 单位（毫秒）
 	uint32_t		m_nRecvKbps;		// 接收码流
 	uint32_t		m_nCurRecvByte;		// 当前已接收字节数
 	uint32_t		m_nSendKbps;		// 发送码流

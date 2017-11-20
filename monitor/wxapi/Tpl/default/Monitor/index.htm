@@ -2,12 +2,6 @@
 <include file = "Common:monitor_header" />
 <include file = "Common:monitor_nav" />
 
-<style>
-.thumb {
-  background-image: url(/wxapi/public/images/{{$my_web_logo}}.png);
-}
-</style>
-
 <section class="content-wrap">
   <div class="container">
     <div class="row">
@@ -50,13 +44,6 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 
-// 处理缩略图无法加载的问题...
-function doErrHead() {
-  var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/blank.gif"; 
-  img.onerror = null; // 控制不要一直跳动
-}
-
 // 处理 layui 过程...
 layui.use(['flow','layer'], function(){
   var max_page = {{$max_page}};
@@ -78,7 +65,8 @@ layui.use(['flow','layer'], function(){
           // <article>不是标准html标签，必须在外面增加一层<div>...
           // 分页单独懒加载，否则，每次都要全部懒加载...
           $("#page_"+page+" img.lazy").lazyload({
-            effect : "fadeIn"
+            effect : "fadeIn",
+            placeholder: "/wxapi/public/images/default.png"
           });
         },
         error: function(XMLHttpRequest, textStatus, errorThrown) {

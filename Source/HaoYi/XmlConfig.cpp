@@ -3,6 +3,18 @@
 #include "UtilTool.h"
 #include "XmlConfig.h"
 
+extern "C"
+{
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+};
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 CXmlConfig::CXmlConfig(void)
   : m_nMaxCamera(DEF_MAX_CAMERA)
   , m_nMainKbps(DEF_MAIN_KBPS)
@@ -24,6 +36,7 @@ CXmlConfig::CXmlConfig(void)
   , m_nWebType(-1)
   , m_nSliceVal(0)
   , m_nInterVal(0)
+  , m_nSnapVal(2)
 {
 	CString strVersion;
 	strVersion.Format("V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
@@ -583,4 +596,147 @@ void CXmlConfig::ReadHolePipe(HANDLE hStdOut, string & strPipe)
 		strPipe.append(szBuf); ::Sleep(5);
 		bRet = PeekNamedPipe(hStdOut, NULL, 0, NULL, &dwRead, NULL);
 	}
+}
+//
+// 调用ffmpeg接口，进行动态截图...
+BOOL CXmlConfig::FFmpegSnapJpeg(const string & inSrcFrame, const CString & inDestJpgName)
+{
+	if( inSrcFrame.size() <= 0 || inDestJpgName.GetLength() <= 0 )
+		return false;
+	// 准备一些特定的参数...
+	AVCodecID src_codec_id = AV_CODEC_ID_H264;
+	AVCodecParserContext * lpSrcCodecParserCtx = NULL;
+    AVCodecContext * lpSrcCodecCtx = NULL;
+	AVCodec * lpSrcCodec = NULL;
+    AVFrame	* lpSrcFrame = NULL;
+	AVPacket  theSrcPacket = {0};
+	bool      bReturn = false;
+	// 设置ffmpeg的log级别，并注册解码器和编码器...
+	av_log_set_level(AV_LOG_VERBOSE);
+	av_register_all();
+	do {
+		// 查找需要的解码器和相关容器、解析器...
+		lpSrcCodec = avcodec_find_decoder(src_codec_id);
+		if( lpSrcCodec == NULL )
+			break;
+		lpSrcCodecCtx = avcodec_alloc_context3(lpSrcCodec);
+		if( lpSrcCodecCtx == NULL )
+			break;
+		lpSrcCodecParserCtx = av_parser_init(src_codec_id);
+		if( lpSrcCodecParserCtx == NULL )
+			break;
+		// 打开获取到的解码器...
+		if( avcodec_open2(lpSrcCodecCtx, lpSrcCodec, NULL) < 0 )
+			break;
+		// 初始化ffmpeg数据帧...
+		lpSrcFrame = av_frame_alloc();
+		av_init_packet(&theSrcPacket);
+		// 解析传递过来的h264数据帧...
+		uint8_t * lpCurPtr = (uint8_t*)inSrcFrame.c_str();
+		int nCurSize = inSrcFrame.size();
+		int got_picture = 0;
+		int	nResult = 0;
+		while( nCurSize > 0 ) {
+			// 这里需要多次解析，直到解析完所有的缓存为止...
+			nResult = av_parser_parse2( lpSrcCodecParserCtx, lpSrcCodecCtx,
+							  &theSrcPacket.data, &theSrcPacket.size,
+							  lpCurPtr, nCurSize, AV_NOPTS_VALUE,
+							  AV_NOPTS_VALUE, AV_NOPTS_VALUE);
+			lpCurPtr += nResult;
+			nCurSize -= nResult;
+			// 没有解析出packet，继续...
+			if( theSrcPacket.size == 0 )
+				continue;
+			// 对解析正确的packet进行解码操作...
+			nResult = avcodec_decode_video2(lpSrcCodecCtx, lpSrcFrame, &got_picture, &theSrcPacket);
+			// 解码失败或没有得到完整图像，继续解析...
+			if( nResult < 0 || !got_picture )
+				continue;
+			// 解码成功，并且获取了一副图像，进行存盘操作...
+			this->FFmpegSaveJpeg(lpSrcCodecCtx, lpSrcFrame, inDestJpgName);
+			// 设置成功标志，中断循环...
+			bReturn = true;
+			break;
+		}
+	}while( false );
+	// 对用到的数据进行清理工作...
+	av_free_packet(&theSrcPacket);
+	// 释放预先已经分配的空间...
+	if( lpSrcCodecParserCtx != NULL ) {
+		av_parser_close(lpSrcCodecParserCtx);
+		lpSrcCodecParserCtx = NULL;
+	}
+	if( lpSrcFrame != NULL ) {
+		av_frame_free(&lpSrcFrame);
+		lpSrcFrame = NULL;
+	}
+	if( lpSrcCodecCtx != NULL ) {
+		avcodec_close(lpSrcCodecCtx);
+		av_free(lpSrcCodecCtx);
+	}
+	// 返回最终的结果...
+	return bReturn;
+}
+//
+// 将yuv数据存盘成jpg文件...
+BOOL CXmlConfig::FFmpegSaveJpeg(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame, LPCTSTR lpszJpgName)
+{
+    AVOutputFormat * avOutputFormat = av_guess_format("mjpeg", NULL, NULL); //av_guess_format (0, lpszJpgName, 0);
+    AVCodec * pOutAVCodec = avcodec_find_encoder(avOutputFormat->video_codec);
+	if( pOutAVCodec == NULL )
+		return false;
+	int  nBufSize = 0;
+	int  nEncSize = 0;
+	BOOL bReturn = false;
+	uint8_t * lpEncBuf = NULL;
+	AVCodecContext * pOutCodecCtx = NULL;
+	do {
+		pOutCodecCtx = avcodec_alloc_context3(pOutAVCodec);
+		if( pOutCodecCtx == NULL )
+			break;
+		// 准备数据结构需要的参数...
+		pOutCodecCtx->bit_rate = pOrigCodecCtx->bit_rate;
+		pOutCodecCtx->width = pOrigCodecCtx->width;
+		pOutCodecCtx->height = pOrigCodecCtx->height;
+		pOutCodecCtx->pix_fmt = avcodec_find_best_pix_fmt_of_list(pOutAVCodec->pix_fmts, pOrigCodecCtx->pix_fmt, 1, 0); //AV_PIX_FMT_YUVJ420P;  
+		pOutCodecCtx->codec_id = avOutputFormat->video_codec; //AV_CODEC_ID_MJPEG;  
+		pOutCodecCtx->codec_type = pOrigCodecCtx->codec_type; //AVMEDIA_TYPE_VIDEO;  
+		pOutCodecCtx->time_base.num = 1; //pOrigCodecCtx->time_base.num;  
+		pOutCodecCtx->time_base.den = 25; //pOrigCodecCtx->time_base.den;
+		// 打开压缩器...
+		if( avcodec_open2 (pOutCodecCtx, pOutAVCodec, 0) < 0 )
+			break;
+		pOutCodecCtx->mb_lmin = pOutCodecCtx->qmin * FF_QP2LAMBDA;  
+		pOutCodecCtx->mb_lmax = pOutCodecCtx->qmax * FF_QP2LAMBDA;  
+		pOutCodecCtx->flags = CODEC_FLAG_QSCALE;  
+		pOutCodecCtx->global_quality = pOutCodecCtx->qmin * FF_QP2LAMBDA;  
+		pOrigFrame->pts = 1;  
+		pOrigFrame->quality = pOutCodecCtx->global_quality;
+		// 准备接收缓存，开始压缩jpg数据...
+		nBufSize = avpicture_get_size(pOutCodecCtx->pix_fmt, pOutCodecCtx->width, pOutCodecCtx->height); 
+		lpEncBuf = (uint8_t *)malloc(nBufSize);
+		nEncSize = avcodec_encode_video(pOutCodecCtx, lpEncBuf, nBufSize, pOrigFrame);
+		if( nEncSize <= 0 )
+			break;
+		// 保存到jpg文件当中...
+		FILE * pFile = fopen(lpszJpgName, "wb");
+		if( pFile == NULL )
+			break;
+		fwrite(lpEncBuf, 1, nEncSize, pFile);
+		fclose(pFile); pFile = NULL;
+		// 释放中间资源，返回成功...
+		free(lpEncBuf); lpEncBuf = NULL;
+		bReturn = true;
+	}while( false );
+	// 清理已经分配的空间...
+	if( lpEncBuf != NULL ) {
+		free(lpEncBuf);
+		lpEncBuf = NULL;
+	}
+	// 清理中间产生的对象...
+	if( pOutCodecCtx != NULL ) {
+		avcodec_close(pOutCodecCtx);
+		av_free(pOutCodecCtx);
+	}
+	return bReturn;
 }

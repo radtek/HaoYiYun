@@ -4,9 +4,6 @@
 <include file = "Common:home_nav" />
 
 <style>
-.thumb {
-  background-image: url(/wxapi/public/images/{{$my_web_logo}}.png);
-}
 .title:after {
   content: "";
   width: 80px;
@@ -33,7 +30,7 @@
                   <span class="ibg"></span>
                   <span class="itg">{{$item.disptime}}</span>
                 </span><!--img-responsive-->
-                <img class="lazy" data-original="{{$my_web_tracker}}{{$item.image_fdfs}}_154x113" width="154px" height="113px" onerror="doErrHead();"></img>
+                <img class="lazy" data-original="{{$my_web_tracker}}{{$item.image_fdfs}}_154x113" width="154px" height="113px"></img>
               </a>
               <div class="thumb_title"><a href="{{:__APP__}}/Home/play/record_id/{{$item.record_id}}/subject_id/{{$item.subject_id}}">{{$item.teacher_name}}&nbsp;&nbsp;{{$item.title_name}}</a></div>
               <div class="thumb_date">{{$item.grade_type}}&nbsp;&nbsp;{{$item.grade_name}}&nbsp;&nbsp;{{$item.camera_name}}</div>
@@ -75,18 +72,12 @@
 
 <script>
 
-// 处理缩略图无法加载的问题...
-function doErrHead() {
-  var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/blank.gif"; 
-  img.onerror = null; // 控制不要一直跳动
-}
-
 $(document).ready( function () {
   // 延时加载图片...
   $(function() {
     $("img.lazy").lazyload({
-      effect : "fadeIn"
+      effect : "fadeIn",
+      placeholder: "/wxapi/public/images/default.png"
     });
   });
   // 注册窗口的滚动条函数...

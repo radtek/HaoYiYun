@@ -23,10 +23,8 @@ class HomeAction extends Action
     }
     // 如果是录播模式，设置常量信息...
     $this->m_webAction = "Home";
-    $this->m_webLogo = "default";
     // 直接给模板变量赋值...
     $this->assign('my_web_action', $this->m_webAction);
-    $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
   }
@@ -357,7 +355,10 @@ class HomeAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取通道列表 => 在线优先排序
     $arrCamera = D('LiveView')->limit($pageLimit)->order('status DESC, updated DESC')->select();
-    // 设置模板参数...
+    // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    // 设置模板参数 => 使用 pageLive 的模版...
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_list', $arrCamera);
     $this->display('pageLive');
@@ -369,6 +370,9 @@ class HomeAction extends Action
   */
   public function play()
   {
+    // 计算web_tracker地址 => 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $theWebTracker = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
     // 判断获取传递过来的参数信息...
     if( isset($_GET['record_id']) && isset($_GET['subject_id']) ) {
       // 设定能够显示的播放记录条数...
@@ -397,9 +401,8 @@ class HomeAction extends Action
       $my_base['subject_title'] = $my_nav['subject_title'];
       $my_base['play_title'] = sprintf("%s %s %s %s %s %s", $curPlay['grade_type'], $curPlay['grade_name'], $curPlay['camera_name'], $curPlay['teacher_name'], $curPlay['title_name'], $curPlay['created']);
       // 设置点播模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
-      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-      $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
       $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
+      $this->assign('my_web_tracker', $theWebTracker);
       $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrVod);
     } else {
@@ -409,7 +412,13 @@ class HomeAction extends Action
       $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
       $map['camera_id'] = $camera_id;
       $dbLive = D('LiveView')->where($map)->find();
-      $dbLive['image'] = (($dbLive['status'] > 0) ? "live-on.png" : "live-off.png");
+      // 快照地址无效，使用默认的快照；快照有效，使用快照动态缩略图...
+      if( strlen($dbLive['image_fdfs']) <= 0 ) {
+        $dbLive['image_snap'] = "/wxapi/public/images/snap.png";
+      } else {
+        $dbLive['image_snap'] = sprintf("%s%s", $theWebTracker, $dbLive['image_fdfs']);
+      }
+      // 右侧第一条记录一定是直播...
       unset($map); $arrList[0] = $dbLive;
       // 开始设置模版参数信息...
       $my_base['stream_prop'] = $dbLive['stream_prop'];

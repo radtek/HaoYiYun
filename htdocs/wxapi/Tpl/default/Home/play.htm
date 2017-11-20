@@ -7,10 +7,6 @@
 <link href="/wxapi/public/css/royalslider.css" rel="stylesheet">
 <link href="/wxapi/public/css/play.css" rel="stylesheet">
 
-<style>
-.vod-back { background-image:url(/wxapi/public/images/{{$my_web_logo}}-90.png); }
-</style>
-
 <section class="content-wrap">
   <div class="container">
     <div class="row">
@@ -37,13 +33,13 @@
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
-          <a class="rsImg" data-clicks="{{$vo.clicks}}" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}_640x360">
+          <a class="rsImg" data-clicks="{{$vo.clicks}}" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
-              <div class="cover vod-back">
-                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrHead();">
+              <div class="cover">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrVod();">
                 <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
               </div>
               <div class="headline">{{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}}&nbsp;{{$vo.teacher_name}}&nbsp;{{$vo.title_name}}&nbsp;{{$vo.created}}</div>
@@ -53,13 +49,13 @@
             </div>
           </a>
           <else/>
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="/wxapi/public/images/{{$vo.image}}">
+          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="{{$vo.image_snap}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
               <div class="cover">
-                <img src="/wxapi/public/images/{{$vo.image}}" onerror="doErrHead();">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrLive();">
               </div>
               <div class="headline">
                 {{$vo.school_name}} - {{$vo.grade_type}}&nbsp;{{$vo.grade_name}}&nbsp;{{$vo.camera_name}} - 
@@ -96,10 +92,17 @@
 
 <script>
 
-// 处理缩略图无法加载的问题...
-function doErrHead() {
+// 处理点播缩略图无法加载的问题...
+function doErrVod() {
   var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/blank.gif"; 
+  img.src  = "/wxapi/public/images/default-90.png"; 
+  img.onerror = null; // 控制不要一直跳动
+}
+
+// 处理直播缩略图无法加载的问题...
+function doErrLive() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/snap.png"; 
   img.onerror = null; // 控制不要一直跳动
 }
 

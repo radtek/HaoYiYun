@@ -49,7 +49,8 @@ layui.use(['flow','layer'], function(){
           // <article>不是标准html标签，必须在外面增加一层<div>...
           // 分页单独懒加载，否则，每次都要全部懒加载...
           $("#page_"+page+" img.lazy").lazyload({
-            effect : "fadeIn"
+            effect : "fadeIn",
+            placeholder: "/wxapi/public/images/snap.png"
           });
         },
         error: function(XMLHttpRequest, textStatus, errorThrown) {

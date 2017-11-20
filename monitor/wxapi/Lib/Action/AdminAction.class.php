@@ -14,7 +14,6 @@ class AdminAction extends Action
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_sysSite = $dbSys['sys_site'];
     $this->m_webType = kCloudMonitor;
-    $this->m_webLogo = "default";
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
@@ -26,7 +25,6 @@ class AdminAction extends Action
     // 直接给模板变量赋值...
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
-    $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
   }

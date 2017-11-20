@@ -71,7 +71,7 @@ function doModify(inGatherID, inMacAddr, objTr)
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['500px', '480px'],
+        area: ['500px', '520px'],
         title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;配置 - 采集端</i>",
         content: ajaxData,
         success: function() {
@@ -92,6 +92,7 @@ function doModify(inGatherID, inMacAddr, objTr)
             }
             var theMainRate = data.field.myMainRate;
             var theSubRate = data.field.mySubRate;
+            // 判断主码流是否有效...
             if( isNaN(theMainRate) || theMainRate < 32 || theMainRate > 8192 ) {
               layer.msg('【录像码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
                 $("input[name='myMainRate']").addClass('layui-form-danger');
@@ -99,6 +100,7 @@ function doModify(inGatherID, inMacAddr, objTr)
               });
               return false;
             }
+            // 判断子码流是否有效...
             if( isNaN(theSubRate) || theSubRate < 32 || theSubRate > 8192 ) {
               layer.msg('【直播码流】有效区间[32,8192]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
                 $("input[name='mySubRate']").addClass('layui-form-danger');
@@ -106,8 +108,10 @@ function doModify(inGatherID, inMacAddr, objTr)
               });
               return false;
             }
+            // 判断切片时间是否有效...
             var theSliceVal = data.field.mySliceVal;
             var theInterVal = data.field.myInterVal;
+            var theSnapVal = data.field.mySnapVal;
             if( isNaN(theSliceVal) || theSliceVal < 0 || theSliceVal > 30 ) {
               layer.msg('【录像切片】有效区间[0,30]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
                 $("input[name='mySliceVal']").addClass('layui-form-danger');
@@ -115,10 +119,19 @@ function doModify(inGatherID, inMacAddr, objTr)
               });
               return false;
             }
+            // 判断切片间隔是否有效...
             if( isNaN(theInterVal) || theInterVal < 0 || theInterVal > 3 ) {
               layer.msg('【切片交错】有效区间[0,3]，请更正！',  {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
                 $("input[name='myInterVal']").addClass('layui-form-danger');
                 $("input[name='myInterVal']").focus();
+              });
+              return false;
+            }
+            // 判断通道截图是否有效...
+            if( isNaN(theSnapVal) || theSnapVal <= 0 || theSnapVal > 10 ) {
+              layer.msg('【通道截图】有效区间[1,10]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='mySnapVal']").addClass('layui-form-danger');
+                $("input[name='mySnapVal']").focus();
               });
               return false;
             }
@@ -134,6 +147,7 @@ function doModify(inGatherID, inMacAddr, objTr)
             arrData['auto_fdfs'] = theAutoFDFS;
             arrData['slice_val'] = theSliceVal;
             arrData['inter_val'] = theInterVal;
+            arrData['snap_val'] = theSnapVal;
             // 通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({

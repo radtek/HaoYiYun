@@ -10,6 +10,12 @@
 #include "..\Camera.h"
 #include <curl.h>
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 void long2buff(LONGLONG n, char *buff)
 {
 	unsigned char *p;
@@ -876,6 +882,7 @@ GM_Error CRemoteSession::doPHPSetGatherSys(LPCTSTR lpData, int nSize)
 	int nSubKbps = atoi(CUtilTool::getJsonString(value["sub_rate"]).c_str());
 	int nSliceVal = atoi(CUtilTool::getJsonString(value["slice_val"]).c_str());
 	int nInterVal = atoi(CUtilTool::getJsonString(value["inter_val"]).c_str());
+	int nSnapVal = atoi(CUtilTool::getJsonString(value["snap_val"]).c_str());
 	BOOL bAutoLinkDVR = atoi(CUtilTool::getJsonString(value["auto_dvr"]).c_str());
 	BOOL bAutoLinkFDFS = atoi(CUtilTool::getJsonString(value["auto_fdfs"]).c_str());
 	// 存放新增的采集端配置信息...
@@ -885,6 +892,7 @@ GM_Error CRemoteSession::doPHPSetGatherSys(LPCTSTR lpData, int nSize)
 	theConfig.SetSubKbps(nSubKbps);
 	theConfig.SetInterVal(nInterVal);
 	theConfig.SetSliceVal(nSliceVal);
+	theConfig.SetSnapVal(nSnapVal);
 	theConfig.SetAutoLinkFDFS(bAutoLinkFDFS);
 	theConfig.SetAutoLinkDVR(bAutoLinkDVR);
 	// 通知主视图层，系统配置发生变化...

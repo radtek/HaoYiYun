@@ -14,7 +14,6 @@ class AdminAction extends Action
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_sysSite = $dbSys['sys_site'];
     $this->m_webType = kCloudRecorder;
-    $this->m_webLogo = "default";
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
@@ -26,7 +25,6 @@ class AdminAction extends Action
     // 直接给模板变量赋值...
     $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
-    $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
   }
@@ -680,13 +678,16 @@ class AdminAction extends Action
     // 将数据转发给指定的采集端...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    // 连接成功，执行中转命令...
-    if( $transmit ) {
-      $saveJson = json_encode($_POST);
-      $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Gather_SYS, $transmit, $saveJson);
-      transmit_disconnect_server($transmit);
-      echo $json_data;
+    // 连接失败...
+    if( !$transmit ) {
+      echo '连接中转服务器失败！';
+      return;
     }
+    // 连接成功，执行中转命令...
+    $saveJson = json_encode($_POST);
+    $json_data = transmit_command(kClientPHP, kCmd_PHP_Set_Gather_SYS, $transmit, $saveJson);
+    transmit_disconnect_server($transmit);
+    echo $json_data;
   }
   //
   // 添加直播通道...

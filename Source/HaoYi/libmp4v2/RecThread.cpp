@@ -9,6 +9,12 @@
 #include "..\XmlConfig.h"
 #include "..\librtmp\BitWritter.h"
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 CRecThread::CRecThread()
 {
 	m_audio_sample_rate = 0;
@@ -175,18 +181,15 @@ BOOL CRecThread::BeginRecSlice()
 	md5.update(strTimeMicro, strTimeMicro.GetLength());
 	strUniqid = md5.toString();
 	// 准备录像需要的信息...
-	GM_MapData theMapWeb;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	theConfig.GetCamera(nDBCameraID, theMapWeb);
 	CString  strMP4Path;
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapWeb["camera_id"];
 	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
-	m_strJpgName.Format("%s\\%s_%s.jpg", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
+	m_strJpgName.Format("%s\\%s_%d.jpg", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID);
 	// 2017.08.10 - by jackey => 新增创建时间戳字段...
 	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID
 	m_dwRecCTime = (DWORD)::time(NULL);
-	m_strMP4Name.Format("%s\\%s_%s_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str(), m_dwRecCTime, nCourseID);
+	m_strMP4Name.Format("%s\\%s_%d_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID, m_dwRecCTime, nCourseID);
 	// 录像时使用.tmp，避免没有录像完就被上传...
 	strMP4Path.Format("%s.tmp", m_strMP4Name);
 	m_strUTF8MP4 = CUtilTool::ANSI_UTF8(strMP4Path);

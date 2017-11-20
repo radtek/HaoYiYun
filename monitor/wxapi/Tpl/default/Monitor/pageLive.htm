@@ -7,7 +7,7 @@
         <span <if condition="$item.status gt 0">class="ibg online"<else/>class="ibg offline"</if> ></span>
         <span class="itg"><switch name="item.status"><case value="0">离线中</case><case value="1">直播中</case><case value="2">录像中</case><default/>离线中</switch></span>
       </span>
-      <img class="lazy" style="width:100%;margin:15px 0px;" <if condition="$item.status gt 0">data-original="/wxapi/public/images/live-on.png"<else/>data-original="/wxapi/public/images/live-off.png"</if> ></img>
+      <img class="lazy" data-original="{{$my_web_tracker}}{{$item.image_fdfs}}_252x162" width="252px" height="162px"></img>
     </a>
     <div class="thumb_title" title="{{$item.camera_name}}">
       <a href="{{:__APP__}}/Monitor/play/camera_id/{{$item.camera_id}}">

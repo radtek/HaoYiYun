@@ -23,10 +23,8 @@ class MonitorAction extends Action
     }
     // 如果是监控模式，设置常量信息...
     $this->m_webAction = "Monitor";
-    $this->m_webLogo = "default";
     // 直接给模板变量赋值...
     $this->assign('my_web_action', $this->m_webAction);
-    $this->assign('my_web_logo', $this->m_webLogo);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
   }
@@ -195,8 +193,11 @@ class MonitorAction extends Action
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取通道列表 => 在线优先排序
-    $arrCamera = D('camera')->limit($pageLimit)->order('status DESC, updated DESC')->select();
-    // 设置模板参数...
+    $arrCamera = D('LiveView')->limit($pageLimit)->order('status DESC, updated DESC')->select();
+    // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    // 设置模板参数 => 使用 pageLive 的模版...
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_list', $arrCamera);
     $this->display('pageLive');
@@ -238,7 +239,10 @@ class MonitorAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取通道列表 => 在线优先排序
     $map['gather_id'] = $_GET['gather_id'];
-    $arrCamera = D('camera')->where($map)->limit($pageLimit)->order('status DESC, updated DESC')->select();
+    $arrCamera = D('LiveView')->where($map)->limit($pageLimit)->order('status DESC, updated DESC')->select();
+    // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
     // 设置模板参数 => 使用 pageLive 的模版...
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_list', $arrCamera);
@@ -248,12 +252,21 @@ class MonitorAction extends Action
   // 播放页面...
   public function play()
   {
+    // 计算web_tracker地址 => 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $theWebTracker = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
     // 获取通道详细信息...
     $theGoToSlideID = 0;
     $camera_id = $_GET['camera_id'];
     $map['camera_id'] = $camera_id;
-    $dbCamera = D('camera')->where($map)->find();
-    $dbCamera['image'] = (($dbCamera['status'] > 0) ? "live-on.png" : "live-off.png");
+    $dbCamera = D('LiveView')->where($map)->find();
+    // 快照地址无效，使用默认的快照；快照有效，使用快照动态缩略图...
+    if( strlen($dbCamera['image_fdfs']) <= 0 ) {
+      $dbCamera['image_snap'] = "/wxapi/public/images/snap.png";
+    } else {
+      $dbCamera['image_snap'] = sprintf("%s%s", $theWebTracker, $dbCamera['image_fdfs']);
+    }
+    // 给通道模版赋值...
     $this->assign('my_camera', $dbCamera);
     // 右侧第一条记录一定是直播...
     unset($map); $arrList[0] = $dbCamera;
@@ -330,8 +343,7 @@ class MonitorAction extends Action
     $this->assign('max_page', $max_page);
    
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', $theWebTracker);
     $this->assign('my_title', $this->m_webTitle . ' - 播放');
     $this->assign('my_nav', $my_nav);
     $this->display('play');
