@@ -37,13 +37,13 @@ CMP4Thread::CMP4Thread()
 	m_audio_rate_index = 0;
 	m_audio_channel_num = 0;
 
-	m_tidAudio = 0;
-	m_tidVideo = 0;
 	m_iVSampleInx = 1;
 	m_iASampleInx = 1;
+	m_bFinished = false;
 	m_bVideoComplete = true;
 	m_bAudioComplete = true;
-	m_bFinished = false;
+	m_tidAudio = MP4_INVALID_TRACK_ID;
+	m_tidVideo = MP4_INVALID_TRACK_ID;
 
 	// 记录开始时间点...
 	m_dwStartMS = ::GetTickCount();
@@ -238,12 +238,14 @@ bool CMP4Thread::doPrepareMP4()
 	m_hMP4Handle = MP4Read( strUTF8.c_str() );
 	if( m_hMP4Handle == MP4_INVALID_FILE_HANDLE ) {
 		MP4Close(m_hMP4Handle);
+		MsgLogGM(GM_File_Not_Open);
 		m_hMP4Handle = MP4_INVALID_FILE_HANDLE;
 		return false;
 	}
 	// 文件打开正确, 抽取需要的数据...
 	if( !this->doMP4ParseAV(m_hMP4Handle) ) {
 		MP4Close(m_hMP4Handle);
+		MsgLogGM(GM_File_Not_Open);
 		m_hMP4Handle = MP4_INVALID_FILE_HANDLE;
 		return false;
 	}
@@ -350,12 +352,21 @@ bool CMP4Thread::doMP4ParseAV(MP4FileHandle inFile)
 			if( m_strAES.size() <= 0 && nSize > 0 ) {
 				m_strAES.assign((char*)pAES, nSize);
 			}
-			free(pAES);
-
+			// 释放分配的缓存...
+			if( pAES != NULL ) {
+				free(pAES);
+				pAES = NULL;
+			}
 			// 保存音频数据头...
 			this->WriteAACSequenceHeader();
 		}
 	}
+	// 如果音频和视频都没有，返回失败...
+	if((m_tidVideo == MP4_INVALID_TRACK_ID) && (m_tidAudio == MP4_INVALID_TRACK_ID)) {
+		MsgLogGM(GM_File_Read_Err);
+		return false;
+	}
+	// 一切正常，返回成功...
 	return true;
 }
 

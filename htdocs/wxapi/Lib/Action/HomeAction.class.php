@@ -402,7 +402,6 @@ class HomeAction extends Action
       $my_base['play_title'] = sprintf("%s %s %s %s %s %s", $curPlay['grade_type'], $curPlay['grade_name'], $curPlay['camera_name'], $curPlay['teacher_name'], $curPlay['title_name'], $curPlay['created']);
       // 设置点播模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
       $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
-      $this->assign('my_web_tracker', $theWebTracker);
       $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrVod);
     } else {
@@ -427,7 +426,8 @@ class HomeAction extends Action
       $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrList);
     }
-    // 设置其它模板参数...
+    // 设置其它公共的模板参数...
+    $this->assign('my_web_tracker', $theWebTracker);
     $this->assign('my_nav', $my_nav);
     $this->display('play');
   }
