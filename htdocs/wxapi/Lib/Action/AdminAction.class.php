@@ -935,7 +935,7 @@ class AdminAction extends Action
     $theCameraID = $_GET['camera_id'];
     $theGatherID = $_GET['gather_id'];
     // 需要根据类型不同，设置不同的焦点类型...
-    $this->assign('my_title', $this->m_webTitle . " - 课程表");
+    $this->assign('my_title', $this->m_webTitle . " - 录像计划");
     $this->assign('my_command', (($theNavType == 'camera') ? 'gather' : 'live'));
     // 获取班级年级或通道信息...
     $map['camera_id'] = $theCameraID;
