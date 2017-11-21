@@ -394,3 +394,6 @@ h6 {
   background-repeat:no-repeat;
   background-position:center;
 }
+.rsHide {
+  display: none;
+}

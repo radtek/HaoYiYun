@@ -21,6 +21,12 @@ class HomeAction extends Action
     if( $this->m_detect->isMobile() ) {
       header("location: /Mobile");
     }
+    // 判断是否是IE浏览器 => 这里必须用0和1表示...
+    $this->m_isIEBrowser = 0;
+    $theUserAgent = $this->m_detect->getUserAgent();
+    if( false !== strpos($theUserAgent, 'MSIE') ) {
+      $this->m_isIEBrowser = 1;
+    }
     // 如果是录播模式，设置常量信息...
     $this->m_webAction = "Home";
     // 直接给模板变量赋值...
@@ -465,6 +471,8 @@ class HomeAction extends Action
   */
   public function show()
   {
+    // 统一设置设置是否是IE浏览器类型...
+    $this->assign('my_isIE', $this->m_isIEBrowser);
     // 根据type类型获取url地址...
     if( strcasecmp($_GET['type'], "vod") == 0 ) {
       // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
@@ -480,8 +488,9 @@ class HomeAction extends Action
       $dbShow['player_vod'] = 1;
       $dbShow['player_camera'] = -1;
       // 点播以html5优先，flash垫后...
-      $dbShow['order1'] = "html5";
-      $dbShow['order2'] = "flash";
+      $arrTech[0] = "html5";
+      $arrTech[1] = "flash";
+      $dbShow['tech'] = json_encode($arrTech);
       // 反馈点击次数给显示层...
       $dbShow['clicks'] = intval($dbVod['clicks']) + 1;
       $dbShow['click_id'] = "vod_" . $dbVod['record_id'];
@@ -507,19 +516,23 @@ class HomeAction extends Action
         $this->dispError($dbResult['err_msg'], '请联系管理员，汇报错误信息。');
         return;
       }
-      // 连接中转服务器成功 => 设置rtmp地址和hls地址，播放器编号...
-      $arrSource[0]['src'] = $dbResult['rtmp_url'];
-      $arrSource[0]['type'] = $dbResult['rtmp_type'];
-      $arrSource[1]['src'] = $dbResult['hls_url'];
-      $arrSource[1]['type'] = $dbResult['hls_type'];
+      // 连接中转服务器成功 => 设置flvjs地址、rtmp地址、hls地址，播放器编号...
+      $arrSource[0]['src'] = $dbResult['flv_url'];
+      $arrSource[0]['type'] = $dbResult['flv_type'];
+      $arrSource[1]['src'] = $dbResult['rtmp_url'];
+      $arrSource[1]['type'] = $dbResult['rtmp_type'];
+      $arrSource[2]['src'] = $dbResult['hls_url'];
+      $arrSource[2]['type'] = $dbResult['hls_type'];
       $dbShow['source'] = json_encode($arrSource);
       // 这3个参数是直播播放器汇报时需要的数据...
       $dbShow['player_camera'] = $dbCamera['camera_id'];
       $dbShow['player_id'] = $dbResult['player_id'];
       $dbShow['player_vod'] = 0;
-      // 直播flash以优先(延时小)，html5垫后(延时大)...
-      $dbShow['order1'] = "flash";
-      $dbShow['order2'] = "html5";
+      // 直播flvjs(替代flash)，flash以优先(延时小)，html5垫后(延时大)...
+      $arrTech[0] = "flvjs";
+      $arrTech[1] = "flash";
+      $arrTech[2] = "html5";
+      $dbShow['tech'] = json_encode($arrTech);
       // 反馈点击次数给显示层...
       $dbShow['clicks'] = intval($dbCamera['clicks']) + 1;
       $dbShow['click_id'] = "live_" . $dbCamera['camera_id'];

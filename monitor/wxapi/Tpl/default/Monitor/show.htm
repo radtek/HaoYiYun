@@ -25,9 +25,16 @@
   <!-- PC端还是使用videojs的5.18.4，为了兼容IE8界面 -->
   <script src="/wxapi/public/js/jquery-1.12.4.min.js"></script>
   <script src="/wxapi/public/js/video.min.js"></script>
-  <script src="/wxapi/public/js/videojs-contrib-hls.min.js"></script>
   <script src="/wxapi/public/js/zh-CN.js"></script>
+  <!-- 不是IE浏览器，才引入flvjs和hls的支持 -->
+  <eq name='my_isIE' value='0'>
+  <script src="/wxapi/public/js/videojs-contrib-hls.min.js"></script>
+  <script src="/wxapi/public/js/flv.min.js"></script>
+  <script src="/wxapi/public/js/videojs-flvjs.min.js"></script>
+  </eq>
   <script type="text/javascript">
+    // 获取网站地址...
+    var g_isIEBrowser = {{$my_isIE}};
     // 获取网站地址...
     var g_siteurl = "{{:__APP__}}";
     // 初始化直播通知需要的变量...
@@ -56,31 +63,36 @@
           var arrJson = $.parseJSON(ajaxData);
           // 打印错误信息，关闭定时器...
           if( arrJson.err_code > 0 ) {
-            console.log('verify error => ' + arrJson.err_msg);
+            ((!g_isIEBrowser) ? console.log('verify error => ' + arrJson.err_msg) : 0);
             clearInterval(g_player_clock);
             return;
           }
           // 打印成功信息...
-          console.log('verify success => player_camera: %d, player_id: %d, player_type: %d, player_active: %d', inCamera, inPlayID, inPlayType, inPlayActive);
+          if( !g_isIEBrowser ) {
+            console.log('verify success => player_camera: %d, player_id: %d, player_type: %d, player_active: %d', inCamera, inPlayID, inPlayType, inPlayActive);
+          }
         },
         error: function(XMLHttpRequest, textStatus, errorThrown) {
-          console.log('verify error => ' + textStatus+': '+XMLHttpRequest.status+','+errorThrown);
+          if( !g_isIEBrowser ) {
+            console.log('verify error => ' + textStatus+': '+XMLHttpRequest.status+','+errorThrown);
+          }
           clearInterval(g_player_clock);
         }
       });
     }
     // 初始化videojs对象 => 直接设置多个源，让videojs自动匹配...
-    var strJson = '{{$my_show.source}}';
-    var arrSource = $.parseJSON(strJson);
+    var strTech = '{{$my_show.tech}}';
+    var arrTech = $.parseJSON(strTech);
+    var strSource = '{{$my_show.source}}';
+    var arrSource = $.parseJSON(strSource);
     var player = videojs("my-video", {
+      width: "{{$my_show.width}}",
+      height: "{{$my_show.height}}",
       sources: arrSource,
-      controlBar: {
-        currentTimeDisplay: true,
-        audioTrackButton: false
-      },
-      techOrder: ['{{$my_show.order1}}', '{{$my_show.order2}}'],
+      techOrder: arrTech,
+      html5: { hls: {withCredentials: false} },
       flash: { swf: "/wxapi/public/js/video-js.swf" },
-      html5: { hls: {withCredentials: false} }
+      controlBar: { currentTimeDisplay: true, audioTrackButton: false }
     });
     // 播放器ready事件...
     player.ready( function() {
@@ -89,6 +101,8 @@
         window.parent.doEndedEvent();
       });
       // 获取播放器编号，播放器类型，是否有效...
+      // 注意：flvjs也被归为html5播放器...
+      ((!g_isIEBrowser) ? console.log('[techName] > %s', this.techName_) : 0);
       g_player_type = ((this.techName_.toLowerCase() == 'flash') ? 0 : 1);
       // 如果是点播，直接播放返回...
       if( g_player_vod ) {
@@ -118,7 +132,7 @@
     // 播放器播放错误...
     player.on('error', function() {
       // 打印错误信息...
-      console.log('player Error!')
+      ((!g_isIEBrowser) ? console.log('player Error!') : 0);
       // 如果是hls直播，关闭定时器，并通知中转服务器...
       if( g_player_vod <= 0 && g_player_type > 0 ) {
         clearInterval(g_player_clock);
@@ -128,7 +142,7 @@
     // 播放器播放结束...
     player.on('ended', function() {
       // 打印结束信息...
-      console.log('player ended!')
+      ((!g_isIEBrowser) ? console.log('player ended!') : 0);
       // 如果是html5直播，关闭定时器，并通知中转服务器...
       if( g_player_vod <= 0 && g_player_type > 0 ) {
         clearInterval(g_player_clock);
@@ -137,11 +151,11 @@
     });
     // 播放器确认能够播放...
     player.on('canplay', function() {
-      console.log('player Canplay!')
+      ((!g_isIEBrowser) ? console.log('player Canplay!') : 0);
     });
     // 播放器无需停顿直接播放...
     player.on('canplaythrough', function() {
-      console.log('player Canplaythrough!')
+      ((!g_isIEBrowser) ? console.log('player Canplaythrough!') : 0);
     });
   </script>
 </body>

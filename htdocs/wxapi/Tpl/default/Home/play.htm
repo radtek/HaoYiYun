@@ -33,7 +33,7 @@
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
-          <a class="rsImg" data-clicks="{{$vo.clicks}}" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}">
+          <a class="rsImg rsHide" data-clicks="{{$vo.clicks}}" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
@@ -49,7 +49,7 @@
             </div>
           </a>
           <else/>
-          <a class="rsImg" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="{{$vo.image_snap}}">
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" href="{{$vo.image_snap}}">
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
