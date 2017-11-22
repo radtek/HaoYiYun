@@ -1,6 +1,6 @@
 
 <volist name="my_gather" id="vo">
-<tr height="50px" onclick="doModify({{$vo.gather_id}},'{{$vo.mac_addr}}',this);">
+<tr height="50px" onclick="doModify({{$vo.gather_id}},'{{$vo.mac_addr}}',this);" title="ID: {{$vo.gather_id}}">
   <td>
     <switch name="vo.status">
       <case value="0"><i class="fa fa-power-off fa-wait">&nbsp;离线</i></case>

@@ -8,6 +8,8 @@ class MonitorAction extends Action
 {
   public function _initialize()
   {
+    // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
+    Load('extend');
     // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
     $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
     $this->m_webTitle = $dbSys['web_title'];
@@ -101,7 +103,7 @@ class MonitorAction extends Action
       $bFindActive = false;
       foreach($arrDrop as $key => &$dbItem) {
         if( $dbItem['gather_id'] == $my_nav['active_id'] ) {
-          $my_nav['subject_title'] = sprintf("采集器 - %d", $key+1);
+          $my_nav['subject_title'] = $dbItem['name_set'];
           $bFindActive = ((($key + 1) > NAV_ITEM_COUNT) ? true : false);
           break;
         }
