@@ -305,6 +305,9 @@
     <ClInclude Include="UI\HyperLink.h">
       <Filter>ui</Filter>
     </ClInclude>
+    <ClInclude Include="Ntray.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -1008,6 +1011,9 @@
     </ClCompile>
     <ClCompile Include="UI\HyperLink.cpp">
       <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="Ntray.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

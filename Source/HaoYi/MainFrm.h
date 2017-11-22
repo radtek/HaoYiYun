@@ -6,6 +6,7 @@
 #include "InfoBar.h"
 #include "TrueColorToolBar.h"
 
+class CTrayNotifyIcon;
 class CMainFrame : public CFrameWnd
 {
 protected:
@@ -24,6 +25,8 @@ protected:
 	afx_msg void OnClose();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg int  OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg LRESULT OnTrayNotify(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnTrayPopMenu(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 private:
 	enum {
@@ -33,14 +36,18 @@ private:
 	void		LoadMyToolBar();
 	HMENU		NewDefaultMenu();
 	GM_Error	MakeGMSavePath();
+	void		BuildTrayIcon();
+	void		DestoryTrayIcon();
 private:
 	//CInfoBar			m_InfoBar;
 	CReBar				m_wndReBar;
 	BCMenu				m_menuDefault;
 	CStatusBar			m_wndStatusBar;
 	CTrueColorToolBar   m_wndToolBar;
-
 	CCpuMemRate			m_cpu;
+
+	CMenu				m_TrayMenu;				// 系统栏菜单
+	CTrayNotifyIcon	 *  m_pTrayIcon;			// 系统栏图标
 
 	friend class CHaoYiApp;
 };

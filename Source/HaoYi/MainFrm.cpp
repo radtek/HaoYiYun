@@ -7,6 +7,7 @@
 #include "UtilTool.h"
 #include "XmlConfig.h"
 #include "FastSession.h"
+#include "Ntray.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -16,9 +17,11 @@ IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_WM_SIZE()
-	ON_WM_CREATE()
 	ON_WM_CLOSE()
 	ON_WM_TIMER()
+	ON_WM_CREATE()
+	ON_MESSAGE(WM_TRAY_MENU, OnTrayPopMenu)
+	ON_MESSAGE(WM_TRAY_NOTIFY, OnTrayNotify)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -36,6 +39,7 @@ static UINT indicators[] =
 
 CMainFrame::CMainFrame()
 {
+	m_pTrayIcon = NULL;
 }
 
 CMainFrame::~CMainFrame()
@@ -121,19 +125,16 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		MsgLogGM(GM_Err_Config);
 		return -1;
 	}
-
 	// 设置最大的剩余磁盘为录像盘符...
 	this->MakeGMSavePath();
-
 	// 统一保存配置文件...
 	theConfig.GMSaveConfig();
-
 	// 初始化CPU对象...
 	m_cpu.Initial();
-
 	// 创建更新时钟...
 	this->SetTimer(kStatusTimerID, 1000, NULL);
-
+	// 创建系统栏资源...
+	this->BuildTrayIcon();
 	return 0;
 }
 //
@@ -318,6 +319,48 @@ void CMainFrame::OnClose()
 	// 退出之前的询问...
 	if( ::MessageBox(this->m_hWnd, "确实要退出系统吗？", "确认", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL )
 		return;
+	// 释放系统栏资源...
+	this->DestoryTrayIcon();
 	// 释放框架资源...
 	CFrameWnd::OnClose();
+}
+
+void CMainFrame::BuildTrayIcon()
+{
+	// 释放系统栏资源...
+	this->DestoryTrayIcon();
+	// 创建系统栏对象...
+	HICON hTrayIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_pTrayIcon	= new CTrayNotifyIcon();
+	m_pTrayIcon->Create(this, IDR_MENU_TRAY, "采集端", hTrayIcon, WM_TRAY_NOTIFY);
+	m_TrayMenu.LoadMenu(IDR_MENU_TRAY);
+}
+
+void CMainFrame::DestoryTrayIcon()
+{
+	// 释放系统栏对象...
+	if( m_pTrayIcon != NULL ) {
+		delete m_pTrayIcon;
+		m_pTrayIcon = NULL;
+	}
+	// 释放系统栏菜单...
+	m_TrayMenu.DestroyMenu();
+}
+
+LRESULT CMainFrame::OnTrayNotify(WPARAM wParam, LPARAM lParam)
+{
+	if( m_pTrayIcon == NULL )
+		return S_OK;
+	return m_pTrayIcon->OnTrayNotification(wParam, lParam);
+}
+
+LRESULT CMainFrame::OnTrayPopMenu(WPARAM wParam, LPARAM lParam)
+{
+	CPoint	posCursor;
+	::GetCursorPos(&posCursor);
+	CMenu * pSubMenu = m_TrayMenu.GetSubMenu(0);	
+	if( pSubMenu != NULL ) {
+		pSubMenu->TrackPopupMenu (TPM_LEFTALIGN|TPM_RIGHTBUTTON, posCursor.x, posCursor.y, this);
+	}
+	return S_OK;
 }
