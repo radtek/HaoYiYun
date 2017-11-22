@@ -23,9 +23,13 @@ class HomeAction extends Action
     }
     // 判断是否是IE浏览器 => 这里必须用0和1表示...
     $this->m_isIEBrowser = 0;
+    $theIERule = '/(MSIE) (\d+\.\d)/';
     $theUserAgent = $this->m_detect->getUserAgent();
-    if( false !== strpos($theUserAgent, 'MSIE') ) {
-      $this->m_isIEBrowser = 1;
+    // 通过正则匹配，是否是IE浏览器...
+    preg_match($theIERule, $theUserAgent, $data);
+    // IE11 以下禁用高级flvjs和hls，只能用flash播放...
+    if( !empty($data) && is_array($data) ) {
+      $this->m_isIEBrowser = (($data[2] >= '11.0') ? 0 : 1);
     }
     // 如果是录播模式，设置常量信息...
     $this->m_webAction = "Home";

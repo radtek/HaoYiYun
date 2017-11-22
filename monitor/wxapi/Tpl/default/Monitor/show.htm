@@ -84,6 +84,24 @@
     var arrTech = $.parseJSON(strTech);
     var strSource = '{{$my_show.source}}';
     var arrSource = $.parseJSON(strSource);
+    // 如果不是IE浏览器，并且是直播，看看是否支持flvjs...
+    if( !g_isIEBrowser && g_player_vod <= 0 ) {
+      var theSupport = flvjs.isSupported();
+      // 如果不支持flvjs，删除tech和source里的第一个元素...
+      if( theSupport == 'undefined' || !theSupport ) {
+        delete arrTech[0]; delete arrSource[0];
+      } else {
+        // 如果是safari浏览器，10以下版本仍然不支持mse的flvjs功能...
+        var userAgent = navigator.userAgent.toLowerCase();
+        var rSafari = /version\/([\w.]+).*(safari)/;
+        var uaMatch = rSafari.exec(userAgent);
+        // 如果是 Safari 10 以下版本，删除对flvjs的支持...
+        if((uaMatch != null) && (uaMatch[1].split('.')[0] < 10)) {
+          delete arrTech[0]; delete arrSource[0];
+        }
+      }
+    }
+    // 创建videojs对象...
     var player = videojs("my-video", {
       width: "{{$my_show.width}}",
       height: "{{$my_show.height}}",
