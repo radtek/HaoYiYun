@@ -421,12 +421,6 @@ class HomeAction extends Action
       $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
       $map['camera_id'] = $camera_id;
       $dbLive = D('LiveView')->where($map)->find();
-      // 快照地址无效，使用默认的快照；快照有效，使用快照动态缩略图...
-      if( strlen($dbLive['image_fdfs']) <= 0 ) {
-        $dbLive['image_snap'] = "/wxapi/public/images/snap.png";
-      } else {
-        $dbLive['image_snap'] = sprintf("%s%s", $theWebTracker, $dbLive['image_fdfs']);
-      }
       // 右侧第一条记录一定是直播...
       unset($map); $arrList[0] = $dbLive;
       // 开始设置模版参数信息...

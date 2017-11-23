@@ -272,12 +272,6 @@ class MonitorAction extends Action
     $camera_id = $_GET['camera_id'];
     $map['camera_id'] = $camera_id;
     $dbCamera = D('LiveView')->where($map)->find();
-    // 快照地址无效，使用默认的快照；快照有效，使用快照动态缩略图...
-    if( strlen($dbCamera['image_fdfs']) <= 0 ) {
-      $dbCamera['image_snap'] = "/wxapi/public/images/snap.png";
-    } else {
-      $dbCamera['image_snap'] = sprintf("%s%s", $theWebTracker, $dbCamera['image_fdfs']);
-    }
     // 给通道模版赋值...
     $this->assign('my_camera', $dbCamera);
     // 右侧第一条记录一定是直播...

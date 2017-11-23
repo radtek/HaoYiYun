@@ -73,13 +73,14 @@
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" href="{{$my_web_tracker}}{{$vo.image_fdfs}}">
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" 
+             <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
               <div class="cover">
-                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrVod();">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrSnap();">
                 <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
               </div>
               <div class="headline">{{$vo.created}}</div>
@@ -92,13 +93,14 @@
             </div>
           </a>
           <else/>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" href="{{$vo.image_snap}}">
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" 
+             <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
             <div class="rsTmb">
               <div class="serial">
                 <span class="fa fa-play"></span>
               </div>
               <div class="cover">
-                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrLive();">
+                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrSnap();">
               </div>
               <div class="headline">
               通道{{$vo.camera_id}} - 
@@ -145,15 +147,8 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 
-// 处理点播缩略图无法加载的问题...
-function doErrVod() {
-  var img = event.srcElement; // 获取事件对象...
-  img.src  = "/wxapi/public/images/default-90.png"; 
-  img.onerror = null; // 控制不要一直跳动
-}
-
-// 处理直播缩略图无法加载的问题...
-function doErrLive() {
+// 处理直播、点播缩略图无法加载的问题...
+function doErrSnap() {
   var img = event.srcElement; // 获取事件对象...
   img.src  = "/wxapi/public/images/snap.png"; 
   img.onerror = null; // 控制不要一直跳动
