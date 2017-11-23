@@ -12,7 +12,7 @@
     <scroller lock-x :scrollbar-y=true enable-horizontal-swiping use-pulldown :pulldown-config="pulldownConfig" @pulldown:loading="refresh" use-pullup :pullup-config="pullupConfig" @pullup:loading="loadMore" ref="galScroller">
       <div><!-- 必须包含这个div容器，否则scroller无法拖动 -->
         <swiper v-show="isDispSwiper" :list="arrSwiper" auto loop :threshold=10 height="200px" @on-click-list-item="onClickSwiper"></swiper>
-        <galleray v-show="isDispGallery" :isLive="isLive" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickGallery"></galleray>
+        <galleray v-show="isDispGallery" :isLive="isLive" :list="arrGallery" @on-click-list-item="onClickGallery"></galleray>
         <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
       </div>
     </scroller>
@@ -45,7 +45,6 @@ export default {
   },
   data () {
     return {
-      boxGround: '',
       isDispGallery: true,
       isDispSwiper: true,
       isDispEnd: false,
@@ -191,18 +190,12 @@ export default {
       that.maxGalPage = 1
       that.arrSwiper = []
       that.arrGallery = []
-      that.isLive = false
       that.isLoading = true
       that.isDispEnd = false
       that.isDispSwiper = true
       that.isDispGallery = true
-      that.boxGround = '/wxapi/public/images/default-150.png'
       that.$refs.endScroll.style.lineHeight = ''
-      // 如果是直播，使用blank.gif...
-      if (theSubjectID === -2) {
-        that.boxGround = '/wxapi/public/images/blank.gif'
-        that.isLive = true
-      }
+      that.isLive = (theSubjectID === -2)
       // 这里必须让下拉滚动容器返回到顶部...
       that.$refs.galScroller._xscroll.scrollTop(0, 1000, 'ease-in-out')
       // 向服务器请求科目数据内容...
@@ -271,10 +264,10 @@ export default {
     }
   },
   mounted () {
+    // 设置默认的标题栏名称...
+    // document.title = '云录播'
     // 设置最后的滚动结束条的高度...
     this.$refs.endScroll.style.height = '80px'
-    // 设置默认的标题栏名称...
-    document.title = '云录播'
     // 默认加载最新的数据...
     this.loadSubject(-1)
     // 进行局部对象定向绑定...

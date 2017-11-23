@@ -34,7 +34,7 @@
           <x-button type="primary" @click="onClickLive">点击切换到直播</x-button>
         </div>
         <div class="thumb_split"></div>
-        <ListView :focusRecord="videoParams.record_id" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickVod" ref="listVod"></ListView>
+        <ListView :focusRecord="videoParams.record_id" :list="arrGallery" @on-click-list-item="onClickVod" ref="listVod"></ListView>
         <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
       </div>
     </scroller>
@@ -68,7 +68,6 @@ export default {
       player_clock: -1,
       arrGallery: [],
       arrHlsAddr: [],
-      boxGround: '',
       curGalPage: 1,
       isLive: true,
       isDispEnd: false,
@@ -90,7 +89,7 @@ export default {
           remainingTimeDisplay: false
         },
         html5: {hls: {withCredentials: false}},
-        poster: '/wxapi/public/images/live-on.png'
+        poster: (this.$route.params.image_fdfs !== null) ? this.$route.params.image_fdfs : '/wxapi/public/images/snap.png'
         // 注意：proxyTable解决，不用this.$store.state.vux.ajaxImgPath
         // 注意：这里不能用computed计算值，data() 先于computed()执行...
       },
@@ -141,8 +140,6 @@ export default {
     this.$destroy()
   },
   mounted () {
-    // 更新默认的背景小图片 => 加上访问路径...
-    this.boxGround = '/wxapi/public/images/default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -200,7 +197,7 @@ export default {
           // 直接改变播放连接地址和海报地址...
           that.playerOptions.sources[0].type = that.liveParams.arrHlsAddr.hls_type
           that.playerOptions.sources[0].src = that.liveParams.arrHlsAddr.hls_url
-          that.playerOptions.poster = '/wxapi/public/images/live-on.png'
+          that.playerOptions.poster = (that.liveParams.image_fdfs !== null) ? that.liveParams.image_fdfs : '/wxapi/public/images/snap.png'
           // 隐藏时间轴显示信息...
           that.playerOptions.controlBar.timeDivider = false
           that.playerOptions.controlBar.durationDisplay = false
@@ -238,7 +235,7 @@ export default {
       // 直接改变播放连接地址和海报地址...
       this.playerOptions.sources[0].type = 'video/mp4'
       this.playerOptions.sources[0].src = this.videoParams.file_fdfs
-      this.playerOptions.poster = this.videoParams.image_fdfs
+      this.playerOptions.poster = (this.videoParams.image_fdfs !== null) ? this.videoParams.image_fdfs : '/wxapi/public/images/snap.png'
       // 开启时间轴显示信息...
       this.playerOptions.controlBar.timeDivider = true
       this.playerOptions.controlBar.durationDisplay = true

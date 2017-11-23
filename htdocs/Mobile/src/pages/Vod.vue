@@ -32,7 +32,7 @@
           <span style="float: right;"><i class="fa fa-play-circle-o">&nbsp;{{videoParams.clicks}}次</i></span>
         </div>
         <div class="thumb_split"></div>
-        <ListView :focusRecord="videoParams.record_id" :boxGround="boxGround" :list="arrGallery" @on-click-list-item="onClickListView" ref="listVod"></ListView>
+        <ListView :focusRecord="videoParams.record_id" :list="arrGallery" @on-click-list-item="onClickListView" ref="listVod"></ListView>
         <div v-show="isDispEnd" class="endScroll" ref="endScroll">没有更多内容了</div>
       </div>
     </scroller>
@@ -60,7 +60,6 @@ export default {
     return {
       arrGallery: [],
       curGalPage: 1,
-      boxGround: '',
       isDispEnd: false,
       videoParams: this.$route.params,
       playerOptions: {
@@ -74,7 +73,7 @@ export default {
           type: 'video/mp4',
           src: this.$route.params.file_fdfs
         }],
-        poster: this.$route.params.image_fdfs
+        poster: (this.$route.params.image_fdfs !== null) ? this.$route.params.image_fdfs : '/wxapi/public/images/snap.png'
       },
       pullupConfig: {
         pullUpHeight: 245, // 30 + 210 => 需要对上拉滚动的参数进行偏移修正 => 由于tabBanner的存在...
@@ -96,8 +95,6 @@ export default {
     this.$destroy()
   },
   mounted () {
-    // 更新默认的背景小图片 => 加上访问路径...
-    this.boxGround = '/wxapi/public/images/default-90.png'
     // 监听横屏事件...
     window.addEventListener('orientationchange', this.onChangeOrientation, false)
     // 如果没有发现有效的参数内容，直接跳转回去 => destroy 很重要...
@@ -135,7 +132,7 @@ export default {
       this.videoParams = item
       // 直接改变播放连接地址和海报地址...
       this.playerOptions.sources[0].src = this.videoParams.file_fdfs
-      this.playerOptions.poster = this.videoParams.image_fdfs
+      this.playerOptions.poster = (this.videoParams.image_fdfs !== null) ? this.videoParams.image_fdfs : '/wxapi/public/images/snap.png'
       // 向服务器发起点击累加命令，由服务器累加计数，使用服务器反馈的结果更新本地界面的计数器...
       this.doSaveClick(this.videoParams)
     },

@@ -1,6 +1,7 @@
 
 // 消除点击延迟 => 不打开会影响tab点击事件...
 // 必须采用定向绑定，否则会造成Videojs点击两次...
+// Mobile\node_modules\fastclick\lib\fastclick.js
 // 需要在743|744加入 else { return false }，否则android无法支持...
 const FastClick = require('fastclick')
 
@@ -94,9 +95,10 @@ router.beforeEach(function (to, from, next) {
 // cnpm install vue-lazyload --save-dev
 import VueLazyload from 'vue-lazyload'
 Vue.use(VueLazyload, {
+  error: '/wxapi/public/images/snap.png',
   throttleWait: 300,
   observer: false,
-  attempt: 2
+  attempt: 1
 })
 
 // cnpm install vue-resource --save-dev
