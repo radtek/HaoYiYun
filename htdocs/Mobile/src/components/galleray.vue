@@ -7,10 +7,43 @@
             <div class="am-gallery-play" :style="{display: isLive ? 'none' : 'block'}">
               <i class="fa fa-play-circle"></i>
             </div>
+            <!-- 直播通道状态 -->
+            <template v-if="isLive">
+              <div class="am-gallery-up">
+              <template v-if="item.status >= 1">
+                <div class="am-thumb-back online"></div>
+                <div class="am-thumb-text">直播中</div>
+              </template>
+              <template v-else>
+                <div class="am-thumb-back offline"></div>
+                <div class="am-thumb-text">离线中</div>
+              </template>
+              </div>
+            </template>
+            <!-- 录像播放时长 -->
+            <template v-else>
+              <div class="am-gallery-down">
+                <div class="am-thumb-back dtime"></div>
+                <div class="am-thumb-text">{{item.disptime}}</div>
+              </div>
+            </template>
             <img class="am-gallery-img" v-lazy="item.image_fdfs + '_240x140'" />
           </div>
-          <h3 class="am-gallery-title">{{item.subject_name}} {{item.grade_type}} {{item.teacher_name}} {{item.title_name}}</h3>
-          <div class="am-gallery-desc">{{item.created}}</div>
+          <h3 class="am-gallery-title">
+            <template v-if="isLive">{{item.grade_name}} {{item.camera_name}} {{item.school_name}}</template>
+            <template v-else>{{item.subject_name}} {{item.grade_type}} {{item.teacher_name}} {{item.title_name}}</template>
+          </h3>
+          <!-- 录像记录需要的额外信息 -->
+          <template v-if="isLive === false">
+          <div class="am-gallery-desc">
+            <span class="am-left">
+              <i class="fa fa-file-video-o">&nbsp;{{item.file_size}}&nbsp;MB</i>
+            </span>
+            <span class="am-right">
+              <i class="fa fa-play-circle-o">&nbsp;{{item.clicks}}&nbsp;次</i>
+            </span>
+          </div>
+          </template>
         </a>
       </div>
     </li>
@@ -101,6 +134,14 @@ a {
   float: left;
 }
 
+.am-left {
+  margin-left: 2px;
+}
+.am-right {
+  float: right;
+  margin-right: 5px;
+}
+
 /* @media only screen */
 .am-avg-sm-2 > li {
   width: 50%;
@@ -141,6 +182,43 @@ a {
   font-size: 36px;
   position: absolute;
   text-align: center;
+}
+.am-gallery-up {
+  position: absolute;
+  color: #FFF;
+  height: 18px;
+  line-height: 18px;
+  right: 5px;
+  top: 5px;
+}
+.am-gallery-down {
+  position: absolute;
+  color: #FFF;
+  height: 18px;
+  line-height: 18px;
+  bottom: 2px;
+  right: 2px;
+}
+.am-thumb-back {
+  width: 100%;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 2px;
+  position: absolute;
+}
+.am-thumb-text {
+  position: relative;
+  margin: 0px 3px 0px 3px;
+}
+.dtime {
+  opacity: 0.5;
+  background: #000;
+}
+.online {
+  background: #ff6d34;
+}
+.offline {
+  background: #5aa700;
 }
 /**
   * Gallery Theme: default
@@ -228,6 +306,7 @@ a {
   height: auto;
 }
 .am-gallery-bordered .am-gallery-title {
+  margin-left: 2px;
   margin-top: 5px;
   font-weight: normal;
   color: #555555;
@@ -239,6 +318,7 @@ a {
   overflow: hidden;
 }
 .am-gallery-bordered .am-gallery-desc {
-  color: #999999;
+  font-size: 13px;
+  color: #888;
 }
 </style>

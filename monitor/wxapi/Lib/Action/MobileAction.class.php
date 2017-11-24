@@ -281,7 +281,9 @@ class MobileAction extends Action
         $arrErr['err_desc'] = '请联系管理员，汇报错误信息。';
         break;
       }
-      // 将反馈结果进行重新组合...
+      // 将反馈结果进行重新组合 => flvjs地址、rtmp地址、hls地址，播放器编号...
+      // $dbResult['flv_url'];  $dbResult['flv_type'];
+      // $dbResult['rtmp_url']; $dbResult['rtmp_type'];
       $arrErr['hls_url'] = $dbResult['hls_url'];
       $arrErr['hls_type'] = $dbResult['hls_type'];
       // 这3个参数是直播播放器汇报时需要的数据...

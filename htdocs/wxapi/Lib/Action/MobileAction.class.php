@@ -96,6 +96,7 @@ class MobileAction extends Action
         }
         // 组合其它相关信息 => img 用于swiper滑动切换条...
         $dbItem['image_fdfs'] = $dbItem['img'];
+        $dbItem['file_size'] = number_format($dbItem['file_size']/1024/1024,2,'.','');
         $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
         $dbItem['title'] = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
       }
@@ -128,9 +129,6 @@ class MobileAction extends Action
         if( strlen($dbItem['image_fdfs']) > 0 ) {
           $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
         }
-        $dbItem['subject_name'] = $dbItem['grade_name'];
-        $dbItem['teacher_name'] = $dbItem['camera_name'];
-        $dbItem['title_name'] = $dbItem['school_name'];
       }
     } else {
       // 获取点播分页数据，并对缩略图片进行地址重组...
@@ -141,6 +139,7 @@ class MobileAction extends Action
         if( strlen($dbItem['image_fdfs']) > 0 ) {
           $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
         }
+        $dbItem['file_size'] = number_format($dbItem['file_size']/1024/1024,2,'.','');
         $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
       }
     }
@@ -275,7 +274,9 @@ class MobileAction extends Action
         $arrErr['err_desc'] = '请联系管理员，汇报错误信息。';
         break;
       }
-      // 将反馈结果进行重新组合...
+      // 将反馈结果进行重新组合 => flvjs地址、rtmp地址、hls地址，播放器编号...
+      // $dbResult['flv_url'];  $dbResult['flv_type'];
+      // $dbResult['rtmp_url']; $dbResult['rtmp_type'];
       $arrErr['hls_url'] = $dbResult['hls_url'];
       $arrErr['hls_type'] = $dbResult['hls_type'];
       // 这3个参数是直播播放器汇报时需要的数据...

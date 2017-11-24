@@ -23,8 +23,20 @@
     <scroller lock-x :scrollbar-y=true use-pullup :pullup-config="pullupConfig" @pullup:loading="loadMore" ref="galScroller">
       <div><!-- 必须包含这个div容器，否则scroller无法拖动 -->
         <div class="thumb_name">
-          <i class="fa" :class="iconClass" />
-          {{videoParams.grade_type}} {{videoParams.grade_name}} {{videoParams.camera_name}} {{videoParams.school_name}}
+        <template v-if="isLive">
+          <template v-if="videoParams.stream_prop == 0">
+            <i class="fa fa-camera">&nbsp;摄像头 - {{videoParams.camera_name}}</i>
+          </template>
+          <template v-else-if="videoParams.stream_prop == 1">
+            <i class="fa fa-file-video-o">&nbsp;MP4文件 - {{videoParams.camera_name}}</i>
+          </template>
+          <template v-else-if="videoParams.stream_prop == 2">
+            <i class="fa fa-arrow-circle-o-down">&nbsp;流转发 - {{videoParams.camera_name}}</i>
+          </template>
+        </template>
+        <template v-else>
+          <i class="fa fa-file-video-o">&nbsp;{{videoParams.camera_name}}</i>
+        </template>
         </div>
         <div class="thumb_date thumb_ext">
           <span><i class="fa fa-clock-o">&nbsp;{{videoParams.created}}</i></span>
@@ -104,14 +116,6 @@ export default {
     }
   },
   computed: {
-    iconClass: function () {
-      switch (this.videoParams.stream_prop) {
-        case '0': return 'fa-camera'
-        case '1': return 'fa-file-video-o'
-        case '2': return 'fa-arrow-circle-o-down'
-        default: return 'fa-file-video-o'
-      }
-    },
     doCheckError: function () {
       // 如果是点播，永远显示静音标志...
       if (!this.isLive) return false
@@ -192,8 +196,6 @@ export default {
           // 判断返回的hls地址是否有效...
           that.liveParams.arrHlsAddr = response.data
           console.log(response.data.hls_url)
-          // 保存当前数据对象...
-          that.videoParams = that.liveParams
           // 直接改变播放连接地址和海报地址...
           that.playerOptions.sources[0].type = that.liveParams.arrHlsAddr.hls_type
           that.playerOptions.sources[0].src = that.liveParams.arrHlsAddr.hls_url
@@ -217,6 +219,8 @@ export default {
       if (this.isLive) { return }
       // 设置直播标志，保存参数...
       this.isLive = true
+      // 这里需要先保存，否则获取hls会有延时，发生渲染抖动...
+      this.videoParams = this.liveParams
       // 复位时钟，让中转器超时删除已挂载hls直播播放器...
       this.resetClock()
       // 重新异步获取hls地址...

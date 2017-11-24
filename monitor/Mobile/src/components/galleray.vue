@@ -220,7 +220,7 @@ a {
 }
 .am-thumb-text {
   position: relative;
-  margin: -1px 3px 0px 3px;
+  margin: 0px 3px 0px 3px;
 }
 .dtime {
   opacity: 0.5;
