@@ -29,19 +29,19 @@ class MobileAction extends Action
   // 获取最大页码...
   private function fetchMaxPage()
   {
-    // 通过传递过来的科目编号进行数据分发...
-    $theSubjectID = $_GET['subject_id'];
-    switch( $theSubjectID ) {
+    // 通过传递过来的采集编号进行数据分发...
+    $theGatherID = $_GET['gather_id'];
+    switch( $theGatherID ) {
       case -1: $map['Record.record_id'] = array('gt', 0); break;
       case -2: $map['Camera.camera_id'] = array('gt', 0); break;
-      default: $map['Record.subject_id'] = $theSubjectID; break;
+      default: $map['Camera.gather_id'] = $theGatherID; break;
     }
     // 获取每页记录数...
     $pagePer = C('PAGE_PER');
-    if( $theSubjectID == -2 ) {
-      $totalNum = D('LiveView')->where($map)->count();
-    } else {
+    if( $theGatherID == -1 ) {
       $totalNum = D('RecordView')->where($map)->count();
+    } else {
+      $totalNum = D('LiveView')->where($map)->count();
     }
     // 计算总页数...
     $max_page = intval($totalNum / $pagePer);
@@ -53,40 +53,53 @@ class MobileAction extends Action
   // 获取最新swiper接口...
   private function fetchArrSwiper()
   {
-    // 通过传递过来的科目编号进行数据分发...
-    $theSubjectID = $_GET['subject_id'];
-    switch( $theSubjectID ) {
+    // 通过传递过来的采集端编号进行数据分发...
+    $theGatherID = $_GET['gather_id'];
+    switch( $theGatherID ) {
       case -1: $map['Record.record_id'] = array('gt', 0); break;
       case -2: $map['Camera.camera_id'] = array('gt', 0); break;
-      default: $map['Record.subject_id'] = $theSubjectID; break;
+      default: $map['Camera.gather_id'] = $theGatherID; break;
     }
+    // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     // 筛选出最新的5个直播或点播节目...
-    if( $theSubjectID == -2 ) {
-      // 获取最新的5个直播节目...
-      $arrSwiper = D('LiveView')->where($map)->limit(5)->order('Camera.status DESC, Camera.created DESC')->select();
-      // 获取服务器地址 => http 或 https
-      $strAddr = "http://";
-      if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
-        $strAddr = "https://";
-      }
-      // 重新组合swiper需要的数据内容 => 在线优先...
-      foreach($arrSwiper as $key => &$dbItem) {
-        // 注意：$_SERVER['HTTP_HOST'] 自带访问端口，要去掉$_SERVER['SERVER_PORT']，否则会出错...
-        $strLiveImg = (($dbItem['status'] <= 0) ? "wxapi/public/images/live-off.png" : "wxapi/public/images/live-on.png");
-        $dbItem['img'] = sprintf("%s%s/%s", $strAddr, $_SERVER['HTTP_HOST'], $strLiveImg);
-        $dbItem['title'] = sprintf("%s %s %s", $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name']);
-      }
-    } else {
+    if( $theGatherID == -1 ) {
       // 获取最新的5个点播节目...
       $arrSwiper = D('RecordView')->where($map)->limit(5)->order('Record.created DESC')->select();
-      // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
-      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
       // 重新组合swiper需要的数据内容...
       foreach($arrSwiper as $key => &$dbItem) {
-        $dbItem['img'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
-        $dbItem['title'] = sprintf("%s %s %s %s", $dbItem['subject_name'], $dbItem['grade_type'], $dbItem['teacher_name'], $dbItem['title_name']);
-        $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        // 截图快照无效，使用默认快照 => swiper 中没有onerror，要预先给默认无效快照...
+        if( strlen($dbItem['image_fdfs']) <= 0 ) {
+          $dbItem['img'] = "/wxapi/public/images/snap.png";
+        } else {
+          $dbItem['img'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        }
+        // 组合其它相关信息 => img 用于swiper滑动切换条...
+        $dbItem['image_fdfs'] = $dbItem['img'];
+        $dbItem['title'] = sprintf("%s %s", $dbItem['created'], $dbItem['camera_name']);
+        $dbItem['file_size'] = number_format($dbItem['file_size']/1024/1024,2,'.','');
         $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
+      }
+    } else {
+      // 获取最新的5个直播节目...
+      $arrSwiper = D('LiveView')->where($map)->limit(5)->order('Camera.status DESC, Camera.updated DESC')->select();
+      // 重新组合swiper需要的数据内容 => 在线优先...
+      foreach($arrSwiper as $key => &$dbItem) {
+        // 截图快照无效，使用默认快照 => swiper 中没有onerror，要预先给默认无效快照...
+        if( strlen($dbItem['image_fdfs']) <= 0 ) {
+          $dbItem['img'] = "/wxapi/public/images/snap.png";
+        } else {
+          $dbItem['img'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        }
+        // 组合快照和标题名称...
+        $dbItem['image_fdfs'] = $dbItem['img'];
+        switch($dbItem['stream_prop']) {
+          case 0:  $strProp = "摄像头"; break;
+          case 1:  $strProp = "MP4文件"; break;
+          case 2:  $strProp = "流转发"; break;
+          default: $strProp = "摄像头"; break;
+        }
+        $dbItem['title'] = sprintf("通道%d - %s - %s", $dbItem['camera_id'], $strProp, $dbItem['camera_name']);
       }
     }
     return $arrSwiper;
@@ -95,62 +108,64 @@ class MobileAction extends Action
   // 获取分页gallery接口...
   private function fetchArrGallery()
   {
-    // 通过传递过来的科目编号进行数据分发...
-    $theSubjectID = $_GET['subject_id'];
-    switch( $theSubjectID ) {
+    // 通过传递过来的采集端编号进行数据分发...
+    $theGatherID = $_GET['gather_id'];
+    switch( $theGatherID ) {
       case -1: $map['Record.record_id'] = array('gt', 0); break;
       case -2: $map['Camera.camera_id'] = array('gt', 0); break;
-      default: $map['Record.subject_id'] = $theSubjectID; break;
+      default: $map['Camera.gather_id'] = $theGatherID; break;
     }
+    // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     // 得到每页条数...
     $pagePer = C('PAGE_PER');
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取直播或点播分页记录数据...
-    if( $theSubjectID == -2 ) {
-      // 获取服务器地址...
-      $strAddr = "http://";
-      if((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')) {
-        $strAddr = "https://";
-      }
-      // 获取直播分页数据，并对数据进行重新组合...
-      $arrGallery = D('LiveView')->where($map)->limit($pageLimit)->order('Camera.status DESC, Camera.created DESC')->select();
-      foreach($arrGallery as &$dbItem) {
-        // 注意：$_SERVER['HTTP_HOST'] 自带访问端口，要去掉$_SERVER['SERVER_PORT']，否则会出错...
-        $strLiveImg = (($dbItem['status'] <= 0) ? "wxapi/public/images/live-off.png" : "wxapi/public/images/live-on.png");
-        $dbItem['image_fdfs'] = sprintf("%s%s/%s", $strAddr, $_SERVER['HTTP_HOST'], $strLiveImg);
-        $dbItem['subject_name'] = $dbItem['grade_name'];
-        $dbItem['teacher_name'] = $dbItem['camera_name'];
-        $dbItem['title_name'] = $dbItem['school_name'];
-      }
-    } else {
-      // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
-      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    if( $theGatherID == -1 ) {
       // 获取点播分页数据，并对缩略图片进行地址重组...
       $arrGallery = D('RecordView')->where($map)->limit($pageLimit)->order('Record.created DESC')->select();
       // 组合需要返回的数据 => web_tracker_addr 已经自带了协议头 http://或https://
       foreach($arrGallery as &$dbItem) {
-        $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        // 获取截图快照地址，地址不为空才处理 => 为空时，layload会自动跳转到snap.png...
+        if( strlen($dbItem['image_fdfs']) > 0 ) {
+          $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        }
+        $dbItem['file_size'] = number_format($dbItem['file_size']/1024/1024,2,'.','');
         $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
+      }
+    } else {
+      // 获取直播分页数据，并对数据进行重新组合...
+      $arrGallery = D('LiveView')->where($map)->limit($pageLimit)->order('Camera.status DESC, Camera.created DESC')->select();
+      foreach($arrGallery as &$dbItem) {
+        // 获取截图快照地址，地址不为空才处理 => 为空时，layload会自动跳转到snap.png...
+        if( strlen($dbItem['image_fdfs']) > 0 ) {
+          $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+        }
       }
     }
     return $arrGallery;
   }
   //
-  // 得到科目列表...
-  // 参数：subject_id => 科目编号...
-  public function getSubject()
+  // 得到采集端列表...
+  // 参数：gather_id => 采集端编号...
+  public function getGather()
   {
-    // 指定其它域名访问内容 => 跨域访问...
-    //header('Access-Control-Allow-Origin:*');
-    // 筛选出所有的科目列表，在数组头部加入两个元素...
-    $arrSubject = D('subject')->field('subject_id,subject_name')->order('subject_id ASC')->select();
-    array_unshift($arrSubject, array('subject_id' => -1, 'subject_name' => '最新'), array('subject_id' => -2, 'subject_name' => '直播'));
+    // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
+    Load('extend');
+    // 筛选出所有的采集端列表，在数组头部加入两个元素...
+    $arrGather = D('gather')->field('gather_id,name_set')->order('gather_id ASC')->select();
+    // 裁剪采集端名称...
+    foreach($arrGather as &$dbItem) {
+      $dbItem['name_set'] = msubstr($dbItem['name_set'], 0, 4, 'utf-8', false);
+    }
+    // 新增两条特殊记录...
+    array_unshift($arrGather, array('gather_id' => -1, 'name_set' => '最新录像'), array('gather_id' => -2, 'name_set' => '全部通道'));
     // 组合需要的返回数据块...
     $arrData['maxGalPage'] = $this->fetchMaxPage();
     $arrData['arrGallery'] = $this->fetchArrGallery();
     $arrData['arrSwiper'] = $this->fetchArrSwiper();
-    $arrData['arrSubject'] = $arrSubject;
+    $arrData['arrGather'] = $arrGather;
     // 返回json编码数据包...
     echo json_encode($arrData);
   }
@@ -195,7 +210,11 @@ class MobileAction extends Action
     $arrRecord = D('RecordView')->where($map)->limit($pageLimit)->order('Record.created DESC')->select();
     // 组合需要返回的数据 => web_tracker_addr 已经自带了协议头 http://或https://
     foreach($arrRecord as &$dbItem) {
-      $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+      // 获取截图快照地址，地址不为空才处理 => 为空时，layload会自动跳转到snap.png...
+      if( strlen($dbItem['image_fdfs']) > 0 ) {
+        $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+      }
+      $dbItem['file_size'] = number_format($dbItem['file_size']/1024/1024,2,'.','');
       $dbItem['file_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['file_fdfs']);
     }
     // 返回json编码数据包...

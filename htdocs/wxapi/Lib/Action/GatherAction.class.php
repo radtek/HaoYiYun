@@ -383,7 +383,8 @@ class GatherAction extends Action
           }
         } else {
           // 是录像截图，查找截图记录...
-          $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->find();
+          $condition['file_src'] = $arrData['file_src'];
+          $dbImage = D('image')->where($condition)->find();
           if( is_array($dbImage) ) {
             // 更新截图记录...
             $dbImage['camera_id'] = $arrData['camera_id'];
@@ -398,7 +399,7 @@ class GatherAction extends Action
             $arrErr['image_id'] = D('image')->add($arrData);
           }
           // 在录像表中查找file_src，找到了，则更新image_id，截图匹配...
-          $dbRec = D('record')->where('file_src="'.$arrData['file_src'].'"')->field('record_id,image_id')->find();
+          $dbRec = D('record')->where($condition)->field('record_id,image_id')->find();
           if( is_array($dbRec) ) {
             $dbRec['image_id'] = $arrErr['image_id'];
             $dbRec['updated'] = $arrData['updated'];
@@ -425,23 +426,29 @@ class GatherAction extends Action
         // 如果course_id有效，则需要查找到subject_id和teacher_id...
         // 如果course_id已经被删除了，设置默认的subject_id和teacher_id都为1，避免没有编号，造成前端无法显示的问题...
         if( $arrData['course_id'] > 0 ) {
-          $dbCourse = D('course')->where('course_id='.$arrData['course_id'])->field('subject_id,teacher_id')->find();
+          $theWhere['course_id'] = $arrData['course_id'];
+          $dbCourse = D('course')->where($theWhere)->field('subject_id,teacher_id')->find();
           $arrData['subject_id'] = (isset($dbCourse['subject_id']) ? $dbCourse['subject_id'] : 1);
           $arrData['teacher_id'] = (isset($dbCourse['teacher_id']) ? $dbCourse['teacher_id'] : 1);
         }
         // 在图片表中查找file_src，找到了，则新增image_id，截图匹配...
-        $dbImage = D('image')->where('file_src="'.$arrData['file_src'].'"')->field('image_id,camera_id')->find();
+        $condition['file_src'] = $arrData['file_src'];
+        $dbImage = D('image')->where($condition)->field('image_id,camera_id')->find();
         if( is_array($dbImage) ) {
           $arrData['image_id'] = $dbImage['image_id'];
         }
-        // 查找录像记录...
-        $dbRec = D('record')->where('file_src="'.$arrData['file_src'].'"')->find();
+        // 查找通道记录，获取采集端编号...
+        $map['camera_id'] = $arrData['camera_id'];
+        $dbCamera = D('camera')->where($map)->field('camera_id,gather_id')->find();
+        // 查找录像记录，判断是添加还是修改...
+        $dbRec = D('record')->where($condition)->find();
         if( is_array($dbRec) ) {
           // 更新录像记录...
           $dbRec['subject_id'] = $arrData['subject_id'];
           $dbRec['teacher_id'] = $arrData['teacher_id'];
           $dbRec['image_id'] = $arrData['image_id'];
           $dbRec['camera_id'] = $arrData['camera_id'];
+          $dbRec['gather_id'] = $dbCamera['gather_id'];
           $dbRec['file_fdfs'] = $arrData['file_fdfs'];
           $dbRec['file_size'] = $arrData['file_size'];
           $dbRec['duration'] = $arrData['duration'];
@@ -451,6 +458,7 @@ class GatherAction extends Action
           $arrErr['record_id'] = $dbRec['record_id'];
         } else {
           // 新增录像记录 => 创建时间用传递过来的时间...
+          $arrData['gather_id'] = $dbCamera['gather_id'];
           $arrData['created'] = date('Y-m-d H:i:s', $arrSrc[2]);
           $arrErr['record_id'] = D('record')->add($arrData);
         }
