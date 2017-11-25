@@ -39,6 +39,24 @@ class HomeAction extends Action
     $this->assign('my_web_title', $this->m_webTitle);
   }
   //
+  // 移动手机二维码页面...
+  public function mobile()
+  {
+    $this->assign('my_web_title', $this->m_webTitle);
+    $this->display();
+  }
+  //
+  // 显示手机登录的二维码...
+  public function qrcode()
+  {
+    // 生成二维码接口...
+    require(APP_PATH."/Common/phpqrcode.php");
+    // 构造二维码内容，注意：$_SERVER['HTTP_HOST'] 自带访问端口...
+    $value = sprintf("%s://%s", $_SERVER['REQUEST_SCHEME'], $_SERVER['HTTP_HOST']);
+    // 直接返回生成的二维码图片...
+    QRcode::png($value, false, 'L', 12, 2); 
+  }
+  //
   // 点击查看用户登录信息...
   public function userInfo()
   {

@@ -70,6 +70,12 @@ $(document).ready( function () {
 			$('#back-to-top').fadeOut();
 		}
 	});
+  // 设置手机图标事件...
+  $('#btnMobile').on('click', function(e){
+    e.preventDefault();
+    doMobile();
+    return false;
+  });
   // 设置点击back-to-top事件...
 	$('#back-to-top').on('click', function(e){
 		e.preventDefault();
