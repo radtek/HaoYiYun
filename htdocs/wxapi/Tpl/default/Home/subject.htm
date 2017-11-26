@@ -83,7 +83,7 @@ function getPage(inSubject, inGrade, inPage) {
     }
   });
 }
-
+// 页面已经加载完毕...
 $(document).ready( function () {
   // 延时加载图片...
   $(function() {
@@ -92,26 +92,6 @@ $(document).ready( function () {
       placeholder: "/wxapi/public/images/snap.png"
     });
   });
-  // 注册窗口的滚动条函数...
-	$(window).scroll(function() {
-		if( $(this).scrollTop() > 100 ) {
-			$('#back-to-top').fadeIn();
-		} else {
-			$('#back-to-top').fadeOut();
-		}
-	});
-  // 设置手机图标事件...
-  $('#btnMobile').on('click', function(e){
-    e.preventDefault();
-    doMobile();
-    return false;
-  });
-  // 设置点击back-to-top事件...
-	$('#back-to-top').on('click', function(e){
-		e.preventDefault();
-		$('html, body').animate({scrollTop : 0},1000);
-		return false;
-	});
 });
 </script>
 
