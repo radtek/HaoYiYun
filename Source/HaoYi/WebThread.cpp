@@ -152,12 +152,14 @@ BOOL CWebThread::RegisterHaoYi()
 	// 解析JSON成功，进一步解析数据...
 	int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
 	int nHaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
+	int nHaoYiNodeID = atoi(CUtilTool::getJsonString(value["node_id"]).c_str());
 	string strExpired = CUtilTool::getJsonString(value["auth_expired"]);
 	// 通知主窗口授权过期验证结果...
 	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((nHaoYiGatherID > 0) ? true : false));
 	// 存放到配置对象，返回授权验证结果...
 	theConfig.SetAuthExpired(strExpired);
 	theConfig.SetMaxCamera(nMaxCameraNum);
+	theConfig.SetDBHaoYiNodeID(nHaoYiNodeID);
 	theConfig.SetDBHaoYiGatherID(nHaoYiGatherID);
 	return ((nHaoYiGatherID > 0) ? true : false);
 }
