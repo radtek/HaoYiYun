@@ -6,6 +6,21 @@
 
 class GatherAction extends Action
 {
+  // 测试获取小程序二维码...
+  /*public function qrcode()
+  {
+    $strTokenUrl = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wx78b419f717fb1552&secret=29605607d5005fa5f1a5dde59eeb42eb';
+    $result = http_get($strTokenUrl);
+    $json = json_decode($result,true);
+    //echo $json['access_token'];
+    
+    $strQueryUrl = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token='.$json['access_token'];
+    $arrPost['scene'] = '100';
+    $arrPost['page'] = 'pages/index/index';
+    $strPost = json_encode($arrPost);
+    $result = http_post($strQueryUrl, $strPost);
+    print_r($result);
+  }*/
   // 初始化页面的默认操作...
   public function _initialize() {
   }
