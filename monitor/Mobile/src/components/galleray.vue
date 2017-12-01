@@ -194,6 +194,8 @@ a {
   font-size: 36px;
   position: absolute;
   text-align: center;
+  /* transform: translateY(-50%);
+  top: 45%; */
 }
 .am-gallery-up {
   position: absolute;
