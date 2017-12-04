@@ -12,7 +12,11 @@
       'appsecret'=>'c5a1eb36e79cc710f1f73a6ee88e469a', //网站登录应用的appsecret
       'redirect_uri'=>'http://www.myhaoyi.com/', //回调地址
     ),
-    
+    // 微信小程序参数配置
+    'WECHAT_MINI' => array(
+      'appid'=>'wx78b419f717fb1552',
+      'appsecret'=>'29605607d5005fa5f1a5dde59eeb42eb'
+    ), 
     // 每页显示记录数
     'PAGE_PER' => 10,
     

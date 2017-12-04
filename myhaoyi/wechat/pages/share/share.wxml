@@ -1,0 +1,34 @@
+<!--pages/share/share.wxml-->
+<view class="feed-view">
+  <view class="feed-item">
+    <view class="feed-source">
+      <view class="fa fa-camera"></view>
+      <text class="feed-title">流转发 - 监控通道</text>
+    </view>
+    <view class="feed-content">
+      <view class="feed-play">
+        <view class="fa fa-play-circle fa-4x"></view>
+      </view>
+      <view class="feed-down">
+        <view class="feed-thumb-back feed-dtime"></view>
+        <view class="feed-thumb-text">05:00</view>
+      </view>
+      <view class="feed-up">
+        <view class="feed-thumb-back feed-online"></view>
+        <view class="feed-thumb-text">直播中</view>
+      </view>
+      <!-- group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg -->
+      <!-- wxapi/public/images/snap.png -->
+      <image class="feed-image" mode="widthFix" lazy-load="true" src="http://192.168.1.70/group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg"></image>
+    </view>
+    <view class="feed-link">
+      <image class="feed-owner" mode="aspectFill" lazy-load="true" src="../../images/test2.jpg"></image>
+      <text>岳朝伟</text>
+      <view class="feed-right">
+        <view class="fa fa-play-circle-o feed-step"></view>
+        <view class="fa fa-retweet feed-step"></view>
+        <view class="fa fa-thumbs-o-up feed-step"></view>
+      </view>
+    </view>
+  </view>
+</view>

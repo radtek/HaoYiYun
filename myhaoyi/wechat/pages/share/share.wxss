@@ -1,0 +1,110 @@
+/* pages/share/share.wxss */
+Page {
+  background-color: #eee;
+}
+.feed-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  background: #eee;
+}
+.feed-item {
+  width: 100%;
+  margin: 15rpx 0 0 0;
+  background: #ffffff;
+  border-top: 1rpx solid #eee;
+  border-bottom: 1rpx solid #eee;
+}
+.feed-source {
+  font-size: 32rpx;
+  margin: 6rpx 20rpx 4rpx 20rpx;
+}
+.feed-title {
+  margin-left: 15rpx;
+}
+.feed-content {
+  margin: 0 0;
+  position: relative;
+}
+.feed-play {
+  width: 100%;
+  opacity: .8;
+  position: absolute;
+  text-align: center;  
+  transform: translateY(-50%);
+  color: #fff;
+  top: 50%;
+}
+.feed-down, .feed-up {
+  color: #fff;
+  font-size: 30rpx;
+  position: absolute;
+  line-height: 40rpx;
+  height: 40rpx;
+}
+.feed-down {
+  bottom: 15rpx;
+  right: 15rpx;  
+}
+.feed-up {
+  right: 15rpx;
+  top: 15rpx;
+}
+.feed-thumb-back {
+  width: 100%;
+  height: 40rpx;
+  line-height: 40rpx;
+  border-radius: 4rpx;
+  position: absolute;
+}
+.feed-thumb-text {
+  position: relative;
+  margin: 0 6rpx;  
+}
+.feed-dtime {
+  opacity: .5;
+  background: #000;
+}
+.feed-online {
+  background: #ff6d34;
+}
+.feed-offline {
+  background: #5aa700;
+}
+.feed-image {
+  width: 100%;
+  vertical-align: middle;
+  border-top: 1rpx solid #eee;
+  border-bottom: 1rpx solid #eee;
+}
+.feed-link {
+  color: #707c7c;
+  font-size: 30rpx;
+  margin: 8rpx 20rpx 6rpx 20rpx;  
+}
+.feed-owner {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 100%;
+  vertical-align: middle;
+}
+.feed-link text {
+  display: inline-block;
+  height: 40rpx;
+  line-height: 40rpx;
+  vertical-align: middle;
+  margin: 0 0 0 15rpx;
+}
+.feed-right {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 36rpx;
+  margin-right: 20rpx;
+  color: #909c9c;
+  float: right;
+}
+.feed-step {
+  margin-left: 15rpx;
+}

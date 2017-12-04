@@ -63,8 +63,11 @@ class LoginAction extends Action
         $strError = 'error: node_id is null';
         break;
       }
+      // 准备请求需要的url地址...
+      $strTokenUrl = sprintf("https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code",
+                              $this->m_weLogin['appid'], $this->m_weLogin['appsecret'], $strCode);
       // 通过code获取access_token...
-      $result = http_get('https://api.weixin.qq.com/sns/oauth2/access_token?appid='.$this->m_weLogin['appid'].'&secret='.$this->m_weLogin['appsecret'].'&code='.$strCode.'&grant_type=authorization_code');
+      $result = http_get($strTokenUrl);
       if( !$result ) {
         $strError = 'error: get_access_token';
         break;
@@ -75,8 +78,10 @@ class LoginAction extends Action
         $strError = 'error: errorcode='.$arrToken['errcode'].',errormsg='.$arrToken['errmsg'];
         break;
       }
+      // 准备请求需要的url地址...
+      $strUserUrl = sprintf("https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN", $arrToken['access_token'], $arrToken['openid']);
       // 通过access_token获取用户信息...
-      $result = http_get('https://api.weixin.qq.com/sns/userinfo?access_token='.$arrToken['access_token'].'&openid='.$arrToken['openid']);
+      $result = http_get($strUserUrl);
       if( !result ) {
         $strError = 'error: get_user_info';
         break;
@@ -89,8 +94,9 @@ class LoginAction extends Action
       }
       // 微信昵称中去除emoji表情符号的操作...
       $arrUser['nickname'] = trimEmo($arrUser['nickname']);
-      // 将获取到的用户关键帧查找数据库内容...
-      $dbUser = D('user')->where('wx_unionid="'.$arrUser['unionid'].'"')->find();
+      // 将获取到的用户关键帧查找数据库内容 => 这里不能用$map做为数组变量，否则，查询失败...
+      $where['wx_unionid'] = $arrUser['unionid'];
+      $dbUser = D('user')->where($where)->find();
       // 给获取到的用户设置对应的网站节点编号...
       $dbUser['node_id'] = $dbNode['node_id'];
       // 从微信获取的信息更新到数据库当中...
@@ -109,7 +115,8 @@ class LoginAction extends Action
       if( isset($dbUser['user_id']) ) {
         // 更新已有的用户记录...
         $dbUser['update_time'] = date('Y-m-d H:i:s');
-        D('user')->where('user_id='.$dbUser['user_id'])->save($dbUser);
+        $condition['user_id'] = $dbUser['user_id'];
+        D('user')->where($condition)->save($dbUser);
       } else {
         // 新建一条用户记录...
         $dbUser['create_time'] = date('Y-m-d H:i:s');
@@ -131,67 +138,5 @@ class LoginAction extends Action
     // 跳转页面到第三方回调地址...
     header($strLocation);
   }
-  //
-  // 通过wx_unionid获取微信用户信息...
-  // 返回：json => err_code | err_msg | data
-  /*public function getWxUser()
-  {
-    // 准备返回的对象...
-    $arrErr['err_code'] = false;
-    $arrErr['err_msg'] = "OK";
-    do {
-      // 判断输入参数是否有效...
-      if( !isset($_GET['wx_unionid']) ) {
-        $arrErr['err_code'] = true;
-        $arrErr['err_msg'] = '请检查输入参数!';
-        break;
-      }
-      // 通过 wx_unionid 查询用户信息 => 只返回该用户的微信相关信息...
-      $map['wx_unionid'] = $_GET['wx_unionid'];
-      $dbUser = D('user')->where($map)->field('wx_nickname,wx_language,wx_headurl,wx_country,wx_province,wx_city,wx_sex,update_time')->find();
-      if( !$dbUser ) {
-        $arrErr['err_code'] = true;
-        $arrErr['err_msg'] = '没有找到用户信息!';
-        break;
-      }
-      // 将用户信息赋给返回变量...
-      $arrErr['data'] = $dbUser;
-    }while( false );
-    // 将数组转换成json数据包...
-    echo json_encode($arrErr);
-  }
-  //
-  // 保存修改后的用户记录...
-  public function saveUser()
-  {
-    echo D('user')->save($_POST);
-  }
-  //
-  // 通过用户编号获取完整记录信息...
-  // 返回：string(json)
-  public function getUser()
-  {
-    $map['user_id'] = $_GET['user_id'];
-    $dbUser = D('user')->where($map)->find();
-    echo json_encode($dbUser);
-  }
-  //
-  // 获取用户记录总数 => node_tag 筛选...
-  // 返回：number
-  public function getUserCount()
-  {
-    $map['node_tag'] = $_GET['node_tag'];
-    echo D('UserView')->where($map)->count();
-  }
-  //
-  // 获取用户分页数据 => node_tag 筛选...
-  // 返回：string(json)
-  public function getPageUser()
-  {
-    $map['node_tag'] = $_GET['node_tag'];
-    $strLimit = urlsafe_b64decode($_GET['limit']);
-    $arrUser = D('UserView')->where($map)->limit($strLimit)->order('user_id DESC')->select();
-    echo json_encode($arrUser);
-  }*/
 }
 ?>

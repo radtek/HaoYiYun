@@ -1,12 +1,39 @@
 {
   "pages":[
+    "pages/default/default",
     "pages/index/index",
+    "pages/private/private",
+    "pages/person/person",
+    "pages/share/share",
     "pages/logs/logs"
   ],
   "window":{
-    "backgroundTextStyle":"light",
     "navigationBarBackgroundColor": "#fff",
     "navigationBarTitleText": "浩一云",
-    "navigationBarTextStyle":"black"
+    "navigationBarTextStyle":"black",
+    "backgroundColor": "#eee",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": true,
+    "onReachBottomDistance": 50
+  },
+  "tabBar": {
+    "color": "#666",
+    "selectedColor": "#0099e9",
+    "list": [{
+      "pagePath": "pages/share/share",
+      "iconPath": "images/share.png",
+      "selectedIconPath": "images/share_focus.png",
+      "text": "共享通道"
+    }, {
+      "pagePath": "pages/private/private",
+      "iconPath": "images/private.png",
+      "selectedIconPath": "images/private_focus.png",
+      "text": "我的通道"
+    }, {
+      "pagePath": "pages/person/person",
+      "iconPath": "images/person.png",
+      "selectedIconPath": "images/person_focus.png",
+      "text": "个人中心"
+    }]
   }
 }
