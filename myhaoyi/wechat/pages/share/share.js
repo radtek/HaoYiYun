@@ -4,7 +4,6 @@ const g_app = getApp()
 // 本页面的代码...
 Page({
   data: {
- 
   },
   onLoad: function (options) {
     // 如果没有获取到用户编号或用户信息，跳转到默认的授权页面，重新获取授权...
@@ -29,5 +28,20 @@ Page({
   // 上拉触底事件...
   onReachBottom: function() {
     console.log('bottom')
+  },
+  // 处理截图加载失败的事件...
+  doErrSnap: function() {
+    console.log(event);
+  },
+  /*// 响应用户点击发布者事件...
+  catchtap可以阻止后续的冒泡...
+  doTapOwner: function () {
+    console.log('doOwner')
+  },*/
+  // 响应用户点击单条记录事件...
+  doTapItem: function() {
+    wx.navigateTo({
+      url: '../live/live'
+    })
   }
 })

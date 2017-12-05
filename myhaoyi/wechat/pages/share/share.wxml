@@ -1,6 +1,6 @@
 <!--pages/share/share.wxml-->
-<view class="feed-view">
-  <view class="feed-item">
+<view class="feed-container">
+  <view class="feed-item" bindtap="doTapItem">
     <view class="feed-source">
       <view class="fa fa-camera"></view>
       <text class="feed-title">流转发 - 监控通道</text>
@@ -19,15 +19,17 @@
       </view>
       <!-- group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg -->
       <!-- wxapi/public/images/snap.png -->
-      <image class="feed-image" mode="widthFix" lazy-load="true" src="http://192.168.1.70/group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg"></image>
+      <image mode="widthFix" lazy-load="true" src="http://192.168.1.70/group1/M00/00/1A/wKgBRloW0gOAXbHPAADvLwj96tk879.jpg"></image>
     </view>
     <view class="feed-link">
-      <image class="feed-owner" mode="aspectFill" lazy-load="true" src="../../images/test2.jpg"></image>
-      <text>岳朝伟</text>
+      <view class="feed-owner">
+        <image mode="aspectFill" lazy-load="true" src="http://wx.qlogo.cn/mmopen/vi_32/DYAIOgq83erw8YO37WPaJXqShGiaQqP7pvFBYzoTfOn62bEMFgletcYhXjXXoCk99xLbaiazmo0pNBX8oLstGpKQ/64"></image>
+        <text>岳朝伟</text>
+      </view>
       <view class="feed-right">
-        <view class="fa fa-play-circle-o feed-step"></view>
+        <view class="fa fa-share feed-step"></view>
         <view class="fa fa-retweet feed-step"></view>
-        <view class="fa fa-thumbs-o-up feed-step"></view>
+        <view class="fa fa-play-circle-o feed-step"></view>
       </view>
     </view>
   </view>

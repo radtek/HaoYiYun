@@ -1,11 +1,11 @@
 {
   "pages":[
     "pages/default/default",
-    "pages/index/index",
     "pages/private/private",
     "pages/person/person",
     "pages/share/share",
-    "pages/logs/logs"
+    "pages/live/live",
+    "pages/vod/vod"
   ],
   "window":{
     "navigationBarBackgroundColor": "#fff",

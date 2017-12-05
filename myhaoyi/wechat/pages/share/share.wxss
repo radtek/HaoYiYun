@@ -2,7 +2,7 @@
 Page {
   background-color: #eee;
 }
-.feed-view {
+.feed-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -56,7 +56,7 @@ Page {
   width: 100%;
   height: 40rpx;
   line-height: 40rpx;
-  border-radius: 4rpx;
+  border-radius: 5rpx;
   position: absolute;
 }
 .feed-thumb-text {
@@ -73,8 +73,9 @@ Page {
 .feed-offline {
   background: #5aa700;
 }
-.feed-image {
+.feed-content image {
   width: 100%;
+  height: 210px;
   vertical-align: middle;
   border-top: 1rpx solid #eee;
   border-bottom: 1rpx solid #eee;
@@ -82,9 +83,12 @@ Page {
 .feed-link {
   color: #707c7c;
   font-size: 30rpx;
-  margin: 8rpx 20rpx 6rpx 20rpx;  
+  margin: 10rpx 20rpx 8rpx 20rpx;  
 }
 .feed-owner {
+  display: inline-block;
+}
+.feed-owner image {
   width: 52rpx;
   height: 52rpx;
   border-radius: 100%;
@@ -98,7 +102,6 @@ Page {
   margin: 0 0 0 15rpx;
 }
 .feed-right {
-  display: inline-block;
   vertical-align: middle;
   font-size: 36rpx;
   margin-right: 20rpx;
@@ -106,5 +109,5 @@ Page {
   float: right;
 }
 .feed-step {
-  margin-left: 15rpx;
+  margin-left: 20rpx;
 }

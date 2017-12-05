@@ -1,0 +1,145 @@
+/* pages/live/live.wxss */
+Page {
+  background-color: #eee;
+}
+.feed-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  background: #eee;
+}
+.feed-item {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1rpx solid #e6e6e6;
+}
+.feed-video {
+  width: 100%;
+  height: 210px;
+}
+.feed-link {
+  color: #707c7c;
+  font-size: 30rpx;
+  margin: -5rpx 10rpx 8rpx 15rpx;  
+}
+.feed-owner {
+  display: inline-block;
+}
+.feed-owner image {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 100%;
+  vertical-align: middle;
+}
+.feed-owner text {
+  display: inline-block;
+  height: 40rpx;
+  line-height: 40rpx;
+  vertical-align: middle;
+  margin: 0 0 0 10rpx;
+}
+.feed-right {
+  vertical-align: middle;
+  font-size: 36rpx;
+  margin-right: 10rpx;
+  color: #909c9c;
+  float: right;
+}
+.feed-right text {
+  font-size: 30rpx;
+  margin-left: 5rpx;
+  text-align: center;
+}
+.feed-step {
+  margin-left: 25rpx;
+}
+.feed-list {
+  width: 100%;
+  margin-top: 10rpx;
+  background: #ffffff;
+  border-top: 1rpx solid #e6e6e6;
+}
+.feed-media-box {
+  margin: 0 20rpx;
+  padding: 20rpx 0;
+  position: relative;
+  display: flex;
+  display: -ms-flexbox;
+  align-items: center;
+  -ms-flex-align: center;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  border-bottom: 1rpx solid #e6e6e6;
+}
+.feed-media-hd {
+  width: 240rpx;
+  height: 140rpx;
+  text-align: center;
+  display: flex;
+  position: relative;
+  margin-right: 20rpx;
+}
+.feed-media-hd image {
+  width: 240rpx;
+  height: 100%;
+  margin: auto;
+}
+.feed-down {
+  color: #fff;
+  font-size: 26rpx;
+  position: absolute;
+  line-height: 32rpx;
+  height: 32rpx;
+  bottom: 4rpx;
+  right: 4rpx;
+}
+.feed-thumb-back {
+  width: 100%;
+  opacity: 0.5;
+  background: #000;
+  border-radius: 5rpx;
+  position: absolute;
+  line-height: 32rpx;
+  height: 32rpx;
+}
+.feed-thumb-time {
+  position: relative;
+  padding: 0 6rpx;
+}
+.feed-media-bd {
+  flex: 1;
+  -ms-flex: 1;
+  min-width: 0;
+}
+.feed-media-title {
+  color: #333;
+  font-weight: 400;
+  font-size: 30rpx;
+  height: 105rpx;
+  line-height: 36rpx;
+  overflow:hidden; 
+  text-overflow:ellipsis;
+  display:-webkit-box; 
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+}
+.feed-media-title text {
+  margin-left: 5rpx;
+}
+.feed-media-desc {
+  color: #707c7c;
+  font-size: 26rpx;
+}
+.feed-media-time {
+  display: inline-block;
+}
+.feed-media-time text {
+  margin-left: 5rpx;
+}
+.feed-media-play {
+  float: right;
+}
+.feed-media-play text {
+  margin-left: 5rpx;
+}
