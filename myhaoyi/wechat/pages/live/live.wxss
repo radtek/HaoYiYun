@@ -13,7 +13,7 @@ Page {
 .feed-item {
   width: 100%;
   background: #ffffff;
-  border-bottom: 1rpx solid #e6e6e6;
+  border-bottom: 1rpx solid #e0e0e0;
 }
 .feed-video {
   width: 100%;
@@ -59,18 +59,17 @@ Page {
   width: 100%;
   margin-top: 10rpx;
   background: #ffffff;
-  border-top: 1rpx solid #e6e6e6;
+  border-top: 1rpx solid #e0e0e0;
 }
 .feed-media-box {
-  margin: 0 20rpx;
-  padding: 20rpx 0;
+  padding: 20rpx 20rpx;
   position: relative;
   display: flex;
   display: -ms-flexbox;
   align-items: center;
   -ms-flex-align: center;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
-  border-bottom: 1rpx solid #e6e6e6;
+  border-bottom: 1rpx solid #e0e0e0;
 }
 .feed-media-hd {
   width: 240rpx;

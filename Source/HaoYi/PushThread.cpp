@@ -1366,10 +1366,11 @@ BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 	if( !m_lpRecMP4->IsVideoCreated() )
 		return true;
 	// 如果是不是云监控模式，不进行切片处理...
+	// 2017.12.08 => 放开限制，云监控、云录播都能切片...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	if( theConfig.GetWebType() != kCloudMonitor )
+	/*if( theConfig.GetWebType() != kCloudMonitor )
 		return true;
-	ASSERT( theConfig.GetWebType() == kCloudMonitor );
+	ASSERT( theConfig.GetWebType() == kCloudMonitor );*/
 	// 将录像切片由分钟转换成秒数...
 	int nSliceSec  = theConfig.GetSliceVal() * 60;
 	int nInterKey = theConfig.GetInterVal();

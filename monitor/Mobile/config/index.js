@@ -32,11 +32,11 @@ module.exports = {
     assetsPublicPath: '/',
     proxyTable: {
       '/wxapi.php/': {
-        target: 'http://192.168.1.70/',
+        target: 'http://ihaoyi.cn/',
         changeOrigin: true
       },
       '/wxapi/public/images/': {
-        target: 'http://192.168.1.70/',
+        target: 'http://ihaoyi.cn/',
         changeOrigin: true
       }
     },

@@ -45,5 +45,33 @@
         </view>
       </view>
     </view>
+    <view class="feed-media-box">
+      <view class="feed-media-hd">
+        <view class="feed-down">
+          <view class="feed-thumb-back"></view>
+          <view class="feed-thumb-time">05:00</view>
+        </view>
+        <image mode="aspectFill" lazy-load="true" src="http://192.168.1.70:80/group1/M00/00/04/wKgBRloL3xqAThJgAACo0rQ5qL0955.jpg_240x140"></image>
+      </view>
+      <view class="feed-media-bd">
+        <view class="feed-media-title">
+          <view class="fa fa-file-video-o">
+            <text>监控通道</text>
+          </view>
+        </view>
+        <view class="feed-media-desc">
+          <view class="feed-media-time">
+            <view class="fa fa-clock-o">
+              <text>2017-11-15 14:27:07</text>
+            </view>
+          </view>
+          <view class="feed-media-play">
+            <view class="fa fa-play-circle-o">
+              <text>77次</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </view>

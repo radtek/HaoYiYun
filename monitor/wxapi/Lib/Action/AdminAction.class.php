@@ -639,15 +639,25 @@ class AdminAction extends Action
     $dbCamera = D('camera')->where($map)->field('camera_id,camera_name')->find();
     $this->assign('my_camera', $dbCamera);
     // 获取通道下所有的录像任务...
-    $arrCourse = D('course')->where($map)->select();
-    $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
+    //$arrCourse = D('course')->where($map)->select();
+    //$this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
+    //$this->assign('my_total_num', count($arrCourse));
+    $theCount = D('course')->where($map)->count();
+    $this->assign('my_total_num', $theCount);
     // 设置需要的模板参数信息...
-    $this->assign('my_total_num', count($arrCourse));
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('my_nav_type', $theNavType);
     $this->assign('my_week', $arrWeek);
     $this->display();
+  }
+  //
+  // 查找指定通道下面所有的录像任务记录...
+  public function getCourse()
+  {
+    $condition['camera_id'] = $_GET['camera_id'];
+    $arrCourse = D('course')->where($condition)->select();
+    echo ($arrCourse ? json_encode($arrCourse) : false);
   }
   //
   // 保存任务录像区间数据...

@@ -12,13 +12,26 @@ Page({
       return
     }
     // 获取到的用户信息有效，弹出等待框...
-    /*wx.showLoading({
+    wx.showLoading({
       title: '加载中'
     })
-    setTimeout(function () {
-      wx.hideLoading()
-    }, 2000)*/
-    // 调用接口，获取共享通道列表数据...
+    // 调用接口，获取共享通道列表数据 => 默认获取第一页...
+    this.doAPIGetShare()
+  },
+  // 调用网站API获取共享通道列表...
+  doAPIGetShare(inCurPage = 1) {
+    // 构造访问接口连接地址...
+    var theUrl = g_app.globalData.m_urlPrev + 'Mini/share/p/' + inCurPage
+    // 请求远程API过程...
+    wx.request({
+      url: theUrl,
+      method: 'GET',
+      success: function (res) {
+        var arrData = JSON.parse(res.data);
+      },
+      fail: function (res) {
+      }
+    })
   },
   // 下拉刷新事件...
   onPullDownRefresh: function() {

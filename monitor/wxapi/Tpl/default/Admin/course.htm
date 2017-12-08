@@ -223,7 +223,7 @@ $(document).ready(function() {
     time: true,
   });
   // 创建区间 => 这种方式直接构造字符串...
-  var strJson = '{{$my_course}}';
+  /*var strJson = '{{$my_course}}';
   if( !strJson ) return;
   var arrRange = $.parseJSON(strJson);
   for(var j = 0; j < arrRange.length; ++j) {
@@ -235,7 +235,7 @@ $(document).ready(function() {
     var nSecTo = $bar.data("float-options").timeToSec(((strEnd == "23:59:59") ? "24:00:00" : strEnd));
     var range = { start: nSecFrom, end: nSecTo, courseID: item.course_id, teacherID: 1, subjectID: 1 };
     $bar.rangebar('addFloatRange', range);
-  }
+  }*/
 });
 // 处理 layui 过程...
 layui.use(['element','layer','form'], function(){
@@ -243,7 +243,8 @@ layui.use(['element','layer','form'], function(){
   var theGatherID = {{$my_gather_id}};
   var element = layui.element;
   // 这里使用ajax获取区间数据，有时会比较慢，使用数据加载方式填充，参见$(document).ready()...
-  /*var index = layer.load(2);
+  // 2017.12.08 => 使用$(document).ready()也可以，造成第一次页面等待较长时间是由于需要加载的库太多...
+  var index = layer.load(2);
   $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
@@ -260,7 +261,7 @@ layui.use(['element','layer','form'], function(){
         var strEnd = item.end_time.split(' ')[1];
         var nSecFrom = $bar.data("float-options").timeToSec(((strStart == "23:59:59") ? "24:00:00" : strStart));
         var nSecTo = $bar.data("float-options").timeToSec(((strEnd == "23:59:59") ? "24:00:00" : strEnd));
-        var range = { start: nSecFrom, end: nSecTo, courseID: item.course_id, teacherID: item.teacher_id, subjectID: item.subject_id };
+        var range = { start: nSecFrom, end: nSecTo, courseID: item.course_id, teacherID: 1, subjectID: 1 };
         $bar.rangebar('addFloatRange', range);
       }
     },
@@ -268,7 +269,7 @@ layui.use(['element','layer','form'], function(){
       layer.closeAll();
       layer.alert(e, {icon: 2});
     }
-  });*/
+  });
 });
 // 查找全局唯一焦点对象...
 function doFindFocusRange() {

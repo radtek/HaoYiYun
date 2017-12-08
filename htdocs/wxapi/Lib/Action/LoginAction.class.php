@@ -146,6 +146,7 @@ class LoginAction extends Action
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 注意：$_SERVER['HTTP_HOST'] 自带访问端口...
     // 拼接当前访问页面的完整链接地址 => 登录服务器会反向调用 => 前后端跳转地址不一样...
+    $dbJson['node_proto'] = $_SERVER['REQUEST_SCHEME'];
     $dbJson['node_addr'] = $_SERVER['HTTP_HOST'];
     $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Home/login");
     $dbJson['node_tag'] = $dbSys['web_tag'];

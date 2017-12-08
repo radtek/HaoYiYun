@@ -38,17 +38,27 @@ class GatherAction extends Action
         break;
       }
       // 判断输入的网站节点标记是否有效...
-      if( !isset($arrData['node_tag']) || !isset($arrData['node_type']) || !isset($arrData['node_addr']) || !isset($arrData['node_name']) ) {
+      if( !isset($arrData['node_tag']) || !isset($arrData['node_type']) || 
+          !isset($arrData['node_addr']) || !isset($arrData['node_name']) ||
+          !isset($arrData['node_proto']) )
+      {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = "网站节点标记不能为空！";
         break;
       }
+      // 根据node_addr判断，是互联网节点还是局域网节点...
+      $arrAddr = explode(':', $arrData['node_addr']);
+      $theIPAddr = gethostbyname($arrAddr[0]);
+      $theWanFlag = (filter_var($theIPAddr, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) ? true : false);
       // 根据节点标记获取或创建一条新记录...
       // 注意：node_addr已经包含了端口信息...
       $map['node_tag'] = $arrData['node_tag'];
       $dbNode = D('node')->where($map)->find();
+      // 这里是通过元素个数判断，必须单独更新数据...
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
+        $dbNode['node_wan'] = $theWanFlag;
+        $dbNode['node_proto'] = $arrData['node_proto'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
@@ -57,6 +67,8 @@ class GatherAction extends Action
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
       } else {
+        $dbNode['node_wan'] = $theWanFlag;
+        $dbNode['node_proto'] = $arrData['node_proto'];
         $dbNode['node_name'] = $arrData['node_name'];
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];

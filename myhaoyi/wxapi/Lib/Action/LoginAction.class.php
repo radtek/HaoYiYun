@@ -26,13 +26,18 @@ class LoginAction extends Action
       // 判断节点标记不能为空...
       if( !isset($arrJson['node_addr']) || !isset($arrJson['node_url']) || 
           !isset($arrJson['node_tag']) || !isset($arrJson['node_type']) ||
-          !isset($arrJson['node_name']) )
+          !isset($arrJson['node_name']) || !isset($arrJson['node_proto']) )
       {
         $strError = 'error: node_tag is null';
         break;
       }
-      // 保存截取之后的数据 => node_addr 已经带了端口信息...
-      $strBackUrl = sprintf("http://%s%s", $arrJson['node_addr'], $arrJson['node_url']);
+      // 根据node_addr判断，是互联网节点还是局域网节点...
+      $arrAddr = explode(':', $arrJson['node_addr']);
+      $theIPAddr = gethostbyname($arrAddr[0]);
+      $theWanFlag = (filter_var($theIPAddr, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) ? true : false);
+      // 保存截取之后的数据 => node_addr 已经根据需要自动带上端口信息...
+      $strBackUrl = sprintf("%s://%s%s", $arrJson['node_proto'], $arrJson['node_addr'], $arrJson['node_url']);
+      $strNodeProto = $arrJson['node_proto'];
       $strNodeName = $arrJson['node_name'];
       $strNodeAddr = $arrJson['node_addr'];
       $strNodeType = $arrJson['node_type'];
@@ -40,8 +45,11 @@ class LoginAction extends Action
       // 根据节点标记获取或创建一条新记录...
       $map['node_tag'] = $strNodeTag;
       $dbNode = D('node')->where($map)->find();
+      // 这里是通过元素个数判断，必须单独更新数据...
       if( count($dbNode) <= 0 ) {
         // 创建一条新纪录...
+        $dbNode['node_proto'] = $strNodeProto;
+        $dbNode['node_wan'] = $theWanFlag;
         $dbNode['node_name'] = $strNodeName;
         $dbNode['node_addr'] = $strNodeAddr;
         $dbNode['node_type'] = $strNodeType;
@@ -51,6 +59,8 @@ class LoginAction extends Action
         $dbNode['node_id'] = D('node')->add($dbNode);
       } else {
         // 修改已有的记录...
+        $dbNode['node_proto'] = $strNodeProto;
+        $dbNode['node_wan'] = $theWanFlag;
         $dbNode['node_name'] = $strNodeName;
         $dbNode['node_addr'] = $strNodeAddr;
         $dbNode['node_type'] = $strNodeType;

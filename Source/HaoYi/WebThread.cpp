@@ -90,11 +90,14 @@ BOOL CWebThread::RegisterHaoYi()
 	// 判断数据是否有效...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebType = theConfig.GetWebType();
+	int nWebPort = theConfig.GetWebPort();
 	string  & strWebTag = theConfig.GetWebTag();
 	string  & strWebName = theConfig.GetWebName();
 	string  & strWebAddr = theConfig.GetWebAddr();
 	CString & strMacAddr = m_lpHaoYiView->m_strMacAddr;
 	CString & strIPAddr = m_lpHaoYiView->m_strIPAddr;
+	CString   strWebProto = (theConfig.IsWebHttps() ? "https" : "http");
+	CString   strOnlyAddr = strWebAddr.c_str() + strWebProto.GetLength() + 3;
 	if( strMacAddr.GetLength() <= 0 || strIPAddr.GetLength() <= 0 ) {
 		MsgLogGM(GM_NotImplement);
 		return false;
@@ -114,9 +117,9 @@ BOOL CWebThread::RegisterHaoYi()
 	string	strUTF8Web = CUtilTool::ANSI_UTF8(strWebName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_name=%s&os_name=%s", 
-					strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebTag.c_str(), nWebType, strWebAddr.c_str(),
-					theConfig.GetWebPort(), szWebName, CUtilTool::GetServerOS());
+	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_proto=%s&node_name=%s&os_name=%s", 
+					strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebTag.c_str(), nWebType, 
+					strOnlyAddr, nWebPort, strWebProto, szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
 	// 调用Curl接口，汇报采集端信息...

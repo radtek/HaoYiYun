@@ -159,6 +159,10 @@ class MobileAction extends Action
     foreach($arrGather as &$dbItem) {
       $dbItem['name_set'] = msubstr($dbItem['name_set'], 0, 4, 'utf-8', false);
     }
+    // 如果不是数组，定义为数组...
+    if( !is_array($arrGather) ) {
+      $arrGather = array();
+    }
     // 新增两条特殊记录...
     array_unshift($arrGather, array('gather_id' => -1, 'name_set' => '最新录像'), array('gather_id' => -2, 'name_set' => '全部通道'));
     // 组合需要的返回数据块...

@@ -94,6 +94,8 @@ function http_get( $url )
     curl_setopt($oCurl, CURLOPT_SSL_VERIFYHOST, FALSE);
     curl_setopt($oCurl, CURLOPT_SSLVERSION, 1); //CURL_SSLVERSION_TLSv1
   }
+  // 2017.12.06 => set 10s timeout...
+  curl_setopt($oCurl, CURLOPT_TIMEOUT, 5);
   curl_setopt($oCurl, CURLOPT_URL, $url);
   curl_setopt($oCurl, CURLOPT_RETURNTRANSFER, 1 );
   // 2017.06.06 => resolve DNS slow problem...

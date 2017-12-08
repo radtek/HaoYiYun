@@ -11,7 +11,8 @@ class MonitorAction extends Action
     // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
     Load('extend');
     // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
-    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
+    $dbSys = D('system')->field('web_type,web_title,web_phone,sys_site')->find();
+    $this->m_webPhone = $dbSys['web_phone'];
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_sysSite = $dbSys['sys_site'];
     $this->m_webType = kCloudMonitor;
@@ -39,6 +40,7 @@ class MonitorAction extends Action
     $this->assign('my_web_action', $this->m_webAction);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
+    $this->assign('my_web_phone', $this->m_webPhone);
   }
   //
   // 移动手机二维码页面...

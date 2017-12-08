@@ -340,11 +340,6 @@ CString CXmlConfig::GetDBCameraTitle(int nDBCameraID)
 	GM_MapNodeCamera::iterator itorItem = m_MapNodeCamera.find(nDBCameraID);
 	if( itorItem != m_MapNodeCamera.end() ) {
 		GM_MapData & theMapWeb = itorItem->second;
-		/*if( this->m_nWebType != kCloudMonitor ) {
-			strTitle.Format("%s %s %s", theMapWeb["grade_type"].c_str(), theMapWeb["grade_name"].c_str(), theMapWeb["camera_name"].c_str());
-		} else {
-			strTitle = theMapWeb["camera_name"].c_str();
-		}*/
 		strTitle = theMapWeb["camera_name"].c_str();
 	}
 	return strTitle;

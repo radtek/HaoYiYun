@@ -363,7 +363,9 @@ class GatherAction extends Action
             if( $dbLive['image_id'] > 0 ) {
               // 通道下的截图是有效的，先删除这个截图的物理存在...
               if( isset($dbLive['image_fdfs']) && strlen($dbLive['image_fdfs']) > 0 ) { 
-                fastdfs_storage_delete_file1($dbLive['image_fdfs']);
+                if( !fastdfs_storage_delete_file1($dbLive['image_fdfs']) ) {
+                  logdebug("fdfs delete failed => ".$dbLive['image_fdfs']);                  
+                }
               }
               // 将新的截图存储路径更新到截图表当中...
               $dbImage['image_id'] = $dbLive['image_id'];

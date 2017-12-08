@@ -950,10 +950,12 @@ class AdminAction extends Action
     $dbGrade = D('CameraView')->where($map)->find();
     $this->assign('my_grade', $dbGrade);
     // 获取通道下所有的录像任务...
-    $arrCourse = D('course')->where($map)->select();
-    $this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
+    //$arrCourse = D('course')->where($map)->select();
+    //$this->assign('my_course', ($arrCourse ? json_encode($arrCourse) : false));
+    //$this->assign('my_total_num', count($arrCourse));
+    $theCount = D('course')->where($map)->count();
+    $this->assign('my_total_num', $theCount);
     // 设置需要的模板参数信息...
-    $this->assign('my_total_num', count($arrCourse));
     $this->assign('my_camera_id', $theCameraID);
     $this->assign('my_gather_id', $theGatherID);
     $this->assign('my_nav_type', $theNavType);
@@ -962,12 +964,12 @@ class AdminAction extends Action
   }
   //
   // 查找指定通道下面所有的录像任务记录...
-  /*public function getCourse()
+  public function getCourse()
   {
-    $theCameraID = $_GET['camera_id'];
-    $arrCourse = D('course')->where($map)->select();
+    $condition['camera_id'] = $_GET['camera_id'];
+    $arrCourse = D('course')->where($condition)->select();
     echo ($arrCourse ? json_encode($arrCourse) : false);
-  }*/
+  }
   //
   // 保存任务录像区间数据...
   public function saveCourse()

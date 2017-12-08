@@ -4,7 +4,7 @@
     <loading :show="isLoading" position="absolute" text="加载中"></loading>
     <!-- 需要打开 fastclick 否则 scroller 不能点击 -->
     <!-- vux-tab-item 设置了固定的高度 44px -->
-    <scroller lock-y :scrollbar-x=false ref="tabScroller">
+    <scroller lock-y :scrollbar-x=false ref="tabScroller" class="tabGround">
       <tab :line-width="2" active-color="#fc378c" :animate="true" :style="'width:' + tabWidth + 'px'" @on-index-change="onSubjectChange">
         <tab-item :selected="index === 0" v-for="(item, index) in arrGather" :key="index">{{item.name_set}}</tab-item>
       </tab>
@@ -286,3 +286,10 @@ export default {
   }
 }
 </script>
+<style lang="less">
+.tabGround {
+  background: linear-gradient(180deg, #e5e5e5, #e5e5e5, rgba(229, 229, 229, 0)) bottom left no-repeat;
+  background-size: 100% 1px;
+  text-align: -webkit-center;
+}
+</style>

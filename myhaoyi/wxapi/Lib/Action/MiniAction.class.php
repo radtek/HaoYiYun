@@ -78,7 +78,9 @@ class WXBizDataCrypt
 		return ErrorCode::$OK;
 	}
 }
-
+///////////////////////////////////////////////
+// 微信小程序需要用到的数据接口类...
+///////////////////////////////////////////////
 class MiniAction extends Action
 {
   public function _initialize() {
@@ -164,6 +166,62 @@ class MiniAction extends Action
     }while( false );
     // 返回json数据包...
     echo json_encode($arrErr);
+  }
+  // 处理小程序请求共享通道接口...
+  public function getShare()
+  {
+    // 得到每页条数...
+    $pagePer = C('PAGE_PER');
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 读取共享通道列表数据 => 视图数据 => 只选择WAN节点...
+    $condition['node_wan'] = array('gt', 0);
+    $arrTrack = D('TrackView')->where($condition)->limit($pageLimit)->select();
+    $arrList = array_unique(array_column($arrTrack, 'node_id'));
+    $arrRemote = array();
+    for($i = 0; $i < count($arrList); ++$i) {
+      $theCameraList = ''; $theNodeAddr = '';
+      foreach($arrTrack as &$dbItem) {
+        // 找到相同节点的通道...
+        if( $dbItem['node_id'] == $arrList[$i] ) {
+          $theCameraList .= $dbItem['camera_id'] . ',';
+          // 累加通道编号，获取节点完整地址...
+          if( strlen($theNodeAddr) <= 0 ) {
+            $theNodeAddr = sprintf("%s://%s/wxapi.php/Mini", $dbItem['node_proto'], $dbItem['node_addr']);
+          }
+        }
+      }
+      // 去掉通道编号的最后一个逗号，组合查询节点通道列表地址...
+      $theCameraList = rtrim($theCameraList, ",");
+      $strUrl = sprintf("%s/getShare/list/%s", $theNodeAddr, $theCameraList);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      if( !$result )
+        continue;
+      // 解析返回数据记录...
+      $arrJson = json_decode($result, true);
+      if( $arrJson['errcode'] > 0 )
+        continue;
+      // 将记录重组成通道记录...
+      foreach($arrJson['track'] as &$dbJson) {
+        $dbJson['node_id'] = $arrList[$i];
+        array_push($arrRemote, $dbJson);
+      }
+    }
+    print_r($arrRemote);
+    exit;
+    // 需要处理筛选后的记录为空的情况...
+    // 获取有效节点列表，然后在准备接口数据...
+    // 遍历数组，通过节点地址接口获取通道实际数据...
+    /*foreach($arrTrack as &$dbItem) {
+      // 准备访问节点接口地址 => 获取需要的通道数据记录...
+      $strUrl = sprintf("%s/wxapi.php/Mini/getCamera/camera_id/%d", $dbItem['node_addr'], $dbItem['camera_id']);
+      $result = http_get($strUrl);
+      // 获取通道失败，设置为空，成功，转成数组...
+      $dbItem['camera'] = ($result ? json_decode($result, true) : null);
+      // 对通道拥有者的头像进行缩小处理 => 缩小成 96*96
+      $dbItem['wx_headurl'] = str_replace('/0', '/96', $dbItem['wx_headurl']);
+    }*/
   }
 }
 ?>
