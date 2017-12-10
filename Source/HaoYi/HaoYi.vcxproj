@@ -145,15 +145,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;RTMPLIB_EXPORTS;MP4V2_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>common;json;curl;UI;HKNet;DHNet;fastdfs;librtmp;libmp4v2;librtsp\liveMedia\include;librtsp\groupsock\include;librtsp\UsageEnvironment\include;librtsp\BasicUsageEnvironment\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>common;json;curl;UI;HKNet;DHNet;fastdfs;librtmp;libmp4v2;librtsp\liveMedia\include;librtsp\groupsock\include;librtsp\UsageEnvironment\include;librtsp\BasicUsageEnvironment\include;ffmpeg</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>curl;HKNet;DHNet;libmp4v2;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libmp4v2.lib;HCNetSDK.lib;libcurl_imp.lib;Version.lib;Psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>curl;HKNet;DHNet;libmp4v2;ffmpeg/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libmp4v2.lib;HCNetSDK.lib;libcurl_imp.lib;Version.lib;Psapi.lib;avcodec.lib;avformat.lib;avutil.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

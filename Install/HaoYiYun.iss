@@ -2,13 +2,13 @@
 ; 查阅文档获取创建 INNO SETUP 脚本文件详细资料!
 
 [Setup]
-AppName={reg:HKLM\Software\HaoYiYun, AppName|云录播}
-AppVerName={reg:HKLM\Software\HaoYiYun, AppVerName|云录播}
-;AppPublisher={reg:HKLM\Software\GMBacklot, AppPublisher|北京世纪葵花数字传媒技术有限公司}
-;AppPublisherURL={reg:HKLM\Software\GMBacklot, AppPublisherURL|http://www.kuihua.net}
+AppName={reg:HKLM\Software\HaoYiYun, AppName|采集端}
+AppVerName={reg:HKLM\Software\HaoYiYun, AppVerName|采集端}
+AppPublisher={reg:HKLM\Software\GMBacklot, AppPublisher|北京浩一科技有限公司}
+AppPublisherURL={reg:HKLM\Software\GMBacklot, AppPublisherURL|https://myhaoyi.com}
 
-DefaultGroupName={reg:HKLM\Software\HaoYiYun, DefaultGroupName|云录播}
-DefaultDirName={reg:HKLM\Software\HaoYiYun, DefaultDirName|{pf}\云录播}
+DefaultGroupName={reg:HKLM\Software\HaoYiYun, DefaultGroupName|采集端}
+DefaultDirName={reg:HKLM\Software\HaoYiYun, DefaultDirName|{pf}\采集端}
 
 Compression=lzma
 SolidCompression=yes
@@ -18,7 +18,7 @@ AllowCancelDuringInstall=no
 OutputDir=..\Product
 
 VersionInfoVersion=1.0.0.1
-OutputBaseFilename=云录播
+OutputBaseFilename=cloud-gather
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
@@ -31,6 +31,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\Source\bin\HaoYi.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\avcodec-55.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\avformat-55.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\avutil-52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\AudioRender.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\D3DX9_43.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\HCCore.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -46,10 +49,10 @@ Source: "..\Source\bin\HCNetSDKCom\HCCoreDevCfg.dll"; DestDir: "{app}\HCNetSDKCo
 Source: "..\Source\bin\HCNetSDKCom\HCGeneralCfgMgr.dll"; DestDir: "{app}\HCNetSDKCom"; Flags: ignoreversion
 
 [Icons]
-Name: "{userdesktop}\云录播"; Filename: "{app}\HaoYi.exe"; Tasks: desktopicon
-Name: "{group}\{cm:LaunchProgram,云录播}"; Filename: "{app}\HaoYi.exe"
-Name: "{group}\{cm:UninstallProgram,云录播}"; Filename: "{uninstallexe}"
+Name: "{userdesktop}\采集端"; Filename: "{app}\HaoYi.exe"; Tasks: desktopicon
+Name: "{group}\{cm:LaunchProgram,采集端}"; Filename: "{app}\HaoYi.exe"
+Name: "{group}\{cm:UninstallProgram,采集端}"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\HaoYi.exe"; Description: "{cm:LaunchProgram,云录播}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\HaoYi.exe"; Description: "{cm:LaunchProgram,采集端}"; Flags: nowait postinstall skipifsilent
 
