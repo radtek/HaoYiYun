@@ -31,6 +31,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\Source\bin\HaoYi.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\mplayer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\avcodec-55.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\avformat-55.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\avutil-52.dll"; DestDir: "{app}"; Flags: ignoreversion

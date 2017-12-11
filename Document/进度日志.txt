@@ -85,18 +85,6 @@
    D：（未完成）完成网站通过后台，使用swoole完成自动同步升级的功能，而且不用等待，在后台运行；
    E：（未完成）现在需要根据目前的小程序界面设计，找到需要的界面组件库，完成第一步工作；
 
-26.（已完成）将服务器所有模块打包到一个安装包当中，云录播和云监控分别打包，采集端只有一个；
-   A：（已完成）对服务器打包工程进行了重组，产生两个文件cloud-monitor.tar.gz和cloud-recorder.tar.gz，放到百度云盘，并建立分享目录；
-   B：（已完成）目前只针对一体机进行推广和使用，后续才进行分布式的更新，需要用到myhaoyi.com上建立download目录，配合haoyi.sh进行；
-   C：（已完成）将采集端打包，生成 cloud-gather.exe，放到百度云盘上，并建立分享目录；
-   D：（已完成）release模式下，ffmpeg报错，需要使用"保留未引用数据(/OPT:NOREF)"选项才可以正常运行；
-   E：（已完成）ffmpeg的优化方案 => http://blog.csdn.net/dancing_night/article/details/53009350
-   F：（已完成）将采集端默认的连接地址设置为 => http://www.ihaoyi.cn，云监控模式；
-   H：（已完成）https://pan.baidu.com/s/1hsmxT0S => cloud-gather.exe
-   I：（已完成）https://pan.baidu.com/s/1kUG3LVT => cloud-monitor.tar.gz
-   J：（已完成）https://pan.baidu.com/s/1pKBBVuz => cloud-recorder.tar.gz
-   K：（已完成）修改中心网站的数据库密码，代码里还是保持原来的不变；
-   L：（未完成）编写《云录播使用手册》
 
 27.（未完成）采集端，摄像头通道，突然断开时，通道并没有立即反馈状态，还是直播中；
 
@@ -209,6 +197,20 @@
    F：（已完成）还是有个问题：由于加载模块太多，也比较大，第一次加载时，非常缓慢，停顿，需要找到一种读取js文件加载进度的方法，加强用户体验；
    G：（已完成）为了解决上面的问题，需要将script引用都放到head里面，不能放到body里，放在head中的JS代码会在页面加载完成之前就读取，而放在body中的JS代码，会在整个页面加载完成之后读取。
    H：（已完成）这时的体验就会好很多，royalslider会有旋转等待出现rsVideoActive样式，至于video的poster加上也没有意义，因为，它需要页面加载完毕才能显示，不需要设置了；
+12.（已完成）将服务器所有模块打包到一个安装包当中，云录播和云监控分别打包，采集端只有一个；
+   A：（已完成）对服务器打包工程进行了重组，产生两个文件cloud-monitor.tar.gz和cloud-recorder.tar.gz，放到百度云盘，并建立分享目录；
+   B：（已完成）目前只针对一体机进行推广和使用，后续才进行分布式的更新，需要用到myhaoyi.com上建立download目录，配合haoyi.sh进行；
+   C：（已完成）将采集端打包，生成 cloud-gather.exe，放到百度云盘上，并建立分享目录；
+   D：（已完成）release模式下，ffmpeg报错，需要使用"保留未引用数据(/OPT:NOREF)"选项才可以正常运行；
+   E：（已完成）ffmpeg的优化方案 => http://blog.csdn.net/dancing_night/article/details/53009350
+   F：（已完成）将采集端默认的连接地址设置为 => http://www.ihaoyi.cn，云监控模式；
+   H：（已完成）https://pan.baidu.com/s/1hsmxT0S => cloud-gather.exe
+   I：（已完成）https://pan.baidu.com/s/1o8zISmY => cloud-monitor.tar.gz
+   J：（已完成）https://pan.baidu.com/s/1bo9Y2Bl => cloud-recorder.tar.gz
+   K：（已完成）修改中心网站的数据库密码，代码里还是保持原来的不变；
+   L：（已完成）编写《云录播使用手册》
+   M：（已完成）https://smallpdf.com/cn/word-to-pdf，一个非常专一的pdf处理网站；
+   N：（已完成）修改了config.sh配置脚本，支持自动获取本机IP进行配置（通过auto参数）
 
 2017.11.10 - 2017.11.30
 =========================================================================

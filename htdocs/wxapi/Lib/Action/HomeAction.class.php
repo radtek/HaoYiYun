@@ -420,7 +420,7 @@ class HomeAction extends Action
       // 记录数不够，继续向前查询，降序排列...
       if( count($arrVod) < $nPageSize ) {
         $map['Record.record_id'] = array('lt', $record_id);
-        $arrPrev = D('RecordView')->where($map)->limit($nPageSize-count($arrBack))->order('record_id DESC')->select();
+        $arrPrev = D('RecordView')->where($map)->limit($nPageSize-count($arrVod))->order('record_id DESC')->select();
         // 有新数据才进行合并，保持当前记录为第一个记录...
         if( count($arrPrev) > 0 ) {
           $arrVod = array_merge($arrVod, $arrPrev);
