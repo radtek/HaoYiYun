@@ -7,12 +7,33 @@
 }
 .logo {
   position: absolute;
-  left: 0;
-  top: 5px;
+  width: 180px;
+  color: #ddd;
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
 }
-.logo img {
-  width: 90px;
-  height: 50px;
+.logo .brand {
+  font-size: 22px;
+  font-weight: 600;
+}
+.logo .version {
+  position: absolute;
+  font-size: 8px;
+  top: 12px;
+}
+.logo .label {
+  display: inline;
+  padding: .25em .5em .25em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: .25em;
+  background-color: #f39c12;
 }
 .header .layui-nav {
   position: absolute;
@@ -30,9 +51,6 @@
 .header-demo {
   height: 60px;
   border-bottom: none;
-}
-.header-demo .logo {
-  left: 40px;
 }
 .header-demo .layui-nav {
   top: 0;

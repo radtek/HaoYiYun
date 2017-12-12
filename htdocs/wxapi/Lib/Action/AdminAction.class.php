@@ -27,6 +27,7 @@ class AdminAction extends Action
     $this->assign('my_headurl', $this->m_wxHeadUrl);
     $this->assign('my_sys_site', $this->m_sysSite);
     $this->assign('my_web_title', $this->m_webTitle);
+    $this->assign('my_web_version', C('VERSION'));
   }
   //
   // 接口 => 根据cookie判断用户是否已经处于登录状态...
