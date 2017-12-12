@@ -42,6 +42,7 @@ class LoginAction extends Action
       $strNodeAddr = $arrJson['node_addr'];
       $strNodeType = $arrJson['node_type'];
       $strNodeTag = $arrJson['node_tag'];
+      $strNodeVer = $arrJson['node_ver'];
       // 根据节点标记获取或创建一条新记录...
       $map['node_tag'] = $strNodeTag;
       $dbNode = D('node')->where($map)->find();
@@ -54,6 +55,7 @@ class LoginAction extends Action
         $dbNode['node_addr'] = $strNodeAddr;
         $dbNode['node_type'] = $strNodeType;
         $dbNode['node_tag'] = $strNodeTag;
+        $dbNode['node_ver'] = $strNodeVer;
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
@@ -65,6 +67,7 @@ class LoginAction extends Action
         $dbNode['node_addr'] = $strNodeAddr;
         $dbNode['node_type'] = $strNodeType;
         $dbNode['node_tag'] = $strNodeTag;
+        $dbNode['node_ver'] = $strNodeVer;
         $dbNode['updated'] = date('Y-m-d H:i:s');
         D('node')->save($dbNode);
       }

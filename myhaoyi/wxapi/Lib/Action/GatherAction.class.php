@@ -63,6 +63,7 @@ class GatherAction extends Action
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
         $dbNode['node_tag'] = $arrData['node_tag'];
+        $dbNode['node_ver'] = $arrData['node_ver'];
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
         $dbNode['node_id'] = D('node')->add($dbNode);
@@ -73,6 +74,7 @@ class GatherAction extends Action
         $dbNode['node_type'] = $arrData['node_type'];
         $dbNode['node_addr'] = $arrData['node_addr'];
         $dbNode['node_tag'] = $arrData['node_tag'];
+        $dbNode['node_ver'] = $arrData['node_ver'];
         $dbNode['updated'] = date('Y-m-d H:i:s');
         D('node')->save($dbNode);
       }

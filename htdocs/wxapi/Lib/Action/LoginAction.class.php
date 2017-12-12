@@ -152,6 +152,7 @@ class LoginAction extends Action
     $dbJson['node_tag'] = $dbSys['web_tag'];
     $dbJson['node_type'] = $dbSys['web_type'];
     $dbJson['node_name'] = $dbSys['web_title'];
+    $dbJson['node_ver'] = C('VERSION');
     $state = json_encode($dbJson);
     // 对链接地址进行base64加密...
     $state = urlsafe_b64encode($state);

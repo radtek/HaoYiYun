@@ -48,6 +48,7 @@ public:
 	BOOL	 GetAutoLinkFDFS() { return m_bAutoLinkFDFS; }
 	int		 GetMaxCamera() { return m_nMaxCamera; }
 
+	string & GetWebVer()  { return m_strWebVer; }
 	string & GetWebTag()  { return m_strWebTag; }
 	string & GetWebName() { return m_strWebName; }
 	int		 GetWebType() { return m_nWebType; }
@@ -65,6 +66,7 @@ public:
 	void	 SetWebType(int nWebType) { m_nWebType = nWebType; }
 	void	 SetWebName(const string & strWebName) { m_strWebName = strWebName; }
 	void	 SetWebTag(const string & strWebTag) { m_strWebTag = strWebTag; }
+	void	 SetWebVer(const string & strWebVer) { m_strWebVer = strWebVer; }
 	void	 SetDBGatherID(int nDBGatherID) { m_nDBGatherID = nDBGatherID; }
 	void	 SetDBHaoYiNodeID(int nDBNodeID) { m_nDBHaoYiNodeID = nDBNodeID; }
 	void     SetDBHaoYiGatherID(int nDBGatherID) { m_nDBHaoYiGatherID = nDBGatherID; }
@@ -125,6 +127,7 @@ private:
 	string				m_strWebAddr;					// Web的IP地址...
 	int					m_nWebPort;						// Web的端口地址...
 	
+	string				m_strWebVer;					// 注册是获取的网站版本
 	string				m_strWebTag;					// 注册时获取的网站标志
 	string				m_strWebName;					// 注册时获取的网站名称
 	int					m_nWebType;						// 注册时获取的网站类型

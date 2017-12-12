@@ -74,6 +74,7 @@ class GatherAction extends Action
       $arrErr['auto_dvr'] = $dbGather['auto_dvr'];
       $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
       // 返回采集端需要的参数配置信息...
+      $arrErr['web_ver'] = C('VERSION');
       $arrErr['web_tag'] = $dbSys['web_tag'];
       $arrErr['web_type'] = $dbSys['web_type'];
       $arrErr['web_name'] = $dbSys['web_title'];

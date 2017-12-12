@@ -91,6 +91,7 @@ BOOL CWebThread::RegisterHaoYi()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebType = theConfig.GetWebType();
 	int nWebPort = theConfig.GetWebPort();
+	string  & strWebVer = theConfig.GetWebVer();
 	string  & strWebTag = theConfig.GetWebTag();
 	string  & strWebName = theConfig.GetWebName();
 	string  & strWebAddr = theConfig.GetWebAddr();
@@ -103,7 +104,7 @@ BOOL CWebThread::RegisterHaoYi()
 		return false;
 	}
 	// 网站节点标记不能为空 => 必须先通过RegisterGather过程...
-	if( strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
+	if( strWebVer.size() <= 0 || strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}
@@ -117,8 +118,8 @@ BOOL CWebThread::RegisterHaoYi()
 	string	strUTF8Web = CUtilTool::ANSI_UTF8(strWebName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_proto=%s&node_name=%s&os_name=%s", 
-					strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebTag.c_str(), nWebType, 
+	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_ver=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_proto=%s&node_name=%s&os_name=%s", 
+		strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebVer.c_str(), strWebTag.c_str(), nWebType, 
 					strOnlyAddr, nWebPort, strWebProto, szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
@@ -249,6 +250,7 @@ BOOL CWebThread::RegisterGather()
 	int nTrackerPort = atoi(CUtilTool::getJsonString(value["tracker_port"]).c_str());
 	string strWebName = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value["web_name"]).c_str());
 	string strWebTag = CUtilTool::getJsonString(value["web_tag"]);
+	string strWebVer = CUtilTool::getJsonString(value["web_ver"]);
 	// 获取通道记录列表，先清除旧的列表...
 	GM_MapNodeCamera & theNode = theConfig.GetNodeCamera();
 	Json::Value & theCamera = value["camera"];
@@ -311,6 +313,7 @@ BOOL CWebThread::RegisterGather()
 	nSnapVal = ((nSnapVal >= 10) ? 10 : nSnapVal);
 	// 存放到配置文件，但并不存盘...
 	theConfig.SetDBGatherID(nDBGatherID);
+	theConfig.SetWebVer(strWebVer);
 	theConfig.SetWebTag(strWebTag);
 	theConfig.SetWebType(nWebType);
 	theConfig.SetWebName(strWebName);
