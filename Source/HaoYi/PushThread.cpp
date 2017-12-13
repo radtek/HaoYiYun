@@ -169,16 +169,17 @@ bool CMP4Thread::ReadOneFrameFromMP4(MP4TrackId tid, uint32_t sid, bool bIsVideo
 	if( false == MP4ReadSample(m_hMP4Handle, tid, sid, &pSampleData, &nSampleSize, &nStartTime, &nDuration, &nOffset, &bIsKeyFrame) )
 		return false;
 
-	// 计算发送时间 => PTS
+	// 计算发送时间 => PTS => 刻度时间转换成毫秒...
 	msectime *= UINT64_C( 1000 );
 	msectime /= timescale;
-	// 计算开始时间 => DTS
+	// 计算开始时间 => DTS => 刻度时间转换成毫秒...
 	nStartTime *= UINT64_C( 1000 );
 	nStartTime /= timescale;
-	// 计算偏差时间 => CTTS
+	// 计算偏差时间 => CTTS => 刻度时间转换成毫秒...
 	nOffset *= UINT64_C( 1000 );
 	nOffset /= timescale;
 
+	// 注意：msectime | nOffset | m_dwMP4Duration 都要统一成毫秒时间...
 	FMS_FRAME	theFrame;
 	theFrame.typeFlvTag = (bIsVideo ? FLV_TAG_TYPE_VIDEO : FLV_TAG_TYPE_AUDIO);	// 设置音视频标志
 	theFrame.dwSendTime = (uint32_t)msectime + m_dwMP4Duration * m_nLoopCount;	// 这里非常重要，牵涉到循环播放
@@ -194,7 +195,7 @@ bool CMP4Thread::ReadOneFrameFromMP4(MP4TrackId tid, uint32_t sid, bool bIsVideo
 	ASSERT( m_lpPushThread != NULL );
 	m_lpPushThread->PushFrame(theFrame);
 
-	// 返回发送时间(毫秒)...
+	// 返回发送时间(毫秒) => 已将刻度时间转换成了毫秒...
 	outSendTime = (uint32_t)msectime;
 	
 	//TRACE("[%s] duration = %I64d, offset = %I64d, KeyFrame = %d, SendTime = %lu, StartTime = %I64d, Size = %lu\n", bIsVideo ? "Video" : "Audio", nDuration, nOffset, bIsKeyFrame, outSendTime, nStartTime, nSampleSize);
@@ -258,9 +259,11 @@ bool CMP4Thread::doMP4ParseAV(MP4FileHandle inFile)
 		return false;
 	ASSERT( inFile != MP4_INVALID_FILE_HANDLE );
 	
-	// 首先获取文件的总时间长度(毫秒)...
-	m_dwMP4Duration = (uint32_t)MP4GetDuration(inFile);
-	ASSERT( m_dwMP4Duration > 0 );
+	// 首先获取文件的每秒刻度数和总刻度数(不是毫秒数)...
+	uint32_t dwFileScale = MP4GetTimeScale(inFile);
+	MP4Duration theDuration = MP4GetDuration(inFile);
+	// 总毫秒数 = 总刻度数*1000/每秒刻度数 => 先乘法可以降低误差...
+	m_dwMP4Duration = theDuration*1000/dwFileScale;
 
 	// 获取需要的相关信息...
     uint32_t trackCount = MP4GetNumberOfTracks( inFile );
@@ -948,7 +951,7 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
 	m_lpRecMP4 = NULL;
 	m_dwRecCTime = 0;
 	m_dwWriteSize = 0;
-	m_dwWriteRecMS = 0;
+	m_dwWriteSec = 0;
 
 #ifdef _SAVE_H264_
 	m_bSave_sps = true;
@@ -1213,7 +1216,7 @@ BOOL CPushThread::BeginRecSlice()
 		return false;
 	ASSERT( m_lpCamera != NULL );
 	// 复位录像信息变量...
-	m_dwWriteRecMS = 0;
+	m_dwWriteSec = 0;
 	m_dwWriteSize = 0;
 	// 获取唯一的文件名...
 	MD5	    md5;
@@ -1254,11 +1257,11 @@ BOOL CPushThread::EndRecSlice()
 		m_lpRecMP4->Close();
 	}
 	// 进行录像后的截图、改文件名操作...
-	if( m_dwWriteSize > 0 && m_dwWriteRecMS > 0 ) {
-		this->doStreamSnapJPG(m_dwWriteRecMS/1000);
+	if( m_dwWriteSize > 0 && m_dwWriteSec > 0 ) {
+		this->doStreamSnapJPG(m_dwWriteSec);
 	}
 	// 这里需要复位录制变量，否则在退出时出错...
-	m_dwWriteRecMS = 0; m_dwWriteSize = 0;
+	m_dwWriteSec = 0; m_dwWriteSize = 0;
 	return true;
 }
 //
@@ -1359,9 +1362,10 @@ BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 	BOOL bIsVideo = ((inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO) ? true : false);
 	if( !m_lpRecMP4->WriteSample(bIsVideo, (BYTE*)inFrame.strData.c_str(), inFrame.strData.size(), inFrame.dwSendTime, inFrame.dwRenderOffset, inFrame.is_keyframe) )
 		return false;
-	// 这里需要记录已录制文件大小和已录制毫秒数...
+	// 这里需要记录已录制文件大小和已录制秒数...
 	m_dwWriteSize = m_lpRecMP4->GetWriteSize();
-	m_dwWriteRecMS = m_lpRecMP4->GetWriteRecMS();
+	m_dwWriteSec = m_lpRecMP4->GetWriteSec();
+	//TRACE("Write Second: %lu\n", m_dwWriteSec);
 	// 如果没有视频，则不做交错处理...
 	if( !m_lpRecMP4->IsVideoCreated() )
 		return true;

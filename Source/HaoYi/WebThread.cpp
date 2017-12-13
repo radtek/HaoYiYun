@@ -104,7 +104,7 @@ BOOL CWebThread::RegisterHaoYi()
 		return false;
 	}
 	// 网站节点标记不能为空 => 必须先通过RegisterGather过程...
-	if( strWebVer.size() <= 0 || strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
+	if( strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}

@@ -380,9 +380,9 @@ void CMidView::OnWebAuthResult(int nType, BOOL bAuthOK)
 {
 	// 根据不同状态，显示不同的信息...
 	if( nType == kAuthRegister ) {
-		m_strNotice = bAuthOK ? "正在验证网站授权..." : "网站注册失败，请检查网站链接...";
+		m_strNotice = bAuthOK ? "正在验证网站授权..." : "节点网站注册失败，请检查网站链接...";
 	} else if( nType == kAuthExpired ) {
-		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "网站授权过期，验证失败...";
+		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "中心网站授权过期，验证失败...";
 	}
 	// 重新更新窗口背景...
 	this->Invalidate(true);

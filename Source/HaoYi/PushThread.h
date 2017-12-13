@@ -44,7 +44,7 @@ private:
 	CPushThread *	m_lpPushThread;			// 父线程对象
 
 	bool			m_bFinished;			// 文件是否读取完毕
-	uint32_t		m_dwMP4Duration;		// 文件的持续时间(毫秒)
+	uint32_t		m_dwMP4Duration;		// 文件的总毫秒数 = (总刻度数/每秒刻度数)*1000
 
 	MP4FileHandle	m_hMP4Handle;			// MP4文件句柄
 	uint32_t		m_iASampleInx;			// 音频帧当前索引
@@ -184,7 +184,7 @@ public:
 	BOOL			StreamEndRecord();
 
 	DWORD			GetStreamRecSize() { return m_dwWriteSize; }
-	DWORD			GetStreamRecMS() { return m_dwWriteRecMS; }
+	DWORD			GetStreamRecSec() { return m_dwWriteSec; }
 	BOOL			IsStreamPlaying() { return m_bStreamPlaying; }
 	BOOL			IsPublishing() { return m_bIsPublishing; }
 	int				GetSendKbps() { return m_nSendKbps; }
@@ -247,7 +247,7 @@ private:
 	LibMP4		*	m_lpRecMP4;			// mp4录像对象...
 	DWORD			m_dwRecCTime;		// mp4开始录像时间 => 单位(秒)...
 	DWORD			m_dwWriteSize;		// 写入文件长度...
-	DWORD			m_dwWriteRecMS;		// 已经写入的毫秒数...
+	DWORD			m_dwWriteSec;		// 已经写入的秒数...
 	string			m_strUTF8MP4;		// mp4存盘路径(UTF-8)，带.tmp扩展名...
 	CString			m_strMP4Name;		// MP4文件名(不带扩展名)...
 	CString			m_strJpgName;		// JPG文件名(全路径)...

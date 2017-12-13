@@ -26,7 +26,7 @@ bool LibMP4::Close()
 	m_nVideoTimeScale = 0;
 	m_bFirstFrame = true;
 	m_dwFirstStamp = 0;
-	m_dwWriteRecMS = 0;
+	m_dwWriteSec = 0;
 	m_dwWriteSize = 0;
 	
 	m_VLastFrame.m_nTimeStamp = 0;
@@ -117,6 +117,8 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		return false;
 	if( !bIsVideo && m_audioID == MP4_INVALID_TRACK_ID )
 		return false;
+	// 从文件中获取已写入秒数...
+	m_dwWriteSec = this->GetDurationSecond();
 	// 第一帧数据必须是视频关键帧...
 	if( m_bFirstFrame ) {
 		// 如果是音频，将数据帧缓存起来...
@@ -141,7 +143,7 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 					}
 					MP4WriteSample(m_hFileHandle, m_audioID, (BYTE*)myFrame.m_strData.c_str(), myFrame.m_strData.size(), MP4_INVALID_DURATION, 0, myFrame.m_bKeyFrame);
 					m_dwWriteSize += myFrame.m_strData.size();
-					m_dwWriteRecMS = myFrame.m_nTimeStamp - m_dwFirstStamp;
+					//m_dwWriteRecMS = myFrame.m_nTimeStamp - m_dwFirstStamp;
 				}
 				// 存盘之后，释放音频缓存...
 				TRACE("[No Video] Audio-Deque = %d\n", m_deqAudio.size());
@@ -182,7 +184,7 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, (BYTE*)m_VLastFrame.m_strData.c_str(), m_VLastFrame.m_strData.size(), uDuration, uOffset, m_VLastFrame.m_bKeyFrame);
 		// 计算写盘量和总时间...
 		m_dwWriteSize += m_VLastFrame.m_strData.size();
-		m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
+		//m_dwWriteRecMS = inTimeStamp - m_dwFirstStamp;
 		
 		// 保存这一帧的数据，下次使用...
 		m_VLastFrame.m_bKeyFrame = bIsKeyFrame;
@@ -194,18 +196,20 @@ bool LibMP4::WriteSample(bool bIsVideo, BYTE * lpFrame, int nSize, uint32_t inTi
 		bWriteFlag = MP4WriteSample(m_hFileHandle, theTrackID, lpFrame, nSize, MP4_INVALID_DURATION, 0, bIsKeyFrame);
 		// 计算写盘量和总时间...
 		m_dwWriteSize += nSize;
-		m_dwWriteRecMS = ((inTimeStamp >= m_dwFirstStamp) ? (inTimeStamp - m_dwFirstStamp) : 0);
+		//m_dwWriteRecMS = ((inTimeStamp >= m_dwFirstStamp) ? (inTimeStamp - m_dwFirstStamp) : 0);
 	}
 	// 返回存盘结果...
 	return bWriteFlag;
 }
 //
-// 返回文件中播放时间(毫秒)...
-MP4Duration LibMP4::GetDuration()
+// 返回文件中的总秒数...
+DWORD LibMP4::GetDurationSecond()
 {
-	MP4Duration nDuration = 0;
+	DWORD dwTotalSecond = 0;
 	if( m_hFileHandle != MP4_INVALID_FILE_HANDLE ) {
-		nDuration = MP4GetDuration(m_hFileHandle);
+		uint32_t dwFileScale = MP4GetTimeScale(m_hFileHandle);
+		MP4Duration nDuration = MP4GetDuration(m_hFileHandle);
+		dwTotalSecond = nDuration / dwFileScale;
 	}
-	return nDuration;
+	return dwTotalSecond;
 }

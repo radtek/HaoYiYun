@@ -28,7 +28,7 @@ CRecThread::CRecThread()
 	m_lpLibMP4 = NULL;
 	m_dwRecCTime = 0;
 	m_dwWriteSize = 0;
-	m_dwWriteRecMS = 0;
+	m_dwWriteSec = 0;
 	m_nKeyMonitor = 0;
 }
 
@@ -167,7 +167,7 @@ BOOL CRecThread::BeginRecSlice()
 		return false;
 	ASSERT( m_lpCamera != NULL );
 	// 复位录像信息变量...
-	m_dwWriteRecMS = 0;
+	m_dwWriteSec = 0;
 	m_dwWriteSize = 0;
 	// 获取唯一的文件名...
 	MD5	    md5;
@@ -208,11 +208,11 @@ BOOL CRecThread::EndRecSlice()
 		m_lpLibMP4->Close();
 	}
 	// 进行录像后的截图、改文件名操作...
-	if( m_dwWriteSize > 0 && m_dwWriteRecMS > 0 ) {
-		this->doStreamSnapJPG(m_dwWriteRecMS/1000);
+	if( m_dwWriteSize > 0 && m_dwWriteSec > 0 ) {
+		this->doStreamSnapJPG(m_dwWriteSec);
 	}
 	// 这里需要复位录制变量，否则在退出时出错...
-	m_dwWriteRecMS = 0; m_dwWriteSize = 0;
+	m_dwWriteSec = 0; m_dwWriteSize = 0;
 	return true;
 }
 //
@@ -251,7 +251,7 @@ BOOL CRecThread::StreamWriteRecord(FMS_FRAME & inFrame)
 		return false;
 	// 这里需要记录已录制文件大小和已录制毫秒数...
 	m_dwWriteSize = m_lpLibMP4->GetWriteSize();
-	m_dwWriteRecMS = m_lpLibMP4->GetWriteRecMS();
+	m_dwWriteSec = m_lpLibMP4->GetWriteSec();
 	// 如果没有视频，则不做交错处理...
 	if( !m_lpLibMP4->IsVideoCreated() )
 		return true;
