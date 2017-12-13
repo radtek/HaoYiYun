@@ -17,7 +17,9 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 CWebThread::CWebThread(CHaoYiView * lpView)
-  : m_eRegState(kRegHaoYi)
+  : m_bIsCanReConnect(false)
+  , m_bIsLoadSuccess(false)
+  , m_eRegState(kRegHaoYi)
   , m_lpHaoYiView(lpView)
   , m_nCurCameraCount(0)
 {
@@ -378,6 +380,9 @@ BOOL CWebThread::LogoutHaoYi()
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	// 需要将配置文件中服务器编号置空...
+	theConfig.SetDBHaoYiGatherID(-1);
+	theConfig.SetDBHaoYiNodeID(-1);
 	return true;
 }
 //
@@ -429,6 +434,8 @@ BOOL CWebThread::LogoutGather()
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	// 需要将配置文件中采集端编号置空...
+	theConfig.SetDBGatherID(-1);
 	return true;
 }
 //
@@ -803,18 +810,24 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode/* = 0*
 
 void CWebThread::Entry()
 {
-	// 首先，在网站上注册采集端信息...
-	if( !this->RegisterGather() ) {
-		return;
-	}
-	// 然后，需要验证授权是否已经过期...
-	if( !this->RegisterHaoYi() ) {
-		return;
-	}
-	// 开始注册摄像头，这里只能注册已知的，新建的不能注册，因此，需要在新扫描出来的地方增加注册功能...
-	if( !this->GetAllCameraData() ) {
-		return;
-	}
-	// 主视图启动组播频道自动搜索线程，启动Tracker自动连接，中间视图创建等等...
-	m_lpHaoYiView->PostMessage(WM_WEB_LOAD_RESOURCE);
+	// 连接过程中不可以重连...
+	m_bIsCanReConnect = false;
+	m_bIsLoadSuccess  = false;
+	do {
+		// 首先，在网站上注册采集端信息...
+		if( !this->RegisterGather() )
+			break;
+		// 然后，需要验证授权是否已经过期...
+		if( !this->RegisterHaoYi() )
+			break;
+		// 开始注册摄像头，这里只能注册已知的，新建的不能注册，因此，需要在新扫描出来的地方增加注册功能...
+		if( !this->GetAllCameraData() )
+			break;
+		// 主视图启动组播频道自动搜索线程，启动Tracker自动连接，中间视图创建等等...
+		m_lpHaoYiView->PostMessage(WM_WEB_LOAD_RESOURCE);
+		// 设置已经成功连接服务器标志...
+		m_bIsLoadSuccess = true;
+	}while( false );
+	// 设置可以重连服务器标志...
+	m_bIsCanReConnect = true;
 }

@@ -42,6 +42,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_UPDATE_COMMAND_UI(ID_DEL_DVR, &CHaoYiView::OnCmdUpdateDelDVR)
 	ON_UPDATE_COMMAND_UI(ID_LOGIN_DVR, &CHaoYiView::OnCmdUpdateLoginDVR)
 	ON_UPDATE_COMMAND_UI(ID_LOGOUT_DVR, &CHaoYiView::OnCmdUpdateLogoutDVR)
+	ON_UPDATE_COMMAND_UI(ID_RECONNECT, &CHaoYiView::OnCmdUpdateReConnect)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE_DEVICE, &CHaoYiView::OnSelchangedTreeDevice)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
@@ -56,6 +57,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_MESSAGE(WM_SYS_CONFIG, &CHaoYiView::OnMsgSysConfig)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
+	ON_COMMAND(ID_RECONNECT, &CHaoYiView::OnReConnect)
 	ON_COMMAND(ID_SYS_SET, &CHaoYiView::OnSysSet)
 	ON_COMMAND(ID_ADD_DVR, &CHaoYiView::OnAddDVR)
 	ON_COMMAND(ID_MOD_DVR, &CHaoYiView::OnModDVR)
@@ -1539,6 +1541,30 @@ void CHaoYiView::UpdateFocusTitle(int nDBCameraID, CString & strTitle)
 	}
 }
 //
+// 更新 断开重连 菜单状态...
+void CHaoYiView::OnCmdUpdateReConnect(CCmdUI *pCmdUI)
+{
+	// 如果网站不允许重连，设置菜单状态...
+	if( m_lpWebThread != NULL && !m_lpWebThread->IsCanReConnect() ) {
+		pCmdUI->Enable(false);
+		return;
+	}
+	// 允许重连菜单状态...
+	pCmdUI->Enable(true);
+}
+//
+// 点击菜单 => 断开重连...
+void CHaoYiView::OnReConnect()
+{
+	// 弹框询问是否确认重连...
+	if( this->MessageBox("确实要【断开重连】吗？", "确认", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL )
+		return;
+	// 先注销已经登录的服务器...
+	this->doGatherLogout();
+	// 发起重连消息事件...
+	this->PostMessage(WM_RELOAD_VIEW);
+}
+//
 // 点击菜单 => 系统设置...
 void CHaoYiView::OnSysSet()
 {
@@ -1582,14 +1608,16 @@ void CHaoYiView::doGatherLogout()
 // 响应整个视图窗口的重建消息事件...
 LRESULT CHaoYiView::OnMsgReloadView(WPARAM wParam, LPARAM lParam)
 {
-	CRect rectMid;
 	// 获取中间视图的矩形区...
+	CRect rectMid;
 	if( m_lpMidView != NULL ) {
 		m_lpMidView->GetWindowRect(rectMid);
 		this->ScreenToClient(rectMid);
 	}
 	// 重建所有的资源数据对象...
 	this->BuildResource();
+	// 资源重建之后，刷新右侧窗口区域...
+	m_RightView.Invalidate();
 	// 调整中间视图的矩形位置...
 	if( m_lpMidView != NULL ) {
 		m_lpMidView->doMoveWindow(rectMid);

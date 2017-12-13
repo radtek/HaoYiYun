@@ -47,6 +47,7 @@ protected:
 	afx_msg void OnSysSet();
 	afx_msg void OnLoginDVR();
 	afx_msg void OnLogoutDVR();
+	afx_msg void OnReConnect();
 	afx_msg void OnDestroy();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -55,6 +56,7 @@ protected:
 	afx_msg void OnCmdUpdateDelDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateLoginDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateReConnect(CCmdUI *pCmdUI);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);

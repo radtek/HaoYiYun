@@ -51,7 +51,7 @@ void CMidView::BuildResource()
 	m_BitArray[CVideoWnd::kZoomIn]	= new CBitItem(IDB_VIDEO_MIN, 18, 18);
 	m_BitArray[CVideoWnd::kClose]   = new CBitItem(IDB_VIDEO_CLOSE, 18, 18);
 	// 设置默认的提示信息...
-	m_strNotice = "正在注册采集端...";
+	m_strNotice = "正在注册采集端，请稍等...";
 }
 //
 // 销毁资源...
@@ -380,7 +380,7 @@ void CMidView::OnWebAuthResult(int nType, BOOL bAuthOK)
 {
 	// 根据不同状态，显示不同的信息...
 	if( nType == kAuthRegister ) {
-		m_strNotice = bAuthOK ? "正在验证网站授权..." : "节点网站注册失败，请检查网站链接...";
+		m_strNotice = bAuthOK ? "正在验证网站授权，请稍等..." : "节点网站注册失败，请检查网站链接...";
 	} else if( nType == kAuthExpired ) {
 		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "中心网站授权过期，验证失败...";
 	}

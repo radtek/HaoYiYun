@@ -241,13 +241,14 @@ void CMainFrame::LoadMyToolBar()
     CToolBarCtrl& oBarCtrl = m_wndToolBar.GetToolBarCtrl();
 
 	// 设置命令...
-	const int nItemCount = 8;
+	const int nItemCount = 9;
 	UINT uCtrlID[nItemCount] = {
 		ID_VIEW_FULL,
 		ID_ADD_DVR, ID_DEL_DVR, ID_MOD_DVR, 
 		ID_LOGIN_DVR, ID_LOGOUT_DVR,
 		ID_SYS_SET,
 		ID_APP_ABOUT, 
+		ID_RECONNECT, 
 	};
 	LPCTSTR lpszCtrl[nItemCount] = {
 		"全屏模式", 
@@ -255,6 +256,7 @@ void CMainFrame::LoadMyToolBar()
 		"登录通道", "注销通道", 
 		"系统设置", 
 		"显示版本", 
+		"断开重连", 
 	};
 
 	// 分隔符按钮...
