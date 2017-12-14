@@ -117,6 +117,7 @@ bool LibRtmp::Open(const char* url)
 	}while( false );
 	// 连接服务器失败，销毁对象...
 	if( bError ) {
+		TRACE("== LibRtmp::Open error ==\n");
 		srs_rtmp_destroy(m_lpSRSRtmp);
 		m_lpSRSRtmp = NULL;
 		return false;
@@ -149,6 +150,7 @@ bool LibRtmp::Read()
 		if( data != NULL ) {
 			free(data);
 		}
+		TRACE("== LibRtmp::Read error(%d) ==\n", ret);
 		return false;
 	}
 	// 判断读取数据的有效性...
@@ -156,6 +158,7 @@ bool LibRtmp::Read()
 		if( data != NULL ) {
 			free(data);
 		}
+		TRACE("== LibRtmp::Read size(%d) ==\n", size);
 		return false;
 	}
 	// 对收到的数据包进行分发处理...
