@@ -85,30 +85,11 @@ BOOL CVideoWnd::IsCameraDevice()
 	return m_lpCamera->IsCameraDevice();
 }
 //
-// 是否是流转发模式正在播放中...
-BOOL CVideoWnd::IsStreamPlaying()
-{
-	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
-		return false;
-	ASSERT( !m_lpCamera->IsCameraDevice() );
-	return m_lpCamera->IsPlaying();
-}
-//
-// 是否是流数据在发布中...
-BOOL CVideoWnd::IsStreamPublish()
-{
-	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
-		return false;
-	ASSERT( !m_lpCamera->IsCameraDevice() );
-	return m_lpCamera->IsPublishing();
-}
-//
 // 是否是流数据已经连接成功...
 BOOL CVideoWnd::IsStreamLogin()
 {
-	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+	if( m_lpCamera == NULL )
 		return false;
-	ASSERT( !m_lpCamera->IsCameraDevice() );
 	return m_lpCamera->IsLogin();
 }
 

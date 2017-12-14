@@ -84,20 +84,6 @@ BOOL CCamera::IsPlaying()
 		return false;
 	ASSERT( m_lpPushThread != NULL );
 	return m_lpPushThread->IsStreamPlaying();
-	// 如果是流转发模式...
-	/*if( m_nStreamProp != kStreamDevice ) {
-		if( m_lpPushThread == NULL )
-			return false;
-		return m_lpPushThread->IsStreamPlaying();
-	}
-	// 如果是摄像头设备模式...
-	ASSERT( m_nStreamProp == kStreamDevice );
-	switch( m_nCameraType )
-	{
-	case kCameraHK: return ((m_HKPlayID < 0) ? false : true);
-	case kCameraDH: return false;
-	}
-	return false;*/
 }
 //
 // 通道是否正处在发布中...
@@ -417,6 +403,13 @@ DWORD CCamera::onDeviceLoginSuccess()
 			MsgLogGM(dwErr);
 			break;
 		}
+		// 2017.12.13 - by jackey => 不用处理，作用不大...
+		// 设置设备异常消息回调接口函数...
+		/*if( !NET_DVR_SetExceptionCallBack_V30(0, NULL, CCamera::DeviceException, this) ) {
+			dwErr = NET_DVR_GetLastError();
+			MsgLogGM(dwErr);
+			break;
+		}*/
 		// 准备显示预览画面需要的参数...
 		ASSERT( m_lpVideoWnd != NULL );
 		CRenderWnd * lpRenderWnd = m_lpVideoWnd->GetRenderWnd();
@@ -437,7 +430,7 @@ DWORD CCamera::onDeviceLoginSuccess()
 	}while(false);
 	// 如果调用失败，清除所有资源...
 	if( dwErr != GM_NoErr ) {
-		m_strLogStatus.Format("登录失败，错误号：%lu", dwErr);
+		m_strLogStatus.Format("登录失败，错误：%s", NET_DVR_GetErrorMsg(&dwErr));
 		m_lpVideoWnd->GetRenderWnd()->SetRenderText(m_strLogStatus);
 		this->ClearResource();
 		// 通知网站将通道设置为等待状态 => 只有硬件设备走这条路...
@@ -469,82 +462,18 @@ DWORD CCamera::onDeviceLoginSuccess()
 	return GM_NoErr;
 }
 //
-// 启动一个录像切片...
-/*void CCamera::StartRecSlice()
+// 设备异常回调函数接口...
+void CALLBACK CCamera::DeviceException(DWORD dwType, LONG lUserID, LONG lHandle, void * pUser)
 {
-	// 发起自定义的rtsp录像操作 => 自动录制主码流的视频...
-	if( m_lpRecThread != NULL ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}
-	// 获取唯一的文件名...
-	MD5	    md5;
-	string  strUniqid;
-	CString strTimeMicro;
-	ULARGE_INTEGER	llTimCountCur = {0};
-	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
-	strTimeMicro.Format("%I64d", llTimCountCur.QuadPart);
-	md5.update(strTimeMicro, strTimeMicro.GetLength());
-	strUniqid = md5.toString();
-
-	// 生成一个截图文件...
-	this->doSnapJPG(strUniqid);
-
-	// 获取录像切片时间(毫秒)...
-	GM_MapData theMapLoc;
-	CXmlConfig & theConfig = CXmlConfig::GMInstance();
-	DWORD dwRecSliceMS = theConfig.GetRecSlice() * 1000;
-	theConfig.GetCamera(m_nCameraID, theMapLoc);
-	// 准备rtsp链接地址和MP4录像名称...
-	CString  strRtspUrl, strMP4Path;
-	string & strSavePath = theConfig.GetSavePath();
-	string & strDBCameraID = theMapLoc["DBCameraID"];
-	//strCurTime = CTime::GetCurrentTime().Format("%Y%m%d%H%M%S");
-	//m_strMP4Name.Format("%s\\%s_%d", strSavePath.c_str(), strCurTime, m_nCameraID);
-	m_strMP4Name.Format("%s\\%s_%s", strSavePath.c_str(), strUniqid.c_str(), strDBCameraID.c_str());
-	strMP4Path.Format("%s.tmp", m_strMP4Name);
-	// 准备rtsp链接地址 => 主码流 => rtsp://admin:12345@192.168.1.65/Streaming/Channels/101
-	strRtspUrl.Format("rtsp://%s:%s@%s:%d/Streaming/Channels/101", m_strLoginUser, m_strLoginPass, theMapLoc["IPv4Address"].c_str(), m_nRtspPort);
-	// 创建录像线程对象...
-	ASSERT( m_lpWndParent != NULL && m_lpWndParent->m_hWnd != NULL );
-	m_lpRecThread = new CRtspRecThread(m_lpWndParent->m_hWnd, this, dwRecSliceMS);
-	// 创建成功，直接初始化录像线程...
-	if( !m_lpRecThread->InitThread(m_nCameraID, strRtspUrl, strMP4Path) ) {
-		delete m_lpRecThread;
-		m_lpRecThread = NULL;
-	}
-}*/
+	CCamera * lpCamera = (CCamera*)pUser;
+	lpCamera->onDeviceException(dwType, lUserID, lHandle);
+}
 //
-// 执行录像切片操作，并发起新的录像...
-/*void CCamera::doRecSlice()
+// 处理设备异常的实际函数...
+void CCamera::onDeviceException(DWORD dwType, LONG lUserID, LONG lHandle)
 {
-	// 如果没有开始录制，直接返回...
-	if( m_lpRecThread == NULL )
-		return;
-	ASSERT( m_lpRecThread != NULL );
-	// 直接删除录像线程(触发doRecEnd)，发起新的录像线程...
-	delete m_lpRecThread; m_lpRecThread = NULL;
-	// 将发起录像过程写成一个统一的简单函数...
-	//this->StartRecSlice();
-}*/
-//
-// 执行录像结束事件...
-/*void CCamera::doRecEnd(int nRecSecond)
-{
-	// 先将正在运行的记录编号复位...
-	m_nRecCourseID = -1;
-	// 更换录像文件的扩展名...
-	CString strMP4Temp, strMP4File;
-	strMP4Temp.Format("%s.tmp", m_strMP4Name);
-	strMP4File.Format("%s_%d.mp4", m_strMP4Name, nRecSecond);
-	// 如果文件不存在，直接返回...
-	if( _access(strMP4Temp, 0) < 0 )
-		return;
-	// 直接对文件进行更改操作，并记录失败的日志...
-	if( !MoveFile(strMP4Temp, strMP4File) ) {
-		MsgLogGM(::GetLastError());
-	}
-}*/
+	TRACE("=== Device Exception 0x%x ===\n", dwType);
+}
 //
 // 处理录像前的截图事件...
 /*DWORD CCamera::doDeviceSnapJPG(CString & inJpgName)

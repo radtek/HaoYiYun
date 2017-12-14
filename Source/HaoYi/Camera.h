@@ -42,6 +42,7 @@ public:
 	DWORD		doDeviceLogin(HWND hWndNotify, LPCTSTR lpIPAddr, int nCmdPort, LPCTSTR lpUser, LPCTSTR lpPass);
 	void		doDeviceLogout();
 
+	void		onDeviceException(DWORD dwType, LONG lUserID, LONG lHandle);
 	void		onDeviceLoginAsync(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo);
 	DWORD		onDeviceLoginSuccess();
 
@@ -54,6 +55,7 @@ public:
 	void		doWebStatCamera(int nStatus, int nErrCode = 0, LPCTSTR lpszErrMsg = NULL);
 private:
 	static void CALLBACK DeviceLoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
+	static void CALLBACK DeviceException(DWORD dwType, LONG lUserID, LONG lHandle, void * pUser);
 private:
 	void		WaitForExit();						// 等待异步登录退出...
 	void		ClearResource();					// 释放建立资源...

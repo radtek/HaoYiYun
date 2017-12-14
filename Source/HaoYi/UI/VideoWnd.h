@@ -85,8 +85,6 @@ public:
 	int				GetSendPushKbps();
 	BOOL			IsCameraDevice();
 	BOOL			IsStreamLogin();
-	BOOL			IsStreamPlaying();
-	BOOL			IsStreamPublish();
 	LPCTSTR			GetStreamPushUrl();
 	void			GetStreamPullUrl(CString & outPullUrl);
 private:
