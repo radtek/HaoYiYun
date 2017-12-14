@@ -77,6 +77,14 @@ BEGIN_MESSAGE_MAP(CVideoWnd, CWnd)
 	ON_COMMAND_RANGE(ID_RENDER_WND_BEGIN, ID_RENDER_WND_BEGIN + kBitNum, &CVideoWnd::OnClickItemWnd)
 END_MESSAGE_MAP()
 //
+// 是否显示设备特殊状态...
+BOOL CVideoWnd::IsDeviceStatus()
+{
+	if( m_lpCamera == NULL )
+		return false;
+	return m_lpCamera->IsDeviceStatus();
+}
+//
 // 是否是摄像头设备模式...
 BOOL CVideoWnd::IsCameraDevice()
 {
@@ -122,8 +130,13 @@ LPCTSTR	CVideoWnd::GetStreamPushUrl()
 
 void CVideoWnd::GetStreamPullUrl(CString & outPullUrl)
 {
-	if( m_lpCamera == NULL || m_lpCamera->IsCameraDevice() )
+	if( m_lpCamera == NULL )
 		return;
+	// 对设备类型进行特殊处理...
+	if( m_lpCamera->IsCameraDevice() ) {
+		outPullUrl = m_lpCamera->GetDevicePullUrl();
+		return;
+	}
 	GM_MapData theMapWeb;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetCamera(this->GetDBCameraID(), theMapWeb);

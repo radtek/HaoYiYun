@@ -20,7 +20,9 @@ public:
 	BOOL		IsPlaying();	// 这个可以用于状态的精确判断...
 	BOOL		IsRecording();	// 通道是否正处在录像中...
 	BOOL		IsPublishing(); // 通道是否正处在发布中...
+	BOOL		IsDeviceStatus();
 	BOOL		IsCameraDevice() { return ((m_nStreamProp == kStreamDevice) ? true : false); }
+	CString  &  GetDevicePullUrl() { return (m_bIsTwiceMode ? m_strRtspSubUrl : m_strRtspMainUrl); }
 	int			GetRecCourseID() { return m_nRecCourseID; }
 	DWORD		GetHKErrCode() { return m_dwHKErrCode; }
 	STREAM_PROP	GetStreamProp() { return m_nStreamProp; }

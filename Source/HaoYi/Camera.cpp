@@ -116,7 +116,20 @@ BOOL CCamera::IsRecording()
 		return false;
 	return m_lpPushThread->IsRecording();
 }
-
+//
+// 判断是否显示设备特殊状态...
+BOOL CCamera::IsDeviceStatus()
+{
+	// 不是设备通道，直接返回失败...
+	if( !this->IsCameraDevice() )
+		return false;
+	// 如果通道的上传对象为空，返回需要显示特殊状态...
+	if( m_lpPushThread == NULL )
+		return true;
+	ASSERT( m_lpPushThread != NULL );
+	// 最后，如果是正在预览画面，返回需要特殊状态...
+	return ((m_HKPlayID >= 0) ? true : false);
+}
 //
 // 释放建立资源...
 void CCamera::ClearResource()
@@ -410,23 +423,29 @@ DWORD CCamera::onDeviceLoginSuccess()
 			MsgLogGM(dwErr);
 			break;
 		}*/
-		// 准备显示预览画面需要的参数...
-		ASSERT( m_lpVideoWnd != NULL );
-		CRenderWnd * lpRenderWnd = m_lpVideoWnd->GetRenderWnd();
-		NET_DVR_CLIENTINFO dvrClientInfo = {0};
-		dvrClientInfo.hPlayWnd     = lpRenderWnd->m_hWnd;
-		dvrClientInfo.lChannel     = nDvrStartChan;
-		dvrClientInfo.lLinkMode    = 0;
-		dvrClientInfo.sMultiCastIP = NULL;
-		// 调用实时预览接口...
-		m_HKPlayID = NET_DVR_RealPlay_V30(m_HKLoginID, &dvrClientInfo, NULL, NULL, TRUE);
-		if( m_HKPlayID < 0 ) {
-			dwErr = NET_DVR_GetLastError();
-			MsgLogGM(dwErr);
-			break;
+		// 从通道配置中获取是否开启本地预览...
+		string & strPreview = theMapWeb["device_show"];
+		BOOL bPreview = ((strPreview.size() > 0) ? atoi(strPreview.c_str()) : true);
+		// 配置了可以预览画面才显示...
+		if( bPreview ) {
+			// 准备显示预览画面需要的参数...
+			ASSERT( m_lpVideoWnd != NULL );
+			CRenderWnd * lpRenderWnd = m_lpVideoWnd->GetRenderWnd();
+			NET_DVR_CLIENTINFO dvrClientInfo = {0};
+			dvrClientInfo.hPlayWnd     = lpRenderWnd->m_hWnd;
+			dvrClientInfo.lChannel     = nDvrStartChan;
+			dvrClientInfo.lLinkMode    = 0;
+			dvrClientInfo.sMultiCastIP = NULL;
+			// 调用实时预览接口...
+			m_HKPlayID = NET_DVR_RealPlay_V30(m_HKLoginID, &dvrClientInfo, NULL, NULL, TRUE);
+			if( m_HKPlayID < 0 ) {
+				dwErr = NET_DVR_GetLastError();
+				MsgLogGM(dwErr);
+				break;
+			}
+			// 设置渲染窗口状态...
+			lpRenderWnd->SetRenderState(CRenderWnd::ST_RENDER);
 		}
-		// 设置渲染窗口状态...
-		lpRenderWnd->SetRenderState(CRenderWnd::ST_RENDER);
 	}while(false);
 	// 如果调用失败，清除所有资源...
 	if( dwErr != GM_NoErr ) {

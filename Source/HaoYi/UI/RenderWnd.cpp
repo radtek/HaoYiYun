@@ -92,8 +92,8 @@ void CRenderWnd::DrawBackText(CDC * pDC)
 	rcPos.cx = (rcRect.Width() - rcSize.cx) / 2;
 	rcPos.cy = (rcRect.Height() - rcSize.cy) / 2;
 
-	if( m_lpParent->IsCameraDevice() ) {
-		// 如果是摄像头设备模式，只显示标题...
+	if( m_lpParent->IsCameraDevice() && m_lpParent->IsDeviceStatus() ) {
+		// 如果是摄像头设备模式，并且正在预览画面，只显示标题...
 		CRect rcDraw;
 		pDC->SetTextColor(RGB(0, 255, 0));
 		rcSize = pDC->GetOutputTextExtent(m_szTxt);
@@ -156,12 +156,10 @@ void CRenderWnd::DrawFlowKbps()
 	// 分别获取接收和发送的码流信息 => 触发超时...
 	int nRecvKbps = m_lpParent->GetRecvPullKbps();
 	int nSendKbps = m_lpParent->GetSendPushKbps();
-	// 如果是摄像头设备，只检测，不显示，但可以触发超时...
-	if( m_lpParent->IsCameraDevice() )
+	// 如果是摄像头设备，并且正在预览画面，只检测，不显示，但可以触发超时...
+	if( m_lpParent->IsCameraDevice() && m_lpParent->IsDeviceStatus() )
 		return;
-	// 专门处理流转发模式下的情况...
-	ASSERT( !m_lpParent->IsCameraDevice() );
-
+	// 获取接收码率和推送码率...
 	CRect	rcRect;
 	CFont *	pOld = NULL;
 	CDC	* pDC = this->GetDC();

@@ -83,6 +83,7 @@ public:
 
 	int				GetRecvPullKbps();
 	int				GetSendPushKbps();
+	BOOL			IsDeviceStatus();
 	BOOL			IsCameraDevice();
 	BOOL			IsStreamLogin();
 	LPCTSTR			GetStreamPushUrl();
