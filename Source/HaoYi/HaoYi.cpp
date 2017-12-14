@@ -233,6 +233,9 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	CMainFrame * lpMain = (CMainFrame*)AfxGetMainWnd();
+	CHaoYiView * lpView = (CHaoYiView*)lpMain->GetActiveView();
+
 	CString strTitle, strAuthorize;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nMaxCamera = theConfig.GetMaxCamera();
@@ -256,8 +259,12 @@ BOOL CAboutDlg::OnInitDialog()
 	m_ctrlHome.SetLinkCursor(this->m_hHandCur);
 	m_ctrlHome.SetAutoSize();
 
-	// 设置授权信息...
-	strAuthorize.Format("最大通道数【%d 路】，有效期【%s】", nMaxCamera, strAuthExpired.c_str());
+	// 成功登录，获取已授权信息...
+	if( lpView != NULL && lpView->IsLoadSuccess() ) {
+		strAuthorize.Format("最大通道数【%d 路】，有效期【%s】", nMaxCamera, strAuthExpired.c_str());
+	} else {
+		strAuthorize = "没有登录成功，未知授权...";
+	}
 	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowTextA(strAuthorize);
 
 	// 设置标题信息...

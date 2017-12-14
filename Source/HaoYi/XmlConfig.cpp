@@ -23,7 +23,7 @@ CXmlConfig::CXmlConfig(void)
   , m_bAutoLinkDVR(false)
   , m_strSavePath(DEF_REC_PATH)
   , m_strMainName(DEF_MAIN_NAME)
-  , m_strWebAddr(DEF_WEB_ADDR)
+  , m_strWebAddr(DEF_CLOUD_MONITOR)
   , m_nWebPort(DEF_WEB_PORT)
   , m_nDBHaoYiGatherID(-1)
   , m_nDBHaoYiNodeID(-1)
@@ -45,7 +45,7 @@ CXmlConfig::CXmlConfig(void)
 	m_strVersion = strVersion;
 	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2017-2020";
 	m_strPhone = "15010119735";
-	m_strWebSite = "https://www.myhaoyi.com";	
+	m_strWebSite = DEF_WEB_HOME;	
 	m_strAddress = "北京市海淀区北四环西路68号6层C16";
 }
 
@@ -64,6 +64,7 @@ BOOL CXmlConfig::GMLoadConfig()
 {
 	// 先清空一些数据...
 	m_MapNodeCamera.clear();
+	m_MapServer.clear();
 
 	// 得到xml配置文件的全路径...
 	TCHAR	 szPath[MAX_PATH] = {0};
@@ -81,6 +82,7 @@ BOOL CXmlConfig::GMLoadConfig()
 	TiXmlDocument	theDoc;
 	TiXmlElement  * lpRootElem = NULL;
 	TiXmlElement  * lpCommElem = NULL;
+	TiXmlElement  * lpServerElem = NULL;
 	TiXmlElement  * lpAboutElem = NULL;
 	TiXmlElement  * lpChildElem = NULL;
 	// 开始加载配置节点...
@@ -99,8 +101,9 @@ BOOL CXmlConfig::GMLoadConfig()
 		// 读取关于节点/公共节点/监控节点...
 		lpCommElem = lpRootElem->FirstChildElement("Common");
 		lpAboutElem = lpRootElem->FirstChildElement("About");
+		lpServerElem = lpRootElem->FirstChildElement("Server");
 		// 没有关于节点或没有公共节点，重新构建...
-		if( lpCommElem == NULL || lpAboutElem == NULL ) {
+		if( lpCommElem == NULL || lpAboutElem == NULL || lpServerElem == NULL ) {
 			bLoadOK = false;
 			break;
 		}
@@ -129,7 +132,7 @@ BOOL CXmlConfig::GMLoadConfig()
 		// 保存默认的配置数据...
 		return this->GMSaveConfig();
 	}
-	ASSERT( bLoadOK && lpAboutElem != NULL && lpRootElem != NULL && lpCommElem != NULL );
+	ASSERT( bLoadOK && lpAboutElem != NULL && lpRootElem != NULL && lpCommElem != NULL && lpServerElem != NULL );
 	// 首先，读取关于配置节点信息...
 	lpChildElem = ((lpAboutElem != NULL) ? lpAboutElem->FirstChildElement() : NULL);
 	while( lpChildElem != NULL ) {
@@ -155,11 +158,11 @@ BOOL CXmlConfig::GMLoadConfig()
 		const string & strValue = lpChildElem->ValueStr();
 		if( strValue == "SavePath" ) {
 			m_strSavePath = ((lpszText != NULL && strlen(lpszText) > 0 ) ? CUtilTool::UTF8_ANSI(lpszText) : DEF_REC_PATH);
-		} else if( strValue == "WebAddr" ) {
-			m_strWebAddr = ((lpszText != NULL && strlen(lpszText) > 0 ) ? lpszText : DEF_WEB_ADDR);
+		}/* else if( strValue == "WebAddr" ) {
+			m_strWebAddr = ((lpszText != NULL && strlen(lpszText) > 0 ) ? lpszText : DEF_CLOUD_MONITOR);
 		} else if( strValue == "WebPort" ) {
 			m_nWebPort = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_WEB_PORT);
-		}/* else if( strValue == "MainName" ) {
+		} else if( strValue == "MainName" ) {
 			m_strMainName = ((lpszText != NULL && strlen(lpszText) > 0 ) ? CUtilTool::UTF8_ANSI(lpszText) : DEF_MAIN_NAME);
 		} else if( strValue == "MainKbps" ) {
 			m_nMainKbps = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_MAIN_KBPS);
@@ -172,6 +175,25 @@ BOOL CXmlConfig::GMLoadConfig()
 		} else if( strValue == "MaxCamera" ) {
 			m_nMaxCamera = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_MAX_CAMERA);
 		}*/
+		lpChildElem = lpChildElem->NextSiblingElement();
+	}
+	// 读取服务器列表配置...
+	lpChildElem = lpServerElem->FirstChildElement();
+	while( lpChildElem != NULL ) {
+		// 读取每隔节点的三个属性元素...
+		LPCTSTR lpszName = lpChildElem->Attribute("Name");
+		LPCTSTR lpszPort = lpChildElem->Attribute("Port");
+		LPCTSTR lpszFocus = lpChildElem->Attribute("Focus");
+		// 将数据存放到集合当中...
+		if( lpszName != NULL && lpszPort != NULL ) {
+			m_MapServer[lpszName] = atoi(lpszPort);
+		}
+		// 如果是焦点节点，更新到变量当中 => 数据无效，使用默认值...
+		if( lpszFocus != NULL && atoi(lpszFocus) > 0 ) {
+			m_strWebAddr = ((lpszName != NULL) ? lpszName : DEF_CLOUD_MONITOR);
+			m_nWebPort = ((lpszPort != NULL) ? atoi(lpszPort) : DEF_WEB_PORT);
+		}
+		// 查找下一个服务器节点对象...
 		lpChildElem = lpChildElem->NextSiblingElement();
 	}
 	// 2017.10.27 - by jackey => 通道配置，全部放置到网站端...
@@ -222,6 +244,7 @@ BOOL CXmlConfig::GMSaveConfig()
 	TiXmlElement	rootElem("Config");
 	TiXmlElement	commElem("Common");
 	TiXmlElement	aboutElem("About");
+	TiXmlElement	serverElem("Server");
 	TiXmlElement	theElem("None");
 	// 构造文件头...
 	theDoc.Parse(XML_DECLARE_UTF8);
@@ -230,12 +253,28 @@ BOOL CXmlConfig::GMSaveConfig()
 		theElem = this->BuildXmlElem("SavePath", CUtilTool::ANSI_UTF8(m_strSavePath.c_str()));
 		commElem.InsertEndChild(theElem);
 	}
-	// 只保存网站地址和端口，其它存放到内存和数据库当中...
-	theElem = this->BuildXmlElem("WebAddr", m_strWebAddr);
-	commElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("WebPort", m_nWebPort);
-	commElem.InsertEndChild(theElem);
-	/*// 更行主窗口标题名称...
+	// 如果服务器列表为空，自动加入默认的连接地址...
+	if( m_MapServer.size() <= 0 ) {
+		m_MapServer[DEF_CLOUD_MONITOR] = DEF_WEB_PORT;
+		m_MapServer[DEF_CLOUD_RECORDER] = DEF_WEB_PORT;
+	}
+	// 扩展了网站地址和端口，可以存放多条记录...
+	GM_MapServer::iterator itorServer;
+	for(itorServer = m_MapServer.begin(); itorServer != m_MapServer.end(); ++itorServer) {
+		// 新建一个节点对象...
+		TiXmlElement theAddress("Address");
+		// 设置地址和端口属性元素...
+		theAddress.SetAttribute("Name", itorServer->first);
+		theAddress.SetAttribute("Port", itorServer->second);
+		// 判断当前使用地址是否是焦点地址 => 大小写在存入前已经处理了...
+		BOOL theFocus = ((m_strWebAddr.compare(itorServer->first) == 0) ? true : false);
+		theAddress.SetAttribute("Focus", theFocus);
+		serverElem.InsertEndChild(theAddress);
+	}
+	//////////////////////////////////////////////////////////
+	// 以下常规配置都存放到内存和数据库当中...
+	//////////////////////////////////////////////////////////
+	/*// 更新主窗口标题名称...
 	theElem = this->BuildXmlElem("MainName", CUtilTool::ANSI_UTF8(m_strMainName.c_str()));
 	commElem.InsertEndChild(theElem);
 	// 更新主码流和子码流配置信息...
@@ -290,10 +329,23 @@ BOOL CXmlConfig::GMSaveConfig()
 	}*/
 	// 组合节点列表...
 	rootElem.InsertEndChild(commElem);
+	rootElem.InsertEndChild(serverElem);
 	rootElem.InsertEndChild(aboutElem);
 	theDoc.InsertEndChild(rootElem);
 	// 最后，进行存盘处理...
 	return theDoc.SaveFile(m_strXMLFile);
+}
+//
+// 将新选中的地址和端口更新到服务器列表，并设置成焦点，然后存盘...
+void CXmlConfig::SetFocusServer(const string & inWebAddr, int inWebPort)
+{
+	// 直接更新记录，没有自动创建，有则自动更新...
+	m_MapServer[inWebAddr] = inWebPort;
+	// 保存输入的地址和端口到焦点对象当中...
+	m_strWebAddr = inWebAddr;
+	m_nWebPort = inWebPort;
+	// 将最终的结果存入配置文件当中...
+	this->GMSaveConfig();
 }
 
 TiXmlElement CXmlConfig::BuildXmlElem(const string & strNode, int inData)

@@ -1641,3 +1641,12 @@ BOOL CHaoYiView::PreCreateWindow(CREATESTRUCT& cs)
 	//cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
 	return TRUE;
 }
+//
+// 获取是否登录成功标志...
+BOOL CHaoYiView::IsLoadSuccess()
+{
+	if( m_lpWebThread == NULL )
+		return false;
+	ASSERT( m_lpWebThread != NULL );
+	return m_lpWebThread->IsLoadSuccess();
+}

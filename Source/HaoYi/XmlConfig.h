@@ -4,8 +4,9 @@
 #include "tinyxml.h"
 #include "OSMutex.h"
 
-typedef map<int, GM_MapData>	GM_MapNodeCamera;	// int => 是指数据库DBCameraID
-typedef map<int, GM_MapCourse>  GM_MapNodeCourse;	// int => 是指数据库DBCameraID
+typedef map<string, int>		GM_MapServer;		// addr => port
+typedef map<int, GM_MapData>	GM_MapNodeCamera;	// int  => 是指数据库DBCameraID
+typedef map<int, GM_MapCourse>  GM_MapNodeCourse;	// int  => 是指数据库DBCameraID
 
 struct AVCodecContext;
 struct AVFrame;
@@ -82,13 +83,14 @@ public:
 	void	 SetAutoLinkFDFS(BOOL bAutoLinkFDFS) { m_bAutoLinkFDFS = bAutoLinkFDFS; }
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
 
-	void	 SetWebAddr(const string & strAddr) { m_strWebAddr = strAddr; }
-	void     SetWebPort(int nPort) { m_nWebPort = nPort; }
 	void	 SetSavePath(const string & strPath) { m_strSavePath = strPath; }
+	void	 SetFocusServer(const string & inWebAddr, int inWebPort);
 
 	void	 SetCamera(int nDBCameraID, GM_MapData & inMapData) { m_MapNodeCamera[nDBCameraID] = inMapData; }
 	void	 GetCamera(int nDBCameraID, GM_MapData & outMapData) { outMapData = m_MapNodeCamera[nDBCameraID]; }
 	GM_MapNodeCamera & GetNodeCamera() { return m_MapNodeCamera; }
+
+	GM_MapServer & GetServerList() { return m_MapServer; }
 
 	void	 SetCourse(int nDBCameraID, GM_MapCourse & inMapCourse);
 	void	 GetCourse(int nDBCameraID, GM_MapCourse & outMapCourse);
@@ -124,8 +126,9 @@ private:
 	int				    m_nSnapVal;						// 通道截图间隔(1~10分钟)
 	BOOL				m_bAutoLinkDVR;					// 自动重连DVR摄像头...
 	BOOL				m_bAutoLinkFDFS;				// 自动重连FDFS服务器...
-	string				m_strWebAddr;					// Web的IP地址...
-	int					m_nWebPort;						// Web的端口地址...
+
+	string				m_strWebAddr;					// 焦点网站的IP或域名...
+	int					m_nWebPort;						// 焦点网站的端口地址...
 	
 	string				m_strWebVer;					// 注册是获取的网站版本
 	string				m_strWebTag;					// 注册时获取的网站标志
@@ -139,6 +142,8 @@ private:
 	int					m_nDBHaoYiNodeID;				// 在中心服务器上的节点编号...
 	int                 m_nDBHaoYiGatherID;				// 在中心服务器上的采集端编号...
 	string				m_strAuthExpired;				// 中心服务器反馈的授权过期时间...
+
+	GM_MapServer		m_MapServer;					// 可连接的服务器列表...
 
 	int					m_nMaxCamera;					// 能够支持的最大摄像头数（默认为16个）
 	GM_MapNodeCamera	m_MapNodeCamera;				// 监控通道配置信息(数据库CameraID）

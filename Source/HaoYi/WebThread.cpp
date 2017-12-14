@@ -124,7 +124,7 @@ BOOL CWebThread::RegisterHaoYi()
 		strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebVer.c_str(), strWebTag.c_str(), nWebType, 
 					strOnlyAddr, nWebPort, strWebProto, szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
-	strUrl.Format("https://%s/wxapi.php/Gather/verify", "www.myhaoyi.com");
+	strUrl.Format("%s/wxapi.php/Gather/verify", DEF_WEB_HOME);
 	// 调用Curl接口，汇报采集端信息...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
@@ -353,7 +353,7 @@ BOOL CWebThread::LogoutHaoYi()
 	CString strPost, strUrl;
 	strPost.Format("gather_id=%d", nDBHaoYiGatherID);
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
-	strUrl.Format("https://%s/wxapi.php/Gather/logout", "www.myhaoyi.com");
+	strUrl.Format("%s/wxapi.php/Gather/logout", DEF_WEB_HOME);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
@@ -828,6 +828,10 @@ void CWebThread::Entry()
 		// 设置已经成功连接服务器标志...
 		m_bIsLoadSuccess = true;
 	}while( false );
+	// 如果连接失败，需要退出已经连接的部分内容...
+	if( !m_bIsLoadSuccess ) {
+		this->doWebGatherLogout();
+	}
 	// 设置可以重连服务器标志...
 	m_bIsCanReConnect = true;
 }

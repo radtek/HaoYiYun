@@ -382,7 +382,7 @@ void CMidView::OnWebAuthResult(int nType, BOOL bAuthOK)
 	if( nType == kAuthRegister ) {
 		m_strNotice = bAuthOK ? "正在验证网站授权，请稍等..." : "节点网站注册失败，请检查网站链接...";
 	} else if( nType == kAuthExpired ) {
-		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "中心网站授权过期，验证失败...";
+		m_strNotice = bAuthOK ? "正在搜索网络摄像机..." : "采集端授权已过期，请联系供应商重新授权！";
 	}
 	// 重新更新窗口背景...
 	this->Invalidate(true);

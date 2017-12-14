@@ -68,8 +68,10 @@ using namespace std;
 #define DEF_NETSESSION_TIMEOUT		2						// 默认网络会话超时时间(分钟)
 #define DEF_CAMERA_START_ID			1						// 默认摄像头开始ID
 #define DEF_MAX_CAMERA              8						// 默认最大摄像头数目
-#define DEF_WEB_ADDR				"http://www.ihaoyi.cn"	// Web默认地址 => 必须包含 http:// 或 https:// 协议前缀
-#define DEF_WEB_PORT				80						// Web默认端口 
+#define DEF_WEB_HOME				"https://www.myhaoyi.com"	// 默认中心网站 => 必须是 https:// 兼容小程序接口...
+#define DEF_WEB_PORT				80							// Web默认端口 
+#define DEF_CLOUD_MONITOR			"http://ihaoyi.cn"			// 云监控地址
+#define DEF_CLOUD_RECORDER			"http://demo.myhaoyi.com"	// 云录播地址
 
 #define VIDEO_TIME_SCALE			90000					// 视频时间刻度，刻度越大好像越精确???
 

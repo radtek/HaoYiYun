@@ -119,7 +119,7 @@ void CRenderWnd::DrawBackText(CDC * pDC)
 		strStatus.Format("通道状态：%s", m_strStreamStatus);
 		strPushUrl.Format("推流地址：%s", ((lpszPush != NULL) ? lpszPush : "无"));
 		strPullKbps.Format("接收码率：%d Kbps", m_lpParent->GetRecvPullKbps());
-		strPushKbps.Format("发送码率：%d Kbps", m_lpParent->GetSendPushKbps());
+		strPushKbps.Format("推送码率：%d Kbps", m_lpParent->GetSendPushKbps());
 		pDC->SetTextColor(RGB(20, 220, 20));
 		pDC->TextOut(rcRect.left + 50, rcPos.cy - 60, strStatus);
 
@@ -167,7 +167,7 @@ void CRenderWnd::DrawFlowKbps()
 	CDC	* pDC = this->GetDC();
 	CString strPushKbps, strPullKbps;
 	strPullKbps.Format("接收码率：%d Kbps", nRecvKbps);
-	strPushKbps.Format("发送码率：%d Kbps", nSendKbps);
+	strPushKbps.Format("推送码率：%d Kbps", nSendKbps);
 
 	this->GetClientRect(rcRect);
 	pDC->SetBkMode(TRANSPARENT);
