@@ -5,17 +5,18 @@
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/stefanpenner/es6-promise/master/LICENSE
- * @version   4.1.0
+ * @version   4.1.1
  */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-    typeof define === 'function' && define.amd ? define(factory) :
-    (global.ES6Promise = factory());
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.ES6Promise = factory());
 }(this, (function () { 'use strict';
 
 function objectOrFunction(x) {
-  return typeof x === 'function' || typeof x === 'object' && x !== null;
+  var type = typeof x;
+  return x !== null && (type === 'object' || type === 'function');
 }
 
 function isFunction(x) {
@@ -23,12 +24,12 @@ function isFunction(x) {
 }
 
 var _isArray = undefined;
-if (!Array.isArray) {
+if (Array.isArray) {
+  _isArray = Array.isArray;
+} else {
   _isArray = function (x) {
     return Object.prototype.toString.call(x) === '[object Array]';
   };
-} else {
-  _isArray = Array.isArray;
 }
 
 var isArray = _isArray;
@@ -216,7 +217,7 @@ function then(onFulfillment, onRejection) {
   @return {Promise} a promise that will become fulfilled with the given
   `value`
 */
-function resolve(object) {
+function resolve$1(object) {
   /*jshint validthis:true */
   var Constructor = this;
 
@@ -225,7 +226,7 @@ function resolve(object) {
   }
 
   var promise = new Constructor(noop);
-  _resolve(promise, object);
+  resolve(promise, object);
   return promise;
 }
 
@@ -256,24 +257,24 @@ function getThen(promise) {
   }
 }
 
-function tryThen(then, value, fulfillmentHandler, rejectionHandler) {
+function tryThen(then$$1, value, fulfillmentHandler, rejectionHandler) {
   try {
-    then.call(value, fulfillmentHandler, rejectionHandler);
+    then$$1.call(value, fulfillmentHandler, rejectionHandler);
   } catch (e) {
     return e;
   }
 }
 
-function handleForeignThenable(promise, thenable, then) {
+function handleForeignThenable(promise, thenable, then$$1) {
   asap(function (promise) {
     var sealed = false;
-    var error = tryThen(then, thenable, function (value) {
+    var error = tryThen(then$$1, thenable, function (value) {
       if (sealed) {
         return;
       }
       sealed = true;
       if (thenable !== value) {
-        _resolve(promise, value);
+        resolve(promise, value);
       } else {
         fulfill(promise, value);
       }
@@ -283,12 +284,12 @@ function handleForeignThenable(promise, thenable, then) {
       }
       sealed = true;
 
-      _reject(promise, reason);
+      reject(promise, reason);
     }, 'Settle: ' + (promise._label || ' unknown promise'));
 
     if (!sealed && error) {
       sealed = true;
-      _reject(promise, error);
+      reject(promise, error);
     }
   }, promise);
 }
@@ -297,36 +298,36 @@ function handleOwnThenable(promise, thenable) {
   if (thenable._state === FULFILLED) {
     fulfill(promise, thenable._result);
   } else if (thenable._state === REJECTED) {
-    _reject(promise, thenable._result);
+    reject(promise, thenable._result);
   } else {
     subscribe(thenable, undefined, function (value) {
-      return _resolve(promise, value);
+      return resolve(promise, value);
     }, function (reason) {
-      return _reject(promise, reason);
+      return reject(promise, reason);
     });
   }
 }
 
-function handleMaybeThenable(promise, maybeThenable, then$$) {
-  if (maybeThenable.constructor === promise.constructor && then$$ === then && maybeThenable.constructor.resolve === resolve) {
+function handleMaybeThenable(promise, maybeThenable, then$$1) {
+  if (maybeThenable.constructor === promise.constructor && then$$1 === then && maybeThenable.constructor.resolve === resolve$1) {
     handleOwnThenable(promise, maybeThenable);
   } else {
-    if (then$$ === GET_THEN_ERROR) {
-      _reject(promise, GET_THEN_ERROR.error);
+    if (then$$1 === GET_THEN_ERROR) {
+      reject(promise, GET_THEN_ERROR.error);
       GET_THEN_ERROR.error = null;
-    } else if (then$$ === undefined) {
+    } else if (then$$1 === undefined) {
       fulfill(promise, maybeThenable);
-    } else if (isFunction(then$$)) {
-      handleForeignThenable(promise, maybeThenable, then$$);
+    } else if (isFunction(then$$1)) {
+      handleForeignThenable(promise, maybeThenable, then$$1);
     } else {
       fulfill(promise, maybeThenable);
     }
   }
 }
 
-function _resolve(promise, value) {
+function resolve(promise, value) {
   if (promise === value) {
-    _reject(promise, selfFulfillment());
+    reject(promise, selfFulfillment());
   } else if (objectOrFunction(value)) {
     handleMaybeThenable(promise, value, getThen(value));
   } else {
@@ -355,7 +356,7 @@ function fulfill(promise, value) {
   }
 }
 
-function _reject(promise, reason) {
+function reject(promise, reason) {
   if (promise._state !== PENDING) {
     return;
   }
@@ -440,7 +441,7 @@ function invokeCallback(settled, promise, callback, detail) {
     }
 
     if (promise === value) {
-      _reject(promise, cannotReturnOwn());
+      reject(promise, cannotReturnOwn());
       return;
     }
   } else {
@@ -451,25 +452,25 @@ function invokeCallback(settled, promise, callback, detail) {
   if (promise._state !== PENDING) {
     // noop
   } else if (hasCallback && succeeded) {
-      _resolve(promise, value);
+      resolve(promise, value);
     } else if (failed) {
-      _reject(promise, error);
+      reject(promise, error);
     } else if (settled === FULFILLED) {
       fulfill(promise, value);
     } else if (settled === REJECTED) {
-      _reject(promise, value);
+      reject(promise, value);
     }
 }
 
 function initializePromise(promise, resolver) {
   try {
     resolver(function resolvePromise(value) {
-      _resolve(promise, value);
+      resolve(promise, value);
     }, function rejectPromise(reason) {
-      _reject(promise, reason);
+      reject(promise, reason);
     });
   } catch (e) {
-    _reject(promise, e);
+    reject(promise, e);
   }
 }
 
@@ -485,7 +486,7 @@ function makePromise(promise) {
   promise._subscribers = [];
 }
 
-function Enumerator(Constructor, input) {
+function Enumerator$1(Constructor, input) {
   this._instanceConstructor = Constructor;
   this.promise = new Constructor(noop);
 
@@ -494,7 +495,6 @@ function Enumerator(Constructor, input) {
   }
 
   if (isArray(input)) {
-    this._input = input;
     this.length = input.length;
     this._remaining = input.length;
 
@@ -504,34 +504,31 @@ function Enumerator(Constructor, input) {
       fulfill(this.promise, this._result);
     } else {
       this.length = this.length || 0;
-      this._enumerate();
+      this._enumerate(input);
       if (this._remaining === 0) {
         fulfill(this.promise, this._result);
       }
     }
   } else {
-    _reject(this.promise, validationError());
+    reject(this.promise, validationError());
   }
 }
 
 function validationError() {
   return new Error('Array Methods must be provided an Array');
-};
+}
 
-Enumerator.prototype._enumerate = function () {
-  var length = this.length;
-  var _input = this._input;
-
-  for (var i = 0; this._state === PENDING && i < length; i++) {
-    this._eachEntry(_input[i], i);
+Enumerator$1.prototype._enumerate = function (input) {
+  for (var i = 0; this._state === PENDING && i < input.length; i++) {
+    this._eachEntry(input[i], i);
   }
 };
 
-Enumerator.prototype._eachEntry = function (entry, i) {
+Enumerator$1.prototype._eachEntry = function (entry, i) {
   var c = this._instanceConstructor;
-  var resolve$$ = c.resolve;
+  var resolve$$1 = c.resolve;
 
-  if (resolve$$ === resolve) {
+  if (resolve$$1 === resolve$1) {
     var _then = getThen(entry);
 
     if (_then === then && entry._state !== PENDING) {
@@ -539,28 +536,28 @@ Enumerator.prototype._eachEntry = function (entry, i) {
     } else if (typeof _then !== 'function') {
       this._remaining--;
       this._result[i] = entry;
-    } else if (c === Promise) {
+    } else if (c === Promise$2) {
       var promise = new c(noop);
       handleMaybeThenable(promise, entry, _then);
       this._willSettleAt(promise, i);
     } else {
-      this._willSettleAt(new c(function (resolve$$) {
-        return resolve$$(entry);
+      this._willSettleAt(new c(function (resolve$$1) {
+        return resolve$$1(entry);
       }), i);
     }
   } else {
-    this._willSettleAt(resolve$$(entry), i);
+    this._willSettleAt(resolve$$1(entry), i);
   }
 };
 
-Enumerator.prototype._settledAt = function (state, i, value) {
+Enumerator$1.prototype._settledAt = function (state, i, value) {
   var promise = this.promise;
 
   if (promise._state === PENDING) {
     this._remaining--;
 
     if (state === REJECTED) {
-      _reject(promise, value);
+      reject(promise, value);
     } else {
       this._result[i] = value;
     }
@@ -571,7 +568,7 @@ Enumerator.prototype._settledAt = function (state, i, value) {
   }
 };
 
-Enumerator.prototype._willSettleAt = function (promise, i) {
+Enumerator$1.prototype._willSettleAt = function (promise, i) {
   var enumerator = this;
 
   subscribe(promise, undefined, function (value) {
@@ -628,8 +625,8 @@ Enumerator.prototype._willSettleAt = function (promise, i) {
   fulfilled, or rejected if any of them become rejected.
   @static
 */
-function all(entries) {
-  return new Enumerator(this, entries).promise;
+function all$1(entries) {
+  return new Enumerator$1(this, entries).promise;
 }
 
 /**
@@ -697,7 +694,7 @@ function all(entries) {
   @return {Promise} a promise which settles in the same way as the first passed
   promise to settle.
 */
-function race(entries) {
+function race$1(entries) {
   /*jshint validthis:true */
   var Constructor = this;
 
@@ -749,11 +746,11 @@ function race(entries) {
   Useful for tooling.
   @return {Promise} a promise rejected with the given `reason`.
 */
-function reject(reason) {
+function reject$1(reason) {
   /*jshint validthis:true */
   var Constructor = this;
   var promise = new Constructor(noop);
-  _reject(promise, reason);
+  reject(promise, reason);
   return promise;
 }
 
@@ -868,27 +865,27 @@ function needsNew() {
   Useful for tooling.
   @constructor
 */
-function Promise(resolver) {
+function Promise$2(resolver) {
   this[PROMISE_ID] = nextId();
   this._result = this._state = undefined;
   this._subscribers = [];
 
   if (noop !== resolver) {
     typeof resolver !== 'function' && needsResolver();
-    this instanceof Promise ? initializePromise(this, resolver) : needsNew();
+    this instanceof Promise$2 ? initializePromise(this, resolver) : needsNew();
   }
 }
 
-Promise.all = all;
-Promise.race = race;
-Promise.resolve = resolve;
-Promise.reject = reject;
-Promise._setScheduler = setScheduler;
-Promise._setAsap = setAsap;
-Promise._asap = asap;
+Promise$2.all = all$1;
+Promise$2.race = race$1;
+Promise$2.resolve = resolve$1;
+Promise$2.reject = reject$1;
+Promise$2._setScheduler = setScheduler;
+Promise$2._setAsap = setAsap;
+Promise$2._asap = asap;
 
-Promise.prototype = {
-  constructor: Promise,
+Promise$2.prototype = {
+  constructor: Promise$2,
 
   /**
     The primary way of interacting with a promise is through its `then` method,
@@ -1117,7 +1114,8 @@ Promise.prototype = {
   }
 };
 
-function polyfill() {
+/*global self*/
+function polyfill$1() {
     var local = undefined;
 
     if (typeof global !== 'undefined') {
@@ -1147,16 +1145,17 @@ function polyfill() {
         }
     }
 
-    local.Promise = Promise;
+    local.Promise = Promise$2;
 }
 
 // Strange compat..
-Promise.polyfill = polyfill;
-Promise.Promise = Promise;
+Promise$2.polyfill = polyfill$1;
+Promise$2.Promise = Promise$2;
 
-return Promise;
+return Promise$2;
 
 })));
+
 
 
 }).call(this,_dereq_('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
@@ -1652,89 +1651,6 @@ process.chdir = function (dir) {
 process.umask = function() { return 0; };
 
 },{}],4:[function(_dereq_,module,exports){
-var bundleFn = arguments[3];
-var sources = arguments[4];
-var cache = arguments[5];
-
-var stringify = JSON.stringify;
-
-module.exports = function (fn, options) {
-    var wkey;
-    var cacheKeys = Object.keys(cache);
-
-    for (var i = 0, l = cacheKeys.length; i < l; i++) {
-        var key = cacheKeys[i];
-        var exp = cache[key].exports;
-        // Using babel as a transpiler to use esmodule, the export will always
-        // be an object with the default export as a property of it. To ensure
-        // the existing api and babel esmodule exports are both supported we
-        // check for both
-        if (exp === fn || exp && exp.default === fn) {
-            wkey = key;
-            break;
-        }
-    }
-
-    if (!wkey) {
-        wkey = Math.floor(Math.pow(16, 8) * Math.random()).toString(16);
-        var wcache = {};
-        for (var i = 0, l = cacheKeys.length; i < l; i++) {
-            var key = cacheKeys[i];
-            wcache[key] = key;
-        }
-        sources[wkey] = [
-            Function(['require','module','exports'], '(' + fn + ')(self)'),
-            wcache
-        ];
-    }
-    var skey = Math.floor(Math.pow(16, 8) * Math.random()).toString(16);
-
-    var scache = {}; scache[wkey] = wkey;
-    sources[skey] = [
-        Function(['require'], (
-            // try to call default if defined to also support babel esmodule
-            // exports
-            'var f = require(' + stringify(wkey) + ');' +
-            '(f.default ? f.default : f)(self);'
-        )),
-        scache
-    ];
-
-    var workerSources = {};
-    resolveSources(skey);
-
-    function resolveSources(key) {
-        workerSources[key] = true;
-
-        for (var depPath in sources[key][1]) {
-            var depKey = sources[key][1][depPath];
-            if (!workerSources[depKey]) {
-                resolveSources(depKey);
-            }
-        }
-    }
-
-    var src = '(' + bundleFn + ')({'
-        + Object.keys(workerSources).map(function (key) {
-            return stringify(key) + ':['
-                + sources[key][0]
-                + ',' + stringify(sources[key][1]) + ']'
-            ;
-        }).join(',')
-        + '},{},[' + stringify(skey) + '])'
-    ;
-
-    var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
-
-    var blob = new Blob([src], { type: 'text/javascript' });
-    if (options && options.bare) { return blob; }
-    var workerUrl = URL.createObjectURL(blob);
-    var worker = new Worker(workerUrl);
-    worker.objectURL = workerUrl;
-    return worker;
-};
-
-},{}],5:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1793,7 +1709,7 @@ function createDefaultConfig() {
     return Object.assign({}, defaultConfig);
 }
 
-},{}],6:[function(_dereq_,module,exports){
+},{}],5:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1893,7 +1809,7 @@ var Features = function () {
 
 exports.default = Features;
 
-},{"../config.js":5,"../io/io-controller.js":23}],7:[function(_dereq_,module,exports){
+},{"../config.js":4,"../io/io-controller.js":21}],6:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2022,7 +1938,7 @@ var MediaInfo = function () {
 
 exports.default = MediaInfo;
 
-},{}],8:[function(_dereq_,module,exports){
+},{}],7:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2291,7 +2207,7 @@ var MediaSegmentInfoList = exports.MediaSegmentInfoList = function () {
     return MediaSegmentInfoList;
 }();
 
-},{}],9:[function(_dereq_,module,exports){
+},{}],8:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2881,7 +2797,7 @@ var MSEController = function () {
 
 exports.default = MSEController;
 
-},{"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./media-segment-info.js":8,"./mse-events.js":10,"events":2}],10:[function(_dereq_,module,exports){
+},{"../utils/browser.js":37,"../utils/exception.js":38,"../utils/logger.js":39,"./media-segment-info.js":7,"./mse-events.js":9,"events":2}],9:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2914,7 +2830,7 @@ var MSEEvents = {
 
 exports.default = MSEEvents;
 
-},{}],11:[function(_dereq_,module,exports){
+},{}],10:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3229,7 +3145,7 @@ var Transmuxer = function () {
 
 exports.default = Transmuxer;
 
-},{"../utils/logger.js":41,"../utils/logging-control.js":42,"./media-info.js":7,"./transmuxing-controller.js":12,"./transmuxing-events.js":13,"./transmuxing-worker.js":14,"events":2,"webworkify":4}],12:[function(_dereq_,module,exports){
+},{"../utils/logger.js":39,"../utils/logging-control.js":40,"./media-info.js":6,"./transmuxing-controller.js":11,"./transmuxing-events.js":12,"./transmuxing-worker.js":13,"events":2,"webworkify":43}],11:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3615,6 +3531,7 @@ var TransmuxingController = function () {
                 this._internalAbort();
                 this._loadSegment(nextSegmentIndex);
             } else {
+                this._remuxer.flushStashedSamples();
                 this._emitter.emit(_transmuxingEvents2.default.LOADING_COMPLETE);
                 this._disableStatisticsReporter();
             }
@@ -3725,7 +3642,7 @@ var TransmuxingController = function () {
 
 exports.default = TransmuxingController;
 
-},{"../demux/demux-errors.js":16,"../demux/flv-demuxer.js":18,"../io/io-controller.js":23,"../io/loader.js":24,"../remux/mp4-remuxer.js":38,"../utils/browser.js":39,"../utils/logger.js":41,"./media-info.js":7,"./transmuxing-events.js":13,"events":2}],13:[function(_dereq_,module,exports){
+},{"../demux/demux-errors.js":15,"../demux/flv-demuxer.js":17,"../io/io-controller.js":21,"../io/loader.js":22,"../remux/mp4-remuxer.js":36,"../utils/browser.js":37,"../utils/logger.js":39,"./media-info.js":6,"./transmuxing-events.js":12,"events":2}],12:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3763,7 +3680,7 @@ var TransmuxingEvents = {
 
 exports.default = TransmuxingEvents;
 
-},{}],14:[function(_dereq_,module,exports){
+},{}],13:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3972,7 +3889,7 @@ var TransmuxingWorker = function TransmuxingWorker(self) {
 
 exports.default = TransmuxingWorker;
 
-},{"../utils/logger.js":41,"../utils/logging-control.js":42,"../utils/polyfill.js":43,"./transmuxing-controller.js":12,"./transmuxing-events.js":13}],15:[function(_dereq_,module,exports){
+},{"../utils/logger.js":39,"../utils/logging-control.js":40,"../utils/polyfill.js":41,"./transmuxing-controller.js":11,"./transmuxing-events.js":12}],14:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4262,7 +4179,7 @@ var AMF = function () {
 
 exports.default = AMF;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"../utils/utf8-conv.js":44}],16:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"../utils/utf8-conv.js":42}],15:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4295,7 +4212,7 @@ var DemuxErrors = {
 
 exports.default = DemuxErrors;
 
-},{}],17:[function(_dereq_,module,exports){
+},{}],16:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4433,7 +4350,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"../utils/exception.js":40}],18:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38}],17:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4831,6 +4748,13 @@ var FLVDemuxer = function () {
                 return;
             }
 
+            // 2017.12.16 - by jackey => first check use metadata value...
+            var onMetaData = this._metadata.onMetaData;
+            if (typeof onMetaData.hasAudio === 'boolean' && !onMetaData.hasAudio) {
+                _logger2.default.v(this.TAG, '_parseAudioData: No Audio in metadata');
+                return;
+            }
+
             if (this._hasAudioFlagOverrided === true && this._hasAudio === false) {
                 // If hasAudio: false indicated explicitly in MediaDataSource,
                 // Ignore all the audio packets
@@ -4931,7 +4855,7 @@ var FLVDemuxer = function () {
                 } else if (aacData.packetType === 1) {
                     // AAC raw frame data
                     var dts = this._timestampBase + tagTimestamp;
-                    var aacSample = { unit: aacData.data, dts: dts, pts: dts };
+                    var aacSample = { unit: aacData.data, length: aacData.data.byteLength, dts: dts, pts: dts };
                     track.samples.push(aacSample);
                     track.length += aacData.data.length;
                 } else {
@@ -4979,7 +4903,7 @@ var FLVDemuxer = function () {
                     return;
                 }
                 var _dts = this._timestampBase + tagTimestamp;
-                var mp3Sample = { unit: data, dts: _dts, pts: _dts };
+                var mp3Sample = { unit: data, length: data.byteLength, dts: _dts, pts: _dts };
                 track.samples.push(mp3Sample);
                 track.length += data.length;
             }
@@ -5198,6 +5122,13 @@ var FLVDemuxer = function () {
         value: function _parseVideoData(arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition) {
             if (dataSize <= 1) {
                 _logger2.default.w(this.TAG, 'Flv: Invalid video packet, missing VideoData payload!');
+                return;
+            }
+
+            // 2017.12.16 - by jackey => first check use metadata value...
+            var onMetaData = this._metadata.onMetaData;
+            if (typeof onMetaData.hasVideo === 'boolean' && !onMetaData.hasVideo) {
+                _logger2.default.v(this.TAG, '_parseVideoData: No Video in metadata');
                 return;
             }
 
@@ -5593,7 +5524,7 @@ var FLVDemuxer = function () {
 
 exports.default = FLVDemuxer;
 
-},{"../core/media-info.js":7,"../utils/exception.js":40,"../utils/logger.js":41,"./amf-parser.js":15,"./demux-errors.js":16,"./sps-parser.js":19}],19:[function(_dereq_,module,exports){
+},{"../core/media-info.js":6,"../utils/exception.js":38,"../utils/logger.js":39,"./amf-parser.js":14,"./demux-errors.js":15,"./sps-parser.js":18}],18:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5910,7 +5841,7 @@ var SPSParser = function () {
 
 exports.default = SPSParser;
 
-},{"./exp-golomb.js":17}],20:[function(_dereq_,module,exports){
+},{"./exp-golomb.js":16}],19:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6017,21 +5948,13 @@ Object.defineProperty(flvjs, 'version', {
     enumerable: true,
     get: function get() {
         // replaced by browserify-versionify transform
-        return '1.3.3';
+        return '1.3.4';
     }
 });
 
 exports.default = flvjs;
 
-},{"./core/features.js":6,"./player/flv-player.js":32,"./player/native-player.js":33,"./player/player-errors.js":34,"./player/player-events.js":35,"./utils/exception.js":40,"./utils/logging-control.js":42,"./utils/polyfill.js":43}],21:[function(_dereq_,module,exports){
-'use strict';
-
-// entry/index file
-
-// make it compatible with browserify's umd wrapper
-module.exports = _dereq_('./flv.js').default;
-
-},{"./flv.js":20}],22:[function(_dereq_,module,exports){
+},{"./core/features.js":5,"./player/flv-player.js":30,"./player/native-player.js":31,"./player/player-errors.js":32,"./player/player-events.js":33,"./utils/exception.js":38,"./utils/logging-control.js":40,"./utils/polyfill.js":41}],20:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6297,7 +6220,7 @@ var FetchStreamLoader = function (_BaseLoader) {
 
 exports.default = FetchStreamLoader;
 
-},{"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],23:[function(_dereq_,module,exports){
+},{"../utils/browser.js":37,"../utils/exception.js":38,"../utils/logger.js":39,"./loader.js":22}],21:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7033,7 +6956,7 @@ var IOController = function () {
 
 exports.default = IOController;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./fetch-stream-loader.js":22,"./loader.js":24,"./param-seek-handler.js":25,"./range-seek-handler.js":26,"./speed-sampler.js":27,"./websocket-loader.js":28,"./xhr-moz-chunked-loader.js":29,"./xhr-msstream-loader.js":30,"./xhr-range-loader.js":31}],24:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"./fetch-stream-loader.js":20,"./loader.js":22,"./param-seek-handler.js":23,"./range-seek-handler.js":24,"./speed-sampler.js":25,"./websocket-loader.js":26,"./xhr-moz-chunked-loader.js":27,"./xhr-msstream-loader.js":28,"./xhr-range-loader.js":29}],22:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7191,7 +7114,7 @@ var BaseLoader = exports.BaseLoader = function () {
     return BaseLoader;
 }();
 
-},{"../utils/exception.js":40}],25:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38}],23:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7294,7 +7217,7 @@ var ParamSeekHandler = function () {
 
 exports.default = ParamSeekHandler;
 
-},{}],26:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7364,7 +7287,7 @@ var RangeSeekHandler = function () {
 
 exports.default = RangeSeekHandler;
 
-},{}],27:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7480,7 +7403,7 @@ var SpeedSampler = function () {
 
 exports.default = SpeedSampler;
 
-},{}],28:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7675,7 +7598,7 @@ var WebSocketLoader = function (_BaseLoader) {
 
 exports.default = WebSocketLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],29:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"./loader.js":22}],27:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7918,7 +7841,7 @@ var MozChunkedLoader = function (_BaseLoader) {
 
 exports.default = MozChunkedLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],30:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"./loader.js":22}],28:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8266,7 +8189,7 @@ var MSStreamLoader = function (_BaseLoader) {
 
 exports.default = MSStreamLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24}],31:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"./loader.js":22}],29:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8671,7 +8594,7 @@ var RangeLoader = function (_BaseLoader) {
 
 exports.default = RangeLoader;
 
-},{"../utils/exception.js":40,"../utils/logger.js":41,"./loader.js":24,"./speed-sampler.js":27}],32:[function(_dereq_,module,exports){
+},{"../utils/exception.js":38,"../utils/logger.js":39,"./loader.js":22,"./speed-sampler.js":25}],30:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9351,7 +9274,7 @@ var FlvPlayer = function () {
 
 exports.default = FlvPlayer;
 
-},{"../config.js":5,"../core/mse-controller.js":9,"../core/mse-events.js":10,"../core/transmuxer.js":11,"../core/transmuxing-events.js":13,"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./player-errors.js":34,"./player-events.js":35,"events":2}],33:[function(_dereq_,module,exports){
+},{"../config.js":4,"../core/mse-controller.js":8,"../core/mse-events.js":9,"../core/transmuxer.js":10,"../core/transmuxing-events.js":12,"../utils/browser.js":37,"../utils/exception.js":38,"../utils/logger.js":39,"./player-errors.js":32,"./player-events.js":33,"events":2}],31:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9649,7 +9572,7 @@ var NativePlayer = function () {
 
 exports.default = NativePlayer;
 
-},{"../config.js":5,"../utils/exception.js":40,"./player-events.js":35,"events":2}],34:[function(_dereq_,module,exports){
+},{"../config.js":4,"../utils/exception.js":38,"./player-events.js":33,"events":2}],32:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9702,7 +9625,7 @@ var ErrorDetails = exports.ErrorDetails = {
     MEDIA_CODEC_UNSUPPORTED: _demuxErrors2.default.CODEC_UNSUPPORTED
 };
 
-},{"../demux/demux-errors.js":16,"../io/loader.js":24}],35:[function(_dereq_,module,exports){
+},{"../demux/demux-errors.js":15,"../io/loader.js":22}],33:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9736,7 +9659,7 @@ var PlayerEvents = {
 
 exports.default = PlayerEvents;
 
-},{}],36:[function(_dereq_,module,exports){
+},{}],34:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9811,7 +9734,7 @@ var AAC = function () {
 
 exports.default = AAC;
 
-},{}],37:[function(_dereq_,module,exports){
+},{}],35:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10107,8 +10030,8 @@ var MP4 = function () {
             MP4.box(MP4.types.stts, MP4.constants.STTS), // Time-To-Sample
             MP4.box(MP4.types.stsc, MP4.constants.STSC), // Sample-To-Chunk
             MP4.box(MP4.types.stsz, MP4.constants.STSZ), // Sample size
-            MP4.box(MP4.types.stco, MP4.constants.STCO // Chunk offset
-            ));
+            MP4.box(MP4.types.stco, MP4.constants.STCO) // Chunk offset
+            );
             return result;
         }
 
@@ -10334,7 +10257,7 @@ MP4.init();
 
 exports.default = MP4;
 
-},{}],38:[function(_dereq_,module,exports){
+},{}],36:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10399,6 +10322,8 @@ var MP4Remuxer = function () {
         this._videoDtsBase = Infinity;
         this._audioNextDts = undefined;
         this._videoNextDts = undefined;
+        this._audioStashedLastSample = null;
+        this._videoStashedLastSample = null;
 
         this._audioMeta = null;
         this._videoMeta = null;
@@ -10462,6 +10387,8 @@ var MP4Remuxer = function () {
     }, {
         key: 'seek',
         value: function seek(originalDts) {
+            this._audioStashedLastSample = null;
+            this._videoStashedLastSample = null;
             this._videoSegmentInfoList.clear();
             this._audioSegmentInfoList.clear();
         }
@@ -10533,6 +10460,33 @@ var MP4Remuxer = function () {
             this._dtsBaseInited = true;
         }
     }, {
+        key: 'flushStashedSamples',
+        value: function flushStashedSamples() {
+            var videoSample = this._videoStashedLastSample;
+            var audioSample = this._audioStashedLastSample;
+
+            var videoTrack = {
+                type: 'video',
+                id: 1,
+                sequenceNumber: 0,
+                samples: [videoSample],
+                length: videoSample.length
+            };
+
+            var audioTrack = {
+                type: 'audio',
+                id: 2,
+                sequenceNumber: 0,
+                samples: [audioSample],
+                length: audioSample.length
+            };
+
+            this._videoStashedLastSample = null;
+            this._audioStashedLastSample = null;
+
+            this.remux(audioTrack, videoTrack);
+        }
+    }, {
         key: '_remuxAudio',
         value: function _remuxAudio(audioTrack) {
             if (this._audioMeta == null) {
@@ -10571,6 +10525,27 @@ var MP4Remuxer = function () {
                 mdatBytes = 8 + track.length;
             }
 
+            var lastSample = null;
+
+            // Pop the lastSample and waiting for stash
+            if (samples.length > 1) {
+                lastSample = samples.pop();
+                mdatBytes -= lastSample.length;
+            }
+
+            // Insert [stashed lastSample in the previous batch] to the front
+            if (this._audioStashedLastSample != null) {
+                var sample = this._audioStashedLastSample;
+                this._audioStashedLastSample = null;
+                samples.unshift(sample);
+                mdatBytes += sample.length;
+            }
+
+            // Stash the lastSample of current batch, waiting for next batch
+            if (lastSample != null) {
+                this._audioStashedLastSample = lastSample;
+            }
+
             var firstSampleOriginalDts = samples[0].dts - this._dtsBase;
 
             // calculate dtsCorrection
@@ -10586,13 +10561,13 @@ var MP4Remuxer = function () {
                         }
                     }
                 } else {
-                    var lastSample = this._audioSegmentInfoList.getLastSampleBefore(firstSampleOriginalDts);
-                    if (lastSample != null) {
-                        var distance = firstSampleOriginalDts - (lastSample.originalDts + lastSample.duration);
+                    var _lastSample = this._audioSegmentInfoList.getLastSampleBefore(firstSampleOriginalDts);
+                    if (_lastSample != null) {
+                        var distance = firstSampleOriginalDts - (_lastSample.originalDts + _lastSample.duration);
                         if (distance <= 3) {
                             distance = 0;
                         }
-                        var expectedDts = lastSample.dts + lastSample.duration + distance;
+                        var expectedDts = _lastSample.dts + _lastSample.duration + distance;
                         dtsCorrection = firstSampleOriginalDts - expectedDts;
                     } else {
                         // lastSample == null, cannot found
@@ -10623,9 +10598,9 @@ var MP4Remuxer = function () {
 
             // Correct dts for each sample, and calculate sample duration. Then output to mp4Samples
             for (var i = 0; i < samples.length; i++) {
-                var sample = samples[i];
-                var unit = sample.unit;
-                var originalDts = sample.dts - this._dtsBase;
+                var _sample = samples[i];
+                var unit = _sample.unit;
+                var originalDts = _sample.dts - this._dtsBase;
                 var _dts = originalDts - dtsCorrection;
 
                 if (firstDts === -1) {
@@ -10639,7 +10614,11 @@ var MP4Remuxer = function () {
                     sampleDuration = nextDts - _dts;
                 } else {
                     // the last sample
-                    if (mp4Samples.length >= 1) {
+                    if (lastSample != null) {
+                        // use stashed sample's dts to calculate sample duration
+                        var _nextDts = lastSample.dts - this._dtsBase - dtsCorrection;
+                        sampleDuration = _nextDts - _dts;
+                    } else if (mp4Samples.length >= 1) {
                         // use second last sample duration
                         sampleDuration = mp4Samples[mp4Samples.length - 1].duration;
                     } else {
@@ -10712,8 +10691,8 @@ var MP4Remuxer = function () {
                     dts: _dts,
                     pts: _dts,
                     cts: 0,
-                    unit: sample.unit,
-                    size: sample.unit.byteLength,
+                    unit: _sample.unit,
+                    size: _sample.unit.byteLength,
                     duration: sampleDuration,
                     originalDts: originalDts,
                     flags: {
@@ -10822,13 +10801,29 @@ var MP4Remuxer = function () {
             }
 
             var offset = 8;
+            var mdatbox = null;
             var mdatBytes = 8 + videoTrack.length;
-            var mdatbox = new Uint8Array(mdatBytes);
-            mdatbox[0] = mdatBytes >>> 24 & 0xFF;
-            mdatbox[1] = mdatBytes >>> 16 & 0xFF;
-            mdatbox[2] = mdatBytes >>> 8 & 0xFF;
-            mdatbox[3] = mdatBytes & 0xFF;
-            mdatbox.set(_mp4Generator2.default.types.mdat, 4);
+
+            var lastSample = null;
+
+            // Pop the lastSample and waiting for stash
+            if (samples.length > 1) {
+                lastSample = samples.pop();
+                mdatBytes -= lastSample.length;
+            }
+
+            // Insert [stashed lastSample in the previous batch] to the front
+            if (this._videoStashedLastSample != null) {
+                var sample = this._videoStashedLastSample;
+                this._videoStashedLastSample = null;
+                samples.unshift(sample);
+                mdatBytes += sample.length;
+            }
+
+            // Stash the lastSample of current batch, waiting for next batch
+            if (lastSample != null) {
+                this._videoStashedLastSample = lastSample;
+            }
 
             var firstSampleOriginalDts = samples[0].dts - this._dtsBase;
 
@@ -10840,13 +10835,13 @@ var MP4Remuxer = function () {
                 if (this._videoSegmentInfoList.isEmpty()) {
                     dtsCorrection = 0;
                 } else {
-                    var lastSample = this._videoSegmentInfoList.getLastSampleBefore(firstSampleOriginalDts);
-                    if (lastSample != null) {
-                        var distance = firstSampleOriginalDts - (lastSample.originalDts + lastSample.duration);
+                    var _lastSample2 = this._videoSegmentInfoList.getLastSampleBefore(firstSampleOriginalDts);
+                    if (_lastSample2 != null) {
+                        var distance = firstSampleOriginalDts - (_lastSample2.originalDts + _lastSample2.duration);
                         if (distance <= 3) {
                             distance = 0;
                         }
-                        var expectedDts = lastSample.dts + lastSample.duration + distance;
+                        var expectedDts = _lastSample2.dts + _lastSample2.duration + distance;
                         dtsCorrection = firstSampleOriginalDts - expectedDts;
                     } else {
                         // lastSample == null, cannot found
@@ -10860,11 +10855,11 @@ var MP4Remuxer = function () {
 
             // Correct dts for each sample, and calculate sample duration. Then output to mp4Samples
             for (var i = 0; i < samples.length; i++) {
-                var sample = samples[i];
-                var originalDts = sample.dts - this._dtsBase;
-                var isKeyframe = sample.isKeyframe;
+                var _sample2 = samples[i];
+                var originalDts = _sample2.dts - this._dtsBase;
+                var isKeyframe = _sample2.isKeyframe;
                 var dts = originalDts - dtsCorrection;
-                var cts = sample.cts;
+                var cts = _sample2.cts;
                 var pts = dts + cts;
 
                 if (firstDts === -1) {
@@ -10879,7 +10874,11 @@ var MP4Remuxer = function () {
                     sampleDuration = nextDts - dts;
                 } else {
                     // the last sample
-                    if (mp4Samples.length >= 1) {
+                    if (lastSample != null) {
+                        // use stashed sample's dts to calculate sample duration
+                        var _nextDts2 = lastSample.dts - this._dtsBase - dtsCorrection;
+                        sampleDuration = _nextDts2 - dts;
+                    } else if (mp4Samples.length >= 1) {
                         // use second last sample duration
                         sampleDuration = mp4Samples[mp4Samples.length - 1].duration;
                     } else {
@@ -10889,8 +10888,8 @@ var MP4Remuxer = function () {
                 }
 
                 if (isKeyframe) {
-                    var syncPoint = new _mediaSegmentInfo.SampleInfo(dts, pts, sampleDuration, sample.dts, true);
-                    syncPoint.fileposition = sample.fileposition;
+                    var syncPoint = new _mediaSegmentInfo.SampleInfo(dts, pts, sampleDuration, _sample2.dts, true);
+                    syncPoint.fileposition = _sample2.fileposition;
                     info.appendSyncPoint(syncPoint);
                 }
 
@@ -10898,8 +10897,8 @@ var MP4Remuxer = function () {
                     dts: dts,
                     pts: pts,
                     cts: cts,
-                    units: sample.units,
-                    size: sample.length,
+                    units: _sample2.units,
+                    size: _sample2.length,
                     isKeyframe: isKeyframe,
                     duration: sampleDuration,
                     originalDts: originalDts,
@@ -10912,6 +10911,14 @@ var MP4Remuxer = function () {
                     }
                 });
             }
+
+            // allocate mdatbox
+            mdatbox = new Uint8Array(mdatBytes);
+            mdatbox[0] = mdatBytes >>> 24 & 0xFF;
+            mdatbox[1] = mdatBytes >>> 16 & 0xFF;
+            mdatbox[2] = mdatBytes >>> 8 & 0xFF;
+            mdatbox[3] = mdatBytes & 0xFF;
+            mdatbox.set(_mp4Generator2.default.types.mdat, 4);
 
             // Write samples into mdatbox
             for (var _i2 = 0; _i2 < mp4Samples.length; _i2++) {
@@ -11005,7 +11012,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"../core/media-segment-info.js":8,"../utils/browser.js":39,"../utils/exception.js":40,"../utils/logger.js":41,"./aac-silent.js":36,"./mp4-generator.js":37}],39:[function(_dereq_,module,exports){
+},{"../core/media-segment-info.js":7,"../utils/browser.js":37,"../utils/exception.js":38,"../utils/logger.js":39,"./aac-silent.js":34,"./mp4-generator.js":35}],37:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11119,7 +11126,7 @@ detect();
 
 exports.default = Browser;
 
-},{}],40:[function(_dereq_,module,exports){
+},{}],38:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11236,7 +11243,7 @@ var NotImplementedException = exports.NotImplementedException = function (_Runti
     return NotImplementedException;
 }(RuntimeException);
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],39:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11396,7 +11403,7 @@ Log.emitter = new _events2.default();
 
 exports.default = Log;
 
-},{"events":2}],42:[function(_dereq_,module,exports){
+},{"events":2}],40:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11587,7 +11594,7 @@ LoggingControl.emitter = new _events2.default();
 
 exports.default = LoggingControl;
 
-},{"./logger.js":41,"events":2}],43:[function(_dereq_,module,exports){
+},{"./logger.js":39,"events":2}],41:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11664,7 +11671,7 @@ Polyfill.install();
 
 exports.default = Polyfill;
 
-},{"es6-promise":1}],44:[function(_dereq_,module,exports){
+},{"es6-promise":1}],42:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11753,7 +11760,97 @@ function decodeUTF8(uint8array) {
 
 exports.default = decodeUTF8;
 
-},{}]},{},[21])(21)
+},{}],43:[function(_dereq_,module,exports){
+var bundleFn = arguments[3];
+var sources = arguments[4];
+var cache = arguments[5];
+
+var stringify = JSON.stringify;
+
+module.exports = function (fn, options) {
+    var wkey;
+    var cacheKeys = Object.keys(cache);
+
+    for (var i = 0, l = cacheKeys.length; i < l; i++) {
+        var key = cacheKeys[i];
+        var exp = cache[key].exports;
+        // Using babel as a transpiler to use esmodule, the export will always
+        // be an object with the default export as a property of it. To ensure
+        // the existing api and babel esmodule exports are both supported we
+        // check for both
+        if (exp === fn || exp && exp.default === fn) {
+            wkey = key;
+            break;
+        }
+    }
+
+    if (!wkey) {
+        wkey = Math.floor(Math.pow(16, 8) * Math.random()).toString(16);
+        var wcache = {};
+        for (var i = 0, l = cacheKeys.length; i < l; i++) {
+            var key = cacheKeys[i];
+            wcache[key] = key;
+        }
+        sources[wkey] = [
+            'function(require,module,exports){' + fn + '(self); }',
+            wcache
+        ];
+    }
+    var skey = Math.floor(Math.pow(16, 8) * Math.random()).toString(16);
+
+    var scache = {}; scache[wkey] = wkey;
+    sources[skey] = [
+        'function(require,module,exports){' +
+            // try to call default if defined to also support babel esmodule exports
+            'var f = require(' + stringify(wkey) + ');' +
+            '(f.default ? f.default : f)(self);' +
+        '}',
+        scache
+    ];
+
+    var workerSources = {};
+    resolveSources(skey);
+
+    function resolveSources(key) {
+        workerSources[key] = true;
+
+        for (var depPath in sources[key][1]) {
+            var depKey = sources[key][1][depPath];
+            if (!workerSources[depKey]) {
+                resolveSources(depKey);
+            }
+        }
+    }
+
+    var src = '(' + bundleFn + ')({'
+        + Object.keys(workerSources).map(function (key) {
+            return stringify(key) + ':['
+                + sources[key][0]
+                + ',' + stringify(sources[key][1]) + ']'
+            ;
+        }).join(',')
+        + '},{},[' + stringify(skey) + '])'
+    ;
+
+    var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+
+    var blob = new Blob([src], { type: 'text/javascript' });
+    if (options && options.bare) { return blob; }
+    var workerUrl = URL.createObjectURL(blob);
+    var worker = new Worker(workerUrl);
+    worker.objectURL = workerUrl;
+    return worker;
+};
+
+},{}],44:[function(_dereq_,module,exports){
+'use strict';
+
+// entry/index file
+
+// make it compatible with browserify's umd wrapper
+module.exports = _dereq_('./flv.js').default;
+
+},{"./flv.js":19}]},{},[44])(44)
 });
 
 //# sourceMappingURL=flv.js.map

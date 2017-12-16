@@ -1948,9 +1948,7 @@ BOOL CPushThread::SendAVCSequenceHeaderPacket()
 	OSMutexLocker theLock(&m_Mutex);
 	if( m_lpRtmpPush == NULL )
 		return false;
-
 	string strAVC;
-
 	if( m_lpRtspThread != NULL ) {
 		strAVC = m_lpRtspThread->GetAVCHeader();
 	} else if( m_lpRtmpThread != NULL ) {
@@ -1958,12 +1956,10 @@ BOOL CPushThread::SendAVCSequenceHeaderPacket()
 	} else if( m_lpMP4Thread != NULL ) {
 		strAVC = m_lpMP4Thread->GetAVCHeader();
 	}
-
 	// 没有视频数据...
 	if( strAVC.size() <= 0 )
 		return true;
 	ASSERT( strAVC.size() > 0 );
-
 	TRACE("== RtmpPush => Send Video SequenceHeaderPacket ==\n");
 	return m_lpRtmpPush->Send(strAVC.c_str(), strAVC.size(), FLV_TAG_TYPE_VIDEO, 0);
 }
@@ -1975,9 +1971,7 @@ BOOL CPushThread::SendAACSequenceHeaderPacket()
 	OSMutexLocker theLock(&m_Mutex);
 	if( m_lpRtmpPush == NULL )
 		return false;
-
 	string strAAC;
-
 	if( m_lpRtspThread != NULL ) {
 		strAAC = m_lpRtspThread->GetAACHeader();
 	} else if( m_lpRtmpThread != NULL ) {
@@ -1985,12 +1979,10 @@ BOOL CPushThread::SendAACSequenceHeaderPacket()
 	} else if( m_lpMP4Thread != NULL ) {
 		strAAC = m_lpMP4Thread->GetAACHeader();
 	}
-
 	// 没有音频数据...
 	if( strAAC.size() <= 0 )
 		return true;
 	ASSERT( strAAC.size() > 0 );
-
 	TRACE("== RtmpPush => Send Audio SequenceHeaderPacket ==\n");
     return m_lpRtmpPush->Send(strAAC.c_str(), strAAC.size(), FLV_TAG_TYPE_AUDIO, 0);
 }
@@ -2010,9 +2002,12 @@ BOOL CPushThread::SendMetadataPacket()
 
 char * CPushThread::WriteMetadata(char * buf)
 {
+	BOOL bHasVideo = false;
+	BOOL bHasAudio = false;
+	string strAVC, strAAC;
 	int nVideoWidth = 0;
 	int nVideoHeight = 0;
-    char* pbuf = buf;
+    char * pbuf = buf;
 
     pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_STRING);
     pbuf = AmfStringToBytes(pbuf, "@setDataFrame");
@@ -2024,51 +2019,58 @@ char * CPushThread::WriteMetadata(char * buf)
 	//pbuf = UI32ToBytes(pbuf, 2);
     pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_OBJECT);
 
-	// 设置视频宽度属性...
+	// 设置视频宽度和高度属性...
 	if( m_lpRtspThread != NULL ) {
+		strAVC = m_lpRtspThread->GetAVCHeader();
+		strAAC = m_lpRtspThread->GetAACHeader();
 		nVideoWidth = m_lpRtspThread->GetVideoWidth();
+		nVideoHeight = m_lpRtspThread->GetVideoHeight();
 	} else if( m_lpRtmpThread != NULL ) {
+		strAVC = m_lpRtmpThread->GetAVCHeader();
+		strAAC = m_lpRtmpThread->GetAACHeader();
 		nVideoWidth = m_lpRtmpThread->GetVideoWidth();
+		nVideoHeight = m_lpRtmpThread->GetVideoHeight();
 	} else if( m_lpMP4Thread != NULL ) {
+		strAVC = m_lpMP4Thread->GetAVCHeader();
+		strAAC = m_lpMP4Thread->GetAACHeader();
 		nVideoWidth = m_lpMP4Thread->GetVideoWidth();
+		nVideoHeight = m_lpMP4Thread->GetVideoHeight();
 	}
+	// 获取是否有音视频的标志状态信息...
+	bHasVideo = ((strAVC.size() > 0) ? true : false);
+	bHasAudio = ((strAAC.size() > 0) ? true : false);
+	// 设置宽度属性...
 	if( nVideoWidth > 0 ) {
 	    pbuf = AmfStringToBytes(pbuf, "width");
 		pbuf = AmfDoubleToBytes(pbuf, nVideoWidth);
 	}
 	// 设置视频高度属性...
-	if( m_lpRtspThread != NULL ) {
-		nVideoHeight = m_lpRtspThread->GetVideoHeight();
-	} else if( m_lpRtmpThread != NULL ) {
-		nVideoHeight = m_lpRtmpThread->GetVideoHeight();
-	} else if( m_lpMP4Thread != NULL ) {
-		nVideoHeight = m_lpMP4Thread->GetVideoHeight();
-	}
 	if( nVideoHeight > 0 ) {
 	    pbuf = AmfStringToBytes(pbuf, "height");
 		pbuf = AmfDoubleToBytes(pbuf, nVideoHeight);
 	}
-	// 设置视频帧率属性...
-	/*int nVideoFPS = 0;
-	if( m_lpRtspThread != NULL ) {
-		nVideoFPS = m_lpRtspThread->GetVideoFPS();
-	} else if( m_lpRtmpThread != NULL ) {
-		nVideoFPS = m_lpRtmpThread->GetVideoFPS();
-	} else if( m_lpMP4Thread != NULL ) {
-		nVideoFPS = m_lpMP4Thread->GetVideoFPS();
+	// 设置视频标志...
+    pbuf = AmfStringToBytes(pbuf, "hasVideo");
+	pbuf = AmfBoolToBytes(pbuf, bHasVideo);
+	// 设置音视标志...
+    pbuf = AmfStringToBytes(pbuf, "hasAudio");
+	pbuf = AmfBoolToBytes(pbuf, bHasAudio);
+	// 如果有视频，才设置视频相关信息...
+	if( bHasVideo ) {
+		// 统一设置默认的视频帧率属性...
+		pbuf = AmfStringToBytes(pbuf, "framerate");
+		pbuf = AmfDoubleToBytes(pbuf, 25);
+		// 设置视频编码器...
+		pbuf = AmfStringToBytes(pbuf, "videocodecid");
+		pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_STRING);
+		pbuf = AmfStringToBytes(pbuf, "avc1");
 	}
-	if( nVideoFPS > 0 ) {
-	    pbuf = AmfStringToBytes(pbuf, "framerate");
-		pbuf = AmfDoubleToBytes(pbuf, 25);//nVideoFPS);
-	}*/
-	// 统一设置默认的视频帧率属性...
-    pbuf = AmfStringToBytes(pbuf, "framerate");
-	pbuf = AmfDoubleToBytes(pbuf, 25);//nVideoFPS);
-
-	pbuf = AmfStringToBytes(pbuf, "videocodecid");
-    pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_STRING);
-    pbuf = AmfStringToBytes(pbuf, "avc1");
-
+	// 如果有音频，才设置音频相关信息...
+	if( bHasAudio ) {
+		pbuf = AmfStringToBytes(pbuf, "audiocodecid");
+		pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_STRING);
+		pbuf = AmfStringToBytes(pbuf, "mp4a");
+	}
     // 0x00 0x00 0x09
     pbuf = AmfStringToBytes(pbuf, "");
     pbuf = UI08ToBytes(pbuf, AMF_DATA_TYPE_OBJECT_END);

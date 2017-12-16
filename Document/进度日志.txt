@@ -85,10 +85,6 @@
    D：（未完成）完成网站通过后台，使用swoole完成自动同步升级的功能，而且不用等待，在后台运行；
    E：（未完成）现在需要根据目前的小程序界面设计，找到需要的界面组件库，完成第一步工作；
 
-24.（未完成）只有视频的数据流，flvjs无法播放，因此，需要在后台加入一个开关，是否屏蔽flvjs的回放功能；
-   A：（未完成）需要在wk_system表中新增一个字段flvjs，控制PC端直播播放时是否可以加载flvjs，无法播放只有视频数据的内容；
-   B：（未完成）show.htm当中去验证这个开关，一旦关闭，直接删除对flvjs的支持，而不用再根据浏览器的支持情况再决定是否删除flvjs的支持；
-
 25.（未完成）将来所有在百度云盘上发布的版本都要按照版本编号建立目录，采集端和服务器分开发布，它们的版本不相同；
 
 28.（未完成）中转端，某通道上的播放器为0时，转发命令给采集端，会因为网络原因，无法到达采集端，造成采集端一直在上传已经停止的通道；
@@ -266,6 +262,48 @@
    C：（已完成）是由于数据区里面没有再次发送sps和pps的信息，造成无法启动初始化；
    D：（已完成）这是之前将初始化过程转移到了，当在数据区又找到了sps和pps时才处理，为了应对当时有些平台在协议部分给的sps和pps是错误的情况；
    E：（已完成）现在又要改回去？改回去之后，是否可以在数据区也保留再次发送AVC的格式信息的数据包？告诉服务器格式都可能有变化？
+23.（已完成）对srs的编译日志开关做了研究，如下：
+   A：（已完成）./configure -h => 可以查看所有的编译开关；
+   B：（已完成）--log-verbose 对应 SRS_AUTO_VERBOSE 在 auto_headers.sh 当中定义；
+   C：（已完成）srs.log当中可以看到编译进二进制的开关是哪些，默认使用 --log-trace，只有trace函数有效，其它都为空；
+   D：（已完成）因此，这种设计，无论怎么开编译后的配置，都不能打印除trace之外的其它日志，必须重新编译配置日志才能有效；
+24.（已完成）只有视频的数据流，flvjs无法播放，因此，需要在后台加入一个开关，是否屏蔽flvjs的回放功能；
+   A：（不执行）需要在wk_system表中新增一个字段flvjs，控制PC端直播播放时是否可以加载flvjs，无法播放只有视频数据的内容；
+   B：（不执行）show.htm当中去验证这个开关，一旦关闭，直接删除对flvjs的支持，而不用再根据浏览器的支持情况再决定是否删除flvjs的支持；
+   C：（已完成）尝试通过修改flvjs代码的方式，或者，通过修改采集端推流的MetaData的方式来提前告知有没有音频的方式去处理；
+   D：（已完成）在采集端 WriteMetadata 做了严格的设定之后，但是，由于 srs 会缓存通道数据，包括头信息，而flvjs不仅会从metadata当中获取格式，还会从数据流获取格式；
+   E：（已完成）这两种因素结合在一起，就会造成只有视频的通道，在通道数据切换时，造成始终等待，从而无法播放；
+   F：（已完成）srs的代码大量相互牵连，太复杂，只能从 flvjs 入手，简单修改 flvjs 的代码，让flvjs完全听从metadata的音视频标志进行处理，即使有数据也要扔掉；
+   G：（已完成）npm 下载flvjs代码，修改代码，重新编译，打包；以metadata的标志为优先，而不是人为的设定，metadata的原始数据来自推流端，因此，推流端要先判断清楚；
+   H：（已完成）flv-demuxer.js:_parseAudioData:446 追加代码如下：
+        // 2017.12.16 - by jackey => first check use metadata value...
+
+        let onMetaData = this._metadata.onMetaData;
+
+        if ((typeof onMetaData.hasAudio === 'boolean') && (!onMetaData.hasAudio)) {
+
+            Log.v(this.TAG, '_parseAudioData: No Audio in metadata');
+
+            return;
+
+        }
+      
+   I：（已完成）flv-demuxer.js:_parseVideoData:806 追加代码如下：
+        // 2017.12.16 - by jackey => first check use metadata value...
+
+        let onMetaData = this._metadata.onMetaData;
+
+        if ((typeof onMetaData.hasVideo === 'boolean') && (!onMetaData.hasVideo)) {
+
+            Log.v(this.TAG, '_parseVideoData: No Video in metadata');
+
+            return;
+
+        }
+
+   J：（已完成）在编译flvjs时，遇到一些问题，有关 gulp 的；gulp 不仅要在 全局安装，还要在本地安装，编译时缺少的库都需要逐个安装才行；
+   K：（已完成）这样的修改就不用在数据库当中添加字段，也不用修改播放器代码，而是在flvjs中修改音视频的有效性依据metadata就可以了；
+   L：（已完成）flvjs的源码安装在 F:\Vue\flvjs\ 当中，具体编译位置 F:\Vue\flvjs\node_modules\flv.js
 
 2017.11.10 - 2017.11.30
 =========================================================================
