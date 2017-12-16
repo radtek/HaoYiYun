@@ -43,9 +43,7 @@ protected: // called only by createNew();
 public:
 	StreamClientState	m_scs;
 public:
-	BOOL IsHasStart() { return m_bHasStart; }
 	void WriteSample(bool bIsVideo, string & inFrame, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame);
-	BOOL doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsFromAudio);
 	void myAfterOPTIONS(int resultCode, char* resultString);
 	void myAfterDESCRIBE(int resultCode, char* resultString);
 	void myAfterSETUP(int resultCode, char* resultString);
@@ -55,13 +53,6 @@ public:
 public:
 	CRtspThread		*	m_lpRtspThread;			// rtsp推流线程
 	CRtspRecThread	*	m_lpRecThread;			// rtsp录像线程
-	unsigned int		m_audio_channels;		// 音频声道
-	unsigned int		m_audio_rate;			// 音频码流
-	string				m_strSPS;				// SPS数据头
-	string				m_strPPS;				// PPS数据头
-	BOOL				m_bHasVideo;			// 有视频标志
-	BOOL				m_bHasAudio;			// 有音频标志
-	BOOL				m_bHasStart;			// 已经启动标志...
 };
 
 // Define a data sink (a subclass of "MediaSink") to receive the data for each subsession (i.e., each audio or video 'substream').
@@ -94,7 +85,5 @@ private:
 	u_int8_t		*	fReceiveBuffer;			// 帧缓冲区
 	MediaSubsession &	fSubsession;			// 会话引用对象
 	ourRTSPClient	*	fRtspClient;			// RTSP客户端对象
-	string				m_strNewSPS;			// 记录数据帧里的SPS...
-	string				m_strNewPPS;			// 记录数据帧里的PPS...
 	ULARGE_INTEGER		m_llTimCountFirst;		// 音视频的0点时间 => 单位是0.1微妙...
 };

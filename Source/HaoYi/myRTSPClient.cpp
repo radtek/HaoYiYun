@@ -70,15 +70,8 @@ ourRTSPClient* ourRTSPClient::createNew(UsageEnvironment& env, char const* rtspU
 ourRTSPClient::ourRTSPClient(UsageEnvironment& env, char const* rtspURL, int verbosityLevel, char const* applicationName, CRtspThread * lpRtspThread, CRtspRecThread * lpRecThread)
   : RTSPClient(env, rtspURL, verbosityLevel, applicationName, 0, -1),
     m_lpRtspThread(lpRtspThread),
-	m_lpRecThread(lpRecThread),
-	m_bHasStart(false),
-	m_bHasVideo(false),
-	m_bHasAudio(false),
-	m_audio_channels(0),
-	m_audio_rate(0)
+	m_lpRecThread(lpRecThread)
 {
-	m_strSPS.clear();
-	m_strPPS.clear();
 }
 
 ourRTSPClient::~ourRTSPClient()
@@ -186,36 +179,37 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 			}
 			// 获得第一个 SPS 和 第一个PPS ...
 			ASSERT( lpszSpro != NULL );
+			string strSPS, strPPS;
 			unsigned numSPropRecords = 0;
 			SPropRecord * sPropRecords = parseSPropParameterSets(lpszSpro, numSPropRecords);
 			for(unsigned i = 0; i < numSPropRecords; ++i) {
-				if( i == 0 && m_strSPS.size() <= 0 ) {
-					m_strSPS.assign((char*)sPropRecords[i].sPropBytes, sPropRecords[i].sPropLength);
+				if( i == 0 && strSPS.size() <= 0 ) {
+					strSPS.assign((char*)sPropRecords[i].sPropBytes, sPropRecords[i].sPropLength);
 				}
-				if( i == 1 && m_strPPS.size() <= 0 ) {
-					m_strPPS.assign((char*)sPropRecords[i].sPropBytes, sPropRecords[i].sPropLength);
+				if( i == 1 && strPPS.size() <= 0 ) {
+					strPPS.assign((char*)sPropRecords[i].sPropBytes, sPropRecords[i].sPropLength);
 				}
 			}
 			delete[] sPropRecords;
 			// 必须同时包含 SPS 和 PPS...
-			if( m_strSPS.size() <= 0 || m_strPPS.size() <= 0 ) {
+			if( strSPS.size() <= 0 || strPPS.size() <= 0 ) {
 				TRACE("[%s/%s] Error => SPS or PPS...\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 				break;
 			}
-			ASSERT( m_strSPS.size() > 0 && m_strPPS.size() > 0 );
-			//////////////////////////////////////////////////////////////////////////////
-			// 注意：这时的PPS、SPS有可能是错误的，只有在数据区获取的才是最真实的...
-			//////////////////////////////////////////////////////////////////////////////
+			ASSERT( strSPS.size() > 0 && strPPS.size() > 0 );
+			TRACE("== SPS-Size(%d), PPS-Size(%d) ==\n", strSPS.size(), strPPS.size());
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			// 注意：这时的PPS、SPS有可能是错误的，但是数据区不一定能再次获取到PPS、SPS...
+			// 因此：还是在这里处理启动流程，后期如果再遇到问题，可以在数据区获取到新的PPS、SPS后再次发起WriteAVC，并直接发送给服务器试试....
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			// 通知rtsp线程，格式头已经准备好了...
-			/*if( m_lpRtspThread != NULL ) {
+			if( m_lpRtspThread != NULL ) {
 				m_lpRtspThread->WriteAVCSequenceHeader(strSPS, strPPS);
 			}
 			// 通知录像线程，格式头已经准备好了...
 			if( m_lpRecThread != NULL ) {
-				m_lpRecThread->CreateVideoTrack(strSPS, strPPS);
-			}*/
-			// 保存视频标志...
-			m_bHasVideo = true;
+				m_lpRecThread->StoreVideoHeader(strSPS, strPPS);
+			}
 		}
 
 		// 判断音频格式是否正确, 必须是 audio/MPEG4 ...
@@ -226,22 +220,20 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 			}
 			ASSERT( strnicmp(scs.m_subsession->codecName(), "MPEG4", strlen("MPEG4")) == 0 );
 			// 获取声道数和采样率信息...
-			m_audio_channels = scs.m_subsession->numChannels();
-			m_audio_rate = scs.m_subsession->rtpTimestampFrequency();
-			if( m_audio_channels <= 0 || m_audio_rate <= 0 ) {
-				TRACE("[%s/%s] Error => channel(%d),rate(%d).\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), m_audio_channels, m_audio_rate);
+			unsigned audio_channels = scs.m_subsession->numChannels();
+			unsigned audio_rate = scs.m_subsession->rtpTimestampFrequency();
+			if( audio_channels <= 0 || audio_rate <= 0 ) {
+				TRACE("[%s/%s] Error => channel(%d),rate(%d).\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), audio_channels, audio_rate);
 				break;
 			}
 			// 通知rtsp线程，格式头已经准备好了...
-			/*if( m_lpRtspThread != NULL ) {
+			if( m_lpRtspThread != NULL ) {
 				m_lpRtspThread->WriteAACSequenceHeader(audio_rate, audio_channels);
 			}
 			// 通知录像线程，格式头已经准备好了...
 			if( m_lpRecThread != NULL ) {
-				m_lpRecThread->CreateAudioTrack(audio_rate, audio_channels);
-			}*/
-			// 保存音频标志...
-			m_bHasAudio = true;
+				m_lpRecThread->StoreAudioHeader(audio_rate, audio_channels);
+			}
 		}
 		
 		// 打印正确信息...
@@ -294,7 +286,7 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 }
 //
 // 启动推流或录像线程...
-BOOL ourRTSPClient::doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsFromAudio)
+/*BOOL ourRTSPClient::doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsFromAudio)
 {
 	// 如果是通过音频启动的，但是有视频，直接返回false，等待视频启动...
 	if( bIsFromAudio && m_bHasVideo ) {
@@ -338,7 +330,7 @@ BOOL ourRTSPClient::doStartEvent(string & inNewSPS, string & inNewPPS, BOOL bIsF
 	// 启动成功，返回结果...
 	m_bHasStart = true;
 	return m_bHasStart;
-}
+}*/
 //
 // 进行数据帧的处理...
 void ourRTSPClient::WriteSample(bool bIsVideo, string & inFrame, DWORD inTimeStamp, DWORD inRenderOffset, bool bIsKeyFrame)
@@ -350,13 +342,13 @@ void ourRTSPClient::WriteSample(bool bIsVideo, string & inFrame, DWORD inTimeSta
 	theFrame.dwRenderOffset = inRenderOffset;
 	theFrame.is_keyframe = bIsKeyFrame;
 	theFrame.strData = inFrame;
+	// 推送给rtsp线程，新的数据帧到达...
+	if( m_lpRtspThread != NULL ) {
+		m_lpRtspThread->PushFrame(theFrame);
+	}
 	// 通知录像线程，保存一帧数据包...
 	if( m_lpRecThread != NULL ) {
 		m_lpRecThread->StreamWriteRecord(theFrame);
-	}
-	// 推送给rtsp线程...
-	if( m_lpRtspThread != NULL ) {
-		m_lpRtspThread->PushFrame(theFrame);
 	}
 }
 
@@ -386,10 +378,15 @@ void ourRTSPClient::myAfterPLAY(int resultCode, char* resultString)
 		
 		// 一切正常，打印信息，直接返回...
 		TRACE("Started playing session.(for up to %.2f)\n", scs.m_duration);
-		// 启动rtmp推送线程...
-		//if( m_lpRtspThread != NULL ) {
-		//	m_lpRtspThread->StartPushThread();
-		//}
+		// 正式启动rtmp推送线程...
+		if( m_lpRtspThread != NULL ) {
+			m_lpRtspThread->StartPushThread();
+		}
+		// 正式启动录像过程...
+		if( m_lpRecThread != NULL ) {
+			m_lpRecThread->StreamBeginRecord();
+		}
+		// 处理完毕，直接返回...
 		return;
 	} while (0);
 
@@ -550,8 +547,6 @@ DummySink* DummySink::createNew(UsageEnvironment& env, MediaSubsession& subsessi
 DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, char const* streamId, ourRTSPClient * lpRtspClient)
   : MediaSink(env), fSubsession(subsession), fRtspClient(lpRtspClient)
 {
-	m_strNewSPS.clear();
-	m_strNewPPS.clear();
 	ASSERT( fRtspClient != NULL );
 	fStreamId = strDup(streamId);
 	fReceiveBuffer = new u_int8_t[DUMMY_SINK_RECEIVE_BUFFER_SIZE];
@@ -620,22 +615,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 		// 2017.04.10 - by jackey => 如果是SPS或PPS，直接丢弃...
 		// 否则会造成HTML5播放器在video标签中无法播放，通过MPlayer发现，写了多余的坏帧，刚好是3个...
 		if( nalType > 5 ) {
-			// 如果没有启动，进行启动处理...
-			if( fRtspClient != NULL && !fRtspClient->IsHasStart() ) {
-				// 保存数据区里的SPS...
-				if( nalType == 7 ) {
-					m_strNewSPS.assign((const char*)fReceiveBuffer, frameSize);
-				}
-				// 保存数据区里的PPS...
-				if( nalType == 8 ) {
-					m_strNewPPS.assign((const char*)fReceiveBuffer, frameSize);
-				}
-				// SPS与PPS获取完毕，通知推送线程...
-				if( m_strNewSPS.size() > 0 && m_strNewPPS.size() > 0 ) {
-					fRtspClient->doStartEvent(m_strNewSPS, m_strNewPPS, false);
-				}
-			}
-			// 直接丢弃这些头部数据...
+			// 6|7|8直接丢弃这些头部数据...
 			this->continuePlaying();
 			return;
 		}
@@ -658,16 +638,12 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 	if( strcmp(fSubsession.mediumName(), "audio") == 0 ) {
 		bIsVideo = false; bIsKeyFrame = true;
 		strFrame.assign((char*)fReceiveBuffer, frameSize);
-		// 从音频数据帧去启动推流或录像线程...
-		if( fRtspClient != NULL && !fRtspClient->IsHasStart() ) {
-			fRtspClient->doStartEvent(m_strNewSPS, m_strNewPPS, true);
-		}
 		//TRACE("[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//sprintf(szBuf, "[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//DoTextLog(szBuf);
 	}
 	// 启动成功之后，才需要处理帧数据包...
-	if( fRtspClient != NULL && fRtspClient->IsHasStart() ) {
+	if( fRtspClient != NULL ) {
 		fRtspClient->WriteSample(bIsVideo, strFrame, dwTimeStamp, 0, bIsKeyFrame);
 	}
 	// 处理下一帧的数据...

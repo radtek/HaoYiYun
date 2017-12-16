@@ -1585,7 +1585,7 @@ BOOL CPushThread::OpenRtmpUrl()
 	if( m_lpRtmpPush == NULL || m_strRtmpUrl.size() <= 0  )
 		return false;
 	ASSERT( m_lpRtmpPush != NULL && m_strRtmpUrl.size() > 0);
-	
+	TRACE("== RtmpPush => OpenRtmpUrl ==\n");
 	// 连接rtmp server，完成握手等协议
 	return m_lpRtmpPush->Open(m_strRtmpUrl.c_str());
 }
@@ -1962,8 +1962,9 @@ BOOL CPushThread::SendAVCSequenceHeaderPacket()
 	// 没有视频数据...
 	if( strAVC.size() <= 0 )
 		return true;
-	
 	ASSERT( strAVC.size() > 0 );
+
+	TRACE("== RtmpPush => Send Video SequenceHeaderPacket ==\n");
 	return m_lpRtmpPush->Send(strAVC.c_str(), strAVC.size(), FLV_TAG_TYPE_VIDEO, 0);
 }
 
@@ -1988,8 +1989,9 @@ BOOL CPushThread::SendAACSequenceHeaderPacket()
 	// 没有音频数据...
 	if( strAAC.size() <= 0 )
 		return true;
-
 	ASSERT( strAAC.size() > 0 );
+
+	TRACE("== RtmpPush => Send Audio SequenceHeaderPacket ==\n");
     return m_lpRtmpPush->Send(strAAC.c_str(), strAAC.size(), FLV_TAG_TYPE_AUDIO, 0);
 }
 
@@ -1998,6 +2000,7 @@ BOOL CPushThread::SendMetadataPacket()
 	OSMutexLocker theLock(&m_Mutex);
 	if( m_lpRtmpPush == NULL )
 		return false;
+	TRACE("== RtmpPush => SendMetadataPacket ==\n");
 
 	char   metadata_buf[4096];
     char * pbuf = this->WriteMetadata(metadata_buf);

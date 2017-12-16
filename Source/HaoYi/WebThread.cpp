@@ -152,6 +152,15 @@ BOOL CWebThread::RegisterHaoYi()
 	Json::Value value;
 	// 解析JSON失败，通知界面层...
 	if( !this->parseJson(value) ) {
+		// 授权失败，仍然要获取最大通道、到期日期、剩余天数...
+		int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
+		int nAuthDays = atoi(CUtilTool::getJsonString(value["auth_days"]).c_str());
+		string strExpired = CUtilTool::getJsonString(value["auth_expired"]);
+		// 存放到配置对象，以便关于对话框查看授权状态...
+		theConfig.SetMaxCamera(nMaxCameraNum);
+		theConfig.SetAuthExpired(strExpired);
+		theConfig.SetAuthDays(nAuthDays);
+		// 授权失败，通知界面层...
 		m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, false);
 		return false;
 	}
@@ -159,10 +168,12 @@ BOOL CWebThread::RegisterHaoYi()
 	int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
 	int nHaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	int nHaoYiNodeID = atoi(CUtilTool::getJsonString(value["node_id"]).c_str());
+	int nAuthDays = atoi(CUtilTool::getJsonString(value["auth_days"]).c_str());
 	string strExpired = CUtilTool::getJsonString(value["auth_expired"]);
 	// 通知主窗口授权过期验证结果...
 	m_lpHaoYiView->PostMessage(WM_WEB_AUTH_RESULT, kAuthExpired, ((nHaoYiGatherID > 0) ? true : false));
 	// 存放到配置对象，返回授权验证结果...
+	theConfig.SetAuthDays(nAuthDays);
 	theConfig.SetAuthExpired(strExpired);
 	theConfig.SetMaxCamera(nMaxCameraNum);
 	theConfig.SetDBHaoYiNodeID(nHaoYiNodeID);

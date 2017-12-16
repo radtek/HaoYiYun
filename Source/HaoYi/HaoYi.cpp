@@ -198,11 +198,12 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 protected:
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	virtual void DoDataExchange(CDataExchange* pDX);
 	virtual BOOL OnInitDialog();
 protected:
 	DECLARE_MESSAGE_MAP()
-public:
+private:
 	enum { IDD = IDD_ABOUTBOX };
 	CHyperLink	m_ctrlHome;
 	HCURSOR		m_hHandCur;
@@ -220,6 +221,7 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+	ON_WM_CTLCOLOR()
 END_MESSAGE_MAP()
 
 // 用于运行对话框的应用程序命令
@@ -233,12 +235,10 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	CMainFrame * lpMain = (CMainFrame*)AfxGetMainWnd();
-	CHaoYiView * lpView = (CHaoYiView*)lpMain->GetActiveView();
-
 	CString strTitle, strAuthorize;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nMaxCamera = theConfig.GetMaxCamera();
+	int nAuthDays = theConfig.GetAuthDays();
 	string & strAuthExpired = theConfig.GetAuthExpired();
 	string & strMainName = theConfig.GetMainName();
 	string & strCopyRight = theConfig.GetCopyRight();
@@ -260,11 +260,7 @@ BOOL CAboutDlg::OnInitDialog()
 	m_ctrlHome.SetAutoSize();
 
 	// 成功登录，获取已授权信息...
-	if( lpView != NULL && lpView->IsLoadSuccess() ) {
-		strAuthorize.Format("最大通道数【%d 路】，有效期【%s】", nMaxCamera, strAuthExpired.c_str());
-	} else {
-		strAuthorize = "没有登录成功，未知授权...";
-	}
+	strAuthorize.Format("剩余期限【 %d 天 】，最大通道数【 %d 路 】", nAuthDays, nMaxCamera);
 	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowTextA(strAuthorize);
 
 	// 设置标题信息...
@@ -276,4 +272,16 @@ BOOL CAboutDlg::OnInitDialog()
 	//GetDlgItem(IDC_STATIC_VER)->SetWindowText(strVersion);
 
 	return TRUE;
+}
+
+HBRUSH CAboutDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+	if( pWnd->GetDlgCtrlID() == IDC_ABOUT_AUTHORIZE ) {
+		CXmlConfig & theConfig = CXmlConfig::GMInstance();
+		int nAuthDays = theConfig.GetAuthDays();
+		// 授权天数为0或负数，设置颜色为红色警告色...
+		pDC->SetTextColor((nAuthDays <= 0) ? RGB(255,0,0) : RGB(0,0,128));
+	}
+	return hbr;
 }

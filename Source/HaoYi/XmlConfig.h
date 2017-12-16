@@ -38,6 +38,7 @@ public:
 	/////////////////////////////////////////////////////////////
 	// 这几个地址和端口是动态获取的，不会存入xml当中...
 	/////////////////////////////////////////////////////////////
+	int      GetAuthDays() { return m_nAuthDays; }
 	string & GetAuthExpired() { return m_strAuthExpired; }
 	string & GetMainName() { return m_strMainName; }
 	int		 GetMainKbps() { return m_nMainKbps; }
@@ -72,6 +73,7 @@ public:
 	void	 SetDBHaoYiNodeID(int nDBNodeID) { m_nDBHaoYiNodeID = nDBNodeID; }
 	void     SetDBHaoYiGatherID(int nDBGatherID) { m_nDBHaoYiGatherID = nDBGatherID; }
 
+	void	 SetAuthDays(const int nAuthDays) { m_nAuthDays = nAuthDays; }
 	void	 SetAuthExpired(const string & strExpired) { m_strAuthExpired = strExpired; }
 	void	 SetMainName(const string & strName) { m_strMainName = strName; }
 	void	 SetMainKbps(int nMainKbps) { m_nMainKbps = nMainKbps; } 
@@ -142,6 +144,7 @@ private:
 	int					m_nDBHaoYiNodeID;				// 在中心服务器上的节点编号...
 	int                 m_nDBHaoYiGatherID;				// 在中心服务器上的采集端编号...
 	string				m_strAuthExpired;				// 中心服务器反馈的授权过期时间...
+	int					m_nAuthDays;					// 中心服务器反馈的剩余授权天数...
 
 	GM_MapServer		m_MapServer;					// 可连接的服务器列表...
 

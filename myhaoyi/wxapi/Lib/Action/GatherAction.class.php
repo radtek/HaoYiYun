@@ -107,14 +107,17 @@ class GatherAction extends Action
       } else {
         // 查看用户授权是否已经过期 => 当前时间 与 过期时间 比较...
         $nDiffSecond = $this->diffSecond(date("Y-m-d H:i:s"), $dbGather['expired']);
+        // 统一返回最大通道数、授权有效期、剩余天数...
+        $arrErr['auth_days'] = ceil($nDiffSecond/3600/24);
+        $arrErr['auth_expired'] = $dbGather['expired'];
+        $arrErr['max_camera'] = $dbGather['max_camera'];
+        // 授权过期，返回失败...
         if( $nDiffSecond <= 0 ) {
           $arrErr['err_code'] = true;
           $arrErr['err_msg'] = "授权已过期！";
           break;
         }
-        // 授权有效，返回最大通道数和授权有效期、所在节点编号...
-        $arrErr['auth_expired'] = $dbGather['expired'];
-        $arrErr['max_camera'] = $dbGather['max_camera'];
+        // 授权有效，返回所在节点编号...
         $arrErr['gather_id'] = $dbGather['gather_id'];
         $arrErr['node_id'] = $arrData['node_id'];
         // 授权有效，将记录更新到数据库...
