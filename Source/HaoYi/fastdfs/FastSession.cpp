@@ -828,11 +828,12 @@ GM_Error CRemoteSession::ForRead()
 		if( nDataSize < lpCmdHeader->m_pkg_len )
 			return GM_NoErr;
 		ASSERT( nDataSize >= lpCmdHeader->m_pkg_len );
-		ASSERT( lpCmdHeader->m_type == kClientPHP || lpCmdHeader->m_type == kClientPlay || lpCmdHeader->m_type == kClientLive ); 
+		ASSERT( lpCmdHeader->m_type == kClientPHP || lpCmdHeader->m_type == kClientPlay || lpCmdHeader->m_type == kClientLive || lpCmdHeader->m_type == kClientGather ); 
 		// 开始分发转发过来的PHP命令...
 		GM_Error theErr = GM_NoErr;
 		switch( lpCmdHeader->m_cmd )
 		{
+		case kCmd_Gather_Camera_List:     theErr = this->doCmdGatherCameraList(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Play_Login:			  theErr = this->doCmdPlayLogin(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_PHP_Start_Camera:		  theErr = this->doPHPCameraOperate(lpDataPtr, lpCmdHeader->m_pkg_len, true); break;
@@ -853,6 +854,72 @@ GM_Error CRemoteSession::ForRead()
 		}
 		// 如果还有数据，则继续解析命令...
 		ASSERT(theErr == GM_NoErr);
+	}
+	return GM_NoErr;
+}
+//
+// 处理中转服务器反馈的在线通道列表...
+GM_Error CRemoteSession::doCmdGatherCameraList(LPCTSTR lpData, int nSize)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strUTF8Data, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取在线通道的数量...
+	int nListNum = atoi(CUtilTool::getJsonString(value["list_num"]).c_str());
+	// 没有在线通道，一直没有推流，直接返回，中转端会一直保留曾经有过在线用户的通道列表...
+	if( nListNum <= 0 ) {
+		return GM_NoErr;
+	}
+	// 有在线通道，解析出来，判断用户数是否为0，为0的话，停止推流...
+	Json::Value arrayObj = value["list_data"];
+	for (unsigned int i = 0; i < arrayObj.size(); i++)
+	{
+		// 数据结构 => nDBCameraID:nUserCount
+		char * lpDelims = ":";
+		string strItem = CUtilTool::getJsonString(arrayObj[i]);
+		char * lpResult = strtok((char*)strItem.c_str(), lpDelims);
+		// 解析到的通道编号指针为空，下一个...
+		if( lpResult == NULL )
+			continue;
+		// 通道编号无效，下一个...
+		int nDBCameraID = atoi(lpResult);
+		if( nDBCameraID <= 0 )
+			continue;
+		// 用户数量指针为空，下一个...
+		lpResult = strtok(NULL, lpDelims);
+		if( lpResult == NULL )
+			continue;
+		// 用户数量大于0，下一个...
+		int nUserCount = atoi(lpResult);
+		if( nUserCount > 0 )
+			continue;
+		// 用户数量为0，停止推流...
+		ASSERT( nUserCount <= 0 );
+		// 根据数据库编号获取摄像头对象...
+		CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
+		if( lpCamera == NULL )
+			continue;
+		ASSERT( lpCamera != NULL );
+		// 只有发布中的通道才需要停止推送...
+		if( !lpCamera->IsPublishing() )
+			continue;
+		ASSERT( lpCamera->IsPublishing() );
+		// 如果该通道下的用户数已经为0，则调用删除接口...
+		// 这里不能直接删除，会卡死，一定要通过发送窗口消息...
+		lpCamera->doPostStopLiveMsg();
+		TRACE("== Camera(%d) stop push by kCmd_Gather_Camera_List ==\n", nDBCameraID);
 	}
 	return GM_NoErr;
 }
@@ -978,9 +1045,14 @@ GM_Error CRemoteSession::doCmdLiveVary(LPCTSTR lpData, int nSize)
 		return GM_NoErr;
 	}
 	ASSERT( lpCamera != NULL );
+	// 只有发布中的通道才需要停止推送...
+	if( !lpCamera->IsPublishing() )
+		return GM_NoErr;
+	ASSERT( lpCamera->IsPublishing() );
 	// 如果该通道下的用户数已经为0，则调用删除接口...
 	// 这里不能直接删除，会卡死，一定要通过发送窗口消息...
 	lpCamera->doPostStopLiveMsg();
+	TRACE("== Camera(%d) stop push by kCmd_Live_Vary ==\n", nDBCameraID);
 	return GM_NoErr;
 }
 //
@@ -1432,7 +1504,7 @@ GM_Error CRemoteSession::SendLoginCmd()
 	root["ip_addr"] = m_lpHaoYiView->m_strIPAddr.GetString();
 	strJson = root.toStyledString(); ASSERT( strJson.size() > 0 );
 	// 组合命令包头 => 数据长度 | 终端类型 | 命令编号 | 采集端MAC地址
-	UInt32	nSendSize = 0;
+	UInt32 nSendSize = 0;
 	Cmd_Header theHeader = {0};
 	theHeader.m_pkg_len = strJson.size();
 	theHeader.m_type = kClientGather;
@@ -1442,6 +1514,25 @@ GM_Error CRemoteSession::SendLoginCmd()
 	nSendSize += sizeof(theHeader);
 	memcpy(m_lpSendBuf+nSendSize, strJson.c_str(), strJson.size());
 	nSendSize += strJson.size();
+	// 调用统一的发送接口...
+	return this->SendData(m_lpSendBuf, nSendSize);
+}
+//
+// 每隔30秒发送获取直播通道列表命令...
+GM_Error CRemoteSession::SendCameraListCmd()
+{
+	// 如果状态不对，直接返回...
+	if( m_eState != kConnectState )
+		return GM_NoErr;
+	// 组合命令包头 => 数据长度 | 终端类型 | 命令编号
+	UInt32 nSendSize = 0;
+	Cmd_Header theHeader = {0};
+	theHeader.m_pkg_len = 0;
+	theHeader.m_type = kClientGather;
+	theHeader.m_cmd  = kCmd_Gather_Camera_List;
+	// 追加命令包头和命令数据包内容...
+	memcpy(m_lpSendBuf, &theHeader, sizeof(theHeader));
+	nSendSize += sizeof(theHeader);
 	// 调用统一的发送接口...
 	return this->SendData(m_lpSendBuf, nSendSize);
 }

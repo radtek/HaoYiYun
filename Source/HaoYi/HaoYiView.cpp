@@ -421,6 +421,7 @@ LRESULT CHaoYiView::OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam)
 	this->SetTimer(kTimerCheckDVR, 2 * 1000, NULL);
 	this->SetTimer(kTimerAnimateDVR, 1 * 1000, NULL);
 	this->SetTimer(kTimerCheckCourse, 500, NULL);
+	this->SetTimer(kTimerCameraList, 30 * 1000, NULL);
 	return S_OK;
 }
 
@@ -432,9 +433,18 @@ void CHaoYiView::OnTimer(UINT_PTR nIDEvent)
 	case kTimerCheckDVR:		this->doCheckDVR();			break;
 	case kTimerAnimateDVR:		this->doAnimateDVR();		break;
 	case kTimerCheckCourse:		this->doCheckCourse();		break;
+	case kTimerCameraList:		this->doGetCameraList();	break;
 	default:					/*-- do nothing --*/		break;
 	}
 	CFormView::OnTimer(nIDEvent);
+}
+//
+// 获取正在直播通道列表命令...
+void CHaoYiView::doGetCameraList()
+{
+	if( m_lpRemoteSession == NULL )
+		return;
+	m_lpRemoteSession->SendCameraListCmd();
 }
 //
 // 处理有关课程记录发生变化的情况...

@@ -1515,6 +1515,7 @@ void CPushThread::doErrPushNotify()
 	//WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
 	WPARAM wMsgID = WM_STOP_LIVE_PUSH_MSG;
 	::PostMessage(m_hWndVideo, wMsgID, NULL, NULL);
+	TRACE("== Camera(%d) stop push by SRS ==\n", ((m_lpCamera != NULL) ? m_lpCamera->GetDBCameraID() : 0));
 }
 
 void CPushThread::Entry()

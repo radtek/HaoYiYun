@@ -124,7 +124,10 @@ public:
 public:
 	virtual GM_Error ForConnect();
 	virtual GM_Error ForRead();
+public:
+	GM_Error	SendCameraListCmd();
 private:
+	GM_Error    doCmdGatherCameraList(LPCTSTR lpData, int nSize);
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);
 	GM_Error    doCmdPlayLogin(LPCTSTR lpData, int nSize);
 	GM_Error    doPHPSetGatherSys(LPCTSTR lpData, int nSize);
