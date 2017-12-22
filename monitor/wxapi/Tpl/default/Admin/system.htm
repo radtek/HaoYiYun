@@ -35,6 +35,14 @@
                 <input type="text" name="myWebPhone" maxlength="30" lay-verify="required" autocomplete="off" placeholder="请输入客服电话" class="layui-input" value="{{$my_sys.web_phone}}">
               </div>
             </div>
+            <gt name='my_is_admin' value='0'>
+            <div class="layui-form-item">
+              <label class="layui-form-label">API凭证</label>
+              <div class="layui-input-block">
+                <input type="text" name="myUnionID" autocomplete="off" class="layui-input" value="{{$my_api_unionid}}" readonly>
+              </div>
+            </div>
+            </gt>
             <div class="layui-form-item" style="margin-top:30px;text-align:center;">
               <button class="layui-btn" lay-submit lay-filter="formSystem">立即保存</button>&nbsp;
               <button type="reset" class="layui-btn layui-btn-primary">重置还原</button>

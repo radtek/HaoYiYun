@@ -35,6 +35,14 @@
                 <input type="text" name="myWebPhone" maxlength="30" lay-verify="required" autocomplete="off" placeholder="请输入客服电话" class="layui-input" value="{{$my_sys.web_phone}}">
               </div>
             </div>
+            <gt name='my_is_admin' value='0'>
+            <div class="layui-form-item">
+              <label class="layui-form-label">API凭证</label>
+              <div class="layui-input-block">
+                <input type="text" name="myUnionID" autocomplete="off" class="layui-input" value="{{$my_api_unionid}}" readonly>
+              </div>
+            </div>
+            </gt>
             <!--<div id="recSlice">
               <div class="layui-form-item">
                 <label class="layui-form-label">录像切片</label>

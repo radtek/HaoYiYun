@@ -285,6 +285,13 @@ class AdminAction extends Action
       $_POST['system_id'] = $dbSys['system_id'];
       D('system')->save($_POST);
     } else {
+      // 获取用户类型，是管理员还是普通用户...
+      $strTicker = Cookie::get('wx_ticker');
+      $strUnionID = base64_encode(Cookie::get('wx_unionid'));
+      $bIsAdmin = ((strcmp($strTicker, USER_ADMIN_TICK)==0) ? true : false);
+      // 设置是否显示API标识凭证信息...
+      $this->assign('my_is_admin', $bIsAdmin);
+      $this->assign('my_api_unionid', $strUnionID);
       // 设置模板参数，并返回数据...
       $this->assign('my_sys', $dbSys);
       $this->display();
