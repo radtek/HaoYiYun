@@ -188,6 +188,7 @@ private:
 	CStorageSession  *  m_lpStorageSession;				// 链接Storage，发送上传指令，发送上传文件，接收反馈信息...
 	CRemoteSession   *  m_lpRemoteSession;				// 链接命令中转服务器，获取微信或网站发出的远程操作指令...
 
+	friend class CAboutDlg;
 	friend class CMainFrame;
 	friend class CWebThread;
 	friend class CRemoteSession;

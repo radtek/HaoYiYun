@@ -13,6 +13,15 @@ class LoginAction extends Action
     $this->m_weLogin = C('WECHAT_LOGIN');
   }
   //
+  // 计算时间差值...
+  private function diffSecond($dStart, $dEnd)
+  {
+    $one = strtotime($dStart);//开始时间 时间戳
+    $tow = strtotime($dEnd);//结束时间 时间戳
+    $cle = $tow - $one; //得出时间戳差值
+    return $cle; //返回秒数...
+  }
+  //
   // 执行微信用户的登录授权操作...
   public function doWechatAuth($strCode, $strState)
   {
@@ -58,7 +67,9 @@ class LoginAction extends Action
         $dbNode['node_ver'] = $strNodeVer;
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
+        $dbNode['expired'] = date("Y-m-d H:i:s", strtotime("+30 days"));
         $dbNode['node_id'] = D('node')->add($dbNode);
+        $dbNode['license'] = 0;
       } else {
         // 修改已有的记录...
         $dbNode['node_proto'] = $strNodeProto;
@@ -70,6 +81,17 @@ class LoginAction extends Action
         $dbNode['node_ver'] = $strNodeVer;
         $dbNode['updated'] = date('Y-m-d H:i:s');
         D('node')->save($dbNode);
+      }
+      // 查看授权是否已经过期 => 当前时间 与 过期时间 比较...
+      $nDiffSecond = $this->diffSecond(date("Y-m-d H:i:s"), $dbNode['expired']);
+      // 统一计算 剩余天数、永久授权、授权有效期...
+      $my_auth_days = ceil($nDiffSecond/3600/24);
+      $my_auth_license = $dbNode['license'];
+      $my_auth_expired = $dbNode['expired'];
+      // 不是永久授权版，并且授权已过期，返回失败...
+      if( ($my_auth_license <= 0) && ($nDiffSecond <= 0) ) {
+        $strError = "授权已过期！请与供应商联系！";
+        break;
       }
       // 判断获取的节点记录是否有效...
       if( $dbNode['node_id'] <= 0 ) {
@@ -137,6 +159,10 @@ class LoginAction extends Action
         $insertid = D('user')->add($dbUser);
         $dbUser['user_id'] = $insertid;
       }
+      // 将授权信息传递给登录对象...
+      $arrUser['auth_days'] = $my_auth_days;
+      $arrUser['auth_license'] = $my_auth_license;
+      $arrUser['auth_expired'] = $my_auth_expired;
       // 保存需要返回的用户信息 => 全部转换成JSON...
       $strWxJSON = json_encode($arrUser);
     }while( false );

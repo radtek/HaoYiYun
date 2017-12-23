@@ -10,10 +10,11 @@ class LoginAction extends Action
   public function _initialize()
   {
     // 获取系统配置，根据配置设置相关变量 => 强制配置成云录播...
-    $dbSys = D('system')->field('web_type,web_title')->find();
+    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
     $this->m_webTitle = $dbSys['web_title'];
     $this->m_webType = kCloudRecorder;
     // 直接给模板变量赋值...
+    $this->assign('my_sys_site', $dbSys['sys_site']);
     $this->assign('my_web_title', $this->m_webTitle);
     $this->assign('my_login_title', $this->m_webTitle . " - 微信登录");
   }
@@ -43,6 +44,11 @@ class LoginAction extends Action
       // 判断获取数据的有效性...
       if( !isset($arrUser['unionid']) || !isset($arrUser['headimgurl']) ) {
         $this->dispError($bIsAdmin, '获取微信数据失败', '糟糕，登录失败了');
+        return;
+      }
+      // 判断获取授权数据的有效性...
+      if( !isset($arrUser['auth_days']) || !isset($arrUser['auth_license']) || !isset($arrUser['auth_expired']) ) {
+        $this->dispError($bIsAdmin, '获取授权数据失败', '糟糕，登录失败了');
         return;
       }
       // 从当前已有的数据库中查找这个用户的信息...
@@ -78,10 +84,15 @@ class LoginAction extends Action
       $strUnionid = $dbUser['wx_unionid'];
       $strHeadUrl = $dbUser['wx_headurl'];
       $strTicker = $dbUser['user_tick'];
+      $nElapseTime = 3600*24;
       // 把unionid存入cookie当中，有效期设置一整天，必须用Cookie类...
-      Cookie::set('wx_unionid', $strUnionid, 3600*24);
-      Cookie::set('wx_headurl', $strHeadUrl, 3600*24);
-      Cookie::set('wx_ticker', $strTicker, 3600*24);
+      Cookie::set('wx_unionid', $strUnionid, $nElapseTime);
+      Cookie::set('wx_headurl', $strHeadUrl, $nElapseTime);
+      Cookie::set('wx_ticker', $strTicker, $nElapseTime);
+      // 将授权数据存入cookie当中，有效期设置为一整天，必须用Cookie类...
+      Cookie::set('auth_days', $arrUser['auth_days'], $nElapseTime);
+      Cookie::set('auth_license', $arrUser['auth_license'], $nElapseTime);
+      Cookie::set('auth_expired', $arrUser['auth_expired'], $nElapseTime);
       // 如果是后台 => 用户登录成功，进行页面跳转 => 直接跳转到后台首页...
       if( $bIsAdmin ) {
         A('Admin')->index();
@@ -124,6 +135,9 @@ class LoginAction extends Action
     setcookie('wx_unionid','',-1,'/');
     setcookie('wx_headurl','',-1,'/');
     setcookie('wx_ticker','',-1,'/');
+    setcookie('auth_days','',-1,'/');
+    setcookie('auth_license','',-1,'/');
+    setcookie('auth_expired','',-1,'/');
 
     // 前台特殊处理 => 记录登录成功之后的跳转页面 => 必须用Cookie类...
     if( !$bIsAdmin ) {

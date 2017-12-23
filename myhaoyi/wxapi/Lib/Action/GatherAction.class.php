@@ -66,6 +66,7 @@ class GatherAction extends Action
         $dbNode['node_ver'] = $arrData['node_ver'];
         $dbNode['created'] = date('Y-m-d H:i:s');
         $dbNode['updated'] = date('Y-m-d H:i:s');
+        $dbNode['expired'] = date("Y-m-d H:i:s", strtotime("+30 days"));
         $dbNode['node_id'] = D('node')->add($dbNode);
       } else {
         $dbNode['node_wan'] = $theWanFlag;
@@ -78,6 +79,9 @@ class GatherAction extends Action
         $dbNode['updated'] = date('Y-m-d H:i:s');
         D('node')->save($dbNode);
       }
+      /////////////////////////////////////////////////
+      // 注意：采集端不用验证节点网站的有效性...
+      /////////////////////////////////////////////////
       // 判断获取的节点记录是否有效...
       if( $dbNode['node_id'] <= 0 ) {
         $arrErr['err_code'] = true;
@@ -96,11 +100,14 @@ class GatherAction extends Action
         $dbGather['created'] = date('Y-m-d H:i:s');
         $dbGather['updated'] = date('Y-m-d H:i:s');
         $dbGather['expired'] = date("Y-m-d H:i:s", strtotime("+30 days"));
+        $dbGather['mac_md5'] = md5($arrData['mac_addr']);
         $arrErr['gather_id'] = D('gather')->add($dbGather);
-        // 获取数据库设置的默认最大通道数...
+        // 获取数据库设置的默认最大通道数、永久授权标志...
         $condition['gather_id'] = $arrErr['gather_id'];
-        $dbItem = D('gather')->where($condition)->field('max_camera')->find();
-        // 准备返回数据 => 最大通道数、授权有效期、所在节点编号...
+        $dbItem = D('gather')->where($condition)->field('max_camera,license')->find();
+        // 准备返回数据 => 最大通道数、授权有效期、所在节点编号、永久授权标志...
+        $arrErr['auth_days'] = 30;
+        $arrErr['auth_license'] = $dbItem['license'];
         $arrErr['auth_expired'] = $dbGather['expired'];
         $arrErr['max_camera'] = $dbItem['max_camera'];
         $arrErr['node_id'] = $arrData['node_id'];
@@ -109,10 +116,11 @@ class GatherAction extends Action
         $nDiffSecond = $this->diffSecond(date("Y-m-d H:i:s"), $dbGather['expired']);
         // 统一返回最大通道数、授权有效期、剩余天数...
         $arrErr['auth_days'] = ceil($nDiffSecond/3600/24);
+        $arrErr['auth_license'] = $dbGather['license'];
         $arrErr['auth_expired'] = $dbGather['expired'];
         $arrErr['max_camera'] = $dbGather['max_camera'];
-        // 授权过期，返回失败...
-        if( $nDiffSecond <= 0 ) {
+        // 不是永久授权版，并且授权已过期，返回失败...
+        if( ($arrErr['auth_license'] <= 0) && ($nDiffSecond <= 0) ) {
           $arrErr['err_code'] = true;
           $arrErr['err_msg'] = "授权已过期！";
           break;
@@ -121,6 +129,7 @@ class GatherAction extends Action
         $arrErr['gather_id'] = $dbGather['gather_id'];
         $arrErr['node_id'] = $arrData['node_id'];
         // 授权有效，将记录更新到数据库...
+        $arrData['mac_md5'] = md5($arrData['mac_addr']);
         $arrData['gather_id'] = $dbGather['gather_id'];
         $arrData['updated'] = date('Y-m-d H:i:s');
         $arrData['status'] = 1;

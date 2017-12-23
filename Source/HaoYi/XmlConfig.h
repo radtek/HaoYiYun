@@ -28,7 +28,7 @@ public:
 	string & GetVersion() { return m_strVersion; }
 	string & GetPhone() { return m_strPhone; }
 	string & GetWebSite() { return m_strWebSite; }
-	string & GetAddress() { return m_strAddress; }
+//	string & GetAddress() { return m_strAddress; }
 
 	string & GetSavePath() { return m_strSavePath; }
 	string & GetWebAddr() { return m_strWebAddr; }
@@ -38,6 +38,7 @@ public:
 	/////////////////////////////////////////////////////////////
 	// 这几个地址和端口是动态获取的，不会存入xml当中...
 	/////////////////////////////////////////////////////////////
+	bool     GetAuthLicense() { return m_bAuthLicense; }
 	int      GetAuthDays() { return m_nAuthDays; }
 	string & GetAuthExpired() { return m_strAuthExpired; }
 	string & GetMainName() { return m_strMainName; }
@@ -75,6 +76,7 @@ public:
 
 	void	 SetAuthDays(const int nAuthDays) { m_nAuthDays = nAuthDays; }
 	void	 SetAuthExpired(const string & strExpired) { m_strAuthExpired = strExpired; }
+	void	 SetAuthLicense(bool bLicense) { m_bAuthLicense = bLicense; }
 	void	 SetMainName(const string & strName) { m_strMainName = strName; }
 	void	 SetMainKbps(int nMainKbps) { m_nMainKbps = nMainKbps; } 
 	void     SetSubKbps(int nSubKbps) { m_nSubKbps = nSubKbps; }
@@ -115,7 +117,7 @@ private:
 	string				m_strVersion;					// 版本
 	string				m_strPhone;						// 电话
 	string				m_strWebSite;					// 网站
-	string				m_strAddress;					// 地址
+//	string				m_strAddress;					// 地址
 
 	string				m_strMPlayer;					// 截图工具的全路径...
 	string				m_strXMLFile;					// XML配置文件
@@ -144,6 +146,7 @@ private:
 	int					m_nDBHaoYiNodeID;				// 在中心服务器上的节点编号...
 	int                 m_nDBHaoYiGatherID;				// 在中心服务器上的采集端编号...
 	string				m_strAuthExpired;				// 中心服务器反馈的授权过期时间...
+	bool				m_bAuthLicense;					// 中心服务器反馈的永久授权标志...
 	int					m_nAuthDays;					// 中心服务器反馈的剩余授权天数...
 
 	GM_MapServer		m_MapServer;					// 可连接的服务器列表...

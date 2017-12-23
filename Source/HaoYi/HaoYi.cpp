@@ -12,6 +12,7 @@
 #include "OSThread.h"
 #include "SocketUtils.h"
 #include "PushThread.h"
+#include "MD5.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -235,8 +236,13 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	CMainFrame * lpMain = (CMainFrame*)AfxGetMainWnd();
+	CHaoYiView * lpView = (CHaoYiView*)lpMain->GetActiveView();
+	CString & theMacAddr = lpView->m_strMacAddr;
+
 	CString strTitle, strAuthorize;
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	bool bAuthLicense = theConfig.GetAuthLicense();
 	int nMaxCamera = theConfig.GetMaxCamera();
 	int nAuthDays = theConfig.GetAuthDays();
 	string & strAuthExpired = theConfig.GetAuthExpired();
@@ -245,12 +251,12 @@ BOOL CAboutDlg::OnInitDialog()
 	string & strPhone = theConfig.GetPhone();
 	string & strWebSite = theConfig.GetWebSite();
 	string & strVersion = theConfig.GetVersion();
-	string & strAddress = theConfig.GetAddress();
+	//string & strAddress = theConfig.GetAddress();
 	GetDlgItem(IDC_ABOUT_COPYRIGHT)->SetWindowText(strCopyRight.c_str());
 	GetDlgItem(IDC_ABOUT_VERSION)->SetWindowText(strVersion.c_str());
 	GetDlgItem(IDC_ABOUT_PHONE)->SetWindowText(strPhone.c_str());
 	GetDlgItem(IDC_ABOUT_WEBSITE)->SetWindowText(strWebSite.c_str());
-	GetDlgItem(IDC_ABOUT_ADDRESS)->SetWindowText(strAddress.c_str());
+	//GetDlgItem(IDC_ABOUT_ADDRESS)->SetWindowText(strAddress.c_str());
 
 	// 设置访问连接地址...
 	m_ctrlHome.SetUnderline(TRUE);
@@ -259,9 +265,17 @@ BOOL CAboutDlg::OnInitDialog()
 	m_ctrlHome.SetLinkCursor(this->m_hHandCur);
 	m_ctrlHome.SetAutoSize();
 
+	// 显示“标识”信息，对MAC地址进行MD5编码...
+	MD5 md5;
+	string strUniqid;
+	md5.update(theMacAddr, theMacAddr.GetLength());
+	strUniqid = md5.toString();
+	GetDlgItem(IDC_EDIT_MARK)->SetWindowText(strUniqid.c_str());
+
 	// 成功登录，获取已授权信息...
-	strAuthorize.Format("剩余期限【 %d 天 】，最大通道数【 %d 路 】", nAuthDays, nMaxCamera);
-	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowTextA(strAuthorize);
+	if( bAuthLicense ) { strAuthorize.Format("【永久授权版】，最大通道数【 %d 路 】", nMaxCamera); }
+	else { strAuthorize.Format("剩余期限【 %d 天 】，最大通道数【 %d 路 】", nAuthDays, nMaxCamera); }
+	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowText(strAuthorize);
 
 	// 设置标题信息...
 	strTitle.Format("关于 - %s", strMainName.c_str());
@@ -282,6 +296,8 @@ HBRUSH CAboutDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 		int nAuthDays = theConfig.GetAuthDays();
 		// 授权天数为0或负数，设置颜色为红色警告色...
 		pDC->SetTextColor((nAuthDays <= 0) ? RGB(255,0,0) : RGB(0,0,128));
+	} else if( pWnd->GetDlgCtrlID() == IDC_EDIT_MARK ) {
+		pDC->SetTextColor(RGB(0,0,128));
 	}
 	return hbr;
 }

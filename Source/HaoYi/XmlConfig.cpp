@@ -21,6 +21,7 @@ CXmlConfig::CXmlConfig(void)
   , m_nSubKbps(DEF_SUB_KBPS)
   , m_bAutoLinkFDFS(false)
   , m_bAutoLinkDVR(false)
+  , m_bAuthLicense(false)
   , m_strSavePath(DEF_REC_PATH)
   , m_strMainName(DEF_MAIN_NAME)
   , m_strWebAddr(DEF_CLOUD_MONITOR)
@@ -48,7 +49,7 @@ CXmlConfig::CXmlConfig(void)
 	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2017-2020";
 	m_strPhone = "15010119735";
 	m_strWebSite = DEF_WEB_HOME;	
-	m_strAddress = "北京市海淀区北四环西路68号6层C16";
+	//m_strAddress = "北京市海淀区北四环西路68号6层C16";
 }
 
 CXmlConfig::~CXmlConfig(void)
@@ -148,8 +149,8 @@ BOOL CXmlConfig::GMLoadConfig()
 			m_strPhone = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		} else if( strValue == "WebSite" ) {
 			m_strWebSite = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
-		} else if( strValue == "Address" ) {
-			m_strAddress = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
+		//} else if( strValue == "Address" ) {
+		//	m_strAddress = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		}
 		lpChildElem = lpChildElem->NextSiblingElement();
 	}
@@ -303,8 +304,8 @@ BOOL CXmlConfig::GMSaveConfig()
 	aboutElem.InsertEndChild(theElem);
 	theElem = this->BuildXmlElem("WebSite", CUtilTool::ANSI_UTF8(m_strWebSite.c_str()));
 	aboutElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("Address", CUtilTool::ANSI_UTF8(m_strAddress.c_str()));
-	aboutElem.InsertEndChild(theElem);
+	//theElem = this->BuildXmlElem("Address", CUtilTool::ANSI_UTF8(m_strAddress.c_str()));
+	//aboutElem.InsertEndChild(theElem);
 	// 2017.10.27 - by jackey => 通道配置全部放置到网站端，不存盘到本地...
 	// 开始保存监控通道列表...
 	/*GM_MapNodeCamera::iterator itorData;

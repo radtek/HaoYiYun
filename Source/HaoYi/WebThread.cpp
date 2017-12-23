@@ -165,6 +165,7 @@ BOOL CWebThread::RegisterHaoYi()
 		return false;
 	}
 	// 解析JSON成功，进一步解析数据...
+	bool bAuthLicense = atoi(CUtilTool::getJsonString(value["auth_license"]).c_str());
 	int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
 	int nHaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	int nHaoYiNodeID = atoi(CUtilTool::getJsonString(value["node_id"]).c_str());
@@ -175,6 +176,7 @@ BOOL CWebThread::RegisterHaoYi()
 	// 存放到配置对象，返回授权验证结果...
 	theConfig.SetAuthDays(nAuthDays);
 	theConfig.SetAuthExpired(strExpired);
+	theConfig.SetAuthLicense(bAuthLicense);
 	theConfig.SetMaxCamera(nMaxCameraNum);
 	theConfig.SetDBHaoYiNodeID(nHaoYiNodeID);
 	theConfig.SetDBHaoYiGatherID(nHaoYiGatherID);

@@ -12,6 +12,12 @@
         <div class="layui-field-box" style="padding: 0px 0px; width: 50%;">
           <form class="layui-form layui-form-pane" action="">
             <div class="layui-form-item">
+              <label class="layui-form-label">授权状态</label>
+              <div class="layui-input-block">
+                <input type="text" name="myWebAuth" autocomplete="off" class="layui-input" style="color:red" value="{{$my_web_auth}}" readonly>
+              </div>
+            </div>
+            <div class="layui-form-item">
               <label class="layui-form-label">本站标记</label>
               <div class="layui-input-block">
                 <input type="text" name="myWebTag" autocomplete="off" class="layui-input" value="{{$my_sys.web_tag}}" readonly>

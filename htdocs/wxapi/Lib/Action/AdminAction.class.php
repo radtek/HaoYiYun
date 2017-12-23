@@ -64,6 +64,9 @@ class AdminAction extends Action
     setcookie('wx_unionid','',-1,'/');
     setcookie('wx_headurl','',-1,'/');
     setcookie('wx_ticker','',-1,'/');
+    setcookie('auth_days','',-1,'/');
+    setcookie('auth_license','',-1,'/');
+    setcookie('auth_expired','',-1,'/');
 
     // 注意：只有页面强制刷新，才能真正删除cookie，所以需要强制页面刷新...
     // 自动跳转到登录页面...
@@ -285,6 +288,11 @@ class AdminAction extends Action
       $_POST['system_id'] = $dbSys['system_id'];
       D('system')->save($_POST);
     } else {
+      // 获取授权状态信息...
+      $nAuthDays = Cookie::get('auth_days');
+      $bAuthLicense = Cookie::get('auth_license');
+      $strWebAuth = $bAuthLicense ? "【永久授权版】，无使用时间限制！" : sprintf("剩余期限【 %d 】天，请联系供应商获取更多授权！", $nAuthDays);
+      $this->assign('my_web_auth', $strWebAuth);
       // 获取用户类型，是管理员还是普通用户...
       $strTicker = Cookie::get('wx_ticker');
       $strUnionID = base64_encode(Cookie::get('wx_unionid'));
