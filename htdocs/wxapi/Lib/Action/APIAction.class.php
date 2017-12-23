@@ -829,9 +829,17 @@ class APIAction extends Action
         $this->setError(ErrCode::$GM_NoID);
         break;
       }
-      // 删除记录，批量删除...
+      // 通过ID编号列表获取录像记录
       $condition['record_id'] = array('in', $_GET['record_id']);
-      D('record')->where($condition)->delete();
+      $arrList = D('VodView')->where($condition)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs')->select();
+      foreach ($arrList as &$dbItem) {
+        // 删除图片和视频文件，逐一删除...
+        fastdfs_storage_delete_file1($dbItem['file_fdfs']);
+        fastdfs_storage_delete_file1($dbItem['image_fdfs']);
+        // 删除图片记录和视频记录...
+        D('record')->delete($dbItem['record_id']);
+        D('image')->delete($dbItem['image_id']);
+      }
     }while( false );
     // 返回json数据包...
     echo json_encode($this->m_data);
