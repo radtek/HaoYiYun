@@ -18,21 +18,25 @@ class ErrCode {
   public static $GM_NoID          = 1010;            // 没有编号，请确认参数
   public static $GM_BadTime       = 1011;            // 时间格式不正确
   public static $GM_OverTime      = 1012;            // 时间发生重叠
+  public static $GM_OverDay       = 1013;            // 时间发生跨天
   public static function getErrMsg($inErrCode) {
     $strErrMsg = "OK";
-    switch( $inErrCode ) {
-      case $GM_OK:  $strErrMsg = "OK"; break;
-      case $GM_BadUnionid: $strErrMsg = "无效的unionid"; break;
-      case $GM_NoUser: $strErrMsg = "没有找到unionid指定的帐号"; break;
-      case $GM_NoAuth: $strErrMsg = "unionid对应的帐号没有接口访问权限"; break;
-      case $GM_NoToken: $strErrMsg = "没有凭证，请确认参数"; break;
-      case $GM_BadToken: $strErrMsg = "生成token过程中发生错误"; break;
-      case $GM_ParseToken: $strErrMsg = "解析token失败"; break;
-      case $GM_ExpireToken: $strErrMsg = "凭证已过期，请重新获取"; break;
-      case $GM_NoName: $strErrMsg = "没有名称，请确认参数"; break;
-      case $GM_NoAddr: $strErrMsg = "没有地址，请确认参数"; break;
-      case $GM_NoID: $strErrMsg = "没有编号，请确认参数"; break;
-      case $GM_BadTime: $strErrMsg = "时间格式不正确"; break;
+    switch( $inErrCode )
+    {
+      case ErrCode::$GM_OK: $strErrMsg = "OK"; break;
+      case ErrCode::$GM_BadUnionid: $strErrMsg = "无效的unionid"; break;
+      case ErrCode::$GM_NoUser: $strErrMsg = "没有找到unionid指定的帐号"; break;
+      case ErrCode::$GM_NoAuth: $strErrMsg = "unionid对应的帐号没有接口访问权限"; break;
+      case ErrCode::$GM_NoToken: $strErrMsg = "没有凭证，请确认参数"; break;
+      case ErrCode::$GM_BadToken: $strErrMsg = "生成token过程中发生错误"; break;
+      case ErrCode::$GM_ParseToken: $strErrMsg = "解析token失败"; break;
+      case ErrCode::$GM_ExpireToken: $strErrMsg = "凭证已过期，请重新获取"; break;
+      case ErrCode::$GM_NoName: $strErrMsg = "没有名称，请确认参数"; break;
+      case ErrCode::$GM_NoAddr: $strErrMsg = "没有地址，请确认参数"; break;
+      case ErrCode::$GM_NoID: $strErrMsg = "没有编号，请确认参数"; break;
+      case ErrCode::$GM_BadTime: $strErrMsg = "时间格式不正确"; break;
+      case ErrCode::$GM_OverTime: $strErrMsg = "当前时间发生重叠"; break;
+      case ErrCode::$GM_OverDay: $strErrMsg = "不支持跨天任务"; break;
       default: $strErrMsg = "未定义的错误号"; break;
     }
     return $strErrMsg;
@@ -878,14 +882,13 @@ class APIAction extends Action
     echo json_encode($this->m_data);
   }
   //////////////////////////////////////////////////////////////
-  // 2017.12.21 - 录像任务的接口暂时不写，直接通过后台配置...
-  // 创建录像任务...
+  // 创建录像任务 => 需要连接中转服务器，通知采集端...
   //////////////////////////////////////////////////////////////
-  /*public function add_course() {
+  public function add_course() {
     do {
       $arrToken = $this->parseToken();
       if( !$arrToken ) break;
-      // 没有编号...
+      // 没有编号 => 这里需要严格判断内容长度是否有效...
       if( !isset($_GET['camera_id']) || strlen($_GET['camera_id']) <= 0 ||
           !isset($_GET['subject_id']) || strlen($_GET['subject_id']) <= 0 ||
           !isset($_GET['teacher_id']) || strlen($_GET['teacher_id']) <= 0 ||
@@ -896,36 +899,237 @@ class APIAction extends Action
         $this->setError(ErrCode::$GM_NoID);
         break;
       }
-      // 判断日期格式是否正确...
-      $nElapseSec = intval($_GET['elaspe_sec']);
-      $theStartTime = sprintf("%s %s", date('Y-m-d'), $_GET['start_time']);
-      $nStartTime = strtotime($theStartTime);
-      // 计算出来的持续时间、开始时间不正确...
-      if( $nElapseSec <= 0 || $nStartTime <= 0 ) {
-        $this->setError(ErrCode::$GM_BadTime);
-        break;
-      }
-      // 就算出来的结束时间不正确...
-      $nEndTime = $nStartTime + $nElapseSec;
-      if( $nEndTime <= 0 || $nEndTime <= $nStartTime ) {
-        $this->setError(ErrCode::$GM_BadTime);
-        break;
-      }
-      // 计算结束时间字符串格式...
-      $theEndTime = strftime ("Y-m-d H:i:s", $nEndTime);
-      // 判断输入时间是否与已有时间放生重叠...
-      if( !$this->IsTimeOverlaped() ) {
-        $this->setError(ErrCode::$GM_OverTime);
-        break;
-      }
-      // 将数据存放到数据库当中...
-      $dbCourse = $_GET;
-      $dbCourse['start_time'] = $theStartTime;
-      $dbCourse['end_time'] = $theEndTime;
+      // 因为是添加操作，主动将course_id清理掉...
+      unset($_GET['course_id']);
+      // 对传递的数据进行验证和处理...
+      $this->doCourseOperate(true);
     }while( false );
     // 返回json数据包...
     echo json_encode($this->m_data);
-  }*/
+  }
+  //
+  // 对传递的录像任务数据进行处理 => 添加或修改...
+  private function doCourseOperate($inIsAdd)
+  {
+    do {
+      // 判断输入的开始时间格式是否正确...
+      $preg = '/^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$/';
+      if( !preg_match($preg, $_GET['start_time']) ) {
+        $this->setError(ErrCode::$GM_BadTime);
+        break;
+      }
+      // 判断日期格式是否正确...
+      $nElapseSec = intval($_GET['elapse_sec']);
+      $theStartTime = sprintf("%s %s", date('Y-m-d'), $_GET['start_time']);
+      $nStartTime = strtotime($theStartTime);
+      $nEndTime = $nStartTime + $nElapseSec;
+      // 计算结束时间字符串格式...
+      $theEndTime = strftime("%Y-%m-%d %H:%M:%S", $nEndTime);
+      // 计算出来的持续时间、开始时间不正确...
+      if(($nElapseSec <= 0) || ($nStartTime <= 0)) {
+        $this->setError(ErrCode::$GM_BadTime);
+        break;
+      }
+      // 持续时间不要超过24小时...
+      $nMaxSec = 3600 * 24 - 1;
+      if( $nElapseSec >= $nMaxSec ) {
+        $this->setError(ErrCode::$GM_OverDay);
+        break;
+      }
+      // 将开始时间和结束时间，都去掉日期，检测跨天问题...
+      $nShortStart = 60 * (60*date('H', $nStartTime)+date('i', $nStartTime))+date('s', $nStartTime);
+      $nShortEnd = 60 * (60*date('H', $nEndTime)+date('i', $nEndTime))+date('s', $nEndTime);
+      // 计算出来的结束时间不正确 => 结束时间必须大于开始时间...
+      if( $nShortEnd <= 0 || $nShortEnd <= $nShortStart ) {
+        $this->setError(ErrCode::$GM_OverDay);
+        break;
+      }
+      // 将数据存放到数组对象当中...
+      $dbCourse = $_GET;
+      $dbCourse['start_time'] = $theStartTime;
+      $dbCourse['end_time'] = $theEndTime;
+      // 判断输入时间是否与已有时间放生重叠...
+      $theOverItem = array();
+      if( $this->IsTimeOverlaped($dbCourse, $theOverItem) ) {
+        $this->setError(ErrCode::$GM_OverTime);
+        $strOverStart = date("H:i:s", strtotime($theOverItem['start_time']));
+        $strOverEnd = date("H:i:s", strtotime($theOverItem['end_time']));
+        $this->m_data['err_msg'] .= sprintf("，重叠区间：%s ~ %s", $strOverStart, $strOverEnd);
+        break;
+      }
+      // 新建记录到任务表当中，设置新建或修改标记...
+      $dbCourse['created'] = date('Y-m-d H:i:s');
+      $dbCourse['updated'] = date('Y-m-d H:i:s');
+      // 针对添加操作...
+      if( $inIsAdd ) {
+        $dbCourse['course_id'] = D('course')->add($dbCourse);
+        $dbCourse['is_delete'] = 1;
+      } else {
+        // 针对修改操作...
+        D('course')->save($dbCourse);
+        $dbCourse['is_delete'] = 2;
+      }
+      // 查找通道对应的采集端编号...
+      $where['camera_id'] = $dbCourse['camera_id'];
+      $dbCamera = D('camera')->where($where)->field('camera_id,gather_id')->find();
+      // 转发命令到采集端...
+      $arrCourse[0] = $dbCourse;
+      $this->m_data['camera_id'] = $dbCourse['camera_id'];
+      $this->m_data['course_id'] = $dbCourse['course_id'];
+      $this->m_data['transmit'] = $this->postCourseRecordToGather($dbCamera['camera_id'], $dbCamera['gather_id'], $arrCourse);
+    } while( false );
+  }
+  //
+  // 转发任务录像记录命令到采集端...
+  private function postCourseRecordToGather($inCameraID, $inGatherID, &$arrCourse)
+  {
+    // 通过php扩展插件连接中转服务器 => 性能高...
+    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    if( !$transmit ) return "无法连接中转服务器";
+    // 保存转发需要的数据...
+    $dbTrasmit['data'] = $arrCourse;
+    $dbTrasmit['camera_id'] = $inCameraID;
+    // 需要对日期格式进行转换...
+    foreach($dbTrasmit['data'] as &$dbItem) {
+      if( isset($dbItem['start_time']) ) {
+        $dbItem['start_time'] = strtotime($dbItem['start_time']);
+      }
+      if( isset($dbItem['end_time']) ) {
+        $dbItem['end_time'] = strtotime($dbItem['end_time']);
+      }
+    }
+    // 转发课表记录命令 => 修改 => 只剩下一个修改命令...
+    $map['gather_id'] = $inGatherID;
+    $dbGather = D('gather')->where($map)->field('mac_addr')->find();
+    $dbTrasmit['mac_addr'] = $dbGather['mac_addr'];
+    // 组合课表数据成JSON...
+    $saveJson = json_encode($dbTrasmit);
+    // 发送转发命令...
+    $nCmdType = kCmd_PHP_Set_Course_Mod;
+    $json_data = transmit_command(kClientPHP, $nCmdType, $transmit, $saveJson);
+    // 关闭中转服务器链接...
+    transmit_disconnect_server($transmit);
+    // 反馈转发结果 => 这个命令无需等待采集端返回...
+    $arrData = json_decode($json_data, true);
+    $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    return json_encode($arrData);
+  }
+  //
+  // 具体判断是否重叠的函数...
+  private function IsTimeOverlaped($inCourse, &$outItem)
+  {
+    // 获取通道编号和任务编号，新建任务时，任务编号为空或0...
+    $nCameraID = intval($inCourse['camera_id']);
+    $nCourseID = intval($inCourse['course_id']);
+    $nWeekID   = intval($inCourse['week_id']);
+    // 就算出开始时间、结束时间、持续时间...
+    $tEnd = strtotime($inCourse['end_time']);
+    $tStart = strtotime($inCourse['start_time']);
+    $tDuration = intval($inCourse['elapse_sec']);
+    // 查找当前通道下面所有的录像任务记录...
+    $condition['camera_id'] = $nCameraID;
+    $arrCourse = D('course')->where($condition)->select();
+    foreach ($arrCourse as &$dbItem) {
+      $nItemWeek = intval($dbItem['week_id']);
+      $nItemID = intval($dbItem['course_id']);
+      // 排查检测记录本身...
+      if( $nCourseID == $nItemID )
+        continue;
+      // 不是同一天，直接排除...
+      if( $nWeekID != $nItemWeek )
+        continue;
+      // 假装输出，计算出检测记录的开始时间、结束时间、持续时间...
+      $outItem = $dbItem;
+      $tItemStart = strtotime($dbItem['start_time']);
+      $tItemEnd = strtotime($dbItem['end_time']);
+      $tItemDur = intval($dbItem['elapse_sec']);
+      ///////////////////////////////////////////////////////////////////////
+      // 处理每周重复的情况 => 已经是同一天，只需要将时间转换成秒在比较...
+      ///////////////////////////////////////////////////////////////////////
+      // 检测区间只取时间进行比较，前面已经排除了不是同一天的情况...
+      $tMapStart = 60 * (60*date('H', $tItemStart)+date('i', $tItemStart))+date('s', $tItemStart);
+      $tMapEnd = $tMapStart + $tItemDur;
+      // 输入区间只取时间进行比较，前面已经排除了不是同一天的情况...
+      $tInStart = 60 * (60*date('H', $tStart)+date('i', $tStart))+date('s', $tStart);
+      $tInEnd = $tInStart + $tDuration;
+      if( $tInStart < $tMapStart && $tInEnd > $tMapStart )  // 区间 1
+        return TRUE;
+      if( $tInStart < $tMapEnd && $tInEnd > $tMapEnd )      // 区间 2
+        return TRUE;
+      if( $tInStart >= $tMapStart && $tInEnd <= $tMapEnd )  // 区间 3
+        return TRUE;
+    }
+    return FALSE;
+  }
+  //////////////////////////////////////////////////////////////
+  // 修改录像任务 => 需要连接中转服务器，通知采集端...
+  //////////////////////////////////////////////////////////////
+  public function mod_course() {
+    do {
+      $arrToken = $this->parseToken();
+      if( !$arrToken ) break;
+      // 没有编号 => 这里需要严格判断内容长度是否有效...
+      if( !isset($_GET['course_id']) || strlen($_GET['course_id']) <= 0 ||
+          !isset($_GET['camera_id']) || strlen($_GET['camera_id']) <= 0 ||
+          !isset($_GET['subject_id']) || strlen($_GET['subject_id']) <= 0 ||
+          !isset($_GET['teacher_id']) || strlen($_GET['teacher_id']) <= 0 ||
+          !isset($_GET['week_id']) || strlen($_GET['week_id']) <= 0 ||
+          !isset($_GET['elapse_sec']) || strlen($_GET['elapse_sec']) <= 0 || 
+          !isset($_GET['start_time']) || strlen($_GET['start_time']) <= 0 )
+      {
+        $this->setError(ErrCode::$GM_NoID);
+        break;
+      }
+      // 因为是修改操作，需要验证course_id记录的有效性...
+      $condition['course_id'] = $_GET['course_id'];
+      $dbCourse = D('course')->where($condition)->find();
+      if( !$dbCourse ) {
+        $this->setError(ErrCode::$GM_NoID);
+        break;
+      }
+      // 对传递的数据进行验证和处理...
+      $this->doCourseOperate(false);
+    }while( false );
+    // 返回json数据包...
+    echo json_encode($this->m_data);
+  }
+  //////////////////////////////////////////////////////////////
+  // 删除录像任务 => 需要连接中转服务器，通知采集端...
+  //////////////////////////////////////////////////////////////
+  public function del_course() {
+    do {
+      $arrToken = $this->parseToken();
+      if( !$arrToken ) break;
+      // 没有编号...
+      if( !isset($_GET['course_id']) ) {
+        $this->setError(ErrCode::$GM_NoID);
+        break;
+      }
+      // 构造查询和删除条件...
+      $condition['course_id'] = array('in', $_GET['course_id']);
+      // 查找需要删除的记录列表，并对每条有效记录打上删除标记...
+      $arrCourse = D('course')->where($condition)->field('course_id,camera_id,week_id')->select();
+      // 如果没有找到有效记录，返回错误...
+      if( !$arrCourse ) {
+        $this->setError(ErrCode::$GM_NoID);
+        break;
+      }
+      // 查找通道对应的采集端编号...
+      $where['camera_id'] = $arrCourse[0]['camera_id'];
+      $dbCamera = D('camera')->where($where)->field('camera_id,gather_id')->find();
+      // 设置删除标记，供采集地使用...
+      foreach($arrCourse as &$dbItem) {
+        $dbItem['is_delete'] = 3;
+      }
+      // 删除记录，批量删除...
+      D('course')->where($condition)->delete();
+      // 转发命令到采集端...
+      $this->m_data['transmit'] = $this->postCourseRecordToGather($dbCamera['camera_id'], $dbCamera['gather_id'], $arrCourse);
+    }while( false );
+    // 返回json数据包...
+    echo json_encode($this->m_data);
+  }
   //
   // 播放直播通道 => 返回播放地址，可以自定义页面大小，flvjs/flash/h5 自动匹配
   public function play_camera() {
