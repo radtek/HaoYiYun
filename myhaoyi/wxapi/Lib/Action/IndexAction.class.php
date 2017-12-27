@@ -33,5 +33,11 @@ class IndexAction extends Action
     // 电脑终端页面显示...
     $this->display('index');
   }
+  //
+  // 更新日志 页面...
+  public function changelog()
+  {
+    $this->display('changelog');
+  }
 }
 ?>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+
+<title>云录播、云监控的更新日志 - 北京浩一科技有限公司</title>
+
+<link rel="stylesheet" href="/wxapi/public/css/myhaoyi.css">
+
+<!-- layui css and javascript -->
+<link href="/wxapi/public/layui/css/layui.css" rel="stylesheet" media="all">
+
+<style>
+.layui-main { margin-top: 50px; width: 900px; }
+@media screen and (max-width: 750px) {
+  .layui-main{width: auto; margin: 0 10px;}
+  .top{display: none;}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="top">
+  <div class="inner">
+    <div>
+    <h1 class="logo"><a href="https://www.myhaoyi.com"><img src="/wxapi/public/images/logo.png" width="32px" height="32px"></img></a></h1>
+    <h1 class="firm"><a href="https://www.myhaoyi.com">北京浩一科技有限公司</a></h1>
+    </div>
+    <ul id="menu" class="nav">
+      <li><a href="/#page1">首页</a></li>
+      <li><a href="/#page3">云录播</a></li>
+      <li><a href="/#page5">云监控</a></li>
+      <li><a href="/#page7">联系我们</a></li>
+      <li class="active"><a href="/changelog">更新日志</a></li>
+      <li><a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">立即下载</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="layui-main">
+  <div class="site-content">
+    <h1 class="site-h1">更新日志</h1>
+    <ul class="layui-timeline">
+      <!-- 1.2.0 版本 -->
+      <li class="layui-timeline-item">
+        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+        <div class="layui-timeline-content layui-text">
+          <div class="layui-timeline-title">
+            <h2>1.2.0</h2>
+            <span class="layui-badge-rim">2017-12-25</span>
+          </div>
+          <ul>
+            <li>
+              <h3>采集端</h3>
+              <ul>
+                <li>支持通道配置放在网站端，可通过网站后台动态修改通道配置</li>
+                <li>支持实时单帧快照截图，自动上传到对应通道，网站后台可配置快照间隔时间</li>
+                <li>支持摄像头IPC双流模式，主码流录像，子码流直播</li>
+                <li>支持连接过的WEB服务器历史记录</li>
+                <li>支持不退出进程，再次重连服务器</li>
+                <li>修正了针对MP4文件的扩展时间</li>
+                <li>支持通道心跳检测，避免通道假死状态</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云录播</h3>
+              <ul>
+                <li>新增云录播使用手册，具体参见《云录播-使用手册.pdf》
+                <a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></li>
+                <li>支持API接口输出，具体参见《云录播-API接口.pdf》
+                <a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></li>
+                <li>支持手机浏览器访问时，自动切换到移动页面模式</li>
+                <li>支持微信、QQ、支付宝等常见APP扫码观看</li>
+                <li>支持每个通道都可以通过网站后台配置可视化任务录像</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云监控</h3>
+              <ul>
+                <li>新增云监控使用手册，具体参见《云监控-使用手册.pdf》
+                <a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></li>
+                <li>支持API接口输出，具体参见《云监控-API接口.pdf》
+                <a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></li>
+                <li>支持手机浏览器访问时，自动切换到移动页面模式</li>
+                <li>支持微信、QQ、支付宝等常见APP扫码观看</li>
+                <li>支持每个通道都可以通过网站后台配置可视化任务录像</li>
+                <li>支持播放页面按日期筛选录像，并标记有录像的日期</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <!-- 1.1.0 版本 -->
+      <li class="layui-timeline-item">
+        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+        <div class="layui-timeline-content layui-text">
+          <div class="layui-timeline-title">
+            <h2>1.1.0</h2>
+            <span class="layui-badge-rim">2017-11-05</span>
+          </div>
+          <ul>
+            <li>
+              <h3>采集端</h3>
+              <ul>
+                <li>修正了rtsp流录制成MP4无法在移动端播放的问题</li>
+                <li>更新了curl模块，支持https协议获取交互数据</li>
+                <li>支持录像切片和切片交错，并能通过网站后台配置</li>
+                <li>支持正在推流通道状态显示</li>
+                <li>支持正在录像通道状态显示</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云录播</h3>
+              <ul>
+                <li>支持PC端浏览器前后台全兼容IE8</li>
+                <li>支持多种播放自动适配(flvjs/hls/rtmp)</li>
+                <li>支持通过网站后台配置采集端</li>
+                <li>支持通过网站后台配置直播通道</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云监控</h3>
+              <ul>
+                <li>支持PC端浏览器前后台全兼容IE8</li>
+                <li>支持多种播放自动适配(flvjs/hls/rtmp)</li>
+                <li>支持通过网站后台配置采集端</li>
+                <li>支持通过网站后台配置直播通道</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <!-- 1.0.0 版本 -->
+      <li class="layui-timeline-item">
+        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+        <div class="layui-timeline-content layui-text">
+          <div class="layui-timeline-title">
+            <h2>1.0.0</h2>
+            <span class="layui-badge-rim">2017-09-20</span>
+          </div>
+          <ul>
+            <li>
+              <h3>采集端</h3>
+              <ul>
+                <li>支持自动搜索IPC摄像头，目前支持海康摄像头</li>
+                <li>支持按需推流，即只有当用户点击观看时，才推流到服务器</li>
+                <li>支持终端用户数为0时，自动断开推流通道</li>
+                <li>支持按任务录制标准通用的MP4文件</li>
+                <li>支持自动截取录像图片，自动上传存储服务器，上传完毕，删除本地截图和视频</li>
+                <li>支持本地云台操作，使用海康SDK</li>
+                <li>支持多种数据输入：摄像头IPC、rtmp、rtsp、MP4文件</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云录播</h3>
+              <ul>
+                <li>支持直播、点播动态扩容</li>
+                <li>支持录像存储分布式、动态扩容</li>
+                <li>自带nginx/php/mysql</li>
+                <li>支持内建学校/班级/教师</li>
+                <li>支持微信扫码登录，全平台帐号统一</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云监控</h3>
+              <ul>
+                <li>支持直播、点播动态扩容</li>
+                <li>支持录像存储分布式、动态扩容</li>
+                <li>自带nginx/php/mysql</li>
+                <li>支持微信扫码登录，全平台帐号统一</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <!-- 孵化版 -->
+      <li class="layui-timeline-item">
+        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+        <div class="layui-timeline-content layui-text">
+          <div class="layui-timeline-title">孵化期</div>
+        </div>
+      </li>      
+    </ul>
+  </div>
+</div>
+<div class="footer">
+  <div class="layui-main">
+    <p>Copyright 2018 © <a href="/">北京浩一科技有限公司</a></p>
+    <p>京ICP备17023722号</p>
+  </div>
+</div>
+</body>
+</html>

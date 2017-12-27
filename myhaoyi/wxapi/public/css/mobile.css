@@ -9,6 +9,36 @@ body, button, input, select, textarea {
   -webkit-font-smoothing: antialiased;
 }
 
+.site-download {
+  margin-top: 5px;
+  font-size: 0;
+}
+.site-download a {
+  position: relative;
+  padding: 0 25px 0 60px;
+  height: 40px;
+  line-height: 40px;
+  border: 1px solid #FF5722;
+  border-color: rgba(255,87,34,.4);
+  font-size: 16px;
+  color: #222;
+  transition: all .5s;
+  -webkit-transition: all .5s;
+  text-decoration: none;
+  background-color: rgba(255,87,34,.9);
+  border-radius: 30px;
+}
+.site-download a cite {
+  position: absolute;
+  font-size: 30px;
+  left: 20px;
+}
+.site-version {position: relative; margin-top: 10px; color: #222; font-size: 14px;}
+.site-version span{padding: 0 3px;}
+.site-version *{font-style: normal;}
+.site-version a{color: #2096FF; text-decoration: none;}
+.site-version a:hover{color: #2096FF; text-decoration: underline;}
+
 .section {
   text-align: center;
   background-repeat: no-repeat;
@@ -237,7 +267,7 @@ body, button, input, select, textarea {
   bottom: 5px;
   width: 100%;
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   color: #666;
   position: absolute;
   text-align: center;
