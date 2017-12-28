@@ -25,11 +25,12 @@ class IndexAction extends Action
     // 电脑终端 => Index/index
     // 移动设备 => Mobile/index
     //////////////////////////////////////////////
-    $this->m_detect = new Mobile_Detect();
+    // 2017.12.28 - by jackey => 对页面进行了合并...
+    /*$this->m_detect = new Mobile_Detect();
     if( $this->m_detect->isMobile() ) {
       header("location:".__APP__.'/Mobile/index');
       return;
-    }
+    }*/
     // 电脑终端页面显示...
     $this->display('index');
   }
