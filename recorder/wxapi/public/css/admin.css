@@ -5,10 +5,13 @@
   border-bottom: 1px solid #404553;
   background-color: #393D49;
 }
+a.logo:hover {
+  color: #fff;
+}
 .logo {
   position: absolute;
   width: 180px;
-  color: #ddd;
+  color: #ccc;
   height: 60px;
   line-height: 60px;
   text-align: center;

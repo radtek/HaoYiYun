@@ -164,6 +164,9 @@ body, button, input, select, textarea {
   text-decoration: none;
   color: #fff;
 }
+.firm a:hover {
+  color: #83c3f3;
+}
 .nav {
   float: right;
   margin-top: 10px;
