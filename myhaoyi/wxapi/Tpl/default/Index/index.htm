@@ -8,12 +8,12 @@
 
 <title>云录播、云监控的全平台解决方案 - 北京浩一科技有限公司</title>
 
+<!-- layui css and javascript -->
+<link href="/wxapi/public/layui/css/layui.css" rel="stylesheet" media="all">
+
 <link rel="stylesheet" href="/wxapi/public/css/jquery.fullpage.css">
 <link rel="stylesheet" href="/wxapi/public/css/font-awesome.css">
 <link rel="stylesheet" href="/wxapi/public/css/myhaoyi.css">
-
-<!-- layui css and javascript -->
-<link href="/wxapi/public/layui/css/layui.css" rel="stylesheet" media="all">
 
 <script src="/wxapi/public/js/jquery-1.12.4.min.js"></script>
 <script src="/wxapi/public/js/jquery.fullpage.min.js"></script>
@@ -63,7 +63,7 @@ $(function(){
   $(document.body).show();
   // 处理滚动页面过程...
   $('#haoyi').fullpage({
-    anchors: ['page1', 'page2', 'page3', 'page4', 'page5', 'page6', 'page7'],
+    anchors: ['page1', 'page2', 'page3', 'page4', 'page5', 'page6', 'page7', 'page8', 'page9'],
     //continuousVertical: true, // 垂直方向循环
     navigation: bShowNav, // 导航栏，默认在右侧
     menu: '#menu', // 菜单ID
@@ -170,8 +170,8 @@ $(function(){
     <ul id="menu" class="nav">
       <li data-menuanchor="page1" class="active"><a href="#page1">首页</a></li>
       <li data-menuanchor="page3"><a href="#page3">云录播</a></li>
-      <li data-menuanchor="page5"><a href="#page5">云监控</a></li>
-      <li data-menuanchor="page7"><a href="#page7">联系我们</a></li>
+      <li data-menuanchor="page6"><a href="#page6">云监控</a></li>
+      <li data-menuanchor="page9"><a href="#page9">联系我们</a></li>
       <li><a href="/changelog">更新日志</a></li>
       <li><a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">立即下载</a></li>
     </ul>
@@ -394,7 +394,60 @@ $(function(){
       <a href="http://demo.myhaoyi.com/" target="_blank">云录播演示</a>
     </div>
   </div>
-  <div class="section section5">
+  <div class="section">
+    <div class="subject p1">
+      <img src="/wxapi/public/images/left.png" align="center"></img>
+      <span>云录播 - 安装使用</span>
+      <img src="/wxapi/public/images/right.png" align="center"></img>
+    </div>
+    <div class="site-install">
+      <ul class="layui-timeline">
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>安装云录播 - 服务器</h2>
+            </div>
+            <ul>
+              <li><h3>操作系统：CentOS 5.5以上64位版本，<a href="http://vault.centos.org/6.8/isos/x86_64/" target="_blank">#下载地址</a></h3></li>
+              <li><h3>最新版本：cloud-recorder-x.x.x.tar.gz，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+              <li><h3>安装文档：《云录播使用手册.pdf》，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+            </ul>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>安装云录播 - 采集端</h2>
+            </div>
+            <ul>
+              <li><h3>操作系统：Windows XP 及以上系统</h3></li>
+              <li><h3>最新版本：cloud-gather-x.x.x.exe，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+              <li><h3>安装文档：《云录播使用手册.pdf》，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+            </ul>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>启动采集端推流到云录播服务器</h2>
+            </div>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>打开电脑、手机观看直播或录像</h2>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="section">
     <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云监控 - 特色功能</span>
@@ -454,7 +507,7 @@ $(function(){
       </ul>
     </div>
   </div>
-  <div class="section section6">
+  <div class="section">
     <div class="subject p1">
       <img src="/wxapi/public/images/left.png" align="center"></img>
       <span>云监控 - 应用场景</span>
@@ -493,7 +546,60 @@ $(function(){
       <a href="http://ihaoyi.cn/" target="_blank">云监控演示</a>
     </div>
   </div>
-  <div class="section section7">
+  <div class="section">
+    <div class="subject p1">
+      <img src="/wxapi/public/images/left.png" align="center"></img>
+      <span>云监控 - 安装使用</span>
+      <img src="/wxapi/public/images/right.png" align="center"></img>
+    </div>
+    <div class="site-install">
+      <ul class="layui-timeline">
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>安装云监控 - 服务器</h2>
+            </div>
+            <ul>
+              <li><h3>操作系统：CentOS 5.5以上64位版本，<a href="http://vault.centos.org/6.8/isos/x86_64/" target="_blank">#下载地址</a></h3></li>
+              <li><h3>最新版本：cloud-monitor-x.x.x.tar.gz，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+              <li><h3>安装文档：《云监控使用手册.pdf》，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+            </ul>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>安装云监控 - 采集端</h2>
+            </div>
+            <ul>
+              <li><h3>操作系统：Windows XP 及以上系统</h3></li>
+              <li><h3>最新版本：cloud-gather-x.x.x.exe，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+              <li><h3>安装文档：《云监控使用手册.pdf》，<a href="https://pan.baidu.com/s/1bppqJWr#list/path=%2F%E6%B5%A9%E4%B8%80%E4%BA%91" target="_blank">#下载地址</a></h3></li>
+            </ul>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>启动采集端推流到云监控服务器</h2>
+            </div>
+          </div>
+        </li>
+        <li class="layui-timeline-item">
+          <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+          <div class="layui-timeline-content layui-text">
+            <div class="layui-timeline-title">
+              <h2>打开电脑、手机观看直播或录像</h2>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="section">
     <div class="title1 p1">联系我们</div>
     <div class="p2 contact">
       <img id="qrRec" src="/wxapi/public/images/recorder-qq.png" style="margin-right: 10px;"></img>

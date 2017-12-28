@@ -131,6 +131,9 @@ body, button, input, select, textarea {
 .site-version a{color: #2096FF; text-decoration: none;}
 .site-version a:hover{color: #2096FF; text-decoration: underline;}
 
+.site-install {width: 600px; overflow: hidden; margin: 50px auto 0; padding: 0 20px; text-align: left;}
+.layui-text ul li {margin-top: 20px;}
+
 .top {
   position: fixed;
   left: 0;
@@ -487,5 +490,11 @@ body, button, input, select, textarea {
   .foot_bot {bottom: 5px; font-size: 14px; color: #666;}
   .foot_copy {bottom: 25px;}
   .contact {margin-top: 20px;}
-  
+  .site-install {width: auto; margin-top: 20px; padding: 0 10px;}
+  .layui-timeline-item {padding-bottom: 10px;}
+  .layui-timeline-title {margin-bottom: 0px;}
+  .layui-text ul {padding: 5px 0 5px 5px;}  
+  .layui-text ul li {margin-top: 5px;}
+  .layui-text h2 {font-size: 18px;}
+  .layui-text h3 {font-size: 14px;}
 }
