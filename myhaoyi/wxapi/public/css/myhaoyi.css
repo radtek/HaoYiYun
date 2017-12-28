@@ -118,7 +118,7 @@ body, button, input, select, textarea {
   border-color: rgba(255,87,34,.3);
   background-color: rgba(255,87,34,.9);
   border-radius: 30px;
-  color: #000;
+  color: #fff;
 }
 .site-download a cite {
   position: absolute;
@@ -453,6 +453,7 @@ body, button, input, select, textarea {
   .title3 {font-size: 16px; line-height: 20px; margin: 10px 5px 5px 5px;}
   .DemoBtn {margin: 25px auto 0; width: 120px; height: 36px; line-height: 36px; font-size: 16px; border-radius: 30px;}
   .DemoBtn a {color: #fff;}
+  .DemoBtn a:hover {color: #222;}
   .section .subject {height: 35px; font-size: 22px; line-height: 30px; margin-top: 10px;}
   .system {padding-top: 10px;}
   .system .items {width: auto;}
