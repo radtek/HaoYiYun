@@ -1,0 +1,11 @@
+.feed-more {
+  margin: 20rpx auto;
+  line-height: 1.6em;
+  font-size: 28rpx;
+  text-align: center;
+}
+.feed-none {
+  color: #666;
+  display:inline-block;
+  vertical-align:middle;
+}

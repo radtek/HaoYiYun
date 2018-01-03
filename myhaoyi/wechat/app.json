@@ -14,7 +14,7 @@
     "backgroundColor": "#eee",
     "backgroundTextStyle": "dark",
     "enablePullDownRefresh": true,
-    "onReachBottomDistance": 50
+    "onReachBottomDistance": 40
   },
   "tabBar": {
     "color": "#666",

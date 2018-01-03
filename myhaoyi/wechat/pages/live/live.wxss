@@ -17,12 +17,13 @@ Page {
 }
 .feed-video {
   width: 100%;
-  height: 210px;
+  height: 420rpx;
+  border-bottom: 1rpx solid #e0e0e0;
 }
 .feed-link {
   color: #707c7c;
   font-size: 30rpx;
-  margin: -5rpx 10rpx 8rpx 15rpx;  
+  margin: 8rpx 10rpx 8rpx 15rpx;  
 }
 .feed-owner {
   display: inline-block;
@@ -36,6 +37,7 @@ Page {
 .feed-owner text {
   display: inline-block;
   height: 40rpx;
+  font-size: 32rpx;
   line-height: 40rpx;
   vertical-align: middle;
   margin: 0 0 0 10rpx;
@@ -47,18 +49,26 @@ Page {
   color: #909c9c;
   float: right;
 }
-.feed-right text {
-  font-size: 30rpx;
-  margin-left: 5rpx;
-  text-align: center;
+.feed-click {
+  display: inline-block;
+  font-size: 32rpx;
+  margin-left: -5rpx;
 }
 .feed-step {
-  margin-left: 25rpx;
+  margin-left: 12rpx;
+  margin-right: 12rpx;
+}
+.feed-switch {
+  color: darkorange;
+  transition: all .5s;
+  -webkit-transition: all .5s;
 }
 .feed-list {
   width: 100%;
   margin-top: 10rpx;
   background: #ffffff;
+}
+.feed-top-line {
   border-top: 1rpx solid #e0e0e0;
 }
 .feed-media-box {
@@ -124,7 +134,7 @@ Page {
   -webkit-line-clamp:3;
 }
 .feed-media-title text {
-  margin-left: 5rpx;
+  margin-left: 8rpx;
 }
 .feed-media-desc {
   color: #707c7c;

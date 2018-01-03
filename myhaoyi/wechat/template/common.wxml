@@ -1,0 +1,22 @@
+<template name="error">
+  <view class="weui-msg" style="padding-top:15px;">
+    <view class="weui-msg__icon-area" style="margin-bottom:15px;">
+      <icon type="warn" size="93"></icon>
+    </view>
+    <view class="weui-msg__text-area" style="margin-bottom:15px;">
+      <view class="weui-msg__title" style="font-size:16px;">{{title}}</view>
+      <view class="weui-msg__desc">{{desc}}</view>
+    </view>
+  </view>
+</template>
+<template name="more">
+  <view class="feed-more">
+    <block wx:if="{{show_more}}">
+      <view class="weui-loading"></view>
+      <view class="weui-loadmore__tips">正在加载...</view>
+    </block>
+    <block wx:else>
+      <view class="feed-none">{{no_more}}</view>
+    </block>
+  </view>
+</template>

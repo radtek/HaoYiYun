@@ -51,10 +51,11 @@ Page({
       header: { 'content-type': 'application/x-www-form-urlencoded' },
       data: { code: inCode, encrypt: inEncrypt, iv: inIV },
       success: function (res) {
+        // dataType 没有设置json，需要自己转换...
         var arrData = JSON.parse(res.data);
         // 获取授权数据失败的处理...
-        if( arrData.errcode > 0 ) {
-          that.setData({ m_nAuthState: 2, m_strErrInfo: arrData.errmsg })
+        if( arrData.err_code > 0 ) {
+          that.setData({ m_nAuthState: 2, m_strErrInfo: arrData.err_msg })
           return;
         }
         // 获取授权数据成功，保存用户编号到全局对象...

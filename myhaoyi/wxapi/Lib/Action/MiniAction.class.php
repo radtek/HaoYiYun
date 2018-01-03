@@ -85,17 +85,18 @@ class MiniAction extends Action
   public function _initialize() {
     $this->m_weMini = C('WECHAT_MINI');
   }
+  //
   // 处理小程序登录事件...
   public function login()
   {
     // 准备返回信息...
-    $arrErr['errcode'] = 0;
-    $arrErr['errmsg'] = 'ok';
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
     do {
       // 判断输入参数的有效性 => 没有设置或数据为空，返回错误...
       if( !isset($_POST['code']) || !isset($_POST['encrypt']) || !isset($_POST['iv']) ) {
-        $arrErr['errcode'] = true;
-        $arrErr['errmsg'] = '输入的参数无效';
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
         break;
       }
       // 准备请求需要的url地址...
@@ -104,36 +105,36 @@ class MiniAction extends Action
       // code 换取 session_key，判断返回结果...
       $result = http_get($strUrl);
       if( !$result ) {
-        $arrErr['errcode'] = true;
-        $arrErr['errmsg'] = '获取openid失败';
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '获取openid失败';
         break;
       }
-      // 解析返回数据，发生错误，直接返回...
-			$json = json_decode($result,true);
-			if( !$json || isset($json['errcode']) ) {
-				$arrErr['errcode'] = $json['errcode'];
-				$arrErr['errmsg'] = $json['errmsg'];
+      // 解析微信API返回数据，发生错误...
+      $json = json_decode($result,true);
+      if( !$json || isset($json['errcode']) ) {
+        $arrErr['err_code'] = $json['errcode'];
+        $arrErr['err_msg'] = $json['errmsg'];
         break;
       }
       // 获取到了正确的 openid | session_key | expires_in，构造解密对象...
       $wxCrypt = new WXBizDataCrypt($this->m_weMini['appid'], $json['session_key']);
-      $errCode = $wxCrypt->decryptData($_POST['encrypt'], $_POST['iv'], $outData);
+      $theErr = $wxCrypt->decryptData($_POST['encrypt'], $_POST['iv'], $outData);
       // 解码失败，返回错误...
-      if( $errCode != 0 ) {
-        $arrErr['errcode'] = $errCode;
-        $arrErr['errmsg'] = '数据解密失败';
+      if( $theErr != 0 ) {
+        $arrErr['err_code'] = $theErr;
+        $arrErr['err_msg'] = '数据解密失败';
         break;
       }
       // 将获取的数据转换成数组 => 有些字段包含大写字母...
       $arrUser = json_decode($outData, true);
       if( !isset($arrUser['unionId']) ) {
-        $arrErr['errcode'] = true;
-        $arrErr['errmsg'] = '没有获取到unionid';
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '没有获取到unionid';
         break;
       }
       // 微信昵称中去除emoji表情符号的操作...
       $arrUser['nickName'] = trimEmo($arrUser['nickName']);
-      // 将获取到的用户关键帧查找数据库内容...
+      // 将获取到的用户关键值查找数据库内容...
       $where['wx_unionid'] = $arrUser['unionId'];
       $dbUser = D('user')->where($where)->find();
       // 从微信获取的信息更新到数据库当中...
@@ -166,6 +167,7 @@ class MiniAction extends Action
     // 返回json数据包...
     echo json_encode($arrErr);
   }
+  //
   // 处理小程序请求共享通道接口...
   public function getShare()
   {
@@ -173,54 +175,138 @@ class MiniAction extends Action
     $pagePer = C('PAGE_PER');
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
-    // 读取共享通道列表数据 => 视图数据 => 只选择WAN节点...
+    // 读取共享通道列表数据 => 视图数据 => 只选择WAN节点
     $condition['node_wan'] = array('gt', 0);
-    $arrTrack = D('TrackView')->where($condition)->limit($pageLimit)->select();
-    $arrList = array_unique(array_column($arrTrack, 'node_id'));
-    $arrRemote = array();
-    for($i = 0; $i < count($arrList); ++$i) {
-      $theCameraList = ''; $theNodeAddr = '';
-      foreach($arrTrack as &$dbItem) {
-        // 找到相同节点的通道...
-        if( $dbItem['node_id'] == $arrList[$i] ) {
-          $theCameraList .= $dbItem['camera_id'] . ',';
-          // 累加通道编号，获取节点完整地址...
-          if( strlen($theNodeAddr) <= 0 ) {
-            $theNodeAddr = sprintf("%s://%s/wxapi.php/Mini", $dbItem['node_proto'], $dbItem['node_addr']);
-          }
-        }
-      }
-      // 去掉通道编号的最后一个逗号，组合查询节点通道列表地址...
-      $theCameraList = rtrim($theCameraList, ",");
-      $strUrl = sprintf("%s/getShare/list/%s", $theNodeAddr, $theCameraList);
+    // 获取记录总数和总页数 => 移除的记录并不影响查询，只是显示时会少一些记录...
+    $totalNum = D('TrackView')->where($condition)->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 填充需要返回的信息...
+    $arrShare['total_num'] = $totalNum;
+    $arrShare['max_page'] = $max_page;
+    $arrShare['cur_page'] = $pageCur;
+    // 按照分享时间倒叙 => 最后分享的最先显示
+    $arrTrack = D('TrackView')->where($condition)->limit($pageLimit)->order("Track.created DESC")->select();
+    // 遍历通道，从对应节点获取通道详细实时信息...
+    foreach($arrTrack as $key => &$dbItem) {
+      // 准备访问节点接口地址 => 获取需要的通道数据记录...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/getShare/camera_id/%d", $dbItem['node_proto'], $dbItem['node_addr'], $dbItem['camera_id']);
       // 调用接口，返回查询结果...
       $result = http_get($strUrl);
-      if( !$result )
+      // 调用失败，在记录中移除...
+      if( !$result ) {
+        unset($arrTrack[$key]);
         continue;
-      // 解析返回数据记录...
-      $arrJson = json_decode($result, true);
-      if( $arrJson['errcode'] > 0 )
-        continue;
-      // 将记录重组成通道记录...
-      foreach($arrJson['track'] as &$dbJson) {
-        $dbJson['node_id'] = $arrList[$i];
-        array_push($arrRemote, $dbJson);
       }
-    }
-    print_r($arrRemote);
-    exit;
-    // 需要处理筛选后的记录为空的情况...
-    // 获取有效节点列表，然后在准备接口数据...
-    // 遍历数组，通过节点地址接口获取通道实际数据...
-    /*foreach($arrTrack as &$dbItem) {
-      // 准备访问节点接口地址 => 获取需要的通道数据记录...
-      $strUrl = sprintf("%s/wxapi.php/Mini/getCamera/camera_id/%d", $dbItem['node_addr'], $dbItem['camera_id']);
-      $result = http_get($strUrl);
-      // 获取通道失败，设置为空，成功，转成数组...
-      $dbItem['camera'] = ($result ? json_decode($result, true) : null);
+      // 解析返回的数据记录...
+      $arrJson = json_decode($result, true);
+      // 返回错误，在记录中移除...
+      if( $arrJson['err_code'] > 0 ) {
+        unset($arrTrack[$key]);
+        continue;
+      }
+      // 如果在节点中没有找到对应的通道，则在记录中移除 => 后期可以考虑，直接在数据库中删除这个共享通道，避免数据冗余...
+      if( !is_array($arrJson['track']) ) {
+        unset($arrTrack[$key]);
+        continue;
+      }
+      // 将获取到的通道信息合并到当前通道当中...
+      $dbItem = array_merge($dbItem, $arrJson['track']);
       // 对通道拥有者的头像进行缩小处理 => 缩小成 96*96
       $dbItem['wx_headurl'] = str_replace('/0', '/96', $dbItem['wx_headurl']);
-    }*/
+    }
+    // 将数组的序号重排，否则，会造成小程序的js出错...
+    if( is_array($arrTrack) ) {
+      $arrTrack = array_merge($arrTrack);
+    }
+    // 填充返回的通道数据 => 移除的记录并不影响查询，只是显示时会少一些记录...
+    $arrShare['track'] = $arrTrack;
+    // 返回最终的json数据包...
+    echo json_encode($arrShare);
+  }
+  //
+  // 处理小程序请求的通道直播地址...
+  public function getLiveAddr()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => camera_id | node_proto | node_addr...
+      if( !isset($_POST['camera_id']) || !isset($_POST['node_proto']) || !isset($_POST['node_addr']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 准备访问节点接口地址 => 获取通道直播地址...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/getLiveAddr/camera_id/%d", 
+                         $_POST['node_proto'], $_POST['node_addr'], $_POST['camera_id']);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '获取直播地址失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrJson = json_decode($result, true);
+      // 返回错误，通知小程序...
+      if( $arrJson['err_code'] > 0 ) {
+        $arrErr['err_code'] = $arrJson['err_code'];
+        $arrErr['err_msg'] = (isset($arrJson['err_msg']) ? $arrJson['err_msg'] : '获取直播地址失败');
+        break;
+      }
+      // 将结果直接赋值返回...
+      $arrErr = $arrJson;
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 处理小程序请求通道下的录像接口...
+  public function getRecord()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => cur_page | camera_id | node_proto | node_addr ...
+      if( !isset($_POST['cur_page']) || !isset($_POST['camera_id']) || 
+          !isset($_POST['node_proto']) || !isset($_POST['node_addr']) )
+      {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 准备访问节点接口地址 => 获取通道下的相关录像...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/getRecord/camera_id/%d/p/%d", 
+                        $_POST['node_proto'], $_POST['node_addr'], 
+                        $_POST['camera_id'], $_POST['cur_page']);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '获取录像记录失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrJson = json_decode($result, true);
+      // 发生错误，通知小程序...
+      if( $arrJson['err_code'] > 0 ) {
+        $arrErr['err_code'] = $arrJson['err_code'];
+        $arrErr['err_msg'] = (isset($arrJson['err_msg']) ? $arrJson['err_msg'] : '获取录像记录失败');
+        break;
+      }
+      // 将结果直接赋值返回...
+      $arrErr = $arrJson;
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
   }
 }
 ?>

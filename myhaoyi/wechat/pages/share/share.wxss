@@ -45,12 +45,12 @@ Page {
   height: 40rpx;
 }
 .feed-down {
-  bottom: 15rpx;
-  right: 15rpx;  
+  bottom: 20rpx;
+  right: 20rpx;  
 }
 .feed-up {
-  right: 15rpx;
-  top: 15rpx;
+  right: 20rpx;
+  top: 20rpx;
 }
 .feed-thumb-back {
   width: 100%;
@@ -75,7 +75,7 @@ Page {
 }
 .feed-content image {
   width: 100%;
-  height: 210px;
+  height: 420rpx;
   vertical-align: middle;
   border-top: 1rpx solid #eee;
   border-bottom: 1rpx solid #eee;
@@ -109,5 +109,10 @@ Page {
   float: right;
 }
 .feed-step {
-  margin-left: 20rpx;
+  margin-left: 10rpx;
+  margin-right: 10rpx;
+}
+.feed-click {
+  display: inline-block;
+  font-size: 32rpx;
 }

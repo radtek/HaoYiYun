@@ -8,6 +8,9 @@ App({
     logs.unshift(Date.now())
     wx.setStorageSync('logs', logs)*/
   },
+  doShowLoading: function() {
+    wx.showLoading({ title: '加载中' })
+  },
   globalData: {
     m_urlPrev: 'https://myhaoyi.com/wxapi.php/',
     m_userInfo: null,

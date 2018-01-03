@@ -1,77 +1,57 @@
 <!--pages/live/live.wxml-->
+
+<import src="../../template/common.wxml"/>
+
 <view class="feed-container">
   <view class="feed-item">
-    <video class="feed-video" autoplay objectFit="fill" poster="http://192.168.1.70:80/group1/M00/00/04/wKgBRloL4GOAPmBCAACm508eTDI334.jpg" src="http://192.168.1.70:8080/live/live3.m3u8"></video>
+    <view class="feed-video">
+      <view style="display: {{m_is_error ? 'block' : 'none'}}">
+        <template is="error" data="{{title: m_err_msg, desc: m_err_desc}}" />
+      </view>
+    <!--<video class="feed-video" autoplay objectFit="fill" poster="http://192.168.1.70:80/group1/M00/00/04/wKgBRloL4GOAPmBCAACm508eTDI334.jpg" src="http://192.168.1.70:8080/live/live3.m3u8"></video>-->
+    </view>
     <view class="feed-link">
       <view class="feed-owner">
-        <image mode="aspectFill" lazy-load="true" src="http://wx.qlogo.cn/mmopen/vi_32/DYAIOgq83erw8YO37WPaJXqShGiaQqP7pvFBYzoTfOn62bEMFgletcYhXjXXoCk99xLbaiazmo0pNBX8oLstGpKQ/64"></image>
-        <text>岳朝伟</text>
+        <image mode="aspectFill" lazy-load="true" src="{{m_live_data.wx_headurl}}"></image>
+        <text>{{m_live_data.wx_nickname}}</text>
       </view>
       <view class="feed-right">
-        <view class="fa fa-share feed-step" catchtap="onShareAppMessage"></view>
-        <view class="fa fa-retweet feed-step" catchtap="onSwitchLive"></view>
-        <view class="fa fa-play-circle-o feed-step">
-          <text>3.56万次</text>
-        </view>
+        <!--<view class="fa fa-share feed-step {{m_is_share ? 'feed-switch' : ''}}" catchtap="onShareAppMessage"></view>-->
+        <view class="fa fa-retweet feed-step {{m_is_switch ? 'feed-switch' : ''}}" catchtap="onSwitchLive"></view>
+        <view class="fa fa-play-circle-o feed-step"></view>
+        <view class="feed-click">{{m_live_data.clicks}}次</view>
       </view>
     </view>
   </view>
-  <view class="feed-list">
-    <view class="feed-media-box">
+  <view class="feed-list {{m_arrRecord.length ? 'feed-top-line' : ''}}">
+    <view wx:for="{{m_arrRecord}}" wx:key="unique" class="feed-media-box">
       <view class="feed-media-hd">
         <view class="feed-down">
           <view class="feed-thumb-back"></view>
-          <view class="feed-thumb-time">05:00</view>
+          <view class="feed-thumb-time">{{item.disptime}}</view>
         </view>
-        <image mode="aspectFill" lazy-load="true" src="http://192.168.1.70:80/group1/M00/00/04/wKgBRloL3xqAThJgAACo0rQ5qL0955.jpg_240x140"></image>
+        <image mode="aspectFill" lazy-load="false" src="{{item.image_fdfs ? item.image_fdfs + '_240x140' : '../../images/snap.png'}}" data-err-img="{{index}}" binderror="doErrSnap"></image>
       </view>
       <view class="feed-media-bd">
         <view class="feed-media-title">
           <view class="fa fa-file-video-o">
-            <text>监控通道</text>
+            <text>{{item.camera_name}}</text>
           </view>
         </view>
         <view class="feed-media-desc">
           <view class="feed-media-time">
             <view class="fa fa-clock-o">
-              <text>2017-11-15 14:27:07</text>
+              <text>{{item.created}}</text>
             </view>
           </view>
           <view class="feed-media-play">
             <view class="fa fa-play-circle-o">
-              <text>77次</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-    <view class="feed-media-box">
-      <view class="feed-media-hd">
-        <view class="feed-down">
-          <view class="feed-thumb-back"></view>
-          <view class="feed-thumb-time">05:00</view>
-        </view>
-        <image mode="aspectFill" lazy-load="true" src="http://192.168.1.70:80/group1/M00/00/04/wKgBRloL3xqAThJgAACo0rQ5qL0955.jpg_240x140"></image>
-      </view>
-      <view class="feed-media-bd">
-        <view class="feed-media-title">
-          <view class="fa fa-file-video-o">
-            <text>监控通道</text>
-          </view>
-        </view>
-        <view class="feed-media-desc">
-          <view class="feed-media-time">
-            <view class="fa fa-clock-o">
-              <text>2017-11-15 14:27:07</text>
-            </view>
-          </view>
-          <view class="feed-media-play">
-            <view class="fa fa-play-circle-o">
-              <text>77次</text>
+              <text>{{item.clicks}}次</text>
             </view>
           </view>
         </view>
       </view>
     </view>
   </view>
+  <template is="more" data="{{show_more: m_show_more, no_more: m_no_more}}" />
 </view>

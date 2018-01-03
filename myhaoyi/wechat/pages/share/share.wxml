@@ -1,69 +1,64 @@
 <!--pages/share/share.wxml-->
+
+<import src="../../template/common.wxml"/>
+
 <view class="feed-container">
-  <view class="feed-item" bindtap="doTapItem">
+  <block wx:if="{{m_show_feed}}">
+  <view wx:for="{{m_arrTrack}}" wx:key="unique" class="feed-item" data-track="{{item}}" bindtap="doTapItem">
     <view class="feed-source">
-      <view class="fa fa-camera"></view>
-      <text class="feed-title">流转发 - 监控通道</text>
+      <block wx:if="{{item.stream_prop == 0}}">
+        <view class="fa fa-camera"></view>
+        <text class="feed-title">摄像头 - {{item.camera_name}}</text>
+      </block>
+      <block wx:elif="{{item.stream_prop == 1}}">
+        <view class="fa fa-file-video-o"></view>
+        <text class="feed-title">MP4文件 - {{item.camera_name}}</text>
+      </block>
+      <block wx:elif="{{item.stream_prop == 2}}">
+        <view class="fa fa-arrow-circle-o-down"></view>
+        <text class="feed-title">流转发 - {{item.camera_name}}</text>
+      </block>
     </view>
     <view class="feed-content">
       <view class="feed-play">
         <view class="fa fa-play-circle fa-4x"></view>
       </view>
-      <view class="feed-down">
+      <!--<view class="feed-down">
         <view class="feed-thumb-back feed-dtime"></view>
         <view class="feed-thumb-text">05:00</view>
-      </view>
+      </view>-->
       <view class="feed-up">
-        <view class="feed-thumb-back feed-online"></view>
-        <view class="feed-thumb-text">直播中</view>
+        <block wx:if="{{item.status >= 1}}">
+          <view class="feed-thumb-back feed-online"></view>
+          <view class="feed-thumb-text">直播中</view>
+        </block>
+        <block wx:else>
+          <view class="feed-thumb-back feed-offline"></view>
+          <view class="feed-thumb-text">离线中</view>
+        </block>
       </view>
-      <!-- group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg -->
-      <!-- wxapi/public/images/snap.png -->
-      <image mode="widthFix" lazy-load="true" src="http://192.168.1.70/group1/M00/00/1A/wKgBRloW0gOAXbHPAADvLwj96tk879.jpg"></image>
+      <image mode="widthFix top" lazy-load="true" src="{{item.image_fdfs ? item.image_fdfs : '../../images/snap.png'}}" data-err-img="{{index}}" binderror="doErrSnap"></image>
     </view>
     <view class="feed-link">
       <view class="feed-owner">
-        <image mode="aspectFill" lazy-load="true" src="http://wx.qlogo.cn/mmopen/vi_32/DYAIOgq83erw8YO37WPaJXqShGiaQqP7pvFBYzoTfOn62bEMFgletcYhXjXXoCk99xLbaiazmo0pNBX8oLstGpKQ/64"></image>
-        <text>岳朝伟</text>
+        <image mode="aspectFill" lazy-load="true" src="{{item.wx_headurl}}"></image>
+        <text>{{item.wx_nickname}}</text>
       </view>
       <view class="feed-right">
-        <view class="fa fa-share feed-step"></view>
-        <view class="fa fa-retweet feed-step"></view>
+        <!--<view class="fa fa-share feed-step"></view>
+        <view class="fa fa-retweet feed-step"></view>-->
         <view class="fa fa-play-circle-o feed-step"></view>
+        <view class="feed-click">{{item.clicks}}次</view>
       </view>
     </view>
   </view>
-  <view class="feed-item" bindtap="doTapItem">
-    <view class="feed-source">
-      <view class="fa fa-camera"></view>
-      <text class="feed-title">流转发 - 监控通道</text>
-    </view>
-    <view class="feed-content">
-      <view class="feed-play">
-        <view class="fa fa-play-circle fa-4x"></view>
-      </view>
-      <view class="feed-down">
-        <view class="feed-thumb-back feed-dtime"></view>
-        <view class="feed-thumb-text">05:00</view>
-      </view>
-      <view class="feed-up">
-        <view class="feed-thumb-back feed-online"></view>
-        <view class="feed-thumb-text">直播中</view>
-      </view>
-      <!-- group1/M00/00/1B/wKgBRloX7_aAAWBkAACKF76E0y0755.jpg -->
-      <!-- wxapi/public/images/snap.png -->
-      <image mode="widthFix" lazy-load="true" src="http://192.168.1.70/group1/M00/00/1A/wKgBRloW0gOAXbHPAADvLwj96tk879.jpg"></image>
-    </view>
-    <view class="feed-link">
-      <view class="feed-owner">
-        <image mode="aspectFill" lazy-load="true" src="http://wx.qlogo.cn/mmopen/vi_32/DYAIOgq83erw8YO37WPaJXqShGiaQqP7pvFBYzoTfOn62bEMFgletcYhXjXXoCk99xLbaiazmo0pNBX8oLstGpKQ/64"></image>
-        <text>岳朝伟</text>
-      </view>
-      <view class="feed-right">
-        <view class="fa fa-share feed-step"></view>
-        <view class="fa fa-retweet feed-step"></view>
-        <view class="fa fa-play-circle-o feed-step"></view>
-      </view>
-    </view>
+  <view wx:if="{{m_show_init}}">
+    <template is="more" data="{{show_more: m_show_more, no_more: '没有更多内容了'}}" />
   </view>
+  </block>
+  <!-- 没有共享通道 -->
+  <block wx:else>
+    <view style="margin-top: 40rpx;"></view>
+    <template is="error" data="{{title: '没有共享通道数据', desc: '获取共享通道数据失败，请耐心等待！'}}"/>
+  </block>
 </view>

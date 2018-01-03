@@ -1460,7 +1460,9 @@ BOOL CPushThread::StreamEndRecord()
 // 返回是否正在录像标志...
 BOOL CPushThread::IsRecording()
 {
-	OSMutexLocker theLock(&m_Mutex);
+	//2018.01.01 - by jackey => 这里不能加互斥，会卡住界面...
+	//OSMutexLocker theLock(&m_Mutex);
+
 	return ((m_lpRecMP4 != NULL) ? true : false);
 }
 
@@ -1820,7 +1822,9 @@ int CPushThread::GetRecvKbps()
 // 都是会立即获取拉流数据的位置，超时函数对所有模式有效...
 BOOL CPushThread::IsFrameTimeout()
 {
-	OSMutexLocker theLock(&m_Mutex);
+	//2018.01.01 - by jackey => 这里不能加互斥，会卡住界面...
+	//OSMutexLocker theLock(&m_Mutex);
+
 	// 首先判断数据线程是否已经结束了...
 	if( this->IsDataFinished() )
 		return true;
@@ -1850,6 +1854,8 @@ int CPushThread::SendOneDataPacket()
 	KH_MapFrame::iterator itorItem = m_MapFrame.begin();
 	int nSize = m_MapFrame.count(itorItem->first);
 	// 对相同时间戳的数据帧进行循环处理...
+	//DWORD dwCurTickCount = ::GetTickCount();
+	//TRACE("== Begin Send-Time: %lu ==\n", dwCurTickCount);
 	for(int i = 0; i < nSize; ++i) {
 		FMS_FRAME & theFrame = itorItem->second;
 		
@@ -1883,6 +1889,7 @@ int CPushThread::SendOneDataPacket()
 		// 从队列中移除一个相同时间的数据包 => 这里使用的是算子...
 		m_MapFrame.erase(itorItem++);
 	}
+	//TRACE("== End Spend-Time: %lu ==\n", ::GetTickCount() - dwCurTickCount);
 	// 发送失败，返回错误...
 	return (is_ok ? 1 : -1);
 }
