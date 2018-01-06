@@ -195,7 +195,7 @@ function getTransmitErrMsg($inErrCode)
     case ERR_NO_JSON:     $strErrMsg = '没有JSON数据参数。'; break;
     case ERR_NO_COMMAND:  $strErrMsg = '设置了无效的转发命令。'; break;
     case ERR_NO_MAC_ADDR: $strErrMsg = '没有找到采集端的MAC地址'; break;
-    case ERR_NO_RTMP:     $strErrMsg = '没有找到在线的直播服务器。'; break;
+    case ERR_NO_RTMP:     $strErrMsg = '没有找到在线的直播通道或服务器。'; break;
     default:              $strErrMsg = '未知错误，请确认中转服务器版本。'; break;
   }
   return $strErrMsg;

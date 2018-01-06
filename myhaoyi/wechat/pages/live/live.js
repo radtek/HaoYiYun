@@ -34,7 +34,8 @@ Page(Object.assign({}, ZanToast, {
     m_live_poster_height: 210,
     m_live_show_control: false,
     m_live_show_snap: true,
-    m_live_click_timer: -1
+    m_live_click_timer: -1,
+    m_live_clock_verify: -1,
   },
   // 生命周期函数--监听页面加载...
   onLoad: function (options) {
@@ -48,19 +49,42 @@ Page(Object.assign({}, ZanToast, {
     // 获取当前通道下相关的录像列表...
     this.doAPIGetRecord()
   },
-  // 调用网站API获取通道下的录像列表...
-  doAPIGetRecord: function() {
+  // 生命周期函数--监听页面卸载
+  onUnload: function () {
+    // 无论什么状态，都直接关闭直播状态汇报时钟...
+    this.resetLiveClock()
+  },
+  // 重置直播汇报时钟...
+  resetLiveClock() {
+    clearInterval(this.data.m_live_clock_verify)
+    this.data.m_live_clock_verify = -1
+  },
+  // 创建直播汇报时钟 => 每隔15秒调用ajax通知接口...
+  buildLiveClock() {
+    // 创建时钟之前，先关闭之前的时钟...
+    this.resetLiveClock()
+    // 创建新的时钟...
+    var that = this
+    that.data.m_live_clock_verify = setInterval(function () {
+      that.doAPILiveVerify(1)
+    }, 15000)
+  },
+  // 汇报直播在线状态 => inPlayActive不能用true或false，必须用1或0...
+  doAPILiveVerify: function(inPlayActive) {
     // 保存this对象...
     var that = this
     // 准备需要的参数信息...
+    // player_type => 0(rtmp) 1(html5)
     var thePostData = {
       'node_proto': that.data.m_live_data['node_proto'],
       'node_addr': that.data.m_live_data['node_addr'],
-      'camera_id': that.data.m_live_data['camera_id'],
-      'cur_page': that.data.m_cur_page
+      'rtmp_live': that.data.m_live_data['camera_id'],
+      'player_id': that.data.m_live_data['player_id'],
+      'player_active': inPlayActive,
+      'player_type': 0
     }
     // 构造访问接口连接地址...
-    var theUrl = g_app.globalData.m_urlPrev + 'Mini/getRecord'
+    var theUrl = g_app.globalData.m_urlPrev + 'Mini/liveVerify'
     // 请求远程API过程...
     wx.request({
       url: theUrl,
@@ -69,36 +93,25 @@ Page(Object.assign({}, ZanToast, {
       dataType: 'x-www-form-urlencoded',
       header: { 'content-type': 'application/x-www-form-urlencoded' },
       success: function (res) {
-        // 调用接口失败...
+        // 调用接口失败 => 关闭汇报时钟...
         if (res.statusCode != 200) {
-          that.setData({ m_show_more: false, m_no_more: '获取录像记录失败' })
+          that.resetLiveClock()
           return
         }
-        // 注意：这里不要调用 wx.hideLoading() ...
         // dataType 没有设置json，需要自己转换...
         var arrData = JSON.parse(res.data);
-        // 获取录像失败的处理 => 显示获取到的错误信息...
-        if( arrData.err_code > 0 ) {
-          that.setData({ m_show_more: false, m_no_more: arrData.err_msg })
+        // 汇报反馈失败的处理 => 关闭时钟...
+        if (arrData.err_code > 0) {
+          console.log('Live-Verify error => ' + arrData.err_msg)
+          that.resetLiveClock()
           return
         }
-        // 获取到的记录数据不为空时才进行记录合并处理 => concat 不会改动原数据
-        if ( (arrData.record instanceof Array) && (arrData.record.length > 0) ) {
-          that.data.m_arrRecord = that.data.m_arrRecord.concat(arrData.record)
-        }
-        // 保存获取到的记录总数和总页数...
-        that.data.m_total_num = arrData.total_num
-        that.data.m_max_page = arrData.max_page
-        // 如果到达最大页数，关闭加载更多信息...
-        if (that.data.m_cur_page >= that.data.m_max_page) {
-          that.setData({ m_show_more: false, m_no_more: '没有更多内容了' })
-        }
-        // 将数据显示到模版界面上去，并且显示加载更多页面...
-        that.setData({ m_arrRecord: that.data.m_arrRecord })
+        // 汇报直播状态成功 => 打印信息...
+        console.log(thePostData)
       },
       fail: function (res) {
-        // 注意：这里不要调用 wx.hideLoading() ...
-        that.setData({ m_show_more: false, m_no_more: '获取录像记录失败' })
+        console.log('Live-Verify error => fail')
+        that.resetLiveClock()
       }
     })
   },
@@ -152,12 +165,68 @@ Page(Object.assign({}, ZanToast, {
                        m_live_data: that.data.m_live_data })
         // <live-player>组件与操作对象相互关联起来...
         that.data.m_live_player = wx.createLivePlayerContext("myLivePlayer")
+        // 启动汇报时钟...
+        that.buildLiveClock()
       },
       fail: function (res) {
         // 隐藏加载框...
         wx.hideLoading()
         // 调用接口失败...
         that.doErrNotice()
+      }
+    })
+  },
+  // 调用网站API获取通道下的录像列表...
+  doAPIGetRecord: function () {
+    // 保存this对象...
+    var that = this
+    // 准备需要的参数信息...
+    var thePostData = {
+      'node_proto': that.data.m_live_data['node_proto'],
+      'node_addr': that.data.m_live_data['node_addr'],
+      'camera_id': that.data.m_live_data['camera_id'],
+      'cur_page': that.data.m_cur_page
+    }
+    // 构造访问接口连接地址...
+    var theUrl = g_app.globalData.m_urlPrev + 'Mini/getRecord'
+    // 请求远程API过程...
+    wx.request({
+      url: theUrl,
+      method: 'POST',
+      data: thePostData,
+      dataType: 'x-www-form-urlencoded',
+      header: { 'content-type': 'application/x-www-form-urlencoded' },
+      success: function (res) {
+        // 调用接口失败...
+        if (res.statusCode != 200) {
+          that.setData({ m_show_more: false, m_no_more: '获取录像记录失败' })
+          return
+        }
+        // 注意：这里不要调用 wx.hideLoading() ...
+        // dataType 没有设置json，需要自己转换...
+        var arrData = JSON.parse(res.data);
+        // 获取录像失败的处理 => 显示获取到的错误信息...
+        if (arrData.err_code > 0) {
+          that.setData({ m_show_more: false, m_no_more: arrData.err_msg })
+          return
+        }
+        // 获取到的记录数据不为空时才进行记录合并处理 => concat 不会改动原数据
+        if ((arrData.record instanceof Array) && (arrData.record.length > 0)) {
+          that.data.m_arrRecord = that.data.m_arrRecord.concat(arrData.record)
+        }
+        // 保存获取到的记录总数和总页数...
+        that.data.m_total_num = arrData.total_num
+        that.data.m_max_page = arrData.max_page
+        // 如果到达最大页数，关闭加载更多信息...
+        if (that.data.m_cur_page >= that.data.m_max_page) {
+          that.setData({ m_show_more: false, m_no_more: '没有更多内容了' })
+        }
+        // 将数据显示到模版界面上去，并且显示加载更多页面...
+        that.setData({ m_arrRecord: that.data.m_arrRecord })
+      },
+      fail: function (res) {
+        // 注意：这里不要调用 wx.hideLoading() ...
+        that.setData({ m_show_more: false, m_no_more: '获取录像记录失败' })
       }
     })
   },
@@ -194,6 +263,10 @@ Page(Object.assign({}, ZanToast, {
       case  3002: theErrMsg = '服务器连接失败，停止播放'; break;
       case  3003: theErrMsg = '服务器握手失败，停止播放'; break;
       default:    theErrMsg = null; break;
+    }
+    // 多次重连失败 => 复位时钟，让中转器超时删除直播播放器...
+    if (theCode == -2301) {
+      this.resetLiveClock()
     }
     // 如果发生了验证错误，弹框说明，停止播放，还原状态...
     if (theErrMsg != null ) {
@@ -255,6 +328,8 @@ Page(Object.assign({}, ZanToast, {
       setTimeout( function() {
         that.showZanToast('已经断开，停止播放')
       }, 100)
+      // 非全屏状态下，直接关闭汇报时钟，停止汇报...
+      that.resetLiveClock()
     }
   },
   // 点击直播全屏按钮...
@@ -320,6 +395,8 @@ Page(Object.assign({}, ZanToast, {
   },
   // 响应用户点击单条录像记录事件...
   doTapRecord: function (inEvent) {
+    // 复位时钟，让中转器超时删除直播播放器...
+    this.resetLiveClock()
     // 切换到点播模式，保存点播配置，关闭错误提示框 => 焦点记录设定放在了wxml当中...
     var theItem = inEvent.currentTarget.dataset.record
     this.setData({ m_play_state: PLAY_RUN, m_is_live: false, m_vod_data: theItem })
@@ -360,6 +437,8 @@ Page(Object.assign({}, ZanToast, {
   onSwitchLive: function() {
     // 保存this对象...
     var that = this
+    // 复位时钟，让中转器超时删除直播播放器...
+    that.resetLiveClock()
     // 设置切换动画 => 800毫秒后还原...
     that.setData({ m_is_switch: true })
     setTimeout(function () {
