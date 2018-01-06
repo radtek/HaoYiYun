@@ -37,7 +37,10 @@
           <view class="feed-thumb-text">离线中</view>
         </block>
       </view>
-      <image mode="widthFix top" lazy-load="true" src="{{item.image_fdfs ? item.image_fdfs : '../../images/snap.png'}}" data-err-img="{{index}}" binderror="doErrSnap"></image>
+      <image mode="widthFix top" lazy-load="true" 
+        src="{{item.image_fdfs ? item.image_fdfs : '../../images/snap.png'}}"
+        data-err-img="{{index}}" binderror="doErrSnap">
+      </image>
     </view>
     <view class="feed-link">
       <view class="feed-owner">

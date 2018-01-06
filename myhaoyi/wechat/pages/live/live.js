@@ -1,4 +1,10 @@
 // pages/live/live.js
+// 加载模版需要的脚本...
+var ZanToast = require("../../template/zan-toast.js")
+// 定义播放状态 => 直播点播都适用...
+const PLAY_LOADING  = 0
+const PLAY_ERROR    = 1
+const PLAY_RUN      = 2
 // 定义直播类型...
 // 0 => 共享通道...
 // 1 => 个人通道...
@@ -6,24 +12,32 @@ const LIVE_SHARE  = 0
 const LIVE_PERSON = 1
 // 获取全局的app对象...
 const g_app = getApp()
-// 本页面的代码...
-Page({
+// 本页面的代码 => 这里新增了扩展内容...
+Page(Object.assign({}, ZanToast, {
   // 页面的初始数据...
   data: {
     m_cur_page: 1,
     m_max_page: 1,
     m_total_num: 0,
     m_arrRecord: [],
-    m_is_error: false,
+    m_is_live: true,
+    m_show_more: true,
+    m_vod_data: null,
     m_live_data: null,
-    m_live_type: LIVE_SHARE
+    m_live_player: null,
+    m_live_type: LIVE_SHARE,
+    m_play_state: PLAY_LOADING,
+    m_live_objectFit: "contain",
+    m_live_orientation: "vertical",
+    m_live_is_fullscreen: false,
+    m_live_is_paused: false,
+    m_live_poster_height: 210,
+    m_live_show_control: false,
+    m_live_show_snap: true,
+    m_live_click_timer: -1
   },
   // 生命周期函数--监听页面加载...
   onLoad: function (options) {
-    // 用通道名称设置标题栏...
-    //wx.setNavigationBarTitle({
-    //  title: 'MP4文件 - 监控通道'
-    //})
     // 这里获取的 m_live_data 是对象，不是数组...
     this.data.m_live_type = parseInt(options.type)
     this.data.m_live_data = JSON.parse(options.data)
@@ -31,8 +45,6 @@ Page({
     wx.showLoading({ title: '加载中' })
     // 获取通道的直播播放地址...
     this.doAPIGetLiveAddr()
-    // 初始化录像加载更多状态框...
-    this.setData({m_show_more: true})
     // 获取当前通道下相关的录像列表...
     this.doAPIGetRecord()
   },
@@ -123,15 +135,23 @@ Page({
         if (arrData.err_code > 0) {
           // 更新错误信息、错误提示，已经获取的直播信息...
           arrData.err_desc = ((typeof arrData.err_desc != 'undefined') ? arrData.err_desc : '请联系管理员，汇报错误信息。')
-          that.setData({ m_is_error: true, 
+          that.setData({ m_play_state: PLAY_ERROR, 
                          m_err_msg: arrData.err_msg, 
                          m_err_desc: arrData.err_desc,
                          m_live_data: that.data.m_live_data })
           return
         }
+        // 再次启动等待框，等待直播反馈之后再关闭...
+        wx.showLoading({ title: '正在连接...' })
         // 注意：这里是对象合并(Object.assign)，不是数组合并(concat)...
         // 将获取的通道地址数据与当前已有的通道数据合并...
         Object.assign(that.data.m_live_data, arrData)
+        // 将数据应用到界面当中，修改状态为 PLAY_RUN ...
+        that.setData({ m_is_live: true,
+                       m_play_state: PLAY_RUN,
+                       m_live_data: that.data.m_live_data })
+        // <live-player>组件与操作对象相互关联起来...
+        that.data.m_live_player = wx.createLivePlayerContext("myLivePlayer")
       },
       fail: function (res) {
         // 隐藏加载框...
@@ -141,10 +161,123 @@ Page({
       }
     })
   },
+  // 处理<live-player>全屏状态变化通知事件...
+  onLiveFullChange: function(inEvent) {
+    console.log(inEvent)
+  },
+  // 处理<live-player>状态变化通知事件...
+  onLiveStateChange: function(inEvent) {
+    // 临时存放反馈的错误码信息...
+    var theCode = inEvent.detail.code
+    console.log(inEvent.detail.code)
+    // 开始正常播放，关闭等待框 => 设定播放状态，关闭快照显示层...
+    if (theCode == 2004) {
+      this.setData({ m_live_show_snap: false, m_live_is_paused: false })
+      wx.hideLoading()
+      return
+    }
+    // 如果出现链接断开的情况 => 显示快照，弹框提示...
+    if (theCode == 2103) {
+      // 先关闭之间的等待框...
+      wx.hideLoading()
+      // 再开启新的重连框，显示快照页面...
+      wx.showLoading({title: '正在重连...'})
+      this.setData({ m_live_show_snap: true })
+      return
+    }
+    // 处理不同的错误情况 => 弹框说明，停止播放，还原状态...
+    var theErrMsg = null
+    switch( theCode ) {
+      case -2301: theErrMsg = '多次重连失败，停止播放'; break;
+      case  2006: theErrMsg = '视频播放结束，停止播放'; break;
+      case  3001: theErrMsg = 'DNS解析失败，停止播放'; break;
+      case  3002: theErrMsg = '服务器连接失败，停止播放'; break;
+      case  3003: theErrMsg = '服务器握手失败，停止播放'; break;
+      default:    theErrMsg = null; break;
+    }
+    // 如果发生了验证错误，弹框说明，停止播放，还原状态...
+    if (theErrMsg != null ) {
+      wx.hideLoading()
+      this.data.m_live_player.stop()
+      this.setData({ m_live_is_paused: true })
+      this.showZanToast(theErrMsg)
+    }
+  },
+  // 点击直播视图区域...
+  doClickLiveArea: function() {
+    // 保存this对象...
+    var that = this
+    // 首先，关闭之间创建的超时时钟，并将时钟变量还原...
+    clearTimeout(that.data.m_live_click_timer)
+    that.data.m_live_click_timer = -1
+    // 根据状态标志进行不同的处理...
+    if (that.data.m_live_show_control) {
+      // 如果正在显示控制条，立即停止显示...
+      that.setData({ m_live_show_control: false })
+    } else {
+      // 如果没有显示控制，立即显示控制条...
+      that.setData({ m_live_show_control: true })
+      // 在5秒之后自动停止显示控制条...
+      that.data.m_live_click_timer = setTimeout(function () {
+        that.setData({ m_live_show_control: false })
+      }, 5000)
+    }
+  },
+  // 点击直播播放按钮...
+  doClickPlay: function() {
+    // 如果直播对象无效，直接返回...
+    if (!this.data.m_live_player) {
+      console.log('live player is null')
+      return
+    }
+    // 注意：这里先设置状态，再调用接口，目的是为了快速响应用户点击...
+    if (this.data.m_live_is_paused) {
+      // 开启连接等待框...
+      wx.showLoading({ title: '正在连接...' })
+      // 设置为启动状态 => 先设置状态，再调用接口...
+      // 注意：这里没有强制显示快照层，防止闪烁...
+      this.setData({ m_live_is_paused: false })
+      // 调用接口启动直播...
+      this.data.m_live_player.play()
+    } else {
+      // 设置为暂停状态，显示快照图片层 => 先设置状态，再调用接口...
+      this.setData({ m_live_show_snap: true, m_live_is_paused: true })
+      // 调用接口停止直播...
+      this.data.m_live_player.stop()
+      // 关闭连接等待框...
+      wx.hideLoading()
+      // 全屏状态下直接返回 => 全屏下会自动重连...
+      if (this.data.m_live_is_fullscreen)
+        return
+      // 非全屏状态，显示一个提示框 => 显得不那么突然...
+      var that = this
+      // 不能直接显示(有可能显示不全)，需要使用时钟延时显示...
+      setTimeout( function() {
+        that.showZanToast('已经断开，停止播放')
+      }, 100)
+    }
+  },
+  // 点击直播全屏按钮...
+  doClickFull: function() {
+    // 如果直播对象无效，直接返回...
+    if (!this.data.m_live_player) {
+      console.log('live player is null')
+      return
+    }
+    // 如果是全屏则还原，是窗口则全屏...
+    if (this.data.m_live_is_fullscreen) {
+      this.data.m_live_player.exitFullScreen()
+      this.setData({ m_live_poster_height: 210, m_live_is_fullscreen: false })
+    } else {
+      var posterHeight = wx.getSystemInfoSync().screenWidth
+      this.data.m_live_player.requestFullScreen({ direction: 90 })
+      this.setData({ m_live_poster_height: posterHeight, m_live_is_fullscreen: true })
+    }
+  },
   // 接口失败的统一函数...
   doErrNotice: function() {
     this.setData({
-      m_is_error: true,
+      m_play_state: PLAY_ERROR,
       m_err_msg: '获取直播地址接口失败！',
       m_err_desc: '请联系管理员，汇报错误信息。',
       m_live_data: this.data.m_live_data
@@ -155,13 +288,15 @@ Page({
     // 首先，打印信息，停止刷新...
     console.log('onPullDownRefresh')
     wx.stopPullDownRefresh()
-    // 如果不是直播的错误状态，直接返回...
-    if( !this.data.m_is_error )
-      return
-    // 弹出等待框，获取直播地址...
-    wx.showLoading({ title: '加载中' })
-    // 获取通道的直播播放地址...
-    this.doAPIGetLiveAddr()
+    // 是直播，并且有错误，才刷新，再次获取直播地址...
+    if ( this.data.m_is_live && this.data.m_play_state == PLAY_ERROR ) {
+      // 还原加载状态 => PLAY_LOADING...
+      this.setData({ m_play_state: PLAY_LOADING })
+      // 弹出等待框，获取直播地址...
+      wx.showLoading({ title: '加载中' })
+      // 获取通道的直播播放地址...
+      this.doAPIGetLiveAddr()
+    }
   },
   // 页面上拉触底事件的处理函数...
   onReachBottom: function () {
@@ -183,6 +318,36 @@ Page({
     // 将修改了的数据更新到界面数据对象当中 => 将空值图片自动设置成默认截图...
     this.setData({ m_arrRecord: this.data.m_arrRecord })
   },
+  // 响应用户点击单条录像记录事件...
+  doTapRecord: function (inEvent) {
+    // 切换到点播模式，保存点播配置，关闭错误提示框 => 焦点记录设定放在了wxml当中...
+    var theItem = inEvent.currentTarget.dataset.record
+    this.setData({ m_play_state: PLAY_RUN, m_is_live: false, m_vod_data: theItem })
+    // 改变标题名称 => 录像 - 播放...
+    wx.setNavigationBarTitle({title: '录像 - 播放'})
+  },
+  // 响应播放完毕的事件通知...
+  doPlayEnded: function(inEvent) {
+    // 如果是直播状态模式，直接返回...
+    if( this.data.m_is_live )
+      return
+    // 利用当前点播播放焦点记录编号在现有数据列表中查找索引...
+    var theFocusID = this.data.m_vod_data.record_id
+    for (var i = 0; i < this.data.m_arrRecord.length; ++i) {
+      var theCurID = this.data.m_arrRecord[i].record_id
+      if (theFocusID == theCurID) {
+        // 累加焦点索引编号...
+        var theNewIndex = i + 1
+        // 索引编号越界...
+        if (theNewIndex >= this.data.m_arrRecord.length) {
+          theNewIndex = 0
+        }
+        // 模拟点击对应的索引编号...
+        this.setData({m_vod_data: this.data.m_arrRecord[theNewIndex]})
+        return
+      }
+    }
+  },
   // 用户点击右上角分享...
   /*onShareAppMessage: function () {
     var that = this
@@ -193,10 +358,21 @@ Page({
   },*/
   // 用户点击切换按钮的事件...
   onSwitchLive: function() {
+    // 保存this对象...
     var that = this
+    // 设置切换动画 => 800毫秒后还原...
     that.setData({ m_is_switch: true })
     setTimeout(function () {
       that.setData({ m_is_switch: false })
-    }, 1000)
+    }, 800)
+    // 注意：不要阻止重连刷新，尽管重来...
+    // 改变标题名称 => 直播 - 播放...
+    wx.setNavigationBarTitle({ title: '直播 - 播放' })
+    // 还原播放状态和点播数据 => 直播 | 加载中...
+    this.setData({ m_play_state: PLAY_LOADING, m_is_live: true, m_vod_data: null })
+    // 弹出等待框，获取直播地址...
+    wx.showLoading({ title: '加载中' })
+    // 获取通道的直播播放地址...
+    this.doAPIGetLiveAddr()
   }
-})
+}))

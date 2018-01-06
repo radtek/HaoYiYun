@@ -108,8 +108,8 @@ Page({
     console.log('doOwner')
   },*/
   // 响应用户点击单条记录事件...
-  doTapItem: function(event) {
-    var theItem = event.currentTarget.dataset.track
+  doTapItem: function(inEvent) {
+    var theItem = inEvent.currentTarget.dataset.track
     var theUrl = '../live/live?type=0&data='
     theUrl += JSON.stringify(theItem)
     wx.navigateTo({ url: theUrl })

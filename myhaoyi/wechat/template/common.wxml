@@ -20,3 +20,6 @@
     </block>
   </view>
 </template>
+<template name="zan-toast">
+  <cover-view class="zan-toast" wx:if="{{ zanToast.show }}" bindtap="clearZanToast">{{ zanToast.title }}</cover-view>
+</template>
