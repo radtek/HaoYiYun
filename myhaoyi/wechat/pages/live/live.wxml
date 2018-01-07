@@ -21,7 +21,6 @@
             autoplay mode="live"
             background-mute="true"
             bindstatechange="onLiveStateChange"
-            bindfullscreenchange="onLiveFullChange"
             orientation="{{m_live_orientation}}"
             object-fit="{{m_live_objectFit}}"
             src="{{m_live_data.rtmp_url}}">
