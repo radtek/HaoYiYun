@@ -80,7 +80,7 @@ body, button, input, select, textarea {
   padding: 10px 0;
   line-height: 20px;
   text-align: center;
-  color: #666;
+  color: #333;
   font-weight: 300;
   position: relative;
   bottom: 0;
@@ -132,7 +132,7 @@ body, button, input, select, textarea {
 .site-version a:hover{color: #2096FF; text-decoration: underline;}
 
 .site-install {width: 600px; overflow: hidden; margin: 50px auto 0; padding: 0 20px; text-align: left;}
-.layui-text ul li {margin-top: 20px;}
+.layui-text ul li {color: #222;}
 
 .top {
   position: fixed;
@@ -435,7 +435,7 @@ body, button, input, select, textarea {
   width: 100%;
   display: block;
   font-size: 16px;
-  color: #331815;
+  color: #333;
   position: absolute;
   text-align: center;
   font-family: 'Microsoft Yahei','Tahoma','Arial','Helvetica','Simsun','STHeiti';
@@ -494,7 +494,7 @@ body, button, input, select, textarea {
   .layui-timeline-item {padding-bottom: 10px;}
   .layui-timeline-title {margin-bottom: 0px;}
   .layui-text ul {padding: 5px 0 5px 5px;}  
-  .layui-text ul li {margin-top: 5px;}
+  .layui-text ul li {margin-top: 0px;}
   .layui-text h2 {font-size: 18px;}
-  .layui-text h3 {font-size: 14px;}
+  .layui-text h3 {font-size: 18px;}
 }
