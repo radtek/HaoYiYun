@@ -66,18 +66,22 @@
         <!--<view class="fa fa-share feed-step {{m_is_share ? 'feed-focus' : ''}}" catchtap="onShareAppMessage"></view>-->
         <view class="fa fa-retweet feed-step {{m_is_switch ? 'feed-focus' : ''}}" catchtap="onSwitchLive"></view>
         <view class="fa fa-play-circle-o feed-step"></view>
-        <view class="feed-click">{{m_live_data.clicks}}次</view>
+        <view class="feed-click">{{m_is_live?m_live_data.clicks:m_vod_data.clicks}}次</view>
       </view>
     </view>
   </view>
   <view class="feed-list {{m_arrRecord.length ? 'feed-top-line' : ''}}">
-    <view wx:for="{{m_arrRecord}}" wx:key="unique" class="feed-media-box" data-record="{{item}}" bindtap="doTapRecord">
+    <view wx:for="{{m_arrRecord}}" wx:key="unique" class="feed-media-box" 
+      data-index="{{index}}" data-record="{{item}}" bindtap="doTapRecord">
       <view class="feed-media-hd">
         <view class="feed-down">
           <view class="feed-thumb-back"></view>
           <view class="feed-thumb-time">{{item.disptime}}</view>
         </view>
-        <image mode="aspectFill" lazy-load="false" src="{{item.image_fdfs ? item.image_fdfs + '_240x140' : '../../images/snap.png'}}" data-err-img="{{index}}" binderror="doErrSnap"></image>
+        <image mode="aspectFill" lazy-load="false"
+          data-err-img="{{index}}" binderror="doErrSnap"
+          src="{{item.image_fdfs ? item.image_fdfs + '_240x140' : '../../images/snap.png'}}">
+        </image>
       </view>
       <view class="feed-media-bd">
         <view class="feed-media-title {{m_vod_data.record_id==item.record_id ? 'feed-focus' : 'feed-normal'}}">

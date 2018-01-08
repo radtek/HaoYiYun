@@ -169,5 +169,31 @@ class MiniAction extends Action
     // 返回json编码数据包...
     echo json_encode($arrErr);
   }
+  //
+  // 保存录像记录点击次数...
+  public function saveClick()
+  {
+    // 准备返回结果状态...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    do {
+      // 判断输入的参数是否有效...
+      if( !isset($_GET['record_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入参数无效！';
+        break;
+      }
+      // 找到对应的录像记录对象...
+      $condition['record_id'] = $_GET['record_id'];
+      $dbVod = D('record')->where($condition)->field('record_id,clicks')->find();
+      // 累加点击计数器，写入数据库...
+      $dbVod['clicks'] = intval($dbVod['clicks']) + 1;
+      D('record')->save($dbVod);
+      // 返回计数结果 => 存盘之后的点击次数...
+      $arrErr['clicks'] = $dbVod['clicks'];
+    } while ( false );
+    // 返回json编码数据包...
+    echo json_encode($arrErr);
+  }
 }
 ?>

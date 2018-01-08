@@ -344,5 +344,37 @@ class MiniAction extends Action
     // 返回最终的json数据包...
     echo json_encode($arrErr);
   }
+  //
+  // 处理小程序点击次数累加保存...
+  public function saveClick()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => node_proto | node_addr | record_id
+      if( !isset($_POST['node_proto']) || !isset($_POST['node_addr']) || !isset($_POST['record_id']) )
+      {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 准备访问节点接口地址 => 汇报通道在线情况...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/saveClick/record_id/%d", $_POST['node_proto'], $_POST['node_addr'], $_POST['record_id']);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '保存点击次数失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrErr = json_decode($result, true);
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
 }
 ?>
