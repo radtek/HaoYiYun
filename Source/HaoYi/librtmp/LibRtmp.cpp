@@ -1,6 +1,7 @@
 
 #include "stdafx.h"
 #include "LibRtmp.h"
+#include "UtilTool.h"
 #include "srs_librtmp.h"
 #include "AmfByteStream.h"
 #include "..\ReadSPS.h"
@@ -416,5 +417,11 @@ bool LibRtmp::Send(const char* data, int size, int type, unsigned int timestamp)
 	memcpy(lpPacket, data, size);
 	// 直接调用 SRS 的发送接口...
 	nResult = srs_rtmp_write_packet(m_lpSRSRtmp, type, timestamp, lpPacket, size);
-	return ((nResult != 0) ? false : true);
+	// 打印错误编号信息...
+	if( nResult != 0 ) {
+		MsgLogGM(nResult);
+		return false;
+	}
+	// 返回正确...
+	return true;
 }

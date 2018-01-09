@@ -1568,7 +1568,7 @@ void CPushThread::Entry()
 		nRetValue = this->SendOneDataPacket();
 		// < 0 直接向上层反馈删除之...
 		if( nRetValue < 0 ) {
-			TRACE("[CPushThread::SendOneDataPacket] - Error\n");
+			MsgLogINFO("[CPushThread::SendOneDataPacket] - Error");
 			this->doErrPushNotify();
 			return;
 		}
@@ -1839,8 +1839,10 @@ int CPushThread::SendOneDataPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
 	// 数据已经结束了，直接返回-1...
-	if( this->IsDataFinished() )
+	if( this->IsDataFinished() ) {
+		MsgLogINFO("== Push Data Finished ==");
 		return -1;
+	}
 	// 如果数据还没有结束，则需要有一定缓存，以便音视频能够自动排序，然后再发送数据包...
 	// 这里以前设定是100个数据包，为了降低延时，调整为20个数据包...
 	if( m_MapFrame.size() < 20 )
