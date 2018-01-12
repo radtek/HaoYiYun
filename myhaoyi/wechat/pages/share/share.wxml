@@ -61,7 +61,14 @@
   </block>
   <!-- 没有共享通道 -->
   <block wx:else>
-    <view style="margin-top: 40rpx;"></view>
-    <template is="error" data="{{title: '没有共享通道数据', desc: '获取共享通道数据失败，请耐心等待！'}}"/>
+    <view class="feed-error">
+      <template is="error" data="{{title: '没有共享通道数据', desc: '获取共享通道数据失败，请耐心等待！'}}"></template>
+    </view>
+    <view class="feed-steps-title">
+      <text>发布“共享通道”步骤</text>
+    </view>
+    <view class="feed-steps-content">
+      <template is="zan-steps" data="{{ type: 'vertical', steps: m_steps }}"></template>
+    </view>
   </block>
 </view>

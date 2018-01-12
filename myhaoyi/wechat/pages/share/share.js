@@ -10,7 +10,34 @@ Page({
     m_arrTrack: [],
     m_show_feed: true,
     m_show_more: true,
-    m_show_init: false
+    m_show_init: false,
+    m_steps: [
+      {
+        done: false,
+        current: true,
+        text: '打开 https://myhaoyi.com，安装“服务器”'
+      },
+      {
+        done: false,
+        current: true,
+        text: '打开 https://myhaoyi.com，安装“采集端”'
+      },
+      {
+        done: false,
+        current: true,
+        text: '启动“采集端”，扫码绑定微信用户'
+      },
+      {
+        done: false,
+        current: true,
+        text: '点击“我的通道”，共享采集端上的通道'
+      },
+      {
+        done: false,
+        current: true,
+        text: '更多详细步骤，请查看《使用手册》'
+      }
+    ]
   },
   onLoad: function (options) {
     // 如果没有获取到用户编号或用户信息，跳转到默认的授权页面，重新获取授权...

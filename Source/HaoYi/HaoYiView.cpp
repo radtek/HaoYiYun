@@ -284,12 +284,21 @@ LRESULT CHaoYiView::OnMsgFocusVideo(WPARAM wParam, LPARAM lParam)
 
 BOOL CHaoYiView::GetMacIPAddr()
 {
-	// 这里分配空间很重要，需要多分配一些...
-	DWORD buflen = sizeof(IP_ADAPTER_INFO) * 3;
-	IP_ADAPTER_INFO * lpAdapter = new IP_ADAPTER_INFO[3];
-	DWORD status = GetAdaptersInfo(lpAdapter, &buflen);
-	if( status != ERROR_SUCCESS ) {
-		delete [] lpAdapter;
+	// 2018.01.11 - 解决 ERROR_BUFFER_OVERFLOW 的问题...
+	DWORD outBuflen = sizeof(IP_ADAPTER_INFO);
+	IP_ADAPTER_INFO * lpAdapter = new IP_ADAPTER_INFO;
+	DWORD retStatus = GetAdaptersInfo(lpAdapter, &outBuflen);
+	// 发现缓冲区不够用，重新分配空间...
+	if( retStatus == ERROR_BUFFER_OVERFLOW ) {
+		MsgLogGM( retStatus );
+		delete lpAdapter; lpAdapter = NULL;
+		lpAdapter = (PIP_ADAPTER_INFO)new BYTE[outBuflen];
+		retStatus = GetAdaptersInfo(lpAdapter, &outBuflen);
+	}
+	// 还是发生了错误，打印错误，直接返回...
+	if( retStatus != ERROR_SUCCESS ) {
+		delete lpAdapter; lpAdapter = NULL;
+		MsgLogGM( retStatus );
 		return false;
 	}
 	// 开始循环遍历网卡节点...
@@ -306,7 +315,7 @@ BOOL CHaoYiView::GetMacIPAddr()
 		lpInfo = lpInfo->Next;
 	}
 	// 释放分配的缓冲区...
-	delete [] lpAdapter;
+	delete lpAdapter;
 	lpAdapter = NULL;
 	// 另一种获取IP地址的方法 => MAC地址与IP地址不一定相互关联...
 	/*if( SocketUtils::GetNumIPAddrs() > 1 ) {

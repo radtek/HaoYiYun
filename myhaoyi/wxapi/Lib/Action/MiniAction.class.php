@@ -376,5 +376,144 @@ class MiniAction extends Action
     // 返回最终的json数据包...
     echo json_encode($arrErr);
   }
+  //
+  // 获取指定用户拥有的采集端列表...
+  public function getGather()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_GET 数据...
+    do {
+      // 判断输入参数的有效性...
+      if( !isset($_GET['user_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 读取采集端列表 => 视图数据 => 只选择指定用户的WAN节点的采集端列表...
+      $condition['node_wan'] = array('gt', 0);
+      $condition['user_id'] = $_GET['user_id'];
+      $arrGather = D('GatherView')->where($condition)->order('Gather.created DESC')->select();
+      // 保存并返回采集端列表...
+      $arrErr['list'] = $arrGather;
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 获取指定采集端下面的通道列表 => 分页显示...
+  public function getCamera()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => cur_page | mac_addr | node_proto | node_addr ...
+      if( !isset($_POST['cur_page']) || !isset($_POST['mac_addr']) || 
+          !isset($_POST['node_proto']) || !isset($_POST['node_addr']) )
+      {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 准备访问节点接口地址 => 获取通道下的相关录像...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/getCamera/mac_addr/%s/p/%d", 
+                        $_POST['node_proto'], $_POST['node_addr'], 
+                        $_POST['mac_addr'], $_POST['cur_page']);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '获取通道记录失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrJson = json_decode($result, true);
+      // 发生错误，通知小程序...
+      if( $arrJson['err_code'] > 0 ) {
+        $arrErr['err_code'] = $arrJson['err_code'];
+        $arrErr['err_msg'] = (isset($arrJson['err_msg']) ? $arrJson['err_msg'] : '获取通道记录失败');
+        break;
+      }
+      // 将结果直接赋值返回...
+      $arrErr = $arrJson;
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 保存通道的共享状态...
+  public function saveShare()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => user_id | node_id | node_proto | node_addr | camera_id | shared...
+      if( !isset($_POST['node_proto']) || !isset($_POST['node_addr']) ||
+          !isset($_POST['node_id']) || !isset($_POST['user_id']) || 
+          !isset($_POST['camera_id']) || !isset($_POST['shared']) )
+      {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 先查找是否已经有共享记录...
+      $condition['user_id'] = $_POST['user_id'];
+      $condition['node_id'] = $_POST['node_id'];
+      $condition['camera_id'] = $_POST['camera_id'];
+      $dbTrack = D('track')->where($condition)->find();
+      // 根据id字段判断是否有记录...
+      if( isset($dbTrack['track_id']) ) {
+        // 找到了共享记录...
+        if( $_POST['shared'] <= 0 ) {
+          // 不共享了，直接删除找到的记录...
+          D('track')->delete($dbTrack['track_id']);
+        } else {
+          // 还要继续共享，更新找到的记录...
+          $dbTrack['updated'] = date('Y-m-d H:i:s');
+          D('track')->save($dbTrack);
+        }
+      } else {
+        // 没有找到共享记录 => 只处理继续共享的状态...
+        if( $_POST['shared'] > 0 ) {
+          $dbTrack['user_id'] = $_POST['user_id'];
+          $dbTrack['node_id'] = $_POST['node_id'];
+          $dbTrack['camera_id'] = $_POST['camera_id'];
+          $dbTrack['created'] = date('Y-m-d H:i:s');
+          $dbTrack['updated'] = date('Y-m-d H:i:s');
+          $dbTrack['track_id'] = D('track')->add($dbTrack);
+        }
+      }
+      // 向节点服务器存放通道的共享状态...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/saveShare/camera_id/%d/shared/%d", 
+                        $_POST['node_proto'], $_POST['node_addr'],
+                        $_POST['camera_id'], $_POST['shared']);
+      // 调用接口，返回查询结果...
+      $result = http_get($strUrl);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '保存共享状态失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrJson = json_decode($result, true);
+      // 发生错误，通知小程序...
+      if( $arrJson['err_code'] > 0 ) {
+        $arrErr['err_code'] = $arrJson['err_code'];
+        $arrErr['err_msg'] = (isset($arrJson['err_msg']) ? $arrJson['err_msg'] : '保存共享状态失败');
+        break;
+      }
+      // 将结果直接赋值返回...
+      $arrErr = $arrJson;
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
 }
 ?>

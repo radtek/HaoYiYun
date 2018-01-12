@@ -10,6 +10,26 @@ Page {
   box-sizing: border-box;
   background: #eee;
 }
+.feed-error {
+  background-color: #fff;
+  margin-top: 20rpx;
+  width: 100%;
+}
+.feed-steps-title {
+  width: 100%;
+  color: #222;
+  font-size: 32rpx;
+  margin-top: 20rpx;
+  text-align: center;
+  padding: 10rpx 10rpx;
+  background-color: #fff;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+.feed-steps-content {
+  width: 100%;
+  background-color: #fff;
+  padding: 10rpx 0 10rpx 60rpx;
+}
 .feed-item {
   width: 100%;
   margin: 15rpx 0 0 0;

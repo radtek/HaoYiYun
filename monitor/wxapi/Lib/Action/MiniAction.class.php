@@ -195,5 +195,68 @@ class MiniAction extends Action
     // 返回json编码数据包...
     echo json_encode($arrErr);
   }
+  //
+  // 获取指定采集端下的通道记录...
+  public function getCamera()
+  {
+    // 准备返回结果状态...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    // 判断输入的参数是否有效...
+    if( !isset($_GET['mac_addr']) ) {
+      $arrErr['err_code'] = true;
+      $arrErr['err_msg'] = '输入参数无效！';
+      echo json_encode($arrErr);
+      return;
+    }
+    // 得到每页条数...
+    $pagePer = C('PAGE_PER');
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    // 获取记录总数和总页数...
+    $condition['mac_addr'] = $_GET['mac_addr'];
+    $totalNum = D('LiveView')->where($condition)->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 填充需要返回的信息...
+    $arrErr['total_num'] = $totalNum;
+    $arrErr['max_page'] = $max_page;
+    $arrErr['cur_page'] = $pageCur;
+    // 获取通道分页数据，并对缩略图片进行地址重组...
+    $arrCamera = D('LiveView')->where($condition)->field('camera_id,clicks,stream_prop,shared,status,camera_name,image_fdfs')->order('Camera.created DESC')->select();
+    foreach($arrCamera as &$dbItem) {
+      // 获取截图快照地址，地址不为空才处理 => 为空时，小程序内部会跳转到snap.png...
+      if( strlen($dbItem['image_fdfs']) > 0 ) {
+        $dbItem['image_fdfs'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbItem['image_fdfs']);
+      }
+    }
+    // 组合最终返回的数据结果...
+    $arrErr['camera'] = $arrCamera;
+    // 返回json编码数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 保存通道的共享状态...
+  public function saveShare()
+  {
+    // 准备返回结果状态...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    do {
+      // 判断输入的参数是否有效...
+      if( !isset($_GET['camera_id']) || !isset($_GET['shared']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入参数无效！';
+        break;
+      }
+      // 直接保存通道状态到数据库当中...
+      D('camera')->save($_GET);
+    } while( false );
+    // 返回json编码数据包...
+    echo json_encode($arrErr);
+  }
 }
 ?>

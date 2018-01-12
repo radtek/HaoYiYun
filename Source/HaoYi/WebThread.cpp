@@ -93,6 +93,7 @@ BOOL CWebThread::RegisterHaoYi()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	int nWebType = theConfig.GetWebType();
 	int nWebPort = theConfig.GetWebPort();
+	string  & strMainName = theConfig.GetMainName();
 	string  & strWebVer = theConfig.GetWebVer();
 	string  & strWebTag = theConfig.GetWebTag();
 	string  & strWebName = theConfig.GetWebName();
@@ -106,7 +107,7 @@ BOOL CWebThread::RegisterHaoYi()
 		return false;
 	}
 	// 网站节点标记不能为空 => 必须先通过RegisterGather过程...
-	if( strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
+	if( strMainName.size() <= 0 || strWebTag.size() <= 0 || nWebType < 0 || strWebName.size() <= 0 ) {
 		MsgLogGM(GM_NotImplement);
 		return false;
 	}
@@ -114,15 +115,18 @@ BOOL CWebThread::RegisterHaoYi()
 	CString strPost, strUrl;
 	TCHAR	szDNS[MAX_PATH] = {0};
 	TCHAR	szWebName[MAX_PATH] = {0};
+	TCHAR   szMainName[MAX_PATH] = {0};
 	// 先对频道名称进行UTF8转换，再进行URI编码...
 	string  strDNSName = CUtilTool::GetServerDNSName();
 	string  strUTF8Name = CUtilTool::ANSI_UTF8(strDNSName.c_str());
 	string	strUTF8Web = CUtilTool::ANSI_UTF8(strWebName.c_str());
+	string  strUTF8Main = CUtilTool::ANSI_UTF8(strMainName.c_str());
 	StringParser::EncodeURI(strUTF8Name.c_str(), strUTF8Name.size(), szDNS, MAX_PATH);
 	StringParser::EncodeURI(strUTF8Web.c_str(), strUTF8Web.size(), szWebName, MAX_PATH);
-	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&version=%s&node_ver=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_proto=%s&node_name=%s&os_name=%s", 
-		strMacAddr, strIPAddr, szDNS, _T(SZ_VERSION_NAME), strWebVer.c_str(), strWebTag.c_str(), nWebType, 
-					strOnlyAddr, nWebPort, strWebProto, szWebName, CUtilTool::GetServerOS());
+	StringParser::EncodeURI(strUTF8Main.c_str(), strUTF8Main.size(), szMainName, MAX_PATH);
+	strPost.Format("mac_addr=%s&ip_addr=%s&name_pc=%s&name_set=%s&version=%s&node_ver=%s&node_tag=%s&node_type=%d&node_addr=%s:%d&node_proto=%s&node_name=%s&os_name=%s", 
+		strMacAddr, strIPAddr, szDNS, szMainName, _T(SZ_VERSION_NAME), strWebVer.c_str(), strWebTag.c_str(), nWebType, 
+		strOnlyAddr, nWebPort, strWebProto, szWebName, CUtilTool::GetServerOS());
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("%s/wxapi.php/Gather/verify", DEF_WEB_HOME);
 	// 调用Curl接口，汇报采集端信息...

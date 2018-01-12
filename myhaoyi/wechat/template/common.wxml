@@ -1,5 +1,5 @@
 <template name="error">
-  <view class="weui-msg" style="padding-top:15px;">
+  <view class="weui-msg" style="padding-top:25px">
     <view class="weui-msg__icon-area" style="margin-bottom:15px;">
       <icon type="warn" size="93"></icon>
     </view>
@@ -9,6 +9,7 @@
     </view>
   </view>
 </template>
+
 <template name="more">
   <view class="feed-more">
     <block wx:if="{{show_more}}">
@@ -20,6 +21,65 @@
     </block>
   </view>
 </template>
+
 <template name="zan-toast">
   <cover-view class="zan-toast" wx:if="{{ zanToast.show }}" bindtap="clearZanToast">{{ zanToast.title }}</cover-view>
+</template>
+
+<template name="zan-tab">
+  <view class="zan-tab">
+    <block wx:if="{{tab.scroll}}">
+      <scroll-view
+        class="zan-tab__bd zan-tab__bd--scroll {{ fixed ? 'zan-tab__bd--fixed' : '' }}"
+        scroll-x="true" style="height: {{ tab.height ? tab.height + 'px' : 'auto' }}">
+        <template is="zan-tab-list" data="{{ tab, componentId }}"></template>
+      </scroll-view>
+    </block>
+    <block wx:else>
+      <view class="zan-tab__bd {{fixed ? 'zan-tab__bd--fixed' : ''}}">
+        <template is="zan-tab-list" data="{{ tab, componentId }}"></template>
+      </view>
+    </block>
+  </view>
+</template>
+
+<template name="zan-tab-list">
+  <view wx:for="{{tab.list}}" wx:key="id"
+    class="zan-tab__item {{tab.selectedId == item.gather_id ? 'zan-tab__item--selected' : ''}}"
+    data-component-id="{{componentId}}"
+    data-selected-item="{{item}}"
+    bindtap="_handleZanTabChange">
+    <view class="zan-tab__title">{{item.name_set}}</view>
+  </view>
+</template>
+
+<template name="zan-switch">
+  <view class="zan-switch zan-switch--{{ checked ? 'on' : 'off' }} {{ disabled ? 'zan-swtich--disabled' : '' }}"
+    data-checked="{{ checked }}"
+    data-loading="{{ loading }}"
+    data-disabled="{{ disabled }}"
+    data-component-id="{{ componentId }}"
+    bindtap="_handleZanSwitchChange" >
+    <view class="zan-switch__circle">
+      <view hidden="{{ !loading }}" class="zan-switch__loading"></view>
+    </view>
+    <view class="zan-switch__bg"></view>
+  </view>
+  <view class="zan-share">
+    <text>{{ checked ? '已共享' : '未共享'}}</text>
+  </view>
+</template>
+
+<template name="zan-steps">
+  <view class="zan-steps zan-steps--{{ type == 'vertical' ? 'vsteps' : 'steps' }} zan-steps--{{ steps.length }} {{ className }}">
+    <view wx:for="{{ steps }}" wx:for-item="step" wx:key="unique" wx:for-index="index"
+      class="zan-steps__step {{ hasDesc ? 'zan-steps__step--db-title' : '' }} {{ index == 0 ? 'zan-steps__step--first-child' : '' }} {{ index == steps.length - 1 ? 'zan-steps__step--last-child' : '' }} {{ step.done ? 'zan-steps__step--done' : '' }} {{ step.current ? 'zan-steps__step--cur' : '' }}">
+      <view class="zan-steps__title">{{ step.text }}</view>
+      <view wx:if="{{ hasDesc && step.desc }}" class="zan-steps__title zan-steps__title--desc">{{ step.desc }}</view>
+      <view class="zan-steps__icons">
+        <view class="zan-steps__circle"></view>
+      </view>
+      <view class="zan-steps__line"></view>
+    </view>
+  </view>
 </template>

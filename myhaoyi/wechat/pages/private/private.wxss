@@ -1,1 +1,147 @@
 /* pages/private/private.wxss */
+Page {
+  background-color: #eee;
+}
+.feed-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  background: #eee;
+}
+.feed-error {
+  background-color: #fff;
+  margin-top: 20rpx;
+  width: 100%;
+}
+.feed-steps-title {
+  width: 100%;
+  color: #222;
+  font-size: 32rpx;
+  margin-top: 20rpx;
+  text-align: center;
+  padding: 10rpx 10rpx;
+  background-color: #fff;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+.feed-steps-content {
+  width: 100%;
+  background-color: #fff;
+  padding: 10rpx 0 10rpx 60rpx;
+}
+.feed-tab {
+  width: 100%;
+  text-align: center;
+  border-top: 1rpx solid #e0e0e0;
+}
+.feed-item {
+  width: 100%;
+  margin: 15rpx 0 0 0;
+  background: #ffffff;
+  border-top: 1rpx solid #e0e0e0;
+  border-bottom: 1rpx solid #e0e0e0;
+}
+.feed-source {
+  font-size: 32rpx;
+  margin: 6rpx 20rpx 4rpx 20rpx;
+}
+.feed-title {
+  margin-left: 15rpx;
+}
+.feed-content {
+  margin: 0 0;
+  position: relative;
+}
+.feed-play {
+  width: 100%;
+  opacity: .8;
+  position: absolute;
+  text-align: center;  
+  transform: translateY(-50%);
+  color: #fff;
+  top: 50%;
+}
+.feed-down, .feed-up {
+  color: #fff;
+  font-size: 30rpx;
+  position: absolute;
+  line-height: 40rpx;
+  height: 40rpx;
+}
+.feed-down {
+  bottom: 20rpx;
+  right: 20rpx;  
+}
+.feed-up {
+  right: 20rpx;
+  top: 20rpx;
+}
+.feed-thumb-back {
+  width: 100%;
+  height: 40rpx;
+  line-height: 40rpx;
+  border-radius: 5rpx;
+  position: absolute;
+}
+.feed-thumb-text {
+  position: relative;
+  margin: 0 6rpx;  
+}
+.feed-dtime {
+  opacity: .5;
+  background: #000;
+}
+.feed-online {
+  background: #ff6d34;
+}
+.feed-offline {
+  background: #5aa700;
+}
+.feed-content image {
+  width: 100%;
+  height: 420rpx;
+  vertical-align: middle;
+  border-top: 1rpx solid #eee;
+  border-bottom: 1rpx solid #eee;
+}
+.feed-link {
+  color: #707c7c;
+  font-size: 30rpx;
+  margin: 10rpx 20rpx 10rpx 20rpx;  
+}
+.feed-owner {
+  display: inline-block;
+}
+.feed-owner image {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 100%;
+  vertical-align: middle;
+}
+.feed-share {
+  vertical-align: middle;
+  display: inline-block;
+}
+.feed-link text {
+  display: inline-block;
+  height: 40rpx;
+  line-height: 40rpx;
+  vertical-align: middle;
+  margin: 0 0 0 15rpx;
+}
+.feed-right {
+  vertical-align: middle;
+  font-size: 36rpx;
+  margin-right: 20rpx;
+  color: #909c9c;
+  float: right;
+}
+.feed-step {
+  margin-left: 10rpx;
+  margin-right: 10rpx;
+}
+.feed-click {
+  display: inline-block;
+  font-size: 32rpx;
+}

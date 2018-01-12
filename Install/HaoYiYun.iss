@@ -17,8 +17,8 @@ UsePreviousGroup=noUsePreviousLanguage=no
 AllowCancelDuringInstall=no
 OutputDir=..\Product
 
-VersionInfoVersion=1.2.0
-OutputBaseFilename=cloud-gather-1.2.0
+VersionInfoVersion=1.2.1
+OutputBaseFilename=cloud-gather-1.2.1
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
@@ -31,6 +31,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\Source\bin\HaoYi.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\msvcr100.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\mplayer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\avcodec-55.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\avformat-55.dll"; DestDir: "{app}"; Flags: ignoreversion
