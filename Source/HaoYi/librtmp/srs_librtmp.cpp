@@ -12505,24 +12505,59 @@ int ISrsLog::initialize()
     return ERROR_SUCCESS;
 }
 
-void ISrsLog::verbose(const char* /*tag*/, int /*context_id*/, const char* /*fmt*/, ...)
+void ISrsLog::verbose(const char* tag, int context_id, const char* fmt, ...)
 {
+	/*TCHAR szBuf[MAX_PATH * 2] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    // we reserved 1 bytes for the new line.
+    vsnprintf(szBuf, MAX_PATH*2, fmt, ap);
+    va_end(ap);
+	TRACE("verbose => %s\n", szBuf);*/
 }
 
-void ISrsLog::info(const char* /*tag*/, int /*context_id*/, const char* /*fmt*/, ...)
+void ISrsLog::info(const char* tag, int context_id, const char* fmt, ...)
 {
+	/*TCHAR szBuf[MAX_PATH * 2] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    // we reserved 1 bytes for the new line.
+    vsnprintf(szBuf, MAX_PATH*2, fmt, ap);
+    va_end(ap);
+	TRACE("info => %s\n", szBuf);*/
 }
 
-void ISrsLog::trace(const char* /*tag*/, int /*context_id*/, const char* /*fmt*/, ...)
+void ISrsLog::trace(const char* tag, int context_id, const char* fmt, ...)
 {
+	/*TCHAR szBuf[MAX_PATH * 2] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    // we reserved 1 bytes for the new line.
+    vsnprintf(szBuf, MAX_PATH*2, fmt, ap);
+    va_end(ap);
+	TRACE("trace => %s\n", szBuf);*/
 }
 
-void ISrsLog::warn(const char* /*tag*/, int /*context_id*/, const char* /*fmt*/, ...)
+void ISrsLog::warn(const char* tag, int context_id, const char* fmt, ...)
 {
+	/*TCHAR szBuf[MAX_PATH * 2] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    // we reserved 1 bytes for the new line.
+    vsnprintf(szBuf, MAX_PATH*2, fmt, ap);
+    va_end(ap);
+	TRACE("warn => %s\n", szBuf);*/
 }
 
-void ISrsLog::error(const char* /*tag*/, int /*context_id*/, const char* /*fmt*/, ...)
+void ISrsLog::error(const char* tag, int context_id, const char* fmt, ...)
 {
+	/*TCHAR szBuf[MAX_PATH * 2] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    // we reserved 1 bytes for the new line.
+    vsnprintf(szBuf, MAX_PATH*2, fmt, ap);
+    va_end(ap);
+	TRACE("error => %s\n", szBuf);*/
 }
 
 ISrsThreadContext::ISrsThreadContext()
@@ -29269,6 +29304,7 @@ int SrsFastBuffer::grow(ISrsBufferReader* reader, int required_size)
     while (end - p < required_size) {
         ssize_t nread;
         if ((ret = reader->read(end, nb_free_space, &nread)) != ERROR_SUCCESS) {
+			srs_error("reader->read, ret = %d", ret);
             return ret;
         }
         
@@ -35788,12 +35824,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         sec = srs_max(0, sec);
         microsec = srs_max(0, microsec);
         
-        struct timeval tv = { sec , microsec };
-        if (setsockopt(skt->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) == -1) {
+#ifdef _WINDOWS
+		// 2018.01.13 - by jackey => 这是Windows的参数配置...
+		int nRecvMS = sec * 1000;
+		if (setsockopt(skt->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&nRecvMS, sizeof(int)) == -1) {
             return SOCKET_ERRNO();
         }
-        skt->recv_timeout = timeout_us;
-        
+#else
+		// 2018.01.13 - by jackey => 这是Linux的参数配置...
+        struct timeval tv = { sec , microsec };
+		if (setsockopt(skt->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) == -1) {
+            return SOCKET_ERRNO();
+        }
+#endif
+		// 这里仍然保持srs的时间形式...
+		skt->recv_timeout = timeout_us;
         return ERROR_SUCCESS;
     }
     int64_t srs_hijack_io_get_recv_timeout(srs_hijack_io_t ctx)
@@ -35816,13 +35861,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         sec = srs_max(0, sec);
         microsec = srs_max(0, microsec);
 
+#ifdef _WINDOWS
+		// 2018.01.13 - by jackey => 这是Windows的参数配置...
+		int nSendMS = sec * 1000;
+		if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&nSendMS, sizeof(int)) == -1) {
+            return SOCKET_ERRNO();
+        }
+#else
+		// 2018.01.13 - by jackey => 这是Linux的参数配置...
         struct timeval tv = { sec , microsec };
         if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)) == -1) {
             return SOCKET_ERRNO();
         }
-
-        skt->send_timeout = timeout_us;
-        
+#endif
+		// 这里仍然保持srs的时间形式...
+        skt->send_timeout = timeout_us;        
         return ERROR_SUCCESS;
     }
     int64_t srs_hijack_io_get_send_timeout(srs_hijack_io_t ctx)

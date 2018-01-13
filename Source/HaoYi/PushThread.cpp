@@ -60,7 +60,7 @@ CMP4Thread::~CMP4Thread()
 		m_hMP4Handle = MP4_INVALID_FILE_HANDLE;
 	}
 
-	TRACE("[~CMP4Thread Thread] - Exit\n");
+	MsgLogINFO("[~CMP4Thread Thread] - Exit");
 }
 
 void CMP4Thread::Entry()
@@ -111,13 +111,13 @@ void CMP4Thread::Entry()
 		if( m_bVideoComplete && m_bAudioComplete ) {
 			// 如果不循环，直接退出线程...
 			if( !m_bFileLoop ) {
-				TRACE("[File-Complete]\n");
+				MsgLogINFO("== [File-Complete] ==");
 				m_bFinished = true;
 				return;
 			}
 			// 打印循环次数...
 			ASSERT( m_bFileLoop );
-			TRACE("[File-Loop] Count = %d\n", m_nLoopCount);
+			CUtilTool::MsgLog(kTxtLogger, "== [File-Loop] Count = %d ==\r\n", m_nLoopCount);
 			// 如果要循环，重新计数，复位大量的执行参数...
 			m_bVideoComplete = ((m_tidVideo != MP4_INVALID_TRACK_ID) ? false : true);	// 有视频才复位标志
 			m_bAudioComplete = ((m_tidAudio != MP4_INVALID_TRACK_ID) ? false : true);	// 有音频才复位标志
@@ -500,7 +500,7 @@ CRtspThread::~CRtspThread()
 	// 停止线程...
 	this->StopAndWaitForThread();
 
-	TRACE("[~CRtspThread Thread] - Exit\n");
+	MsgLogINFO("== [~CRtspThread Thread] - Exit ==");
 }
 
 BOOL CRtspThread::InitRtsp(CPushThread * inPushThread, string & strRtspUrl)
@@ -732,7 +732,7 @@ CRtmpThread::~CRtmpThread()
 		m_lpRtmp = NULL;
 	}
 
-	TRACE("[~CRtmpThread Thread] - Exit\n");
+	MsgLogINFO("== [~CRtmpThread Thread] - Exit ==");
 }
 
 BOOL CRtmpThread::InitRtmp(CPushThread * inPushThread, string & strRtmpUrl)
@@ -994,7 +994,7 @@ CPushThread::~CPushThread()
 	m_nKeyFrame = 0;
 	m_bIsPublishing = false;
 	m_bStreamPlaying = false;
-	TRACE("[~CPushThread Thread] - Exit\n");
+	MsgLogINFO("== [~CPushThread Thread] - Exit ==");
 
 	// 释放存盘文件...
 #ifdef _SAVE_H264_
@@ -1326,7 +1326,7 @@ void CPushThread::doFFmpegSnapJPG()
 	if( !theConfig.FFmpegSnapJpeg(strSnapData, strJPGFile) ) {
 		MsgLogGM(GM_Snap_Jpg_Err);
 	} else {
-		TRACE("== ffmpeg snap jpg(%d) ==\n", nDBCameraID);
+		CUtilTool::MsgLog(kTxtLogger, "== ffmpeg snap jpg(%d) ==\r\n", nDBCameraID);
 	}
 }
 //
@@ -1424,7 +1424,7 @@ BOOL CPushThread::StreamWriteRecord(FMS_FRAME & inFrame)
 // 保存交错缓存当中的数据 => 已经按照时序排列好了...
 void CPushThread::doSaveInterFrame()
 {
-	TRACE("== [doSaveInterFrame] nKeyMonitor = %d, MonitorSize = %d ==\n", m_nKeyMonitor, m_MapMonitor.size());
+	CUtilTool::MsgLog(kTxtLogger,"== [doSaveInterFrame] nKeyMonitor = %d, MonitorSize = %d ==\r\n", m_nKeyMonitor, m_MapMonitor.size());
 	KH_MapFrame::iterator itorItem = m_MapMonitor.begin();
 	while( itorItem != m_MapMonitor.end() ) {
 		int nSize = m_MapMonitor.count(itorItem->first);
@@ -1517,32 +1517,33 @@ void CPushThread::doErrPushNotify()
 	//WPARAM wMsgID = ((m_nStreamProp == kStreamDevice) ? WM_ERR_PUSH_MSG : WM_STOP_STREAM_MSG);
 	WPARAM wMsgID = WM_STOP_LIVE_PUSH_MSG;
 	::PostMessage(m_hWndVideo, wMsgID, NULL, NULL);
-	TRACE("== Camera(%d) stop push by SRS ==\n", ((m_lpCamera != NULL) ? m_lpCamera->GetDBCameraID() : 0));
+	// 打印退出信息...
+	CUtilTool::MsgLog(kTxtLogger, _T("== Camera(%d) stop push by SRS ==\r\n"), ((m_lpCamera != NULL) ? m_lpCamera->GetDBCameraID() : 0));
 }
 
 void CPushThread::Entry()
 {
 	// 连接rtmp server，失败，通知上层删除之...
 	if( !this->OpenRtmpUrl() ) {
-		TRACE("[CPushThread::OpenRtmpUrl] - Error\n");
+		MsgLogINFO("[CPushThread::OpenRtmpUrl] - Error");
 		this->doErrPushNotify();
 		return;
 	}
 	// 握手成功，发送metadata数据包，失败，通知上层删除之...
 	if( !this->SendMetadataPacket() ) {
-		TRACE("[CPushThread::SendMetadataPacket] - Error\n");
+		MsgLogINFO("[CPushThread::SendMetadataPacket] - Error");
 		this->doErrPushNotify();
 		return;
 	}
 	// 发送视频序列头数据包，失败，通知上层删除之...
 	if( !this->SendAVCSequenceHeaderPacket() ) {
-		TRACE("[CPushThread::SendAVCSequenceHeaderPacket] - Error\n");
+		MsgLogINFO("[CPushThread::SendAVCSequenceHeaderPacket] - Error");
 		this->doErrPushNotify();
 		return;
 	}
 	// 发送音频序列头数据包，失败，通知上层删除之...
 	if( !this->SendAACSequenceHeaderPacket() ) {
-		TRACE("[CPushThread::SendAACSequenceHeaderPacket] - Error\n");
+		MsgLogINFO("[CPushThread::SendAACSequenceHeaderPacket] - Error");
 		this->doErrPushNotify();
 		return;
 	}
@@ -1588,8 +1589,8 @@ BOOL CPushThread::OpenRtmpUrl()
 	if( m_lpRtmpPush == NULL || m_strRtmpUrl.size() <= 0  )
 		return false;
 	ASSERT( m_lpRtmpPush != NULL && m_strRtmpUrl.size() > 0);
-	TRACE("== RtmpPush => OpenRtmpUrl ==\n");
-	// 连接rtmp server，完成握手等协议
+	CUtilTool::MsgLog(kTxtLogger,"== OpenRtmpUrl => %s ==\r\n", m_strRtmpUrl.c_str());
+	// 连接rtmp server，完成握手等协议...
 	return m_lpRtmpPush->Open(m_strRtmpUrl.c_str());
 }
 //
@@ -1762,7 +1763,7 @@ void CPushThread::BeginSendPacket()
 	KH_MapFrame::iterator itorItem = m_MapFrame.begin();
 	if( itorItem != m_MapFrame.end() ) {
 		m_dwFirstSendTime = itorItem->first;
-		TRACE("== [BeginSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
+		CUtilTool::MsgLog(kTxtLogger, "== [BeginSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\r\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 	}
 }
 //
@@ -1798,7 +1799,7 @@ void CPushThread::EndSendPacket()
 	// 如果缓存队列有数据，关键帧计数器增加...
 	if( m_MapStream.size() > 0 ) {
 		++m_nKeyFrame;
-		TRACE("== [EndSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
+		CUtilTool::MsgLog(kTxtLogger, "== [EndSendPacket] nKeyFrame = %d, FrameSize = %d, StreamSize = %d, FirstSendTime = %lu ==\r\n", m_nKeyFrame, m_MapFrame.size(), m_MapStream.size(), m_dwFirstSendTime);
 	}
 	// 清空缓存队列...
 	m_MapStream.clear();
@@ -1970,7 +1971,7 @@ BOOL CPushThread::SendAVCSequenceHeaderPacket()
 	if( strAVC.size() <= 0 )
 		return true;
 	ASSERT( strAVC.size() > 0 );
-	TRACE("== RtmpPush => Send Video SequenceHeaderPacket ==\n");
+	MsgLogINFO("== RtmpPush => Send Video SequenceHeaderPacket ==");
 	return m_lpRtmpPush->Send(strAVC.c_str(), strAVC.size(), FLV_TAG_TYPE_VIDEO, 0);
 }
 
@@ -1993,7 +1994,7 @@ BOOL CPushThread::SendAACSequenceHeaderPacket()
 	if( strAAC.size() <= 0 )
 		return true;
 	ASSERT( strAAC.size() > 0 );
-	TRACE("== RtmpPush => Send Audio SequenceHeaderPacket ==\n");
+	MsgLogINFO("== RtmpPush => Send Audio SequenceHeaderPacket ==");
     return m_lpRtmpPush->Send(strAAC.c_str(), strAAC.size(), FLV_TAG_TYPE_AUDIO, 0);
 }
 
@@ -2002,7 +2003,7 @@ BOOL CPushThread::SendMetadataPacket()
 	OSMutexLocker theLock(&m_Mutex);
 	if( m_lpRtmpPush == NULL )
 		return false;
-	TRACE("== RtmpPush => SendMetadataPacket ==\n");
+	MsgLogINFO("== RtmpPush => SendMetadataPacket ==");
 
 	char   metadata_buf[4096];
     char * pbuf = this->WriteMetadata(metadata_buf);

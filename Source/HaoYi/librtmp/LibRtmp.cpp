@@ -71,7 +71,7 @@ LibRtmp::LibRtmp(bool isNeedLog, bool isNeedPush, CRtmpThread * lpPullThread)
 	m_stream_name_.clear();
     m_streming_url_.clear();
 	m_is_need_push_ = isNeedPush;
-	TRACE("SRS-Version: %d.%d.%d\n", srs_version_major(), srs_version_minor(), srs_version_revision());
+	CUtilTool::MsgLog(kTxtLogger, "SRS-Version: %d.%d.%d\r\n", srs_version_major(), srs_version_minor(), srs_version_revision());
 }
 
 LibRtmp::~LibRtmp()
@@ -87,38 +87,43 @@ bool LibRtmp::Open(const char* url)
 	m_stream_name_ = m_streming_url_.substr(m_streming_url_.rfind("/")+1);
 
 	// 拉流和推流都使用SRS提供的接口...
+	int nErrCode = 0;
 	BOOL bError = false;
 	do {
 		// 创建SRS的rtmp拉流对象...
 		ASSERT( m_lpSRSRtmp == NULL );
 		m_lpSRSRtmp = srs_rtmp_create(m_streming_url_.c_str());
 		if( m_lpSRSRtmp == NULL ) {
+			MsgLogINFO("== LibRtmp::Open srs_rtmp_create error ==");
 			bError = true; break;
 		}
 		// 简单握手协议...
-		if (srs_rtmp_handshake(m_lpSRSRtmp) != 0) {
+		if ((nErrCode = srs_rtmp_handshake(m_lpSRSRtmp)) != 0) {
+			MsgLogGM(nErrCode);
 			bError = true; break;
 		}
 		// 连接直播服务器...
-		if (srs_rtmp_connect_app(m_lpSRSRtmp) != 0) {
+		if ((nErrCode = srs_rtmp_connect_app(m_lpSRSRtmp)) != 0) {
+			MsgLogGM(nErrCode);
 			bError = true; break;
 		}
 		// 推流和拉流调用的接口不同...
 		if( m_is_need_push_ ) {
 			// 推流调用发布接口...
-			if (srs_rtmp_publish_stream(m_lpSRSRtmp) != 0) {
+			if ((nErrCode = srs_rtmp_publish_stream(m_lpSRSRtmp)) != 0) {
+				MsgLogGM(nErrCode);
 				bError = true; break;
 			}
 		} else {
 			// 拉流调用播放接口...
-			if (srs_rtmp_play_stream(m_lpSRSRtmp) != 0) {
+			if ((nErrCode = srs_rtmp_play_stream(m_lpSRSRtmp)) != 0) {
+				MsgLogGM(nErrCode);
 				bError = true; break;
 			}
 		}
 	}while( false );
 	// 连接服务器失败，销毁对象...
 	if( bError ) {
-		TRACE("== LibRtmp::Open error ==\n");
 		srs_rtmp_destroy(m_lpSRSRtmp);
 		m_lpSRSRtmp = NULL;
 		return false;
@@ -151,7 +156,7 @@ bool LibRtmp::Read()
 		if( data != NULL ) {
 			free(data);
 		}
-		TRACE("== LibRtmp::Read error(%d) ==\n", ret);
+		CUtilTool::MsgLog(kTxtLogger, "== LibRtmp::Read error(%d) ==\r\n", ret);
 		return false;
 	}
 	// 判断读取数据的有效性...
@@ -159,7 +164,7 @@ bool LibRtmp::Read()
 		if( data != NULL ) {
 			free(data);
 		}
-		TRACE("== LibRtmp::Read size(%d) ==\n", size);
+		CUtilTool::MsgLog(kTxtLogger, "== LibRtmp::Read size(%d) ==\r\n", size);
 		return false;
 	}
 	// 对收到的数据包进行分发处理...
