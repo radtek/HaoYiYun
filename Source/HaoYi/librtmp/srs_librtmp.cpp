@@ -35862,19 +35862,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         microsec = srs_max(0, microsec);
 
 #ifdef _WINDOWS
-		// 2018.01.13 - by jackey => 这是Windows的参数配置...
+		// 2018.01.13 - by jackey => for windows setting...
 		int nSendMS = sec * 1000;
 		if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&nSendMS, sizeof(int)) == -1) {
             return SOCKET_ERRNO();
         }
 #else
-		// 2018.01.13 - by jackey => 这是Linux的参数配置...
+		// 2018.01.13 - by jackey => for linux setting...
         struct timeval tv = { sec , microsec };
         if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)) == -1) {
             return SOCKET_ERRNO();
         }
 #endif
-		// 这里仍然保持srs的时间形式...
+		// still use srs setting...
         skt->send_timeout = timeout_us;        
         return ERROR_SUCCESS;
     }
