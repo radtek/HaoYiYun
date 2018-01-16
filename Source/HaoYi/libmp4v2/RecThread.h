@@ -13,7 +13,7 @@ public:
 	CRecThread();
 	virtual ~CRecThread();
 public:
-	virtual BOOL	InitThread(LPCTSTR lpszRtspUrl) = 0;
+	virtual BOOL	InitThread(BOOL bUsingTCP, LPCTSTR lpszRtspUrl) = 0;
 public:
 	BOOL			IsRecFinished() { return m_bFinished; }
 	void			StoreVideoHeader(string & inSPS, string & inPPS);
@@ -61,7 +61,7 @@ public:
 public:
 	void			ResetEventLoop() { m_rtspEventLoopWatchVariable = 1; }
 public:
-	virtual BOOL	InitThread(LPCTSTR lpszRtspUrl);
+	virtual BOOL	InitThread(BOOL bUsingTCP, LPCTSTR lpszRtspUrl);
 	virtual	void	Entry();
 private:
 	string	m_strRtspUrl;					// rtsp¡¨Ω”µÿ÷∑

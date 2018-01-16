@@ -378,7 +378,7 @@ CRtspRecThread::~CRtspRecThread()
 	TRACE("[~CRtspRecThread Thread] - Exit\n");
 }
 
-BOOL CRtspRecThread::InitThread(LPCTSTR lpszRtspUrl)
+BOOL CRtspRecThread::InitThread(BOOL bUsingTCP, LPCTSTR lpszRtspUrl)
 {
 	// 判断并保存rtsp拉流地址...
 	if( lpszRtspUrl == NULL || strlen(lpszRtspUrl) <= 0 )
@@ -388,7 +388,7 @@ BOOL CRtspRecThread::InitThread(LPCTSTR lpszRtspUrl)
 	// 创建rtsp链接环境...
 	m_scheduler_ = BasicTaskScheduler::createNew();
 	m_env_ = BasicUsageEnvironment::createNew(*m_scheduler_);
-	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strRtspUrl.c_str(), 1, "rtspRecord", NULL, this);
+	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strRtspUrl.c_str(), 1, "rtspRecord", bUsingTCP, NULL, this);
 
 	// 2017.07.21 - by jackey => 有些服务器必须先发OPTIONS...
 	// 发起第一次rtsp握手 => 先发起 OPTIONS 命令...

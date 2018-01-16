@@ -40,6 +40,13 @@
         <input type="text" name="myStreamUrl" autocomplete="off" placeholder="请输入rtmp:// 或 rtsp://"  class="layui-input" value="{{$my_live.stream_url}}">
       </div>
     </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">TCP模式</label>
+      <div class="layui-input-inline" style="width: 75px;margin-right:0px;">
+        <input type="checkbox" name="myUseTCP" <eq name='my_live.use_tcp' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
+      </div>
+      <div class="layui-form-mid" style="color: #555;margin-right:0px;">(RTSP数据流是否开启TCP模式，默认UDP模式)</div>
+    </div>
     <div class="layui-form-item" style="margin-bottom:10px;margin-top:40px;text-align:center;">
       <button class="layui-btn" lay-submit lay-filter="formCamera">立即保存</button>&nbsp;
       <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>

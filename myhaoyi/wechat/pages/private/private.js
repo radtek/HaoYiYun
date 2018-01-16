@@ -117,10 +117,18 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       return
     // 整个保存选中的采集端对象 => 获取通道列表使用...
     this.data.m_gather.selectedItem = selectedItem
-    // 点击对象与当前选中对象不一致 => 更新数据...
+    // 获取到的用户信息有效，弹出等待框...
+    wx.showLoading({ title: '加载中' })
+    // 其它变量还原，需要更新到显示页面 => 可以避免画面闪烁...
     this.setData({
+      m_cur_page: 1,
+      m_max_page: 1,
+      m_show_feed: true,
+      m_show_more: true,
+      m_show_init: false,
+      m_arrCamera: [],
       [`${componentId}.selectedId`]: selectedItem.gather_id
-    });
+    })
     // 获取选中采集端下面所有的通道列表...
     this.doAPIGetCamera(selectedItem)
   },
@@ -216,6 +224,8 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       dataType: 'x-www-form-urlencoded',
       header: { 'content-type': 'application/x-www-form-urlencoded' },
       success: function (res) {
+        // 隐藏加载框...
+        wx.hideLoading()
         wx.hideNavigationBarLoading()
         do {
           // 调用接口失败 => 直接返回...
@@ -255,6 +265,7 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
         that.setData({ m_arrCamera: that.data.m_arrCamera, m_show_init: true })
       },
       fail: function (res) {
+        wx.hideLoading()
         wx.hideNavigationBarLoading()
       }
     })
@@ -265,10 +276,36 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
   },
   // 页面相关事件处理函数--监听用户下拉动作
   onPullDownRefresh: function () {
-  
+    // 首先，打印信息，停止刷新...
+    console.log('onPullDownRefresh')
+    wx.stopPullDownRefresh()
+    // 获取到的用户信息有效，弹出等待框...
+    wx.showLoading({ title: '加载中' })
+    // 将通道列表还原，但不更新到显示页面 => 可以避免画面闪烁...
+    this.data.m_arrCamera = []
+    // 其它变量还原，需要更新到显示页面 => 可以避免画面闪烁...
+    this.setData({
+        m_cur_page: 1,
+        m_max_page: 1,
+        m_show_feed: true,
+        m_show_more: true,
+        m_show_init: false
+    })
+    // 重新刷新通道数据...
+    var theCurGather = this.data.m_gather.selectedItem
+    this.doAPIGetCamera(theCurGather)
   },
   // 页面上拉触底事件的处理函数
   onReachBottom: function () {
-  
+    console.log('onReachBottom')
+    // 如果到达最大页数，关闭加载更多信息...
+    if (this.data.m_cur_page >= this.data.m_max_page) {
+      this.setData({ m_show_more: false })
+      return
+    }
+    // 没有达到最大页数，累加当前页码，请求更多数据...
+    var theCurGather = this.data.m_gather.selectedItem
+    this.data.m_cur_page += 1
+    this.doAPIGetCamera(theCurGather)
   }
 }))

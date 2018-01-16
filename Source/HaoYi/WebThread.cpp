@@ -637,12 +637,12 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		StringParser::EncodeURI(strUTF8Pass.c_str(), strUTF8Pass.size(), szDevicePass, MAX_PATH);
 		// 处理通道是摄像头的情况...
 		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&device_ip=%s&device_mac=%s&device_type=%s&device_user=%s&"
-			"device_pass=%s&device_cmd_port=%s&deive_http_port=%s&device_mirror=%s&device_osd=%s&device_desc=%s&device_twice=%s&device_boot=%s",
+			"device_pass=%s&device_cmd_port=%s&device_http_port=%s&device_mirror=%s&device_osd=%s&device_desc=%s&device_twice=%s&device_boot=%s&use_tcp=%s",
 			nDBGatherID, nStreamProp, inData["camera_type"].c_str(), szEncName, inData["device_sn"].c_str(), 
 			inData["device_ip"].c_str(), inData["device_mac"].c_str(), inData["device_type"].c_str(),
 			szDeviceUser, szDevicePass, inData["device_cmd_port"].c_str(), inData["device_http_port"].c_str(),
 			inData["device_mirror"].c_str(), inData["device_osd"].c_str(), inData["device_desc"].c_str(),
-			inData["device_twice"].c_str(), inData["device_boot"].c_str());
+			inData["device_twice"].c_str(), inData["device_boot"].c_str(), inData["use_tcp"].c_str());
 	} else {
 		// 对需要的数据进行编码处理 => 这里需要注意文件名过长时的内存溢出问题...
 		TCHAR  szMP4File[MAX_PATH * 3] = {0};
@@ -653,8 +653,9 @@ BOOL CWebThread::doWebRegCamera(GM_MapData & inData)
 		StringParser::EncodeURI(strUTF8Url.c_str(), strUTF8Url.size(), szUrlLink, MAX_PATH * 2);
 		// 处理通道是流转发的情况...
 		ASSERT( nStreamProp == kStreamMP4File || nStreamProp == kStreamUrlLink );
-		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&stream_mp4=%s&stream_url=%s",
-			nDBGatherID, nStreamProp, inData["camera_type"].c_str(), szEncName, inData["device_sn"].c_str(), szMP4File, szUrlLink);
+		strPost.Format("gather_id=%d&stream_prop=%d&camera_type=%s&camera_name=%s&device_sn=%s&stream_mp4=%s&stream_url=%s&use_tcp=%s",
+			nDBGatherID, nStreamProp, inData["camera_type"].c_str(), szEncName, inData["device_sn"].c_str(),
+			szMP4File, szUrlLink, inData["use_tcp"].c_str());
 	}
 	// 组合访问链接地址...
 	strUrl.Format("%s:%d/wxapi.php/Gather/regCamera", strWebAddr.c_str(), nWebPort);

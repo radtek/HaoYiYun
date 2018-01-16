@@ -281,6 +281,7 @@ GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType, int 
 		theMapLoc["stream_loop"] = inNetData["stream_loop"];
 		theMapLoc["stream_auto"] = inNetData["stream_auto"];
 		theMapLoc["device_sn"] = inNetData["device_sn"];
+		theMapLoc["use_tcp"] = inNetData["use_tcp"];
 	} else {
 		// 如果是摄像头类型，提取有用的字段组合成需要的配置信息...
 		ASSERT( inType == kCameraHK || inType == kCameraDH );
@@ -301,10 +302,11 @@ GM_Error CMidView::AddNewCamera(GM_MapData & inNetData, CAMERA_TYPE inType, int 
 		int nEncLen = Base64encode(szEncode, DEF_LOGIN_PASS_HK, strlen(DEF_LOGIN_PASS_HK));
 		theMapLoc["device_user"] = DEF_LOGIN_USER_HK;
 		theMapLoc["device_pass"] = szEncode;
-		// 默认开启OSD、关闭镜像、关闭双流模式...
+		// 默认开启OSD、关闭镜像、关闭双流模式、关闭TCP模式...
 		theMapLoc["device_osd"] = "1";
 		theMapLoc["device_mirror"] = "0";
 		theMapLoc["device_twice"] = "0";
+		theMapLoc["use_tcp"] = "0";
 	}
 	// 向网站注册摄像头，注册成功才能创建...
 	// 注意：注册之后，会将camera_id更新...

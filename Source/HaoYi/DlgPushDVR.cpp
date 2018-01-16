@@ -18,6 +18,7 @@ CDlgPushDVR::CDlgPushDVR(BOOL bIsEdit, int nDBCameraID, BOOL bIsLogin, CWnd* pPa
   , m_bFileMode(false)
   , m_bFileLoop(false)
   , m_bPushAuto(false)
+  , m_bUseTCP(false)
   , m_strDVRName(_T(""))
   , m_strRtspURL(_T(""))
   , m_strMP4File(_T(""))
@@ -35,6 +36,7 @@ void CDlgPushDVR::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_MP4, m_strMP4File);
 	DDX_Check(pDX, IDC_CHECK_LOOP, m_bFileLoop);
 	DDX_Check(pDX, IDC_CHECK_AUTO, m_bPushAuto);
+	DDX_Check(pDX, IDC_RTSP_USE_TCP, m_bUseTCP);
 	DDX_Text(pDX, IDC_EDIT_NAME, m_strDVRName);
 	DDV_MaxChars(pDX, m_strDVRName, 32);
 }
@@ -101,6 +103,8 @@ void CDlgPushDVR::BuildPushRecord()
 	m_MapData["stream_loop"] = strItem;
 	strItem.Format("%d", m_bPushAuto);
 	m_MapData["stream_auto"] = strItem;
+	strItem.Format("%d", m_bUseTCP);
+	m_MapData["use_tcp"] = strItem;
 	// 如果是编辑模式，保存配置，直接返回...
 	if( m_bEditMode ) {
 		CXmlConfig & theConfig = CXmlConfig::GMInstance();
@@ -133,12 +137,13 @@ BOOL CDlgPushDVR::OnInitDialog()
 	CButton * lpBtn = (CButton *)GetDlgItem(IDC_RADIO_RTSP);
 	lpBtn->SetCheck(true);
 	m_bFileMode = false;
-
+	// 默认是拉流模式...
 	GetDlgItem(IDC_EDIT_RTSP)->EnableWindow(true);
 	GetDlgItem(IDC_EDIT_MP4)->EnableWindow(false);
 	GetDlgItem(IDC_BTN_CHOOSE)->EnableWindow(false);
 	GetDlgItem(IDC_CHECK_LOOP)->EnableWindow(false);
-	GetDlgItem(IDC_CHECK_AUTO)->EnableWindow(false);
+	GetDlgItem(IDC_CHECK_AUTO)->EnableWindow(true);
+	GetDlgItem(IDC_RTSP_USE_TCP)->EnableWindow(true);
 
 	// 修改时的操作...
 	( m_bEditMode ) ? this->FillEditValue() : NULL;
@@ -149,6 +154,7 @@ BOOL CDlgPushDVR::OnInitDialog()
 		CEdit * lpWndName = (CEdit*)GetDlgItem(IDC_EDIT_NAME);
 		lpWndRtsp->SetReadOnly(true);
 		lpWndName->SetReadOnly(true);
+		GetDlgItem(IDC_RTSP_USE_TCP)->EnableWindow(false);
 		GetDlgItem(IDC_RADIO_RTSP)->EnableWindow(false);
 		GetDlgItem(IDC_RADIO_FILE)->EnableWindow(false);
 		GetDlgItem(IDC_CHECK_LOOP)->EnableWindow(false);
@@ -175,6 +181,7 @@ void CDlgPushDVR::FillEditValue()
 	m_bFileMode = ((nStreamProp == kStreamMP4File) ? true : false);
 	ASSERT( nStreamProp == kStreamMP4File || nStreamProp == kStreamUrlLink );
 	// 设置其它流数据信息...
+	m_bUseTCP = atoi(m_MapData["use_tcp"].c_str());
 	m_bPushAuto = atoi(m_MapData["stream_auto"].c_str());
 	m_bFileLoop = atoi(m_MapData["stream_loop"].c_str());
 	m_strRtspURL = m_MapData["stream_url"].c_str();
@@ -253,6 +260,7 @@ void CDlgPushDVR::OnBtnChoose()
 void CDlgPushDVR::OnBnClickedRadioRtsp()
 {
 	m_bFileMode = false;
+	GetDlgItem(IDC_RTSP_USE_TCP)->EnableWindow(true);
 	GetDlgItem(IDC_CHECK_AUTO)->EnableWindow(true);
 	GetDlgItem(IDC_EDIT_RTSP)->EnableWindow(true);
 	GetDlgItem(IDC_EDIT_MP4)->EnableWindow(false);
@@ -263,6 +271,7 @@ void CDlgPushDVR::OnBnClickedRadioRtsp()
 void CDlgPushDVR::OnBnClickedRadioFile()
 {
 	m_bFileMode = true;
+	GetDlgItem(IDC_RTSP_USE_TCP)->EnableWindow(false);
 	GetDlgItem(IDC_CHECK_AUTO)->EnableWindow(false);
 	GetDlgItem(IDC_EDIT_RTSP)->EnableWindow(false);
 	GetDlgItem(IDC_EDIT_MP4)->EnableWindow(true);

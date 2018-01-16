@@ -17,6 +17,7 @@ private:
 	int			m_nDBCameraID;		// 通道编号
 	BOOL		m_bIsLogin;			// 通道是否已登录
 	int			m_nDVRPort;			// 登录端口
+	BOOL		m_bUseTCP;			// 是否开启TCP
 	BOOL		m_bOpenOSD;			// 是否开启OSD
 	BOOL		m_bOpenMirror;		// 是否开启镜像
 	CString		m_strDVRName;		// 通道名称

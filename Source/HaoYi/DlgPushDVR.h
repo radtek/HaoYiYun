@@ -27,6 +27,7 @@ private:
 	int					m_nDBCameraID;	// 修改时读取配置
 	CString				m_strRtspURL;	// 拉流地址
 	CString				m_strMP4File;	// MP4文件
+	BOOL				m_bUseTCP;		// 是否开启TCP
 	BOOL				m_bPushAuto;	// 断开自动推送
 	BOOL				m_bFileLoop;	// 文件循环标志
 	BOOL				m_bFileMode;	// 文件模式或RTSP模式

@@ -2,6 +2,7 @@
 #include "StdAfx.h"
 #include "myRTSPClient.h"
 #include "PushThread.h"
+#include "UtilTool.h"
 
 #include "libmp4v2\RecThread.h"
 #include "librtmp\AmfByteStream.h"
@@ -62,15 +63,19 @@ StreamClientState::~StreamClientState()
 	}
 }
 
-ourRTSPClient* ourRTSPClient::createNew(UsageEnvironment& env, char const* rtspURL,	int verbosityLevel, char const* applicationName, CRtspThread * lpRtspThread, CRtspRecThread * lpRecThread)
+ourRTSPClient* ourRTSPClient::createNew(UsageEnvironment& env, char const* rtspURL,	int verbosityLevel, char const* applicationName,
+										BOOL bStreamUsingTCP, CRtspThread * lpRtspThread, CRtspRecThread * lpRecThread)
 {
-	return new ourRTSPClient(env, rtspURL, verbosityLevel, applicationName, lpRtspThread, lpRecThread);
+	return new ourRTSPClient(env, rtspURL, verbosityLevel, applicationName, bStreamUsingTCP, lpRtspThread, lpRecThread);
 }
 
-ourRTSPClient::ourRTSPClient(UsageEnvironment& env, char const* rtspURL, int verbosityLevel, char const* applicationName, CRtspThread * lpRtspThread, CRtspRecThread * lpRecThread)
-  : RTSPClient(env, rtspURL, verbosityLevel, applicationName, 0, -1),
-    m_lpRtspThread(lpRtspThread),
-	m_lpRecThread(lpRecThread)
+ourRTSPClient::ourRTSPClient(UsageEnvironment& env, char const* rtspURL, int verbosityLevel, char const* applicationName, BOOL bStreamUsingTCP, CRtspThread * lpRtspThread, CRtspRecThread * lpRecThread)
+  : RTSPClient(env, rtspURL, verbosityLevel, applicationName, 0, -1)
+  , m_lpRecThread(lpRecThread)
+  , m_lpRtspThread(lpRtspThread)
+  , m_bUsingTCP(bStreamUsingTCP)
+  , m_bHasVideo(false)
+  , m_bHasAudio(false)
 {
 }
 
@@ -83,11 +88,11 @@ void ourRTSPClient::myAfterOPTIONS(int resultCode, char* resultString)
 	do {
 		// 发生错误，打印返回...
 		if( resultCode != 0 ) {
-			TRACE("[OPTIONS] Code = %d, Error = %s\n", resultCode, resultString);
+			CUtilTool::MsgLog(kTxtLogger, "[OPTIONS] Code = %d, Error = %s\r\n", resultCode, resultString);
 			break;
 		}
 		// 成功，发起DESCRIBE请求...
-		TRACE("[OPTIONS] = %s\n", resultString);
+		CUtilTool::MsgLog(kTxtLogger, "[OPTIONS] = %s\r\n", resultString);
 		this->sendDescribeCommand(continueAfterDESCRIBE);
 		return;
 	}while( 0 );
@@ -110,11 +115,11 @@ void ourRTSPClient::myAfterDESCRIBE(int resultCode, char* resultString)
 		StreamClientState & scs = this->m_scs;
 
 		// 打印获取的SDP信息...
-		TRACE("[SDP] = %s\n", resultString);
+		CUtilTool::MsgLog(kTxtLogger, "[SDP] = %s\r\n", resultString);
 
 		// 返回错误，退出...
 		if( resultCode != 0 ) {
-			TRACE("[DESCRIBE] Code = %d, Error = %s\n", resultCode, resultString);
+			CUtilTool::MsgLog(kTxtLogger, "[DESCRIBE] Code = %d, Error = %s\r\n", resultCode, resultString);
 			break;
 		}
 		
@@ -123,10 +128,10 @@ void ourRTSPClient::myAfterDESCRIBE(int resultCode, char* resultString)
 
 		// 判断创建会话的结果...
 		if( scs.m_session == NULL ) {
-			TRACE("[DESCRIBE] Error = %s\n", env.getResultMsg());
+			CUtilTool::MsgLog(kTxtLogger, "[DESCRIBE] Error = %s\r\n", env.getResultMsg());
 			break;
 		} else if ( !scs.m_session->hasSubsessions() ) {
-			TRACE("[DESCRIBE] Error = This session has no media subsessions\n");
+			MsgLogINFO("[DESCRIBE] Error = This session has no media subsessions");
 			break;
 		}
 		
@@ -160,21 +165,21 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 		
 		// 返回错误，退出...
 		if( resultCode != 0 ) {
-			TRACE("[%s/%s] Failed to Setup.\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+			CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Failed to Setup.\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 			break;
 		}
 
 		// 判断视频格式是否正确，必须是 video/H264 ...
 		if( strcmp(scs.m_subsession->mediumName(), "video") == 0 ) {
 			if( strcmp(scs.m_subsession->codecName(), "H264") != 0 ) {
-				TRACE("[%s/%s] Error => Must be Video/H264.\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+				CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error => Must be Video/H264.\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 				break;
 			}
 			// 必须有 SPS 和 PPS 的数据包...
 			ASSERT( strcmp(scs.m_subsession->codecName(), "H264") == 0 );
 			const char * lpszSpro = scs.m_subsession->fmtp_spropparametersets();
 			if( lpszSpro == NULL ) {
-				TRACE("[%s/%s] Error => SPS or PPS...\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+				CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error => SPS or PPS...\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 				break;
 			}
 			// 获得第一个 SPS 和 第一个PPS ...
@@ -193,11 +198,11 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 			delete[] sPropRecords;
 			// 必须同时包含 SPS 和 PPS...
 			if( strSPS.size() <= 0 || strPPS.size() <= 0 ) {
-				TRACE("[%s/%s] Error => SPS or PPS...\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+				CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error => SPS or PPS...\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 				break;
 			}
 			ASSERT( strSPS.size() > 0 && strPPS.size() > 0 );
-			TRACE("== SPS-Size(%d), PPS-Size(%d) ==\n", strSPS.size(), strPPS.size());
+			CUtilTool::MsgLog(kTxtLogger, "== SPS-Size(%d), PPS-Size(%d) ==\r\n", strSPS.size(), strPPS.size());
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			// 注意：这时的PPS、SPS有可能是错误的，但是数据区不一定能再次获取到PPS、SPS...
 			// 因此：还是在这里处理启动流程，后期如果再遇到问题，可以在数据区获取到新的PPS、SPS后再次发起WriteAVC，并直接发送给服务器试试....
@@ -210,21 +215,23 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 			if( m_lpRecThread != NULL ) {
 				m_lpRecThread->StoreVideoHeader(strSPS, strPPS);
 			}
+			// 设置视频有效的标志...
+			m_bHasVideo = true;
 		}
 
 		// 判断音频格式是否正确, 必须是 audio/MPEG4 ...
 		if( strcmp(scs.m_subsession->mediumName(), "audio") == 0 ) {
 			if( strnicmp(scs.m_subsession->codecName(), "MPEG4", strlen("MPEG4")) != 0 ) {
-				TRACE("[%s/%s] Error => Must be Audio/MPEG4.\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
-				break;
+				CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error => Must be Audio/MPEG4.\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+				goto _audio_ok;
 			}
 			ASSERT( strnicmp(scs.m_subsession->codecName(), "MPEG4", strlen("MPEG4")) == 0 );
 			// 获取声道数和采样率信息...
 			unsigned audio_channels = scs.m_subsession->numChannels();
 			unsigned audio_rate = scs.m_subsession->rtpTimestampFrequency();
 			if( audio_channels <= 0 || audio_rate <= 0 ) {
-				TRACE("[%s/%s] Error => channel(%d),rate(%d).\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), audio_channels, audio_rate);
-				break;
+				CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error => channel(%d),rate(%d).\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), audio_channels, audio_rate);
+				goto _audio_ok;
 			}
 			// 通知rtsp线程，格式头已经准备好了...
 			if( m_lpRtspThread != NULL ) {
@@ -234,14 +241,16 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 			if( m_lpRecThread != NULL ) {
 				m_lpRecThread->StoreAudioHeader(audio_rate, audio_channels);
 			}
+			// 设置音频有效的标志...
+			m_bHasAudio = true;
 		}
-		
+_audio_ok:
 		// 打印正确信息...
-		TRACE("[%s/%s] Setup OK.\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+		CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Setup OK.\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 		if( scs.m_subsession->rtcpIsMuxed() ) {
-			TRACE("[client port] %d \n", scs.m_subsession->clientPortNum());
+			CUtilTool::MsgLog(kTxtLogger, "[client port] %d \r\n", scs.m_subsession->clientPortNum());
 		} else {
-			TRACE("[client ports] %d - %d \n", scs.m_subsession->clientPortNum(), scs.m_subsession->clientPortNum()+1);
+			CUtilTool::MsgLog(kTxtLogger, "[client ports] %d - %d \r\n", scs.m_subsession->clientPortNum(), scs.m_subsession->clientPortNum()+1);
 		}
 		
 		// Having successfully setup the subsession, create a data sink for it, and call "startPlaying()" on it.
@@ -255,11 +264,11 @@ void ourRTSPClient::myAfterSETUP(int resultCode, char* resultString)
 
 		// 创建失败，打印错误信息...
 		if( scs.m_subsession->sink == NULL ) {
-			TRACE("[%s/%s] Error = %s. \n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), env.getResultMsg());
+			CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error = %s. \r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), env.getResultMsg());
 			break;
 		}
 		
-		TRACE("[%s/%s] Created a data sink ok. \n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+		CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Created a data sink ok. \r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 
 		// 发起 PLAY 协议...
 		scs.m_subsession->miscPtr = this;
@@ -361,7 +370,7 @@ void ourRTSPClient::myAfterPLAY(int resultCode, char* resultString)
 		
 		// 返回错误，打印信息...
 		if( resultCode != 0 ) {
-			TRACE("Failed to start playing session.\n");
+			MsgLogINFO("Failed to start playing session.");
 			break;
 		}
 		
@@ -377,7 +386,7 @@ void ourRTSPClient::myAfterPLAY(int resultCode, char* resultString)
 		}
 		
 		// 一切正常，打印信息，直接返回...
-		TRACE("Started playing session.(for up to %.2f)\n", scs.m_duration);
+		CUtilTool::MsgLog(kTxtLogger, "Started playing session.(for up to %.2f)\r\n", scs.m_duration);
 		// 正式启动rtmp推送线程...
 		if( m_lpRtspThread != NULL ) {
 			m_lpRtspThread->StartPushThread();
@@ -412,19 +421,19 @@ void ourRTSPClient::setupNextSubsession()
 	if( scs.m_subsession != NULL ) {
 		if( !scs.m_subsession->initiate() ) {
 			// give up on this subsession; go to the next one
-			TRACE("[%s/%s] Error = %s\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), env.getResultMsg());
+			CUtilTool::MsgLog(kTxtLogger, "[%s/%s] Error = %s\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName(), env.getResultMsg());
 			this->setupNextSubsession();
 		} else {
-			TRACE("[%s/%s] OK\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
+			CUtilTool::MsgLog(kTxtLogger, "[%s/%s] OK\r\n", scs.m_subsession->mediumName(), scs.m_subsession->codecName());
 			if( scs.m_subsession->rtcpIsMuxed() ) {
-				TRACE("[client port] %d \n", scs.m_subsession->clientPortNum());
+				CUtilTool::MsgLog(kTxtLogger, "[client port] %d \r\n", scs.m_subsession->clientPortNum());
 			} else {
-				TRACE("[client ports] %d - %d \n", scs.m_subsession->clientPortNum(), scs.m_subsession->clientPortNum()+1);
+				CUtilTool::MsgLog(kTxtLogger, "[client ports] %d - %d \r\n", scs.m_subsession->clientPortNum(), scs.m_subsession->clientPortNum()+1);
 			}
 			// Continue setting up this subsession, by sending a RTSP "SETUP" command: 
 			// REQUEST_STREAMING_OVER_TCP == True...
-			// 发起SETUP协议，这里必须用TCP模式，否则有些服务器不支持RTP模式...
-			this->sendSetupCommand(*scs.m_subsession, continueAfterSETUP, False, True);
+			// 发起SETUP协议，这里必须用TCP模式，否则有些服务器不支持RTP模式 => 这里需要加一个开关...
+			this->sendSetupCommand(*scs.m_subsession, continueAfterSETUP, False, m_bUsingTCP);
 		}
 		return;
 	}
@@ -474,7 +483,7 @@ void ourRTSPClient::shutdownStream()
 	}
 	
 	// 关闭这个rtsp连接对象...
-	TRACE("[%s] Closing the stream.\n", this->url());
+	CUtilTool::MsgLog(kTxtLogger, "[%s] Closing the stream.\r\n", this->url());
 	Medium::close(this);
 
 	// Note that this will also cause this stream's "StreamClientState" structure to get reclaimed.
@@ -514,7 +523,7 @@ void subsessionByeHandler(void* clientData)
 	RTSPClient * rtspClient = (RTSPClient*)subsession->miscPtr;
 	UsageEnvironment & env = rtspClient->envir(); // alias
 	
-	TRACE("Received RTCP BYTE on %s/%s \n", subsession->mediumName(), subsession->codecName());
+	CUtilTool::MsgLog(kTxtLogger, "Received RTCP BYTE on %s/%s \r\n", subsession->mediumName(), subsession->codecName());
 	
 	// Now act as if the subsession had closed:
 	subsessionAfterPlaying(subsession);
@@ -605,12 +614,11 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 
 	//char szBuf[MAX_PATH] = {0};
 
-	// 获取视频标志，关键帧标志...
+	// 获取视频标志，关键帧标志 => 需要判断是否需要向上传递视频数据...
 	// H264的 nalu 标志类型1(片段),5(关键帧),7(SPS),8(PPS)...
-	BOOL bIsVideo = false, bIsKeyFrame = false;
-	if( strcmp(fSubsession.mediumName(), "video") == 0 ) {
-		bIsVideo = true;
+	if( fRtspClient->m_bHasVideo && strcmp(fSubsession.mediumName(), "video") == 0 ) {
 		// 计算关键帧标志...
+		BOOL bIsKeyFrame = false;
 		BYTE nalType = fReceiveBuffer[0] & 0x1f;
 		// 2017.04.10 - by jackey => 如果是SPS或PPS，直接丢弃...
 		// 否则会造成HTML5播放器在video标签中无法播放，通过MPlayer发现，写了多余的坏帧，刚好是3个...
@@ -633,18 +641,17 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 		//TRACE("[Video] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//sprintf(szBuf, "[Video] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//DoTextLog(szBuf);
+		// 向上层传递视频数据帧...
+		fRtspClient->WriteSample(true, strFrame, dwTimeStamp, 0, bIsKeyFrame);
 	}
-	// 获取音频标志，关键帧标志...
-	if( strcmp(fSubsession.mediumName(), "audio") == 0 ) {
-		bIsVideo = false; bIsKeyFrame = true;
+	// 获取音频标志，关键帧标志 => 需要判断是否需要向上传递音频数据...
+	if( fRtspClient->m_bHasAudio && strcmp(fSubsession.mediumName(), "audio") == 0 ) {
 		strFrame.assign((char*)fReceiveBuffer, frameSize);
 		//TRACE("[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//sprintf(szBuf, "[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//DoTextLog(szBuf);
-	}
-	// 启动成功之后，才需要处理帧数据包...
-	if( fRtspClient != NULL ) {
-		fRtspClient->WriteSample(bIsVideo, strFrame, dwTimeStamp, 0, bIsKeyFrame);
+		// 向上层传递音频数据帧 => 必须在这里单独处理，因为有可能不要音频...
+		fRtspClient->WriteSample(false, strFrame, dwTimeStamp, 0, true);
 	}
 	// 处理下一帧的数据...
 	this->continuePlaying();

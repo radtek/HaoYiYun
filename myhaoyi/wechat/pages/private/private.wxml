@@ -7,7 +7,8 @@
     <template is="zan-tab" data="{{tab: m_gather, componentId: 'm_gather'}}"></template>
   </view>
   <block wx:if="{{m_show_feed}}">
-  <view wx:for="{{m_arrCamera}}" wx:key="unique" class="feed-item" data-track="{{item}}" bindtap="doTapItem">
+  <view wx:for="{{m_arrCamera}}" wx:key="unique" class="feed-item" data-track="{{item}}" bindtap="doTapItem"
+    style="{{m_gather.list.length>1&&index==0?'margin-top:-1rpx':''}}">
     <view class="feed-source">
       <block wx:if="{{item.stream_prop == 0}}">
         <view class="fa fa-camera"></view>

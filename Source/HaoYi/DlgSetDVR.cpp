@@ -17,6 +17,7 @@ CDlgSetDVR::CDlgSetDVR(int nDBCameraID, BOOL bIsLogin, CWnd* pParent /*=NULL*/)
 	, m_strLoginPass(_T(""))
 	, m_bOpenMirror(false)
 	, m_bOpenOSD(true)
+	, m_bUseTCP(false)
 	, m_nDVRPort(0)
 {
 	ASSERT( m_nDBCameraID > 0 );
@@ -37,6 +38,7 @@ void CDlgSetDVR::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxInt(pDX, m_nDVRPort, 1, 65535);
 	DDX_Text(pDX, IDC_EDIT_DVR_USER, m_strLoginUser);
 	DDX_Text(pDX, IDC_EDIT_DVR_PASS, m_strLoginPass);
+	DDX_Check(pDX, IDC_CHECK_USE_TCP, m_bUseTCP);
 	DDX_Check(pDX, IDC_CHECK_OPEN_OSD, m_bOpenOSD);
 	DDX_Check(pDX, IDC_CHECK_OPEN_MIRROR, m_bOpenMirror);
 }
@@ -59,6 +61,7 @@ BOOL CDlgSetDVR::OnInitDialog()
 	string & strCmdPort = theDataWeb["device_cmd_port"];
 	string & strMirror = theDataWeb["device_mirror"];
 	string & strOSD = theDataWeb["device_osd"];
+	string & strUseTCP = theDataWeb["use_tcp"];
 	string & strLoginPass = theDataWeb["device_pass"];
 	int nDecLen = Base64decode(szDecodePass, strLoginPass.c_str());
 	m_strDVRName = theDataWeb["camera_name"].c_str();
@@ -67,6 +70,7 @@ BOOL CDlgSetDVR::OnInitDialog()
 	m_strLoginUser = theDataWeb["device_user"].c_str();
 	m_strLoginPass = szDecodePass;
 	m_bOpenMirror = ((strMirror.size() > 0) ? atoi(strMirror.c_str()) : false);
+	m_bUseTCP = ((strUseTCP.size() > 0) ? atoi(strUseTCP.c_str()) : false);
 	m_bOpenOSD = ((strOSD.size() > 0) ? atoi(strOSD.c_str()) : true);
 
 	this->UpdateData(false);
@@ -78,6 +82,7 @@ BOOL CDlgSetDVR::OnInitDialog()
 		((CEdit*)GetDlgItem(IDC_EDIT_DVR_PORT))->SetReadOnly(true);
 		((CEdit*)GetDlgItem(IDC_EDIT_DVR_USER))->SetReadOnly(true);
 		((CEdit*)GetDlgItem(IDC_EDIT_DVR_PASS))->SetReadOnly(true);
+		GetDlgItem(IDC_CHECK_USE_TCP)->EnableWindow(false);
 		GetDlgItem(IDC_CHECK_OPEN_OSD)->EnableWindow(false);
 		GetDlgItem(IDC_CHECK_OPEN_MIRROR)->EnableWindow(false);
 		GetDlgItem(IDOK)->EnableWindow(false);
@@ -123,6 +128,9 @@ void CDlgSetDVR::OnBnClickedOK()
 	theDataWeb["device_osd"] = szBuffer;
 	sprintf(szBuffer, "%d", m_bOpenMirror);
 	theDataWeb["device_mirror"] = szBuffer;
+	sprintf(szBuffer, "%d", m_bUseTCP);
+	theDataWeb["use_tcp"] = szBuffer;
+
 	// 只需要将配置更新到内存当中就可以了...
 	theConfig.SetCamera(m_nDBCameraID, theDataWeb);
 

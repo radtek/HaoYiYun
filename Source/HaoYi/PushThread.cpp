@@ -503,7 +503,7 @@ CRtspThread::~CRtspThread()
 	MsgLogINFO("== [~CRtspThread Thread] - Exit ==");
 }
 
-BOOL CRtspThread::InitRtsp(CPushThread * inPushThread, string & strRtspUrl)
+BOOL CRtspThread::InitRtsp(BOOL bUsingTCP, CPushThread * inPushThread, string & strRtspUrl)
 {
 	// 保存传递的参数...
 	m_lpPushThread = inPushThread;
@@ -512,7 +512,7 @@ BOOL CRtspThread::InitRtsp(CPushThread * inPushThread, string & strRtspUrl)
 	// 创建rtsp链接环境...
 	m_scheduler_ = BasicTaskScheduler::createNew();
 	m_env_ = BasicUsageEnvironment::createNew(*m_scheduler_);
-	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strRtspUrl.c_str(), 1, "rtspTransfer", this, NULL);
+	m_rtspClient_ = ourRTSPClient::createNew(*m_env_, m_strRtspUrl.c_str(), 1, "rtspTransfer", bUsingTCP, this, NULL);
 	
 	// 2017.07.21 - by jackey => 有些服务器必须先发OPTIONS...
 	// 发起第一次rtsp握手 => 先发起 OPTIONS 命令...
@@ -1034,7 +1034,7 @@ CPushThread::~CPushThread()
 }*/
 //
 // 处理流转发线程的初始化...
-BOOL CPushThread::StreamInitThread(BOOL bFileMode, string & strStreamUrl, string & strStreamMP4)
+BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strStreamUrl, string & strStreamMP4)
 {
 	// 保存传递过来的参数...
 	if( m_lpCamera == NULL )
@@ -1047,7 +1047,7 @@ BOOL CPushThread::StreamInitThread(BOOL bFileMode, string & strStreamUrl, string
 	} else {
 		if( strnicmp("rtsp://", strStreamUrl.c_str(), strlen("rtsp://")) == 0 ) {
 			m_lpRtspThread = new CRtspThread();
-			m_lpRtspThread->InitRtsp(this, strStreamUrl);
+			m_lpRtspThread->InitRtsp(bUsingTCP, this, strStreamUrl);
 		} else {
 			m_lpRtmpThread = new CRtmpThread();
 			m_lpRtmpThread->InitRtmp(this, strStreamUrl);

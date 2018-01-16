@@ -23,6 +23,7 @@ CCamera::CCamera(CVideoWnd * lpWndParent)
   , m_hWndRight(NULL)
   , m_lpPushThread(NULL)
   , m_lpDeviceMainRec(NULL)
+  , m_bIsUsingTCP(false)
   , m_bIsTwiceMode(false)
   , m_bStreamLogin(false)
   , m_bIsExiting(false)
@@ -331,12 +332,11 @@ DWORD CCamera::onDeviceLoginSuccess()
 			MsgLogGM(dwErr);
 			break;
 		}
+		// 2018.01.16 - by jackey => 音频格式不对，只是报错，但不退出，RTSP会话会自动丢弃音频...
 		// 判断主码流或子码流音频编码类型是否正确 => AAC
 		if( dvrCompressCfg.struNormHighRecordPara.byAudioEncType != AUDIOTALKTYPE_AAC ||
 			dvrCompressCfg.struNetPara.byAudioEncType != AUDIOTALKTYPE_AAC ) {
-			dwErr = GM_DVR_AEnc_Err;
-			MsgLogGM(dwErr);
-			break;
+			MsgLogGM(GM_DVR_AEnc_Err);
 		}
 		// 调整一些参数 => 根据设备的编码能力来设置，而不是随意设置的...
 		// 从配置文件中读取并设置主码流大小和子码流大小 => 自定义码流...
@@ -475,9 +475,12 @@ DWORD CCamera::onDeviceLoginSuccess()
 	// 若开启双流模式，使用子码流直播、主码流录像；不开启使用主码流直播、主码流录像...
 	string strStreamUrl, strStreamMP4;
 	strStreamUrl.assign(m_bIsTwiceMode ? m_strRtspSubUrl : m_strRtspMainUrl);
+	// 获取是否开启rtsp的tcp数据流模式...
+	string & strUsingTCP = theMapWeb["use_tcp"];
+	m_bIsUsingTCP = ((strUsingTCP.size() > 0) ? atoi(strUsingTCP.c_str()) : false);
 	// 创建流转发、推流线程对象，并立即启动...
 	m_lpPushThread = new CPushThread(m_lpVideoWnd->m_hWnd, this);
-	m_lpPushThread->StreamInitThread(false, strStreamUrl, strStreamMP4);
+	m_lpPushThread->StreamInitThread(false, m_bIsUsingTCP, strStreamUrl, strStreamMP4);
 	return GM_NoErr;
 }
 //
@@ -526,9 +529,9 @@ BOOL CCamera::DeviceStartMainRec()
 	// 首先，关闭主码流录像对象...
 	this->DeviceStopMainRec();
 	ASSERT( m_lpDeviceMainRec == NULL );
-	// 新建一个主码流录像对象...
+	// 新建一个主码流录像对象 => 直接使用已存的TCP模式标志...
 	m_lpDeviceMainRec = new CRtspRecThread(this);
-	return m_lpDeviceMainRec->InitThread(m_strRtspMainUrl);
+	return m_lpDeviceMainRec->InitThread(m_bIsUsingTCP, m_strRtspMainUrl);
 }
 //
 // 关闭设备主码流录像...
@@ -833,14 +836,16 @@ GM_Error CCamera::doStreamLogin()
 	theConfig.GetCamera(nDBCameraID, theMapWeb);
 	ASSERT( theMapWeb.size() > 0 );
 	// 获取需要的流转发参数信息...
+	string & strUsingTCP = theMapWeb["use_tcp"];
 	string & strStreamMP4 = theMapWeb["stream_mp4"];
 	string & strStreamUrl = theMapWeb["stream_url"];
 	//BOOL bStreamAuto = atoi(theMapLoc["stream_auto"].c_str());
 	//BOOL bStreamLoop = atoi(theMapLoc["stream_loop"].c_str());
 	BOOL bFileMode = ((m_nStreamProp == kStreamMP4File) ? true : false);
+	BOOL bUsingTCP = ((strUsingTCP.size() > 0) ? atoi(strUsingTCP.c_str()) : false);
 	// 只启动数据流部分，不进行rtmp推流处理...
 	m_lpPushThread = new CPushThread(m_lpVideoWnd->m_hWnd, this);
-	m_lpPushThread->StreamInitThread(bFileMode, strStreamUrl, strStreamMP4);
+	m_lpPushThread->StreamInitThread(bFileMode, bUsingTCP, strStreamUrl, strStreamMP4);
 	// 更新登录状态...
 	CString strStatus = "正在链接";
 	CString strTitle = theConfig.GetDBCameraTitle(nDBCameraID);

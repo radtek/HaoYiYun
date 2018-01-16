@@ -33,7 +33,7 @@ Page {
 .feed-tab {
   width: 100%;
   text-align: center;
-  border-top: 1rpx solid #e0e0e0;
+  /*border-top: 1rpx solid #e0e0e0;*/
 }
 .feed-item {
   width: 100%;

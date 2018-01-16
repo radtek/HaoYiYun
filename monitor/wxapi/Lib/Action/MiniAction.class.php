@@ -210,7 +210,7 @@ class MiniAction extends Action
       return;
     }
     // 得到每页条数...
-    $pagePer = C('PAGE_PER');
+    $pagePer = 2;//C('PAGE_PER');
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 获取图片链接需要的数据 => web_tracker_addr 已经自带了协议头 http://或https://
@@ -226,7 +226,7 @@ class MiniAction extends Action
     $arrErr['max_page'] = $max_page;
     $arrErr['cur_page'] = $pageCur;
     // 获取通道分页数据，并对缩略图片进行地址重组...
-    $arrCamera = D('LiveView')->where($condition)->field('camera_id,clicks,stream_prop,shared,status,camera_name,image_fdfs')->order('Camera.created DESC')->select();
+    $arrCamera = D('LiveView')->where($condition)->limit($pageLimit)->field('camera_id,clicks,stream_prop,shared,status,camera_name,image_fdfs')->order('Camera.created DESC')->select();
     foreach($arrCamera as &$dbItem) {
       // 获取截图快照地址，地址不为空才处理 => 为空时，小程序内部会跳转到snap.png...
       if( strlen($dbItem['image_fdfs']) > 0 ) {

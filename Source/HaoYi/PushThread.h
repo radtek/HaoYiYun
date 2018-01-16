@@ -78,7 +78,7 @@ public:
 public:
 	void			StartPushThread();
 	void			PushFrame(FMS_FRAME & inFrame);
-	BOOL			InitRtsp(CPushThread * inPushTread, string & strRtspUrl);
+	BOOL			InitRtsp(BOOL bUsingTCP, CPushThread * inPushTread, string & strRtspUrl);
 	int				GetVideoWidth(){ return m_nVideoWidth; }
 	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }
@@ -172,7 +172,7 @@ public:
 	static void Initialize();
 	static void UnInitialize();
 public:
-	BOOL			StreamInitThread(BOOL bFileMode, string & strStreamUrl, string & strStreamMP4);
+	BOOL			StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strStreamUrl, string & strStreamMP4);
 	BOOL			StreamStartLivePush(string & strRtmpUrl);
 	BOOL			StreamStopLivePush();
 	
