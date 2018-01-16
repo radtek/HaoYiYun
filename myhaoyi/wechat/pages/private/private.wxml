@@ -1,4 +1,5 @@
 <!--pages/private/private.wxml-->
+<!-- style="{{m_gather.list.length>1&&index==0?'margin-top:-1rpx':''}}" -->
 
 <import src="../../template/common.wxml"/>
 
@@ -7,8 +8,7 @@
     <template is="zan-tab" data="{{tab: m_gather, componentId: 'm_gather'}}"></template>
   </view>
   <block wx:if="{{m_show_feed}}">
-  <view wx:for="{{m_arrCamera}}" wx:key="unique" class="feed-item" data-track="{{item}}" bindtap="doTapItem"
-    style="{{m_gather.list.length>1&&index==0?'margin-top:-1rpx':''}}">
+  <view wx:for="{{m_arrCamera}}" wx:key="unique" class="feed-item" data-track="{{item}}" bindtap="doTapItem">
     <view class="feed-source">
       <block wx:if="{{item.stream_prop == 0}}">
         <view class="fa fa-camera"></view>
@@ -47,7 +47,7 @@
         <template is="zan-switch" data="{{ checked: (item.shared>0)?true:false, disabled: false, loading: (item.loading>0)?true:false, componentId: index }}" />
       </view>
       <view class="feed-right">
-        <view class="fa fa-share feed-step"></view>
+        <!--<view class="fa fa-share feed-step"></view>-->
         <!--<view class="fa fa-retweet feed-step"></view>-->
         <view class="fa fa-play-circle-o feed-step"></view>
         <view class="feed-click">{{item.clicks}}次</view>
@@ -66,8 +66,10 @@
     <view class="feed-steps-title">
       <text>创建“我的通道”步骤</text>
     </view>
-    <view class="feed-steps-content">
-      <template is="zan-steps" data="{{ type: 'vertical', steps: m_steps }}"></template>
+    <view class="feed-steps-container">
+      <view class="feed-steps-content">
+        <template is="zan-steps" data="{{ type: 'vertical', steps: m_steps }}"></template>
+      </view>
     </view>
   </block>
 </view>

@@ -226,6 +226,30 @@ class MiniAction extends Action
     echo json_encode($arrShare);
   }
   //
+  // 处理小程序验证共享通道接口...
+  public function checkShare()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_GET 数据...
+    do {
+      // 判断输入参数的有效性 => track_id
+      if( !isset($_GET['track_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 在数据库中查找指定的共享通道是否存在...
+      $condition['track_id'] = $_GET['track_id'];
+      $dbTrack = D('track')->where($condition)->find();
+      // 如果没有查找到记录，返回错误标志...
+      $arrErr['err_code'] = (isset($dbTrack['track_id']) ? false : true);
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
   // 处理小程序请求的通道直播地址...
   public function getLiveAddr()
   {

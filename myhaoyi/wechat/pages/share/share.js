@@ -1,8 +1,10 @@
 // pages/share/share.js
+// 加载模版需要的脚本...
+var ZanToast = require("../../template/zan-toast.js")
 // 获取全局的app对象...
 const g_app = getApp()
-// 本页面的代码...
-Page({
+// 本页面的代码 => 这里新增了扩展内容...
+Page(Object.assign({}, ZanToast, {
   data: {
     m_cur_page: 1,
     m_max_page: 1,
@@ -39,6 +41,18 @@ Page({
       }
     ]
   },
+  // 生命周期函数--监听页面显示
+  onShow: function () {
+    console.log('share - onShow')
+    // 判断是否需要重新加载分享通道列表...
+    if (!g_app.globalData.m_bLoadShare)
+      return
+    // 将重新加载状态复位...
+    g_app.globalData.m_bLoadShare = false
+    // 直接调用下拉刷新，重新加载分享通道列表...
+    this.onPullDownRefresh()
+  },
+  // 生命周期函数--监听页面加载
   onLoad: function (options) {
     // 如果没有获取到用户编号或用户信息，跳转到默认的授权页面，重新获取授权...
     if( g_app.globalData.m_nUserID <= 0 || g_app.globalData.m_userInfo == null ) {
@@ -141,9 +155,36 @@ Page({
   },*/
   // 响应用户点击单条记录事件...
   doTapItem: function(inEvent) {
+    // 弹出正在验证框...
+    wx.showLoading({ title: '正在验证' })
+    // 获取点击的通道数据内容...
     var theItem = inEvent.currentTarget.dataset.track
-    var theUrl = '../live/live?type=0&data='
-    theUrl += JSON.stringify(theItem)
-    wx.navigateTo({ url: theUrl })
+    // 保存this对象...
+    var that = this;
+    // 构造访问接口连接地址...
+    var theUrl = g_app.globalData.m_urlPrev + 'Mini/checkShare/track_id/' + theItem.track_id
+    // 请求远程API过程...
+    wx.request({
+      url: theUrl,
+      method: 'GET',
+      success: function (res) {
+        // 隐藏加载提示框...
+        wx.hideLoading()
+        // dataType 默认json，不需要自己转换...
+        // 调用接口失败 或 返回错误状态 => 弹框提示，不能跳转...
+        if (res.statusCode != 200 || res.data.err_code > 0) {
+          that.showZanToast('验证失败，此通道已停止共享')
+          return
+        }
+        // 返回成功状态，构造跳转链接，直接跳转...
+        var theLiveUrl = '../live/live?type=0&data='
+        theLiveUrl += JSON.stringify(theItem)
+        wx.navigateTo({ url: theLiveUrl })
+      },
+      fail: function (res) {
+        wx.hideLoading()
+        that.showZanToast('验证失败，此通道已停止共享')
+      }
+    })
   }
-})
+}))

@@ -52,6 +52,8 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
   },
   // 响应共享按钮切换事件...
   handleZanSwitchChange(e) {
+    // 发生共享通道变化，设置重载标志...
+    g_app.globalData.m_bLoadShare = true
     // 获取索引编号和切换状态...
     var componentId = e.componentId;
     var theShared = e.checked ? 1 : 0;
@@ -139,13 +141,13 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       wx.navigateTo({ url: '../default/default' })
       return
     }
-    // 获取到的用户信息有效，弹出等待框...
-    wx.showLoading({ title: '加载中' })
     // 调用接口，获取属于当前用户的所有采集端列表...
     this.doAPIGetGather(g_app.globalData.m_nUserID)
   },
   // 获取属于当前用户的所有采集端列表...
   doAPIGetGather(inUserID) {
+    // 获取到的用户信息有效，弹出等待框...
+    wx.showLoading({ title: '加载中' })
     // 显示导航栏加载动画...
     wx.showNavigationBarLoading()
     // 保存this对象...
@@ -182,6 +184,8 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
           that.setData({ m_show_feed: false })
           return
         }
+        // 获取到的采集端信息有效，弹出等待框...
+        wx.showLoading({ title: '加载中' })
         // 将获取到的采集端列表保存起来，并更新到界面当中...
         that.data.m_gather.list = res.data.list
         that.data.m_gather.selectedItem = res.data.list[0]
@@ -272,7 +276,6 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
   },
   // 生命周期函数--监听页面卸载
   onUnload: function () {
-  
   },
   // 页面相关事件处理函数--监听用户下拉动作
   onPullDownRefresh: function () {
@@ -307,5 +310,22 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
     var theCurGather = this.data.m_gather.selectedItem
     this.data.m_cur_page += 1
     this.doAPIGetCamera(theCurGather)
+  },
+  // 响应用户点击单条记录事件...
+  doTapItem: function (inEvent) {
+    // 获取被点击通道的原始数据内容...
+    var theUserInfo = g_app.globalData.m_userInfo
+    var theCurGather = this.data.m_gather.selectedItem
+    var theItem = inEvent.currentTarget.dataset.track
+    var theLiveUrl = '../live/live?type=1&data='
+    // 追加直播播放页面需要的节点内容...
+    theItem.node_proto = theCurGather.node_proto
+    theItem.node_addr = theCurGather.node_addr
+    // 追加直播播放页面需要的用户信息...
+    theItem.wx_headurl = theUserInfo.avatarUrl.replace(/\/0/,'/96')
+    theItem.wx_nickname = theUserInfo.nickName
+    // 将数据json化，跳转到直播播放页面...
+    theLiveUrl += JSON.stringify(theItem)
+    wx.navigateTo({ url: theLiveUrl })
   }
 }))

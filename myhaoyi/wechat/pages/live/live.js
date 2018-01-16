@@ -41,6 +41,21 @@ Page(Object.assign({}, ZanToast, {
   },
   // 生命周期函数--监听页面加载...
   onLoad: function (options) {
+    // 这种方式可以判断屏幕的旋转方向...
+    // 是一个全局函数，在任何页面都会一直响应...
+    // 需要进一步优化，判断旋转方向的变化，来决定是否全屏显示播放页面...
+    /*wx.onAccelerometerChange(function (res) {
+      var angle = Math.atan2(res.y, -res.x)
+      if (angle >= -2.25 && angle <= -0.75) {
+        console.log('竖屏')
+      } else if (angle >= -0.75 && angle <= 0.75) {
+        console.log('左旋屏')
+      } else if (angle >= 0.75 && angle <= 2.25) {
+        console.log('倒置')
+      } else if (angle <= -2.25 || angle >= 2.25) {
+        console.log('右旋屏')
+      }
+    })*/
     // 这里获取的 m_live_data 是对象，不是数组...
     this.data.m_live_type = parseInt(options.type)
     this.data.m_live_data = JSON.parse(options.data)
