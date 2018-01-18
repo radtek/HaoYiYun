@@ -43,6 +43,7 @@
       <article class="base">
         <div class="base_info">
           <h1 class="base_title">
+            <a href="#" download="下载.mp4" class="js_down" style="margin-right: 10px">[下载]</a>
             <span>
               <switch name="my_camera.stream_prop">
                 <case value="0"><i class="fa fa-camera"></i></case>
@@ -164,6 +165,17 @@ function doEndedEvent() {
 // 由子窗口调用的修改点击播放次数的接口...
 function doClicks(inItemID, inClicks) {
   $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
+}
+
+// 由子窗口调用的修改下载连接地址...
+function doDownLoadUrl(isVod, inVodUrl) {
+  if( isVod ) {
+    $('.js_down').attr('href', inVodUrl);
+    $('.js_down').attr('target', '_blank');
+    $('.js_down').css('display', 'inline-block');
+  } else {
+    $('.js_down').css('display', 'none');
+  }
 }
 
 // 处理 layui 过程...

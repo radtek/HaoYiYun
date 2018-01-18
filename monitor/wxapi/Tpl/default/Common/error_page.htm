@@ -55,5 +55,14 @@ body {
 </div>
 </gt>
 
+<!-- 是否调用父窗口接口 -->
+<gt name='my_download' value='0'>
+<script>
+if(typeof(window.parent.doDownLoadUrl) == 'function') {
+  window.parent.doDownLoadUrl(0, '');
+}
+</script>
+</gt>
+
 </body>
 </html>

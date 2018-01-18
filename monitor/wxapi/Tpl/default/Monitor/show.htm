@@ -89,6 +89,10 @@ $(document).ready( function () {
   var arrTech = $.parseJSON(strTech);
   var strSource = '{{$my_show.source}}';
   var arrSource = $.parseJSON(strSource);
+  // 如果是点播文件，并且父窗口的接口有效，修改父窗口的下载地址...
+  if( typeof(window.parent.doDownLoadUrl) == "function" ) {
+    window.parent.doDownLoadUrl(g_player_vod, arrSource[0].src);
+  }
   // 如果不是IE浏览器，并且是直播，看看是否支持flvjs...
   if( !g_isIEBrowser && g_player_vod <= 0 ) {
     var theSupport = flvjs.isSupported();

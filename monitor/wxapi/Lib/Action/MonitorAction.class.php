@@ -413,7 +413,7 @@ class MonitorAction extends Action
       $map['camera_id'] = $_GET['camera_id'];
       $dbCamera = D('LiveView')->where($map)->field('camera_id,clicks,status,gather_id,mac_addr')->find();
       if( $dbCamera['status'] <= 0 ) {
-        $this->dispError('当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。');
+        $this->dispError(true, '当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。');
         return;
       }
       // 中转服务器需要的参数...
@@ -423,7 +423,7 @@ class MonitorAction extends Action
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...
       if( $dbResult['err_code'] > 0 ) {
-        $this->dispError($dbResult['err_msg'], '请联系管理员，汇报错误信息。');
+        $this->dispError(true, $dbResult['err_msg'], '请联系管理员，汇报错误信息。');
         return;
       }
       // 连接中转服务器成功 => 设置flvjs地址、rtmp地址、hls地址，播放器编号...
@@ -460,8 +460,9 @@ class MonitorAction extends Action
   }
   //
   // 显示超时模板信息...
-  private function dispError($inMsgTitle, $inMsgDesc)
+  private function dispError($bIsDownload, $inMsgTitle, $inMsgDesc)
   {
+    $this->assign('my_download', $bIsDownload);
     $this->assign('my_title', '糟糕，出错了');
     $this->assign('my_msg_title', $inMsgTitle);
     $this->assign('my_msg_desc', $inMsgDesc);

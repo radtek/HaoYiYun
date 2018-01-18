@@ -13,10 +13,13 @@
       <article class="base">
         <div class="base_info">
           <h1 class="base_title">
+            <!-- 录像文件 -->
             <notempty name='my_base.subject_id'>
+            <a href="#" download="下载.mp4" class="js_down" style="margin-right: 10px">[下载]</a>
             <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
             </notempty>
-            <notempty>
+            <!-- 直播通道 -->
+            <notempty name="my_base.stream_prop">
               <switch name="my_base.stream_prop">
                 <case value="0"><i class="fa fa-camera" title="摄像头"></i></case>
                 <case value="1"><i class="fa fa-file-video-o" title="MP4文件"></i></case>
@@ -115,6 +118,11 @@ function doClicks(inItemID, inClicks, isVod) {
   } else {
     $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
   }
+}
+
+// 由子窗口调用的修改下载连接地址...
+function doDownLoadUrl(inVodUrl) {
+  $('.js_down').attr('href', inVodUrl);
 }
 
 $(document).ready( function () {
