@@ -32,7 +32,7 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       {
         done: false,
         current: true,
-        text: '更多详细步骤，请查看《使用手册》'
+        text: '注意：小程序不能查看发布在内网的通道'
       }
     ],
     m_gather: {
@@ -179,7 +179,7 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
         that.data.m_gather.selectedId = -1
         that.data.m_gather.selectedItem = null
         // 如果反馈的列表是数组才进行存储...
-        // 如果没有共享通道记录，显示提示信息...
+        // 如果没有采集端记录，显示提示信息...
         if (!(res.data.list instanceof Array) || res.data.list.length <= 0) {
           that.setData({ m_show_feed: false })
           return
@@ -282,21 +282,13 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
     // 首先，打印信息，停止刷新...
     console.log('onPullDownRefresh')
     wx.stopPullDownRefresh()
-    // 获取到的用户信息有效，弹出等待框...
-    wx.showLoading({ title: '加载中' })
     // 将通道列表还原，但不更新到显示页面 => 可以避免画面闪烁...
     this.data.m_arrCamera = []
     // 其它变量还原，需要更新到显示页面 => 可以避免画面闪烁...
-    this.setData({
-        m_cur_page: 1,
-        m_max_page: 1,
-        m_show_feed: true,
-        m_show_more: true,
-        m_show_init: false
-    })
-    // 重新刷新通道数据...
-    var theCurGather = this.data.m_gather.selectedItem
-    this.doAPIGetCamera(theCurGather)
+    this.setData({ m_cur_page: 1, m_max_page: 1, m_show_feed: true, 
+                   m_show_more: true, m_show_init: false })
+    // 调用接口，获取属于当前用户的所有采集端列表...
+    this.doAPIGetGather(g_app.globalData.m_nUserID)
   },
   // 页面上拉触底事件的处理函数
   onReachBottom: function () {

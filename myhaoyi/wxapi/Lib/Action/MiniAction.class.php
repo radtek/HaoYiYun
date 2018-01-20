@@ -401,6 +401,29 @@ class MiniAction extends Action
     echo json_encode($arrErr);
   }
   //
+  // 解除绑定采集端...
+  public function unbindGather()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性...
+      if( !isset($_POST['user_id']) || !isset($_POST['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 找到对应的采集端，然后将user_id设置为0...
+      $dbSave['user_id'] = 0;
+      $dbSave['updated'] = date('Y-m-d H:i:s');
+      D('gather')->where($_POST)->save($dbSave);
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
   // 获取指定用户拥有的采集端列表...
   public function getGather()
   {
@@ -416,7 +439,10 @@ class MiniAction extends Action
         break;
       }
       // 读取采集端列表 => 视图数据 => 只选择指定用户的WAN节点的采集端列表...
-      $condition['node_wan'] = array('gt', 0);
+      if( !isset($_GET['full']) || $_GET['full'] <= 0 ) {
+        $condition['node_wan'] = array('gt', 0);
+      }
+      // 当设置了 full 参数，并且 full > 0，查询全部包含内网的采集端...
       $condition['user_id'] = $_GET['user_id'];
       $arrGather = D('GatherView')->where($condition)->order('Gather.created DESC')->select();
       // 保存并返回采集端列表...

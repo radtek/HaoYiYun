@@ -3,9 +3,11 @@
     "pages/default/default",
     "pages/private/private",
     "pages/person/person",
+    "pages/gather/gather",
     "pages/share/share",
-    "pages/live/live",
-    "pages/vod/vod"
+    "pages/about/about",
+    "pages/home/home",
+    "pages/live/live"
   ],
   "window":{
     "navigationBarBackgroundColor": "#fff",

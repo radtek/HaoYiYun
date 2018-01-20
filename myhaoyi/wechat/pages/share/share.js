@@ -37,7 +37,7 @@ Page(Object.assign({}, ZanToast, {
       {
         done: false,
         current: true,
-        text: '更多详细步骤，请查看《使用手册》'
+        text: '注意：小程序不能查看发布在内网的通道'
       }
     ]
   },
