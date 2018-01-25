@@ -20,11 +20,12 @@
           <live-player id="myLivePlayer" class="feed-video"
             autoplay mode="live"
             background-mute="true"
+            bindfullscreenchange="onLiveFullChange"
             bindstatechange="onLiveStateChange"
             orientation="{{m_live_orientation}}"
             object-fit="{{m_live_objectFit}}"
             src="{{m_live_data.rtmp_url}}">
-            <cover-view class="feed-live-area" bindtap="doClickLiveArea">
+            <cover-view class="feed-live-area" bindtap="doLiveClickArea">
               <cover-view wx:if="{{m_live_show_snap}}">
                 <cover-image style="width:100%;height:{{m_live_poster_height}}px;"
                   src="{{m_live_data.image_fdfs ? m_live_data.image_fdfs : '../../images/snap.png'}}">
@@ -32,13 +33,13 @@
               </cover-view>
               <cover-view class="feed-live-control" wx:if="{{m_live_show_control}}">
                 <cover-view class="feed-live-back"></cover-view>
-                <cover-view class="feed-live-left" catchtap="doClickPlay">
+                <cover-view class="feed-live-left" catchtap="doLiveClickPlay">
                   <cover-image class="feed-live-img" 
                     src="../../images/{{m_live_is_paused?'play':'pause'}}.png">
                   </cover-image>
                 </cover-view>
                 <cover-view class="feed-live-text">{{m_live_is_paused ? '已停止' : '直播中'}}</cover-view>
-                <cover-view class="feed-live-right" catchtap="doClickFull">
+                <cover-view class="feed-live-right" catchtap="doLiveClickFull">
                   <cover-image class="feed-live-img" 
                     src="../../images/{{m_live_is_fullscreen?'restore':'full'}}.png">
                   </cover-image>
@@ -52,7 +53,7 @@
             autoplay objectFit="fill" 
             poster="{{m_vod_data.image_fdfs}}" 
             src="{{m_vod_data.file_fdfs}}"
-            bindended="doPlayEnded">
+            bindended="doVodPlayEnded">
           </video>
         </block>
       </block>

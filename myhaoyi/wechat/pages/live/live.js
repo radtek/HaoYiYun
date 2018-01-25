@@ -331,9 +331,9 @@ Page(Object.assign({}, ZanToast, {
     }, 100)
   },
   // 处理<live-player>全屏状态变化通知事件...
-  /*onLiveFullChange: function(inEvent) {
+  onLiveFullChange: function(inEvent) {
     console.log(inEvent)
-  },*/
+  },
   // 处理<live-player>状态变化通知事件...
   onLiveStateChange: function(inEvent) {
     // 临时存放反馈的错误码信息...
@@ -391,7 +391,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播视图区域...
-  doClickLiveArea: function() {
+  doLiveClickArea: function() {
     // 保存this对象...
     var that = this
     // 首先，关闭之间创建的超时时钟，并将时钟变量还原...
@@ -411,7 +411,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播播放按钮...
-  doClickPlay: function() {
+  doLiveClickPlay: function() {
     // 保存this对象...
     var that = this
     // 如果直播对象无效，直接返回...
@@ -457,7 +457,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播全屏按钮...
-  doClickFull: function() {
+  doLiveClickFull: function() {
     // 如果直播对象无效，直接返回...
     if (!this.data.m_live_player) {
       console.log('live player is null')
@@ -532,7 +532,7 @@ Page(Object.assign({}, ZanToast, {
     this.setData({ m_play_state: PLAY_RUN, m_is_live: false, m_vod_data: theItem })
   },
   // 响应播放完毕的事件通知...
-  doPlayEnded: function(inEvent) {
+  doVodPlayEnded: function(inEvent) {
     // 如果是直播状态模式，直接返回...
     if( this.data.m_is_live )
       return
