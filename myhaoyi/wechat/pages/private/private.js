@@ -22,7 +22,7 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       {
         done: false,
         current: true,
-        text: '启动“采集端”，扫码绑定微信用户'
+        text: '启动“采集端”，工具栏点击“绑定小程序”'
       },
       {
         done: false,
@@ -32,7 +32,7 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
       {
         done: false,
         current: true,
-        text: '注意：小程序不能查看发布在内网的通道'
+        text: '注意：小程序暂时不能查看局域网内的通道'
       }
     ],
     m_gather: {
