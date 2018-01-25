@@ -241,22 +241,22 @@ void CMainFrame::LoadMyToolBar()
     CToolBarCtrl& oBarCtrl = m_wndToolBar.GetToolBarCtrl();
 
 	// 设置命令...
-	const int nItemCount = 9;
+	const int nItemCount = 10;
 	UINT uCtrlID[nItemCount] = {
 		ID_VIEW_FULL,
 		ID_ADD_DVR, ID_DEL_DVR, ID_MOD_DVR, 
 		ID_LOGIN_DVR, ID_LOGOUT_DVR,
-		ID_SYS_SET,
-		ID_APP_ABOUT, 
-		ID_RECONNECT, 
+		ID_SYS_SET, ID_APP_ABOUT, 
+		ID_RECONNECT,
+		ID_BIND_MINI,
 	};
 	LPCTSTR lpszCtrl[nItemCount] = {
 		"全屏模式", 
 		"添加通道", "删除通道", "修改通道", 
 		"登录通道", "注销通道", 
-		"系统设置", 
-		"显示版本", 
-		"断开重连", 
+		"系统设置", "显示版本", 
+		"断开重连",
+		"绑定小程序",
 	};
 
 	// 分隔符按钮...
@@ -279,7 +279,7 @@ void CMainFrame::LoadMyToolBar()
 		// 添加按钮...
 		VERIFY( oBarCtrl.AddButtons(1, &pTBButtons[nIndex]) );
 		// 添加空格...
-		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 6 || nIndex == 7 ) {
+		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 7 || nIndex == 8 ) {
 			VERIFY( oBarCtrl.AddButtons(1, &sepButton) );
 		}
     }

@@ -20,7 +20,7 @@ Page({
       {
         done: false,
         current: true,
-        text: '启动“采集端”，根据提示扫码完成绑定'
+        text: '启动“采集端”，工具栏点击“绑定小程序”'
       }
     ]
   },
@@ -58,6 +58,7 @@ Page({
           that.setData({ m_show_feed: false })
           return
         }
+        // dataType 默认json，不需要自己转换，直接替换新数据...
         // 反馈的结果失败 => 打印失败结果...
         if (res.data.err_code > 0) {
           console.log('doAPIGetGather error => ' + res.data.err_msg)
@@ -69,7 +70,6 @@ Page({
           that.setData({ m_show_feed: false })
           return
         }
-        // dataType 默认json，不需要自己转换，直接替换新数据...
         // 将获取到的采集端列表保存起来，并更新到界面当中...
         that.setData({ m_show_feed: true, m_arrGather: res.data.list })
       },
@@ -84,7 +84,13 @@ Page({
     wx.scanCode({
       onlyFromCamera: true,
       success: (res) => {
+        // 打印扫描结果...
         console.log(res)
+        // 如果路径有效，直接跳转到相关页面 => path 是否带参数还不确定...
+        if (typeof res.path != 'undefined' && res.path.length > 0) {
+          res.path = '../../' + res.path
+          wx.redirectTo({ url: res.path })
+        }
       },
       fail: (res) => {
         console.log(res)

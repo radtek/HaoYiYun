@@ -86,12 +86,66 @@ class MiniAction extends Action
     $this->m_weMini = C('WECHAT_MINI');
   }
   //
+  // 获取小程序的access_token的值 => 附带返回绑定的微信用户信息...
+  public function getToken()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性...
+      if( !isset($_POST['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 获取绑定的微信用户信息...
+      $dbUser = D('GatherUser')->where($_POST)->find();
+      if( !isset($dbUser['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '没有找到指定的采集端';
+        break;
+      }
+      // 准备请求需要的url地址...
+      $strTokenUrl = sprintf("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
+                           $this->m_weMini['appid'], $this->m_weMini['appsecret']);
+      // 直接通过标准API获取access_token...
+      $result = http_get($strTokenUrl);
+      // 获取access_token失败的情况...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '获取access_token失败';
+        break;
+      }
+      // 将获取的数据转换成数组...
+      $json = json_decode($result,true);
+      if( !$json || isset($json['errcode']) ) {
+        $arrErr['err_code'] = $json['errcode'];
+        $arrErr['err_msg'] = $json['errmsg'];
+        break;
+      }
+      // 获取access_token成功...
+      $arrErr['access_token'] = $json['access_token'];
+      $arrErr['expires_in'] = $json['expires_in'];
+      // 保存用户相关信息 => 将头像替换成132*132尺寸...
+      $arrErr['user_id'] = $dbUser['user_id'];
+      $arrErr['gather_id'] = $dbUser['gather_id'];
+      $arrErr['user_name'] = $dbUser['wx_nickname'];
+      $arrErr['user_head'] = str_replace('/0', '/132', $dbUser['wx_headurl']);
+      $arrErr['mini_path'] = 'pages/bind/bind';
+    } while( false );
+    // 返回json数据包...
+    echo json_encode($arrErr);
+  }
+  //
   // 处理小程序登录事件...
   public function login()
   {
     // 准备返回信息...
     $arrErr['err_code'] = 0;
     $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
     do {
       // 判断输入参数的有效性 => 没有设置或数据为空，返回错误...
       if( !isset($_POST['code']) || !isset($_POST['encrypt']) || !isset($_POST['iv']) ) {
@@ -401,6 +455,60 @@ class MiniAction extends Action
     echo json_encode($arrErr);
   }
   //
+  // 绑定采集端接口命令 => 有三个子命令...
+  public function bindGather()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入参数的有效性 => node_proto | node_addr | bind_cmd | mac_addr
+      if( !isset($_POST['node_proto']) || !isset($_POST['node_addr']) || 
+          !isset($_POST['bind_cmd']) || !isset($_POST['mac_addr']) ||
+          !isset($_POST['gather_id']) || !isset($_POST['user_id']) )
+      {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 如果是保存命令，将信息存放到数据库当中...
+      // bind_cmd == 1 => Scan
+      // bind_cmd == 2 => Save
+      // bind_cmd == 3 => Cancel
+      if( $_POST['bind_cmd'] == 2 ) {
+        $dbSave['gather_id'] = $_POST['gather_id'];
+        $dbSave['user_id'] = $_POST['user_id'];
+        $dbSave['updated'] = date('Y-m-d H:i:s');
+        D('gather')->save($dbSave);
+        // 获取绑定用户，转发给采集端...
+        $condition['user_id'] = $_POST['user_id'];
+        $dbUser = D('user')->where($condition)->field('user_id,wx_nickname,wx_headurl')->find();
+        // 保存用户相关信息 => 将头像替换成132*132尺寸...
+        $_POST['user_name'] = $dbUser['wx_nickname'];
+        $_POST['user_head'] = str_replace('/0', '/132', $dbUser['wx_headurl']);
+      }
+      // 准备访问节点接口地址 => 通知采集端绑定的状态...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/bindGather", $_POST['node_proto'], $_POST['node_addr']);
+      // 移除不需要的汇报参数...
+      unset($_POST['gather_id']);
+      unset($_POST['node_addr']);
+      unset($_POST['node_proto']);
+      // 调用post接口，返回汇报结果...
+      $result = http_post($strUrl, $_POST);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '汇报绑定状态失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrErr = json_decode($result, true);
+    } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
   // 解除绑定采集端...
   public function unbindGather()
   {
@@ -420,6 +528,35 @@ class MiniAction extends Action
       $dbSave['updated'] = date('Y-m-d H:i:s');
       D('gather')->where($_POST)->save($dbSave);
     } while( false );
+    // 返回最终的json数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 获取指定采集端编号的内容...
+  public function findGather()
+  {
+    // 准备返回信息...
+    $arrErr['err_code'] = 0;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_GET 数据...
+    do {
+      // 判断输入参数的有效性...
+      if( !isset($_GET['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 查询指定的采集端详细信息...
+      $dbGather = D('GatherView')->where($_GET)->find();
+      // 如果没有找到，直接返回错误...
+      if( !isset($dbGather['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '无法找到指定采集端';
+        break;
+      }
+      // 保存并返回采集端数据...
+      $arrErr['dbGather'] = $dbGather;
+    } while( false );    
     // 返回最终的json数据包...
     echo json_encode($arrErr);
   }

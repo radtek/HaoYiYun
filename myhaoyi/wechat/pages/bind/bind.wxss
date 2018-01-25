@@ -1,0 +1,68 @@
+/* pages/bind/bind.wxss */
+Page {
+  background-color: #fff;
+}
+.feed-container {
+  margin: 0 40rpx;
+  padding-top: 20rpx;
+}
+.feed-error {
+  background-color: #fff;
+  margin-top: 20rpx;
+  width: 100%;
+}
+.feed-scan {
+  padding-top: 30rpx;
+}
+.feed-head {
+  text-align: center;
+  margin: 20rpx auto 20rpx;
+}
+.feed-head image {
+  vertical-align: middle;
+  display: inline-block;
+  border-radius: 10rpx;
+  margin-bottom: 10rpx;
+  border: none;
+  width: 120rpx;
+  height: 120rpx;
+}
+.feed-name {
+  font-size: 36rpx;
+  margin-top: 10rpx;
+}
+.feed-line {
+  margin: 40rpx 0;
+  border-top: 1rpx solid #e0e0e0;
+}
+.feed-title {
+  font-size: 32rpx;
+  margin-bottom: 20rpx;
+}
+.feed-steps {
+  color: #777;
+  font-size: 28rpx;
+  margin: 8rpx 10rpx;
+  position: relative;
+}
+.feed-circle {
+  width: 5px;
+  height: 5px;
+  border-radius: 10px;
+  background-color: #777;
+  position: absolute;
+  left: 10rpx;
+  top: 40%;
+}
+.feed-text {
+  margin-left: 40rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.feed-area {
+  padding-top: 10rpx;
+}
+.feed-area button {
+  margin: 30rpx 0;
+}

@@ -20,9 +20,21 @@
 			"current": -1,
 			"list": []
 		},
-		"miniprogram": {
+		"game": {
 			"current": -1,
 			"list": []
+		},
+		"miniprogram": {
+			"current": -1,
+			"list": [
+				{
+					"id": 0,
+					"name": "扫码绑定采集端",
+					"pathName": "pages/bind/bind",
+					"query": "scene=5",
+					"scene": "1011"
+				}
+			]
 		}
 	}
 }

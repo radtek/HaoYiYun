@@ -60,6 +60,7 @@ public:
 	string & GetTrackerAddr() { return m_strTrackerAddr; }
 	int		 GetTrackerPort() { return m_nTrackerPort; }
 	int      GetDBGatherID() { return m_nDBGatherID; }
+	int      GetDBHaoYiUserID() { return m_nDBHaoYiUserID; }
 	int      GetDBHaoYiNodeID() { return m_nDBHaoYiNodeID; }
 	int      GetDBHaoYiGatherID() { return m_nDBHaoYiGatherID; }
 	void	 SetRemoteAddr(const string & strAddr) { m_strRemoteAddr = strAddr; }
@@ -71,6 +72,7 @@ public:
 	void	 SetWebTag(const string & strWebTag) { m_strWebTag = strWebTag; }
 	void	 SetWebVer(const string & strWebVer) { m_strWebVer = strWebVer; }
 	void	 SetDBGatherID(int nDBGatherID) { m_nDBGatherID = nDBGatherID; }
+	void     SetDBHaoYiUserID(int nDBUserID) { m_nDBHaoYiUserID = nDBUserID; }
 	void	 SetDBHaoYiNodeID(int nDBNodeID) { m_nDBHaoYiNodeID = nDBNodeID; }
 	void     SetDBHaoYiGatherID(int nDBGatherID) { m_nDBHaoYiGatherID = nDBGatherID; }
 
@@ -143,6 +145,7 @@ private:
 	string				m_strTrackerAddr;				// FDFS-Tracker的IP地址...
 	int					m_nTrackerPort;					// FDFS-Tracker的端口地址...
 	int                 m_nDBGatherID;					// 数据库中采集端编号...
+	int					m_nDBHaoYiUserID;				// 在中心服务器上的绑定用户编号...
 	int					m_nDBHaoYiNodeID;				// 在中心服务器上的节点编号...
 	int                 m_nDBHaoYiGatherID;				// 在中心服务器上的采集端编号...
 	string				m_strAuthExpired;				// 中心服务器反馈的授权过期时间...

@@ -1,0 +1,51 @@
+<!--pages/bind/bind.wxml-->
+
+<import src="../../template/common.wxml" />
+
+<view class="feed-container">
+  <block wx:if="{{m_show_feed}}">
+    <view class="feed-head">
+      <image mode="aspectFill" lazy-load="true" src="../../images/logo.png"></image>
+      <view class="feed-name">浩一云</view>
+    </view>
+    <view class="feed-line"></view>
+    <view class="feed-title">即将绑定到浩一云，请确认采集端信息</view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">设定名称：{{m_dbGather.name_set}}</view>
+    </view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">软件版本：{{m_dbGather.version}}</view>
+    </view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">机器名称：{{m_dbGather.name_pc}}</view>
+    </view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">网络地址：{{m_dbGather.ip_addr}}</view>
+    </view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">所在节点：{{m_dbGather.node_wan>0?'互联网':'局域网'}} - {{m_dbGather.node_addr}}</view>
+    </view>
+    <view class="feed-steps">
+      <view class="feed-circle"></view>
+      <view class="feed-text">操作系统：{{m_dbGather.os_name}}</view>
+    </view>
+    <view class="feed-area">
+      <button type="primary" bindtap='doBindSave'>确认绑定</button>
+      <button type="default" bindtap='doBindCancel'>取消</button>
+    </view>
+  </block>
+  <!-- 绑定过程中发生错误显示的信息 -->
+  <block wx:else>
+    <view class="feed-error">
+      <template is="error" data="{{title: '绑定失败，请重新扫描', desc: m_strError}}" />
+      <view class="feed-scan">
+        <button type="primary" bindtap='doScanCode'>重新扫描</button>
+      </view>
+    </view>
+  </block>  
+</view>

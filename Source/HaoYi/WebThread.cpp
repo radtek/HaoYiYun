@@ -36,7 +36,7 @@ GM_Error CWebThread::Initialize()
 {
 	GM_Error theErr = GM_NoErr;
 
-	// 启动组播接收线程...
+	// 启动线程...
 	this->Start();
 	return theErr;
 }
@@ -173,6 +173,7 @@ BOOL CWebThread::RegisterHaoYi()
 	int nMaxCameraNum = atoi(CUtilTool::getJsonString(value["max_camera"]).c_str());
 	int nHaoYiGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	int nHaoYiNodeID = atoi(CUtilTool::getJsonString(value["node_id"]).c_str());
+	int nHaoYiUserID = atoi(CUtilTool::getJsonString(value["user_id"]).c_str());
 	int nAuthDays = atoi(CUtilTool::getJsonString(value["auth_days"]).c_str());
 	string strExpired = CUtilTool::getJsonString(value["auth_expired"]);
 	// 通知主窗口授权过期验证结果...
@@ -182,6 +183,7 @@ BOOL CWebThread::RegisterHaoYi()
 	theConfig.SetAuthExpired(strExpired);
 	theConfig.SetAuthLicense(bAuthLicense);
 	theConfig.SetMaxCamera(nMaxCameraNum);
+	theConfig.SetDBHaoYiUserID(nHaoYiUserID);
 	theConfig.SetDBHaoYiNodeID(nHaoYiNodeID);
 	theConfig.SetDBHaoYiGatherID(nHaoYiGatherID);
 	return ((nHaoYiGatherID > 0) ? true : false);

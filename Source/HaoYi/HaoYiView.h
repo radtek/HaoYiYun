@@ -3,8 +3,8 @@
 
 #include "resource.h"
 #include "OSMutex.h"
-#include "QRStatic.h"
 #include "RightView.h"
+#include "DlgMini.h"
 
 class CCamera;
 class CMidView;
@@ -48,6 +48,7 @@ protected:
 	afx_msg void OnLoginDVR();
 	afx_msg void OnLogoutDVR();
 	afx_msg void OnReConnect();
+	afx_msg void OnBindMini();
 	afx_msg void OnDestroy();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -57,6 +58,7 @@ protected:
 	afx_msg void OnCmdUpdateLoginDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateReConnect(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateBindMini(CCmdUI *pCmdUI);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
@@ -119,6 +121,7 @@ public:
 	int				GetDBCameraStatusByID(int nDBCameraID);
 	void			UpdateFocusTitle(int nDBCameraID, CString & strTitle);
 	void			doCourseChanged(int nOperateID, int nDBCameraID, GM_MapData & inData);
+	void			doBindMiniCmd(int nBindCmd, int nUserID, string & inUserName, string & inUserHead);
 public:
 	CMidView    *	GetMidView()     { return m_lpMidView; }
 	CTreeCtrl   &	GetTreeCtrl()	 { return m_DeviceTree; }
@@ -174,7 +177,7 @@ private:
 	BOOL			m_bTreeKeydown;						// 树的键盘事件...
 	int				m_nAnimateIndex;					// 设备动画索引...
 
-	CQRStatic		m_QRStatic;							// 二维码显示区...
+	CDlgMini		m_dlgMini;							// 小程序绑定窗口...
 	CRightView		m_RightView;						// 右侧显示区...
 	CMidView	*	m_lpMidView;						// 视频窗口管理器...
 	int				m_nFocusDBCamera;					// 视频焦点窗口编号...

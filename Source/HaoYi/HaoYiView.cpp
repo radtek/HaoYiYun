@@ -43,6 +43,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_UPDATE_COMMAND_UI(ID_LOGIN_DVR, &CHaoYiView::OnCmdUpdateLoginDVR)
 	ON_UPDATE_COMMAND_UI(ID_LOGOUT_DVR, &CHaoYiView::OnCmdUpdateLogoutDVR)
 	ON_UPDATE_COMMAND_UI(ID_RECONNECT, &CHaoYiView::OnCmdUpdateReConnect)
+	ON_UPDATE_COMMAND_UI(ID_BIND_MINI, &CHaoYiView::OnCmdUpdateBindMini)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE_DEVICE, &CHaoYiView::OnSelchangedTreeDevice)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
@@ -55,6 +56,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_MESSAGE(WM_FOCUS_VIDEO, &CHaoYiView::OnMsgFocusVideo)
 	ON_MESSAGE(WM_RELOAD_VIEW, &CHaoYiView::OnMsgReloadView)
 	ON_MESSAGE(WM_SYS_CONFIG, &CHaoYiView::OnMsgSysConfig)
+	ON_COMMAND(ID_BIND_MINI, &CHaoYiView::OnBindMini)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
 	ON_COMMAND(ID_RECONNECT, &CHaoYiView::OnReConnect)
@@ -115,7 +117,7 @@ void CHaoYiView::DoDataExchange(CDataExchange* pDX)
 {
 	CFormView::DoDataExchange(pDX);
 
-	DDX_Control(pDX, IDC_QR_CODE, m_QRStatic);
+	//DDX_Control(pDX, IDC_QR_CODE, m_QRStatic);
 	DDX_Control(pDX, IDC_TREE_DEVICE, m_DeviceTree);
 	DDX_Control(pDX, IDC_RIGHT_VIEW, m_RightView);
 }
@@ -997,14 +999,14 @@ void CHaoYiView::OnSize(UINT nType, int cx, int cy)
 	CFormView::OnSize(nType, cx, cy);
 
 	// 对控件进行位置移动操作...
-	if( m_DeviceTree.m_hWnd == NULL || m_QRStatic.m_hWnd == NULL ) 
+	if( m_DeviceTree.m_hWnd == NULL ) // || m_QRStatic.m_hWnd == NULL ) 
 		return;
 	// 显示二维码的模式...
 	//m_DeviceTree.SetWindowPos(this, 0, 0, QR_CODE_CX, cy - QR_CODE_CY, SWP_NOZORDER | SWP_NOACTIVATE);
 	//m_QRStatic.SetWindowPos(this, 0, cy - QR_CODE_CY, QR_CODE_CX, QR_CODE_CY, SWP_NOZORDER | SWP_NOACTIVATE);
 	// 不显示二维码的模式...
 	m_DeviceTree.SetWindowPos(this, 0, 0, QR_CODE_CX, cy - 0, SWP_NOZORDER | SWP_NOACTIVATE);
-	m_QRStatic.SetWindowPos(this, 0, cy - 0, QR_CODE_CX, 0, SWP_NOZORDER | SWP_NOACTIVATE);
+	//m_QRStatic.SetWindowPos(this, 0, cy - 0, QR_CODE_CX, 0, SWP_NOZORDER | SWP_NOACTIVATE);
 	m_RightView.SetWindowPos(this, cx - QR_CODE_CX, 0, QR_CODE_CX, cy, SWP_NOZORDER | SWP_NOACTIVATE);
 	
 	// 调整中间窗口的大小...
@@ -1275,6 +1277,25 @@ void CHaoYiView::OnVKFull()
 	if( m_lpMidView != NULL ) {
 		m_lpMidView->ChangeFullScreen(!m_lpMidView->IsFullScreen());
 	}
+}
+//
+// 更新 断开重连 菜单状态...
+void CHaoYiView::OnCmdUpdateReConnect(CCmdUI *pCmdUI)
+{
+	// 如果网站不允许重连，设置菜单状态...
+	if( m_lpWebThread != NULL && !m_lpWebThread->IsCanReConnect() ) {
+		pCmdUI->Enable(false);
+		return;
+	}
+	// 允许重连菜单状态...
+	pCmdUI->Enable(true);
+}
+//
+// 更新 绑定小程序 菜单状态...
+void CHaoYiView::OnCmdUpdateBindMini(CCmdUI *pCmdUI)
+{
+	// 已经在网站注册成功之后才有效...
+	pCmdUI->Enable(m_lpFastThread != NULL ? true : false);
 }
 //
 // 更新 添加通道 菜单状态...
@@ -1560,16 +1581,40 @@ void CHaoYiView::UpdateFocusTitle(int nDBCameraID, CString & strTitle)
 	}
 }
 //
-// 更新 断开重连 菜单状态...
-void CHaoYiView::OnCmdUpdateReConnect(CCmdUI *pCmdUI)
+// 响应小程序发送的命令事件通知...
+void CHaoYiView::doBindMiniCmd(int nBindCmd, int nUserID, string & inUserName, string & inUserHead)
 {
-	// 如果网站不允许重连，设置菜单状态...
-	if( m_lpWebThread != NULL && !m_lpWebThread->IsCanReConnect() ) {
-		pCmdUI->Enable(false);
+	// 如果用户编号无效，直接返回...
+	if( nUserID <= 0 ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 无效的微信用户 => UserID(%d) ==\r\n", nBindCmd);
 		return;
 	}
-	// 允许重连菜单状态...
-	pCmdUI->Enable(true);
+	// 如果绑定命令的子命令编号越界，直接打印错误，返回...
+	if( nBindCmd <= 0 || nBindCmd > 3 ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 无效的绑定子命令 => BindCmd(%d) ==\r\n", nBindCmd);
+		return;
+	}
+	// 判断绑定对话框是否有效 => 无效，打印错误，返回...
+	if( !::IsWindow(m_dlgMini.m_hWnd) ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 绑定窗口已经关闭了 => BindCmd(%d) ==\r\n", nBindCmd);
+		return;
+	}
+	// 如果是【确认绑定】状态，需要保存用户信息...
+	if( nBindCmd == CDlgMini::kSaveCmd ) {
+		m_dlgMini.m_strUserName = inUserName;
+		m_dlgMini.m_strUserHead = inUserHead;
+	}
+	// 向绑定窗口发送命令消息，显示状态更新...
+	m_dlgMini.PostMessage(WM_BIND_MINI_MSG, nBindCmd, nUserID);
+}
+//
+// 点击菜单 => 绑定小程序...
+void CHaoYiView::OnBindMini()
+{
+	if( m_lpMidView != NULL && m_lpMidView->GetVideoFont() != NULL ) {
+		m_dlgMini.m_lpBtnFont = m_lpMidView->GetVideoFont();
+	}
+	m_dlgMini.DoModal();
 }
 //
 // 点击菜单 => 断开重连...

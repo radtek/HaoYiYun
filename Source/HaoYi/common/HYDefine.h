@@ -113,6 +113,7 @@ using namespace std;
 #define WM_STOP_LIVE_PUSH_MSG		(WM_USER + 505)			// 停止流上传通知消息
 #define	WM_DEL_BY_TRANSMIT_MSG		(WM_USER + 506)			// 中转服务器发起的删除通道指令
 #define	WM_ADD_BY_TRANSMIT_MSG		(WM_USER + 507)			// 中转服务器发起的添加通道指令
+#define WM_BIND_MINI_MSG			(WM_USER + 508)			// 中转服务器转发的小程序绑定命令
 
 typedef	enum AUTH_STATE {
 	kAuthRegister	= 1,		// 网站注册授权

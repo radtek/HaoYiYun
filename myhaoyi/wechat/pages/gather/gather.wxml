@@ -35,7 +35,7 @@
         <view class="weui-form-preview__value">{{item.name_pc}}</view>
       </view>
       <view class="weui-form-preview__item">
-        <view class="weui-form-preview__label">IP地址</view>
+        <view class="weui-form-preview__label">网络地址</view>
         <view class="weui-form-preview__value">{{item.ip_addr}}</view>
       </view>
       <view class="weui-form-preview__item">

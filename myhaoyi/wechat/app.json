@@ -7,7 +7,8 @@
     "pages/share/share",
     "pages/about/about",
     "pages/home/home",
-    "pages/live/live"
+    "pages/live/live",
+    "pages/bind/bind"
   ],
   "window":{
     "navigationBarBackgroundColor": "#fff",

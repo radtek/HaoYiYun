@@ -110,9 +110,6 @@
     <ClInclude Include="stdafx.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="QRStatic.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="json\autolink.h">
       <Filter>json</Filter>
     </ClInclude>
@@ -308,6 +305,9 @@
     <ClInclude Include="Ntray.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="DlgMini.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -323,9 +323,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="MainFrm.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="QRStatic.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="json\json_reader.cpp">
@@ -1013,6 +1010,9 @@
       <Filter>ui</Filter>
     </ClCompile>
     <ClCompile Include="Ntray.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgMini.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

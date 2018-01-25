@@ -833,6 +833,7 @@ GM_Error CRemoteSession::ForRead()
 		GM_Error theErr = GM_NoErr;
 		switch( lpCmdHeader->m_cmd )
 		{
+		case kCmd_Gather_Bind_Mini:       theErr = this->doCmdGatherBindMini(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Gather_Camera_List:     theErr = this->doCmdGatherCameraList(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Play_Login:			  theErr = this->doCmdPlayLogin(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
@@ -858,7 +859,38 @@ GM_Error CRemoteSession::ForRead()
 	return GM_NoErr;
 }
 //
-// 处理中转服务器反馈的在线通道列表...
+// 处理中转服务器反馈的小程序绑定命令 => 不用反馈数据给中转服务器...
+GM_Error CRemoteSession::doCmdGatherBindMini(LPCTSTR lpData, int nSize)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strUTF8Data, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取绑定命令的子命令 => 1(Scan),2(Save),3(Cancel)
+	int nUserID = atoi(CUtilTool::getJsonString(value["user_id"]).c_str());
+	int nBindCmd = atoi(CUtilTool::getJsonString(value["bind_cmd"]).c_str());
+	// 如果是【确认绑定】命令，还需要解析微信用户信息 => 名称需要转换成ANSI格式...
+	string strUserName, strUserHead;
+	if( nBindCmd == CDlgMini::kSaveCmd ) {
+		strUserName = CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(value["user_name"]).c_str());
+		strUserHead = CUtilTool::getJsonString(value["user_head"]);
+	}
+	m_lpHaoYiView->doBindMiniCmd(nBindCmd, nUserID, strUserName, strUserHead);
+	return GM_NoErr;
+}
+//
+// 处理中转服务器反馈的在线通道列表 => 不用反馈数据给中转服务器...
 GM_Error CRemoteSession::doCmdGatherCameraList(LPCTSTR lpData, int nSize)
 {
 	// 判断输入数据的有效性...
