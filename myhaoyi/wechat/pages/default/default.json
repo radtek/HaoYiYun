@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "获取授权"
+  "navigationBarTitleText": "获取授权",
+  "enablePullDownRefresh": false,
+  "backgroundColor": "#fff"
 }
