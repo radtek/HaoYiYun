@@ -6,13 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
   <title>手机二维码入口</title>
+  <!-- layui css and javascript -->
+  <link href="/wxapi/public/layui/css/layui.css" rel="stylesheet" media="all">
+  <script src="/wxapi/public/layui/layui.js" charset="utf-8"></script>
 </head>
 
 <style>
 body { 
   text-align: center;
   background-color: #f2f5e9;
-  color: rgb(55,55,55);
+  color: #333;
+}
+.nav_bg_blue {
+  background-color: #4682b4;
 }
 .main_box {
   width: 100%;
@@ -29,7 +35,7 @@ body {
 }
 .qrcode {
   width: 300px;
-  margin-top: 10px;
+  margin: 10px 0 5px 0;
   border: 1px solid #E2E2E2;
 }
 .info {
@@ -39,23 +45,62 @@ body {
 }
 .info p {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
 }
 </style>
 
 <body>
+<div>
+  <ul class="layui-nav nav_bg_blue" lay-filter="hori">
+    <li class="layui-nav-item layui-this">
+      <a href="javascript:doLoadMiniQR();">微信小程序入口</a>
+    </li>
+    <li class="layui-nav-item">
+      <a href="javascript:doLoadWebQR();">手机浏览器入口</a>
+    </li>
+  </ul>
+</div>
 
 <div class="main_box">
-  <div class="title">手机访问入口</div>
-  <div>
-    <img class="qrcode" src="{{:__APP__}}/{{$my_web_action}}/qrcode/"></img>
+  <div id="myMini">
+    <div>
+      <img class="qrcode" src="/wxapi/public/images/mini.png"></img>
+    </div>
+    <div class="info">
+      <p>请使用微信扫描访问“浩一云”</p>
+      <p>{{$my_web_title}} - 小程序</p>
+    </div>
   </div>
-  <div class="info">
-    <p>请使用微信、QQ、支付宝等APP扫码访问</p>
-    <p>{{$my_web_title}} - 移动端</p>
+  <div id="myWeb" style="display: none">
+    <div>
+      <img class="qrcode" src="{{:__APP__}}/{{$my_web_action}}/qrcode/"></img>
+    </div>
+    <div class="info">
+      <p>请使用微信、QQ、支付宝等APP扫描访问</p>
+      <p>{{$my_web_title}} - 移动端</p>
+    </div>
   </div>
 </div>
+
+<script>
+// 加载微信小程序二维码 => 小程序码...
+function doLoadMiniQR() {
+  var $ = layui.jquery;
+  $('#myMini').css('display', 'block');
+  $('#myWeb').css('display', 'none');
+}
+// 加载网站生成的自定义二维码...
+function doLoadWebQR() {
+  var $ = layui.jquery;
+  $('#myMini').css('display', 'none');
+  $('#myWeb').css('display', 'block');
+}
+// 处理 layui 过程 => nav 依赖 element 模块...
+layui.use(['element'], function(){
+  var element = layui.element;
+});
+</script>
 
 </body>
 </html>

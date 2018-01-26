@@ -57,6 +57,12 @@ class MiniAction extends Action
         $arrErr['err_desc'] = '请联系管理员，开启通道。';
         break;
       }
+      // 2018.01.25 - by jackey => 为了小程序审核做的特殊处理 => 只针对通道1和2...
+      /*if( $dbCamera['camera_id'] == 1 || $dbCamera['camera_id'] == 2 ) {
+        $dbResult['player_id'] = 10;
+        $arrErr['rtmp_type'] = "rtmp/flv";
+        $arrErr['rtmp_url'] = sprintf("rtmp://ihaoyi.cn/live/live%d", $dbCamera['camera_id']);
+      }*/
       // 中转服务器需要的参数...
       $dbParam['mac_addr'] = $dbCamera['mac_addr'];
       $dbParam['rtmp_live'] = $dbCamera['camera_id'];
