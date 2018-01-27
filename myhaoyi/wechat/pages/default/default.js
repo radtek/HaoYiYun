@@ -39,6 +39,24 @@ Page({
   doAPILogin: function(inCode, inUserInfo, inEncrypt, inIV) {
     // 保存this对象...
     var that = this
+    // 获取系统信息同步接口...
+    var theSysInfo = wx.getSystemInfoSync();
+    // 准备需要的参数信息 => 加入一些附加信息...
+    var thePostData = {
+      iv: inIV,
+      code: inCode,
+      encrypt: inEncrypt,
+      wx_brand: theSysInfo.brand,
+      wx_model: theSysInfo.model,
+      wx_version: theSysInfo.version,
+      wx_system: theSysInfo.system,
+      wx_platform: theSysInfo.platform,
+      wx_SDKVersion: theSysInfo.SDKVersion,
+      wx_pixelRatio: theSysInfo.pixelRatio,
+      wx_screenWidth: theSysInfo.screenWidth,
+      wx_screenHeight: theSysInfo.screenHeight,
+      wx_fontSizeSetting: theSysInfo.fontSizeSetting
+    }
     // 获取授权成功，设置状态...
     that.setData({ m_nAuthState: 1, m_strAuthInfo: '正在获取授权数据...' })
     // 构造访问接口连接地址...
@@ -47,9 +65,9 @@ Page({
     wx.request({
       url: theUrl,
       method: 'POST',
+      data: thePostData,
       dataType: 'x-www-form-urlencoded',
       header: { 'content-type': 'application/x-www-form-urlencoded' },
-      data: { code: inCode, encrypt: inEncrypt, iv: inIV },
       success: function (res) {
         // dataType 没有设置json，需要自己转换...
         var arrData = JSON.parse(res.data);
