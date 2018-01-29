@@ -2,13 +2,13 @@
 // 加载模版需要的脚本...
 var ZanToast = require("../../template/zan-toast.js")
 // 定义播放状态 => 直播点播都适用...
-const PLAY_LOADING  = 0
-const PLAY_ERROR    = 1
-const PLAY_RUN      = 2
+const PLAY_LOADING = 0
+const PLAY_ERROR = 1
+const PLAY_RUN = 2
 // 定义直播类型...
 // 0 => 共享通道...
 // 1 => 个人通道...
-const LIVE_SHARE  = 0
+const LIVE_SHARE = 0
 const LIVE_PERSON = 1
 // 获取全局的app对象...
 const g_app = getApp()
@@ -41,19 +41,57 @@ Page(Object.assign({}, ZanToast, {
   },
   // 生命周期函数--监听页面加载...
   onLoad: function (options) {
+    /*// 定义屏幕状态 => 只适用直播...
+    m_screen_state: SCREEN_VERTICAL,
+    const SCREEN_VERTICAL = 0
+    const SCREEN_LEFT_ROTATE = 1
+    const SCREEN_REVERSAL = 2
+    const SCREEN_RIGHT_ROTATE = 3
+    // 保存this对象...
+    var that = this
     // 这种方式可以判断屏幕的旋转方向...
-    // 是一个全局函数，在任何页面都会一直响应...
+    // 是一个全局函数，在任何页面都会一直响应 => onUnload 中停止...
     // 需要进一步优化，判断旋转方向的变化，来决定是否全屏显示播放页面...
-    /*wx.onAccelerometerChange(function (res) {
+    wx.onAccelerometerChange(function (res) {
+      var theNewState = SCREEN_VERTICAL
       var angle = Math.atan2(res.y, -res.x)
       if (angle >= -2.25 && angle <= -0.75) {
-        console.log('竖屏')
+        theNewState = SCREEN_VERTICAL
+        //console.log('竖屏')
       } else if (angle >= -0.75 && angle <= 0.75) {
-        console.log('左旋屏')
+        theNewState = SCREEN_LEFT_ROTATE
+        //console.log('左旋屏')
       } else if (angle >= 0.75 && angle <= 2.25) {
-        console.log('倒置')
+        theNewState = SCREEN_REVERSAL
+        //console.log('倒置')
       } else if (angle <= -2.25 || angle >= 2.25) {
-        console.log('右旋屏')
+        theNewState = SCREEN_RIGHT_ROTATE
+        //console.log('右旋屏')
+      }
+      // 屏幕状态没有变化，直接返回...
+      if (theNewState == that.data.m_screen_state)
+        return
+      // 保存变化后的状态...
+      that.data.m_screen_state = theNewState
+      // 如果不是直播或播放状态，直接返回...
+      if (!that.data.m_live_player || that.data.m_play_state != PLAY_RUN)
+        return
+      // 直接根据新的屏幕状态进行分发处理...
+      var theDegreeValue, theHeightValue
+      if (theNewState == SCREEN_VERTICAL) {
+        theHeightValue = 210
+        that.data.m_live_player.exitFullScreen()
+        that.setData({ m_live_poster_height: theHeightValue, m_live_is_fullscreen: false })
+      } else if (theNewState == SCREEN_LEFT_ROTATE) {
+        theDegreeValue = 90
+        theHeightValue = g_app.globalData.m_sysInfo.screenWidth
+        that.data.m_live_player.requestFullScreen({ direction: theDegreeValue })
+        that.setData({ m_live_poster_height: theHeightValue, m_live_is_fullscreen: true })
+      } else if (theNewState == SCREEN_RIGHT_ROTATE) {
+        theDegreeValue = -90
+        theHeightValue = g_app.globalData.m_sysInfo.screenWidth
+        that.data.m_live_player.requestFullScreen({ direction: theDegreeValue })
+        that.setData({ m_live_poster_height: theHeightValue, m_live_is_fullscreen: true })
       }
     })*/
     // 这里获取的 m_live_data 是对象，不是数组...
@@ -66,10 +104,12 @@ Page(Object.assign({}, ZanToast, {
   },
   // 生命周期函数--监听页面卸载
   onUnload: function () {
+    // 直接停止监听加速度数据...
+    //wx.stopAccelerometer()
     // 无论什么状态，都直接关闭直播状态汇报时钟...
     this.resetLiveClock()
     // 如果直播对象有效，直接关闭...
-    if( this.data.m_live_player ) {
+    if (this.data.m_live_player) {
       this.data.m_live_player.stop()
       this.data.m_live_player = null
       console.log('onUnload => stop live player')
@@ -91,7 +131,7 @@ Page(Object.assign({}, ZanToast, {
     }, 15000)
   },
   // 汇报直播在线状态 => inPlayActive不能用true或false，必须用1或0...
-  doAPILiveVerify: function(inPlayActive) {
+  doAPILiveVerify: function (inPlayActive) {
     // 保存this对象...
     var that = this
     // 准备需要的参数信息...
@@ -137,13 +177,13 @@ Page(Object.assign({}, ZanToast, {
     })
   },
   // 调用网站API获取直播通道地址信息...
-  doAPIGetLiveAddr: function() {
+  doAPIGetLiveAddr: function () {
     // 传递的信息有效，弹出等待框...
     wx.showLoading({ title: '加载中' })
     // 立即重置状态标志...
     this.data.m_live_is_bindstate = false
     // 保存this对象...
-    var that = this    
+    var that = this
     // 准备需要的参数信息...
     var thePostData = {
       'node_proto': that.data.m_live_data['node_proto'],
@@ -163,7 +203,7 @@ Page(Object.assign({}, ZanToast, {
         // 隐藏加载框...
         wx.hideLoading()
         // 调用接口失败...
-        if( res.statusCode != 200 ) {
+        if (res.statusCode != 200) {
           that.doErrNotice()
           return
         }
@@ -173,10 +213,12 @@ Page(Object.assign({}, ZanToast, {
         if (arrData.err_code > 0) {
           // 更新错误信息、错误提示，已经获取的直播信息...
           arrData.err_desc = ((typeof arrData.err_desc != 'undefined') ? arrData.err_desc : '请联系管理员，汇报错误信息。')
-          that.setData({ m_play_state: PLAY_ERROR, 
-                         m_err_msg: arrData.err_msg, 
-                         m_err_desc: arrData.err_desc,
-                         m_live_data: that.data.m_live_data })
+          that.setData({
+            m_play_state: PLAY_ERROR,
+            m_err_msg: arrData.err_msg,
+            m_err_desc: arrData.err_desc,
+            m_live_data: that.data.m_live_data
+          })
           return
         }
         // 再次启动等待框，等待直播反馈之后再关闭...
@@ -185,9 +227,11 @@ Page(Object.assign({}, ZanToast, {
         // 将获取的通道地址数据与当前已有的通道数据合并...
         Object.assign(that.data.m_live_data, arrData)
         // 将数据应用到界面当中，修改状态为 PLAY_RUN ...
-        that.setData({ m_is_live: true,
-                       m_play_state: PLAY_RUN,
-                       m_live_data: that.data.m_live_data })
+        that.setData({
+          m_is_live: true,
+          m_play_state: PLAY_RUN,
+          m_live_data: that.data.m_live_data
+        })
         // <live-player>组件与操作对象相互关联起来...
         // 注意：组件对象只创建一次，不要重复创建...
         if (!that.data.m_live_player) {
@@ -199,7 +243,7 @@ Page(Object.assign({}, ZanToast, {
         // 启动检测 onLiveStateChange 是否有效绑定...
         // 注意：2秒未收到2004|2003播放状态，关闭快照显示，直接显示视频...
         // 注意：相当于延时2秒显示画面，可以避免直接显示时的黑屏问题...
-        that.data.m_live_state_timer = setTimeout( function() {
+        that.data.m_live_state_timer = setTimeout(function () {
           that.doCheckLiveState()
         }, 2000)
       },
@@ -266,9 +310,9 @@ Page(Object.assign({}, ZanToast, {
     })
   },
   // 调用网站API保存点击次数 => 远程自动累加...
-  doAPISaveClick: function(inRecIndex) {
+  doAPISaveClick: function (inRecIndex) {
     // 判断输入参数是否有效...
-    if ( inRecIndex < 0 || inRecIndex >= this.data.m_arrRecord.length)
+    if (inRecIndex < 0 || inRecIndex >= this.data.m_arrRecord.length)
       return
     // 显示导航栏加载动画...
     wx.showNavigationBarLoading()
@@ -321,7 +365,7 @@ Page(Object.assign({}, ZanToast, {
   // <live-player>状态事件绑定失败的处理 => 2秒未收到2004|2003播放状态，关闭快照，直接显示...
   // 注意：状态没来，不代表播放失败，播放失败是由 onLiveStateChange 专门处理，而不要主动判定...
   // 注意：这样做，相当于延时2秒才显示画面，避免直接显示画面的黑屏问题...
-  doCheckLiveState: function() {
+  doCheckLiveState: function () {
     // 保存this对象...
     var that = this
     // 关闭连接等待框...
@@ -331,16 +375,16 @@ Page(Object.assign({}, ZanToast, {
       return
     // 如果事件没有变化，强制关闭快照显示，强制设定为播放状态...
     // 注意：主观判断交给用户和 onLiveStateChange 去处理...
-    that.setData({m_live_is_bindstate: true, m_live_show_snap: false, m_live_is_paused: false})
+    that.setData({ m_live_is_bindstate: true, m_live_show_snap: false, m_live_is_paused: false })
     // 打印信息 => 证明状态是被强制改变的，不是事件通知...
     console.log('LiveState => 2004|2003 event not come in')
   },
   // 处理<live-player>全屏状态变化通知事件...
-  onLiveFullChange: function(inEvent) {
+  onLiveFullChange: function (inEvent) {
     console.log(inEvent)
   },
   // 处理<live-player>状态变化通知事件...
-  onLiveStateChange: function(inEvent) {
+  onLiveStateChange: function (inEvent) {
     // 临时存放反馈的错误码信息...
     var theCode = inEvent.detail.code
     console.log(inEvent.detail.code)
@@ -381,20 +425,20 @@ Page(Object.assign({}, ZanToast, {
     }
     // 处理不同的错误情况 => 弹框说明，停止播放，还原状态...
     var theErrMsg = null
-    switch( theCode ) {
+    switch (theCode) {
       case -2301: theErrMsg = '多次重连失败，停止播放'; break;
-      case  2006: theErrMsg = '视频播放结束，停止播放'; break;
-      case  3001: theErrMsg = 'DNS解析失败，停止播放'; break;
-      case  3002: theErrMsg = '服务器连接失败，停止播放'; break;
-      case  3003: theErrMsg = '服务器握手失败，停止播放'; break;
-      default:    theErrMsg = null; break;
+      case 2006: theErrMsg = '视频播放结束，停止播放'; break;
+      case 3001: theErrMsg = 'DNS解析失败，停止播放'; break;
+      case 3002: theErrMsg = '服务器连接失败，停止播放'; break;
+      case 3003: theErrMsg = '服务器握手失败，停止播放'; break;
+      default: theErrMsg = null; break;
     }
     // 多次重连失败 => 复位时钟，让中转器超时删除直播播放器...
     if (theCode == -2301) {
       this.resetLiveClock()
     }
     // 如果发生了验证错误，弹框说明，停止播放，还原状态...
-    if (theErrMsg != null ) {
+    if (theErrMsg != null) {
       wx.hideLoading()
       this.data.m_live_player.stop()
       this.setData({ m_live_is_paused: true })
@@ -402,7 +446,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播视图区域...
-  doLiveClickArea: function() {
+  doLiveClickArea: function () {
     // 保存this对象...
     var that = this
     // 首先，关闭之间创建的超时时钟，并将时钟变量还原...
@@ -422,7 +466,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播播放按钮...
-  doLiveClickPlay: function() {
+  doLiveClickPlay: function () {
     // 保存this对象...
     var that = this
     // 如果直播对象无效，直接返回...
@@ -460,7 +504,7 @@ Page(Object.assign({}, ZanToast, {
         return
       // 非全屏状态，显示一个提示框 => 显得不那么突然...
       // 不能直接显示(有可能显示不全)，需要使用时钟延时显示...
-      setTimeout( function() {
+      setTimeout(function () {
         that.showZanToast('已经断开，停止播放')
       }, 100)
       // 这里不要关闭汇报时钟，再次点击还能正常播放...
@@ -469,7 +513,7 @@ Page(Object.assign({}, ZanToast, {
     }
   },
   // 点击直播全屏按钮...
-  doLiveClickFull: function() {
+  doLiveClickFull: function () {
     // 如果直播对象无效，直接返回...
     if (!this.data.m_live_player) {
       console.log('live player is null')
@@ -480,13 +524,13 @@ Page(Object.assign({}, ZanToast, {
       this.data.m_live_player.exitFullScreen()
       this.setData({ m_live_poster_height: 210, m_live_is_fullscreen: false })
     } else {
-      var posterHeight = wx.getSystemInfoSync().screenWidth
+      var posterHeight = g_app.globalData.m_sysInfo.screenWidth
       this.data.m_live_player.requestFullScreen({ direction: 90 })
       this.setData({ m_live_poster_height: posterHeight, m_live_is_fullscreen: true })
     }
   },
   // 接口失败的统一函数...
-  doErrNotice: function() {
+  doErrNotice: function () {
     this.setData({
       m_play_state: PLAY_ERROR,
       m_err_msg: '获取直播地址接口失败！',
@@ -500,7 +544,7 @@ Page(Object.assign({}, ZanToast, {
     console.log('onPullDownRefresh')
     wx.stopPullDownRefresh()
     // 是直播，并且有错误，才刷新，再次获取直播地址...
-    if ( this.data.m_is_live && this.data.m_play_state == PLAY_ERROR ) {
+    if (this.data.m_is_live && this.data.m_play_state == PLAY_ERROR) {
       // 还原加载状态 => PLAY_LOADING...
       this.setData({ m_play_state: PLAY_LOADING })
       // 获取通道的直播播放地址...
@@ -542,9 +586,9 @@ Page(Object.assign({}, ZanToast, {
     this.setData({ m_play_state: PLAY_RUN, m_is_live: false, m_vod_data: theItem })
   },
   // 响应播放完毕的事件通知...
-  doVodPlayEnded: function(inEvent) {
+  doVodPlayEnded: function (inEvent) {
     // 如果是直播状态模式，直接返回...
-    if( this.data.m_is_live )
+    if (this.data.m_is_live)
       return
     // 利用当前点播播放焦点记录编号在现有数据列表中查找索引...
     var theFocusID = this.data.m_vod_data.record_id
@@ -560,7 +604,7 @@ Page(Object.assign({}, ZanToast, {
         // 调用API远程累加点击计数器...
         this.doAPISaveClick(theNewIndex)
         // 模拟点击对应的索引编号...
-        this.setData({m_vod_data: this.data.m_arrRecord[theNewIndex]})
+        this.setData({ m_vod_data: this.data.m_arrRecord[theNewIndex] })
         return
       }
     }
@@ -574,7 +618,7 @@ Page(Object.assign({}, ZanToast, {
     }, 1000)
   },*/
   // 用户点击切换按钮的事件...
-  onSwitchLive: function() {
+  onSwitchLive: function () {
     // 保存this对象...
     var that = this
     // 复位时钟，让中转器超时删除直播播放器...
