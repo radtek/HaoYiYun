@@ -30,7 +30,7 @@
       <view class="feed-up">
         <block wx:if="{{item.status >= 1}}">
           <view class="feed-thumb-back feed-online"></view>
-          <view class="feed-thumb-text">直播中</view>
+          <view class="feed-thumb-text">在线中</view>
         </block>
         <block wx:else>
           <view class="feed-thumb-back feed-offline"></view>

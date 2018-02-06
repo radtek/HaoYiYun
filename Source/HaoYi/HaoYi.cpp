@@ -26,6 +26,8 @@ END_MESSAGE_MAP()
 
 CHaoYiApp::CHaoYiApp()
 {
+	m_hMutex = NULL;
+
 	// TODO: 将以下应用程序 ID 字符串替换为唯一的 ID 字符串；建议的字符串格式
 	//为 CompanyName.ProductName.SubProduct.VersionInformation
 	//SetAppID(_T("HaoYi.AppID.NoVersion"));
@@ -88,11 +90,20 @@ void writeJson()
 	//std::cout << out << std::endl;
 }*/
 
+// 定义全局唯一的标题名称...
+#define MY_GUID_NAME "{E7A44F38-69E6-420A-BCC9-B48179DA6E50}"
+
 BOOL CHaoYiApp::InitInstance()
 {
 	//readJson();
 	//writeJson();
 
+	// 防止进程多次启动 => 使用互斥...
+	m_hMutex = CreateMutex(NULL, true, MY_GUID_NAME);
+	if( GetLastError() == ERROR_ALREADY_EXISTS ) {
+		AfxMessageBox(_T("采集端不可以重复启动"), MB_OK | MB_APPLMODAL | MB_ICONSTOP); 
+		return FALSE;
+	}
 	// 如果一个运行在 Windows XP 上的应用程序清单指定要
 	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
 	//则需要 InitCommonControlsEx()。否则，将无法创建窗口。
@@ -182,6 +193,12 @@ BOOL CHaoYiApp::InitInstance()
 
 int CHaoYiApp::ExitInstance() 
 {
+	// 释放防止二次启动的互斥资源...
+	if( m_hMutex != NULL ) {
+		ReleaseMutex(m_hMutex);
+		CloseHandle(m_hMutex);
+		m_hMutex = NULL;
+	}
 	// 释放海康SDK资源...
 	NET_DVR_Cleanup();
 

@@ -1,7 +1,7 @@
 <!--pages/person/person.wxml-->
 
 <view class="feed-head">
-  <image mode="aspectFill" lazy-load="true" src="{{m_headUrl}}" bindload="doHeadLoad"></image>
+  <image mode="aspectFill" lazy-load="true" src="{{m_headUrl}}" bindload="doHeadLoad" binderror="doHeadErr"></image>
   <view class="feed-name">{{m_nickName}}</view>
 </view>
 <view class="weui-cells weui-cells_after-title">

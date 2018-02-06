@@ -327,6 +327,161 @@ class AdminAction extends Action
     }
   }
   //
+  // 升级服务 操作页面...
+  public function upgrade()
+  {
+    // 设置标题内容...
+    $this->assign('my_title', $this->m_webTitle . " - 系统升级");
+    $this->assign('my_command', 'upgrade');
+    $this->display();
+  }
+  //
+  // 点击 升级数据库 ...
+  public function upDbase()
+  {
+    // 构造接口需要的连接地址...
+    $strUrl = sprintf("https://myhaoyi.com/wxapi.php/Upgrade/upDbase/type/%d", $this->m_webType);
+    // 调用接口，获取数据库列表文件...
+    $result = http_get($strUrl);
+    $arrJson = json_decode($result, true);
+    // 遍历获取的文件列表，与本地文件相比较...
+    $theDBRoot = '/weike/mysql/data/monitor';
+    foreach($arrJson as &$dbItem) {
+      $theFullPath = sprintf("%s/%s", $theDBRoot, $dbItem['name']);
+      $theFileSize = filesize($theFullPath);
+      $dbItem['localSize'] = ($theFileSize <= 0 ? 0 : $theFileSize);
+      $dbItem['localTime'] = ($theFileSize <= 0 ? '0000-00-00 00:00:00' : date("Y-m-d H:i:s", filemtime($theFullPath)));
+      //$dbItem['needUpgrade'] = (($dbItem['localSize'] != $dbItem['size'] || $dbItem['localTime'] != $dbItem['time']) ? true : false);
+    }
+    // 设置模版参数 => 应用到界面当中...
+    $this->assign('my_dbase', $arrJson);
+    $this->display();
+  }
+  //
+  // 点击升级数据表...
+  public function upDbTable()
+  {
+    // 准备返回结果...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    // 准备调用接口和参数 => 获取表结构，需要指定云监控或云录播标志...
+    $strUrl = "https://myhaoyi.com/wxapi.php/Upgrade/upDbTable";
+    $_POST['type'] = $this->m_webType;
+    do {
+      // 调用接口，解析返回数据...
+      $result = http_post($strUrl, $_POST);
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '无法获取数据表内容';
+        break;
+      }
+      // 获取反馈的详情数据...
+      $arrData = json_decode($result, true);
+      if( $arrData['err_code'] ) {
+        $arrErr['err_code'] = $arrData['err_code'];
+        $arrErr['err_msg'] = $arrData['err_msg'];
+        break;
+      }
+      // 根据获取到的数据表结构进行更新本地的数据表...
+      $arrFields = $arrData['fields'];
+      $tbName = $arrData['table'];
+      $theDB = Db::getInstance();
+      // 首先判断数据表在本地是否存在...
+      $theTableSQL = sprintf("SHOW TABLES LIKE '%s'", $tbName);
+      $arrTable = $theDB->query($theTableSQL);
+      // 如果本地没有找到数据表，构建新建SQL语句...
+      if( count($arrTable) <= 0 ) {
+        $theCreateSQL = sprintf("Create Table `%s` (", $tbName);
+      }
+      // 遍历指定数据表的所有字段...
+      $rsCount = count($arrFields);
+      foreach($arrFields as $k => $dbItem) {
+        // 将需要的字段的属性单独列举出来...
+        $field   =  $dbItem['Field'];
+        $type    =  $dbItem['Type'];
+        $default =  $dbItem['Default'];
+        $extra   =  $dbItem['Extra'];
+        $null    =  $dbItem['Null'];
+        $comment =  $dbItem['Comment'];
+
+        // 注释、默认值、是否为空、关键字...
+        $comment = !($comment == '') ? "comment '".$comment."'" : '';
+        $default = !($default == '') ? "default '".$default."'" : '';
+        $null = ($null == 'NO') ? 'not null' : 'null';
+        $key = ($dbItem['Key'] == 'PRI') ? 'primary key' : '';
+
+        // 如果新建数据表，特殊处理...
+        if( count($arrTable) <= 0 ) {
+          // 累加 SQL 语句...
+          $theCreateSQL .= "`$field` $type $null $default $key $extra $comment,";
+          // SQL组合完毕，继续下一个字段...
+          continue;
+        }
+        
+        // 查找本地数据表是否有指定字段...
+        $strDesc = sprintf("DESCRIBE `%s` `%s`", $tbName, $field);
+        $arrLocal = $theDB->query($strDesc);
+        // 有字段，修改操作，没有字段，添加操作...
+        $strCmd = (count($arrLocal) > 0 ? 'MODIFY' : 'ADD');
+        // 如果是修改字段，不能有关键字，会报错...
+        $key = (count($arrLocal) > 0 ? '' : $key);
+        
+        // 准备马上执行的SQL语句...
+        $strSQL  = sprintf("ALTER TABLE `%s` %s `%s` ", $tbName, $strCmd, $field);
+        $strSQL .= "$type $null $default $key $extra $comment";
+        // 立即执行SQL语句...        
+        $theDB->query($strSQL);
+      }
+      // 如果是新建数据表，特殊处理 => 最后一个逗号需要替换...
+      if( count($arrTable) <= 0 ) {
+        $theCreateSQL .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8;";
+        $theCreateSQL = str_replace(',)', ')', $theCreateSQL);
+        $theDB->execute($theCreateSQL);
+      }
+      // 获取修改后的表结构文件的大小和修改时间...
+      $theDBRoot = '/weike/mysql/data/monitor';
+      $theFullPath = sprintf("%s/%s.frm", $theDBRoot, $tbName);
+      $theFileSize = filesize($theFullPath);
+      $arrErr['localSize'] = ($theFileSize <= 0 ? 0 : $theFileSize);
+      $arrErr['localTime'] = date("Y-m-d H:i:s", filemtime($theFullPath));
+    } while( false );
+    // 返回json数据包...
+    echo json_encode($arrErr);
+  }
+  //
+  // 点击 升级网站代码...
+  public function upWeb()
+  {
+    $this->display();
+  }
+  // 发起下载文件的命令...
+  /*public function upDbFile()
+  {
+    // 准备返回结果...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    // 准备调用接口和参数...
+    $strUrl = "https://myhaoyi.com/wxapi.php/Upgrade/upDbFile";
+    $_POST['type'] = $this->m_webType;
+    do {
+      // 调用接口，解析返回数据...
+      $result = http_post($strUrl, $_POST);
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '无法获取文件内容';
+        break;
+      }
+      // 直接将获取的数据存放到临时目录...
+      $theName = sprintf("/tmp/%s", $_POST['name']);
+      $theFile = fopen($theName, 'w+');
+      fwrite($theFile, $result);
+      fclose($theFile);
+      // 根据命令类型进行分发操作...
+    } while( false );
+    // 返回json数据包...
+    echo json_encode($arrErr);
+  }*/
+  //
   // 获取采集端页面...
   public function gather()
   {

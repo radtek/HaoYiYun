@@ -71,6 +71,7 @@
       </view>
     </view>
   </view>
+  <!-- 2017.02.061 - by jackey => 打开录像回放...-->
   <view class="feed-list {{m_arrRecord.length ? 'feed-top-line' : ''}}">
     <view wx:for="{{m_arrRecord}}" wx:key="unique" class="feed-media-box" 
       data-index="{{index}}" data-record="{{item}}" bindtap="doTapRecord">

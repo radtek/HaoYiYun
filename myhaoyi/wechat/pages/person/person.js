@@ -14,10 +14,6 @@ Page({
     }
     // 显示导航栏加载动画...
     wx.showNavigationBarLoading()
-    // 4秒之后直接关闭加载框...
-    setTimeout(function () {
-      wx.hideNavigationBarLoading()
-    }, 4000)
     // 调整头像的尺寸...
     var theUserInfo = g_app.globalData.m_userInfo
     var theHeadUrl = theUserInfo.avatarUrl.replace(/\/0/, '/132')
@@ -26,6 +22,10 @@ Page({
   },
   // 用户头像加载完毕通知 => 隐藏加载框...
   doHeadLoad: function (inEvent) {
+    wx.hideNavigationBarLoading()
+  },
+  // 用户头像加载失败通知 => 隐藏加载框...
+  doHeadErr: function (inEvent) {
     wx.hideNavigationBarLoading()
   },
   // 页面相关事件处理函数--监听用户下拉动作

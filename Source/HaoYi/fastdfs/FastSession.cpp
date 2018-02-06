@@ -293,7 +293,7 @@ GM_Error CTrackerSession::ForRead()
 		memcpy(m_NewStorage.ip_addr, in_buff + FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 		m_NewStorage.port = (int)buff2long(in_buff + FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1);
 		m_NewStorage.store_path_index = (int)(*(in_buff + FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE - 1 + FDFS_PROTO_PKG_LEN_SIZE)); // 内存中只有一个字节...
-		TRACE("Group = %s, Storage = %s:%d, PathIndex = %d\n", m_NewStorage.group_name, m_NewStorage.ip_addr, m_NewStorage.port, m_NewStorage.store_path_index);
+		CUtilTool::MsgLog(kTxtLogger, "Group = %s, Storage = %s:%d, PathIndex = %d\r\n", m_NewStorage.group_name, m_NewStorage.ip_addr, m_NewStorage.port, m_NewStorage.store_path_index);
 		// 将缓冲区进行减少处理...
 		m_strRecv.erase(0, nCmdLength + TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
 		// 通知消息窗口，可以创建新的存储会话，进行数据上传的操作了...
@@ -393,7 +393,7 @@ void CStorageSession::Entry()
 		// 注：删除操作只有一个地方，不要从多个地方删除，容易混乱...
 		if( nRetValue < 0 ) {
 			ASSERT( this->GetErrorCode() > 0 );
-			TRACE("[CStorageSession::SendOnePacket] - Error = %lu\n", this->GetErrorCode());
+			CUtilTool::MsgLog(kTxtLogger, "[CStorageSession::SendOnePacket] - Error = %lu\r\n", this->GetErrorCode());
 			continue;
 		}
 		// == 0 马上继续...
@@ -951,7 +951,7 @@ GM_Error CRemoteSession::doCmdGatherCameraList(LPCTSTR lpData, int nSize)
 		// 如果该通道下的用户数已经为0，则调用删除接口...
 		// 这里不能直接删除，会卡死，一定要通过发送窗口消息...
 		lpCamera->doPostStopLiveMsg();
-		TRACE("== Camera(%d) stop push by kCmd_Gather_Camera_List ==\n", nDBCameraID);
+		CUtilTool::MsgLog(kTxtLogger, "== Camera(%d) stop push by kCmd_Gather_Camera_List ==\r\n", nDBCameraID);
 	}
 	return GM_NoErr;
 }
@@ -1084,7 +1084,7 @@ GM_Error CRemoteSession::doCmdLiveVary(LPCTSTR lpData, int nSize)
 	// 如果该通道下的用户数已经为0，则调用删除接口...
 	// 这里不能直接删除，会卡死，一定要通过发送窗口消息...
 	lpCamera->doPostStopLiveMsg();
-	TRACE("== Camera(%d) stop push by kCmd_Live_Vary ==\n", nDBCameraID);
+	CUtilTool::MsgLog(kTxtLogger, "== Camera(%d) stop push by kCmd_Live_Vary ==\r\n", nDBCameraID);
 	return GM_NoErr;
 }
 //
@@ -1116,6 +1116,7 @@ GM_Error CRemoteSession::doCmdPlayLogin(LPCTSTR lpData, int nSize)
 		string strRtmpUrl = CUtilTool::getJsonString(value["rtmp_url"]);
 		int nDBCameraID = atoi(CUtilTool::getJsonString(value["rtmp_live"]).c_str());
 		int nUserCount = atoi(CUtilTool::getJsonString(value["rtmp_user"]).c_str());
+		CUtilTool::MsgLog(kTxtLogger, "rtmp_url => %s, rtmp_live => %d, rtmp_user => %d \r\n", strRtmpUrl.c_str(), nDBCameraID, nUserCount);
 		// 根据数据库编号获取摄像头对象...
 		CCamera * lpCamera = m_lpHaoYiView->FindDBCameraByID(nDBCameraID);
 		if( lpCamera == NULL ) {
