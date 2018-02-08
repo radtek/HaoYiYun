@@ -352,7 +352,7 @@ class GatherAction extends Action
       $arrData['updated'] = date('Y-m-d H:i:s');
       // 根据文件扩展名进行数据表分发...
       // jpg => uniqid_DBCameraID
-      // mp4 => uniqid_DBCameraID_CreateTime_CourseID_Duration
+      // mp4 => uniqid_DBCameraID_CreateTime_CourseID_SliceID_SliceInx_Duration
       if( (strcasecmp($arrData['ext'], ".jpg") == 0) || (strcasecmp($arrData['ext'], ".jpeg") == 0) ) {
         // 如果是直播截图，进行特殊处理...
         if( strcasecmp($arrData['file_src'], "live") == 0 ) {
@@ -365,7 +365,7 @@ class GatherAction extends Action
               // 通道下的截图是有效的，先删除这个截图的物理存在...
               if( isset($dbLive['image_fdfs']) && strlen($dbLive['image_fdfs']) > 0 ) { 
                 if( !fastdfs_storage_delete_file1($dbLive['image_fdfs']) ) {
-                  logdebug("fdfs delete failed => ".$dbLive['image_fdfs']);                  
+                  logdebug("fdfs delete failed => ".$dbLive['image_fdfs']);
                 }
               }
               // 将新的截图存储路径更新到截图表当中...
@@ -413,10 +413,14 @@ class GatherAction extends Action
         // 保存录像时长(秒)，初始化image_id...
         // $arrSrc[2] => CreateTime
         // $arrSrc[3] => CourseID
-        // $arrSrc[4] => Duration
+        // $arrSrc[4] => SliceID
+        // $arrSrc[5] => SliceInx
+        // $arrSrc[6] => Duration
         $arrData['image_id'] = 0;
         $arrData['course_id'] = (is_null($arrSrc[3]) ? 0 : $arrSrc[3]);
-        $arrData['duration'] = (is_null($arrSrc[4]) ? 0 : $arrSrc[4]);
+        $arrData['slice_id'] = (is_null($arrSrc[4]) ? NULL : $arrSrc[4]);
+        $arrData['slice_inx'] = (is_null($arrSrc[5]) ? 0 : $arrSrc[5]);
+        $arrData['duration'] = (is_null($arrSrc[6]) ? 0 : $arrSrc[6]);
         $nTotalSec = intval($arrData['duration']);
         $theSecond = intval($nTotalSec % 60);
         $theMinute = intval($nTotalSec / 60) % 60;
@@ -456,6 +460,9 @@ class GatherAction extends Action
           $dbRec['file_size'] = $arrData['file_size'];
           $dbRec['duration'] = $arrData['duration'];
           $dbRec['disptime'] = $arrData['disptime'];
+          $dbRec['course_id'] = $arrData['course_id'];
+          $dbRec['slice_id'] = $arrData['slice_id'];
+          $dbRec['slice_inx'] = $arrData['slice_inx'];
           $dbRec['updated'] = $arrData['updated'];
           D('record')->save($dbRec);
           $arrErr['record_id'] = $dbRec['record_id'];

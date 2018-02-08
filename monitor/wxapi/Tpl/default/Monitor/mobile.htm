@@ -20,9 +20,15 @@ body {
 .nav_bg_blue {
   background-color: #4682b4;
 }
+.nav_bg_white {
+  background-color: #f2f5e9;
+}
+.layui-nav .layui-nav-item a {
+  color: #000;
+}
 .main_box {
   width: 100%;
-  margin-top: 25px;
+  margin-top: 20px;
   margin-left: auto;
   margin-right: auto;
   text-align: center;
@@ -52,7 +58,7 @@ body {
 
 <body>
 <div>
-  <ul class="layui-nav" lay-filter="hori">
+  <ul class="layui-nav nav_bg_white" lay-filter="hori">
     <li class="layui-nav-item layui-this">
       <a href="javascript:doLoadMiniQR();">微信小程序入口</a>
     </li>

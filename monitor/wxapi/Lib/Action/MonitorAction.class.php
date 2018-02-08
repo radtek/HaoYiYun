@@ -401,9 +401,10 @@ class MonitorAction extends Action
       $arrTech[0] = "html5";
       $arrTech[1] = "flash";
       $dbShow['tech'] = json_encode($arrTech);
-      // 反馈点击次数给显示层...
+      // 反馈点击次数给显示层，当期播放录像编号...
       $dbShow['clicks'] = intval($dbVod['clicks']) + 1;
       $dbShow['click_id'] = "vod_" . $dbVod['record_id'];
+      $dbShow['record_id'] = $dbVod['record_id'];
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = $dbShow['clicks'];
       $dbSave['record_id'] = $dbVod['record_id'];
@@ -443,9 +444,10 @@ class MonitorAction extends Action
       $arrTech[1] = "flash";
       $arrTech[2] = "html5";
       $dbShow['tech'] = json_encode($arrTech);
-      // 反馈点击次数给显示层...
+      // 反馈点击次数给显示层，当期播放录像编号...
       $dbShow['clicks'] = intval($dbCamera['clicks']) + 1;
       $dbShow['click_id'] = "live_" . $dbCamera['camera_id'];
+      $dbShow['record_id'] = 0;
       // 累加点播计数器，写入数据库...
       $dbCamera['clicks'] = $dbShow['clicks'];
       D('camera')->save($dbCamera);
@@ -516,6 +518,35 @@ class MonitorAction extends Action
     $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
     // 将整个数组返回...
     return $arrData;
+  }
+  //
+  // 下载相关录像文件列表...
+  public function downRecord()
+  {
+    // 判断输入参数是否有效...
+    if( !isset($_GET['record_id']) ) {
+      $this->dispError(false, '输入参数无效', '请确认录像编号是否有效。');
+      return;
+    }
+    // 通过编号查找对应的录像记录...
+    $map['record_id'] = $_GET['record_id'];
+    $dbCurRec = D('record')->where($map)->field('record_id, slice_id')->find();
+    if( !isset($dbCurRec['record_id']) ) {
+      $this->dispError(false, '无法找到指定的录像记录', '请确认录像编号是否有效。');
+      return;
+    }
+    // 保存当前正在播放的录像编号...
+    $arrShow['cur_record'] = $_GET['record_id'];
+    // 通过 slice_id 查找其它相关的录像文件，并以 slice_inx 排序...
+    $condition['slice_id'] = $dbCurRec['slice_id'];
+    $arrShow['list'] = D('record')->where($condition)->order('slice_inx ASC')->select();
+    $arrShow['total_num'] = count($arrShow['list']);
+    // 获取视频播放地址连接...
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $arrShow['vod_addr'] = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
+    // 设置模版参数，显示模版文件...
+    $this->assign('my_show', $arrShow);
+    $this->display();
   }
 }
 ?>

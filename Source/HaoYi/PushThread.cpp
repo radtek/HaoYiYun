@@ -923,6 +923,7 @@ void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
   : m_hWndVideo(hWndVideo)
   , m_lpCamera(lpCamera)
+  , m_nSliceInx(0)
 {
 	ASSERT( m_lpCamera != NULL );
 	ASSERT( m_hWndVideo != NULL );
@@ -1236,9 +1237,11 @@ BOOL CPushThread::BeginRecSlice()
 	// 准备JPG截图文件 => PATH + Uniqid + DBCameraID + .jpg
 	m_strJpgName.Format("%s\\%s_%d.jpg", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID);
 	// 2017.08.10 - by jackey => 新增创建时间戳字段...
-	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID
+	// 2018.02.06 - by jackey => 新增切片标志字段...
+	// 准备MP4录像名称 => PATH + Uniqid + DBCameraID + CreateTime + CourseID + SliceID + SliceIndex
 	m_dwRecCTime = (DWORD)::time(NULL);
-	m_strMP4Name.Format("%s\\%s_%d_%lu_%d", strSavePath.c_str(), strUniqid.c_str(), nDBCameraID, m_dwRecCTime, nCourseID);
+	m_strMP4Name.Format("%s\\%s_%d_%lu_%d_%s_%d", strSavePath.c_str(), strUniqid.c_str(), 
+						nDBCameraID, m_dwRecCTime, nCourseID, m_strSliceID, ++m_nSliceInx);
 	// 录像时使用.tmp，避免没有录像完就被上传...
 	strMP4Path.Format("%s.tmp", m_strMP4Name);
 	m_strUTF8MP4 = CUtilTool::ANSI_UTF8(strMP4Path);
@@ -1347,6 +1350,11 @@ BOOL CPushThread::StreamBeginRecord()
 	// 创建新的录像对象...
 	m_lpRecMP4 = new LibMP4();
 	ASSERT( m_lpRecMP4 != NULL );
+	// 计算切片标志信息...
+	ULARGE_INTEGER	llTimCountCur = {0};
+	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
+	m_strSliceID.Format("%I64d", llTimCountCur.QuadPart);
+	m_nSliceInx = 0;
 	// 启动第一个切片录像...
 	return this->BeginRecSlice();
 }

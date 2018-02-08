@@ -7,6 +7,12 @@
 <link href="/wxapi/public/css/royalslider.css" rel="stylesheet">
 <link href="/wxapi/public/css/play.css" rel="stylesheet">
 
+<style>
+.feed-down-title {
+  font-style: normal;
+}
+</style>
+
 <section class="content-wrap">
   <div class="container">
     <div class="row">
@@ -15,7 +21,7 @@
           <h1 class="base_title">
             <!-- 录像文件 -->
             <notempty name='my_base.subject_id'>
-            <a href="#" download="下载.mp4" class="js_down" style="margin-right: 10px">[下载]</a>
+            <a href="#" class="js_down" onclick="doRecDown();" style="margin-right: 10px">[下载]</a>
             <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
             </notempty>
             <!-- 直播通道 -->
@@ -96,6 +102,8 @@
 </section>
 
 <script>
+// 保存全局的当前播放录像编号...
+var g_record_id = 0;
 
 // 处理点播、直播缩略图无法加载的问题...
 function doErrSnap() {
@@ -121,8 +129,30 @@ function doClicks(inItemID, inClicks, isVod) {
 }
 
 // 由子窗口调用的修改下载连接地址...
-function doDownLoadUrl(inVodUrl) {
-  $('.js_down').attr('href', inVodUrl);
+function doDownLoadUrl(inRecordID) {
+  // 保存当前正在播放的录像编号...
+  g_record_id = inRecordID;
+  //$('.js_down').attr('href', inVodUrl);
+}
+
+// 具体响应用户点击下载的命令...
+function doRecDown() {
+  // 判断录像编号是否有效...
+  if( g_record_id <= 0 ) {
+    layer.msg('录像编号无效，无法下载！', {icon: 2});
+    return;
+  }
+  // 弹出下载列表框...
+  layer.open({
+    type: 2, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+    closeBtn: 1,
+    fixed: true,
+    scrollbar: false,
+    shadeClose: false,
+    area: ['600px', '450px'],
+    content: "{{:__APP__}}/{{$my_web_action}}/downRecord/record_id/"+g_record_id,
+    title: "<i class='layui-icon'>&#xe601;</i><i class='feed-down-title'>&nbsp;&nbsp;下载相关录像片段</i>"
+  });
 }
 
 $(document).ready( function () {

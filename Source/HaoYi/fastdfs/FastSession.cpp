@@ -721,7 +721,7 @@ BOOL CStorageSession::doWebSaveFDFS(CString & strPathFile, CString & strFileFDFS
 	TCHAR szDir[MAX_PATH] = {0};
 	TCHAR szSrcName[MAX_PATH*2] = {0};
 	// szSrcName => jpg => uniqid_DBCameraID
-	// szSrcName => mp4 => uniqid_DBCameraID_CourseID_Duration
+	// szSrcName => mp4 => uniqid_DBCameraID_CourseID_SliceID_SliceInx_Duration
 	_splitpath(strPathFile, szDriver, szDir, szSrcName, szExt);
 	// SrcName转换成UTF8格式, 再进行URIEncode...
 	string strUTF8Name = CUtilTool::ANSI_UTF8(szSrcName);

@@ -341,11 +341,11 @@ class AdminAction extends Action
   {
     // 构造接口需要的连接地址...
     $strUrl = sprintf("https://myhaoyi.com/wxapi.php/Upgrade/upDbase/type/%d", $this->m_webType);
+    $theDBRoot = ($this->m_webType > 0 ? '/weike/mysql/data/monitor' : '/weike/mysql/data/haoyi');
     // 调用接口，获取数据库列表文件...
     $result = http_get($strUrl);
     $arrJson = json_decode($result, true);
     // 遍历获取的文件列表，与本地文件相比较...
-    $theDBRoot = '/weike/mysql/data/monitor';
     foreach($arrJson as &$dbItem) {
       $theFullPath = sprintf("%s/%s", $theDBRoot, $dbItem['name']);
       $theFileSize = filesize($theFullPath);
@@ -439,7 +439,7 @@ class AdminAction extends Action
         $theDB->execute($theCreateSQL);
       }
       // 获取修改后的表结构文件的大小和修改时间...
-      $theDBRoot = '/weike/mysql/data/monitor';
+      $theDBRoot = ($this->m_webType > 0 ? '/weike/mysql/data/monitor' : '/weike/mysql/data/haoyi');
       $theFullPath = sprintf("%s/%s.frm", $theDBRoot, $tbName);
       $theFileSize = filesize($theFullPath);
       $arrErr['localSize'] = ($theFileSize <= 0 ? 0 : $theFileSize);

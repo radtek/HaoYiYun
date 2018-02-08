@@ -12,15 +12,15 @@
     <view class="feed-source">
       <block wx:if="{{item.stream_prop == 0}}">
         <view class="fa fa-camera"></view>
-        <text class="feed-title">摄像头 - {{item.camera_name}}</text>
+        <text class="feed-title">{{item.camera_name}}</text>
       </block>
       <block wx:elif="{{item.stream_prop == 1}}">
         <view class="fa fa-file-video-o"></view>
-        <text class="feed-title">MP4文件 - {{item.camera_name}}</text>
+        <text class="feed-title">{{item.camera_name}}</text>
       </block>
       <block wx:elif="{{item.stream_prop == 2}}">
         <view class="fa fa-arrow-circle-o-down"></view>
-        <text class="feed-title">流转发 - {{item.camera_name}}</text>
+        <text class="feed-title">{{item.camera_name}}</text>
       </block>
     </view>
     <view class="feed-content">
