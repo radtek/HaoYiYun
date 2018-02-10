@@ -313,6 +313,9 @@ Page(Object.assign({}, ZanTab, ZanSwitch, {
     // 追加直播播放页面需要的节点内容...
     theItem.node_proto = theCurGather.node_proto
     theItem.node_addr = theCurGather.node_addr
+    theItem.node_type = theCurGather.node_type
+    theItem.node_wan = theCurGather.node_wan
+    theItem.node_id = theCurGather.node_id
     // 追加直播播放页面需要的用户信息...
     theItem.wx_headurl = theUserInfo.avatarUrl.replace(/\/0/,'/96')
     theItem.wx_nickname = theUserInfo.nickName

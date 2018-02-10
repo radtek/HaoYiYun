@@ -24,9 +24,9 @@
       </block>
     </view>
     <view class="feed-content">
-      <view class="feed-play">
+      <!--<view class="feed-play">
         <view class="fa fa-play-circle fa-4x"></view>
-      </view>
+      </view>-->
       <view class="feed-up">
         <block wx:if="{{item.status >= 1}}">
           <view class="feed-thumb-back feed-online"></view>

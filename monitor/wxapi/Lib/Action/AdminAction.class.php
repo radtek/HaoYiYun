@@ -209,42 +209,75 @@ class AdminAction extends Action
   }
   //
   // 获取中转核心数据接口...
-  private function getTransmitCoreData($inCmdID, $inTplName)
+  private function getTransmitCoreData($inCmdID, $inTplName, $inJson = NULL)
   {
+    // 设置默认的返回值...
+    $dbShow['err_code'] = false;
+    $dbShow['err_msg'] = 'ok';
     // 查找系统设置记录...
     $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    $my_err = true;
-
-    /*// 通过 php socket 直接连接中转服务器...
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPHP, $inCmdID);
-    if( $json_data ) {
-      $arrData = json_decode($json_data, true);
-      if( isset($arrData['err_data']) ) {
-        $my_err = false;
-        $this->assign('my_list', $arrData['err_data']);
-      }
-    }*/
-    
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    // 链接成功，获取直播服务器列表 => 不用传递 JSON 数据包...
-    if( $transmit ) {
-      $json_data = transmit_command(kClientPHP, $inCmdID, $transmit);
-      // 获取的JSON数据有效，转成数组，并判断返回值...
-      if( $json_data ) {
-        $arrData = json_decode($json_data, true);
-        if( isset($arrData['err_data']) ) {
-          $my_err = false;
-          $this->assign('my_list', $arrData['err_data']);
+    do {
+      // 判断连接中转服务器是否成功...
+      if( !$transmit ) {
+        $dbShow['err_code'] = true;
+        $dbShow['err_msg'] = '连接中转服务器失败！';
+        break;
+      }
+      // 连接成功，获取直播服务器列表...
+      $json_data = transmit_command(kClientPHP, $inCmdID, $transmit, $inJson);
+      // 获取的JSON数据无效...
+      if( !$json_data ) {
+        $dbShow['err_code'] = true;
+        $dbShow['err_msg'] = '获取直播服务器信息失败！';
+        break;
+      }
+      // 转成数组，并判断返回值...
+      $arrData = json_decode($json_data, true);
+      if( $arrData['err_code'] > 0 || !isset($arrData['err_data']) ) {
+        $dbShow['err_code'] = true;
+        $dbShow['err_msg'] = '解析获取的直播服务器信息失败！';
+        break;
+      }
+      // 进一步解析返回的数据 => 解析成新的数组...
+      $arrList = array();
+      foreach($arrData['err_data'] as &$theValue) {
+        $arrLine = explode('-', $theValue);
+        if( $inCmdID == kCmd_PHP_Get_Camera_List ) {
+          $condition['camera_id'] = $arrLine[0];
+          $dbCamera = D('camera')->where($condition)->field('camera_id,camera_name,stream_prop')->find();
+          $dbCamera['player_num'] = $arrLine[1];
+          array_push($arrList, $dbCamera);
+        } else {
+          array_push($arrList, $arrLine);
         }
       }
-      // 断开中转服务器...
+      // 保存服务器列表...
+      $dbShow['list'] = $arrList;
+    } while( false );
+    // 如果已连接，断开中转服务器...
+    if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
-    
-    // 设置状态判断标志...
-    $this->assign('my_err', $my_err);
+    // 设置模版内容，返回模版数据...
+    $this->assign('my_show', $dbShow);
     echo $this->fetch($inTplName);
+  }
+  //
+  // 获取指定服务器下的通道列表...
+  public function getCameraList()
+  {
+    $saveJson = json_encode($_GET);
+    $this->assign('my_server', $_GET['server']);
+    $this->getTransmitCoreData(kCmd_PHP_Get_Camera_List, 'getCameraList', $saveJson);
+  }
+  //
+  // 获取指定服务器、指定通道下的在线用户列表...
+  public function getPlayerList()
+  {
+    $saveJson = json_encode($_GET);
+    $this->getTransmitCoreData(kCmd_PHP_Get_Player_List, 'getPlayerList', $saveJson);
   }
   //
   // 获取直播服务器信息...

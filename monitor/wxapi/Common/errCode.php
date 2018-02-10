@@ -69,6 +69,8 @@ define('kCmd_Play_Verify',           19);
 define('kCmd_PHP_Set_Gather_SYS',    20);
 define('kCmd_Gather_Camera_List',    21);
 define('kCmd_Gather_Bind_Mini',      22);
+define('kCmd_PHP_Get_Camera_List',   23);
+define('kCmd_PHP_Get_Player_List',   24);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...

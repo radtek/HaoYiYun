@@ -232,7 +232,7 @@ class MiniAction extends Action
     $arrErr['max_page'] = $max_page;
     $arrErr['cur_page'] = $pageCur;
     // 获取通道分页数据，并对缩略图片进行地址重组...
-    $arrCamera = D('LiveView')->where($condition)->limit($pageLimit)->field('camera_id,clicks,stream_prop,shared,status,camera_name,image_fdfs')->order('Camera.created DESC')->select();
+    $arrCamera = D('LiveView')->where($condition)->limit($pageLimit)->field('camera_id,clicks,stream_prop,shared,status,camera_name,image_fdfs,created,updated')->order('Camera.created DESC')->select();
     foreach($arrCamera as &$dbItem) {
       // 获取截图快照地址，地址不为空才处理 => 为空时，小程序内部会跳转到snap.png...
       if( strlen($dbItem['image_fdfs']) > 0 ) {

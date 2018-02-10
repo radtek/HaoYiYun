@@ -7,6 +7,7 @@ mySrcFile=$mySrcName"-0.0.1-1.x86_64.rpm"
 mySrcUrl="https://myhaoyi.com/download/"$mySrcFile
 
 # download newest rpm package...
+#rm -rf ./$mySrcFile
 wget -c --limit-rate=300k $mySrcUrl
 
 # uninstall web...
