@@ -113,8 +113,8 @@ private:
 	void			BuildRenderWnd(int inRenderWndID);
 	void			ClearResource();
 private:
-	int				m_nWndIndex;
-	UINT			m_nVideoWndID;
+	int				m_nWndIndex;		// 就是数据库里的通道编号 => DBCameraID
+	UINT			m_nVideoWndID;		// DBCameraID加上一个固定值...
 	BOOL			m_bDraging;
 	CRect			m_rcWinPos;
 	CPoint			m_ptMouse;

@@ -49,6 +49,9 @@ protected:
 	afx_msg void OnLogoutDVR();
 	afx_msg void OnReConnect();
 	afx_msg void OnBindMini();
+	afx_msg void OnPagePrev();
+	afx_msg void OnPageJump();
+	afx_msg void OnPageNext();
 	afx_msg void OnDestroy();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -59,6 +62,9 @@ protected:
 	afx_msg void OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateReConnect(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateBindMini(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdatePagePrev(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdatePageJump(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdatePageNext(CCmdUI *pCmdUI);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
@@ -134,12 +140,13 @@ private:
 
 	void			ClearFastThreads();					// 删除所有的fastthread...
 	void			ClearFastSession();					// 删除所有的fastsession...
+	void			ClearDetectThread();				// 删除IPC自动探测线程...
 
 	GM_Error		DelByEventThread(CFastSession * lpSession);
 	GM_Error		AddToEventThread(CFastSession * lpSession);
 	void			OnOptDelSession(ULONG inUniqueID);
 	void			doDelTreeFocus(int nDBCameraID);
-	void			doSysConfigChanged();
+	void			doSysConfigChanged(BOOL bChangePageSize = false);
 
 	void			doRecStartCourse(int nDBCameraID, int nCourseID);
 	void			doRecStopCourse(int nDBCameraID, int nCourseID);
@@ -153,6 +160,7 @@ private:
 	void			doCheckTracker();
 	void			doCheckStorage();
 	void			doCheckTransmit();
+	void			doCheckDetect();
 
 	BOOL			IsHasUploadFile();					// 是否有需要上传文件...
 	time_t			GetTimeSecond(time_t inTime);		// 获取只有时间的秒数，不含日期...

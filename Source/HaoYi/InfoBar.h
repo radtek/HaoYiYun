@@ -10,6 +10,7 @@ public:
 	virtual ~CInfoBar();
 	enum { IDD = IDD_INFOBAR };
 protected:
+	virtual BOOL OnInitDialog();
 	virtual void DoDataExchange(CDataExchange* pDX);
 	DECLARE_MESSAGE_MAP()
 };

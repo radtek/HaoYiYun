@@ -22,3 +22,11 @@ void CInfoBar::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CInfoBar, CDialog)
 END_MESSAGE_MAP()
+
+
+BOOL CInfoBar::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	return TRUE;
+}

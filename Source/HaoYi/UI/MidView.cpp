@@ -8,6 +8,7 @@
 #include "..\resource.h"
 #include "..\HaoYiView.h"
 #include "..\XmlConfig.h"
+#include "..\DlgJump.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -25,6 +26,9 @@ CMidView::CMidView(CHaoYiView * lpParent)
   : m_bIsFullScreen(false)
   , m_rcOrigin(0, 0, 0, 0)
   , m_lpParentDlg(lpParent)
+  , m_nCurPage(0)
+  , m_nMaxPage(0)
+  , m_nFirstID(0)
 {
 	ASSERT( m_lpParentDlg != NULL );
 	memset(m_BitArray, 0, sizeof(void*) * CVideoWnd::kBitNum);
@@ -115,7 +119,7 @@ void CMidView::BuildVideoByWeb()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	GM_MapNodeCamera & theMapCamera = theConfig.GetNodeCamera();
 	GM_MapNodeCamera::iterator itorItem;
-	// 创建网站配置通道列表...
+	// 创建网站配置通道列表 => 按照从小到大的顺序创建...
 	for(itorItem = theMapCamera.begin(); itorItem != theMapCamera.end(); ++itorItem) {
 		GM_MapData & theData = itorItem->second;
 		this->BuildWebCamera(theData);
@@ -192,26 +196,48 @@ void CMidView::doDelDVR(int nCameraID)
 	GM_MapVideo::iterator itorItem = m_MapVideo.find(nCameraID);
 	if( itorItem == m_MapVideo.end() )
 		return;
-	// 删除对应的视频窗口对象...
+	// 判断通道窗口的有效性...
 	CVideoWnd * lpVideo = itorItem->second;
+	if( lpVideo == NULL )
+		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 计算删除通道所在分页号码 => 需要包含自己的计数...
+	int nTotalNum = std::distance(m_MapVideo.begin(), itorItem) + 1;
+	int nThisPage = nTotalNum / nPerPageSize;
+	nThisPage += ((nTotalNum % nPerPageSize) ? 1 : 0);
+	// 删除对应的视频窗口对象...
 	delete lpVideo; lpVideo = NULL;
 	m_MapVideo.erase(itorItem);
-	// 对子窗口进行布局重绘操作...
-	CRect rcRect;
-	this->GetClientRect(rcRect);
-	if( rcRect.Width() > 0 && rcRect.Height() > 0 ) {
-		this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
-		this->Invalidate(true);
-	}
-	// 窗口列表不为空，找第一个焦点...
+	// 如果没有窗口了，重置相关变量，返回...
 	if( m_MapVideo.size() <= 0 ) {
-		::PostMessage(m_lpParentDlg->m_hWnd, WM_FOCUS_VIDEO, -1, NULL);
+		m_nCurPage = 0;	m_nMaxPage = 0;	m_nFirstID = 0;
+		this->Invalidate(true);
 		return;
 	}
-	// 找到当前第一个窗口进行焦点事件操作...
+	// 重新计算最大总页数 => 注意加1的情况...
+	int nTotalWnd = m_MapVideo.size();
+	m_nMaxPage  = nTotalWnd / nPerPageSize;
+	m_nMaxPage += ((nTotalWnd % nPerPageSize) ? 1 : 0);
+	// 如果删除窗口所在页大于当前页，不影响，直接返回...
+	if( nThisPage > m_nCurPage )
+		return;
+	ASSERT( nThisPage <= m_nCurPage );
+	// 如果当前页大于最大页，需要将当前页等于最大页...
+	if( m_nCurPage > m_nMaxPage ) {
+		m_nCurPage = m_nMaxPage;
+	}
+	// 这时，删除窗口所在页小于或等于当前页，使用当前页进行重排窗口...
 	itorItem = m_MapVideo.begin();
-	lpVideo = itorItem->second;
-	lpVideo->doFocusAction();
+	std::advance(itorItem, (m_nCurPage-1)*nPerPageSize);
+	m_nFirstID = itorItem->first;
+	// 对当前页的子窗口进行重排操作...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
 }
 //
 // 得到下一个窗口编号...
@@ -347,6 +373,7 @@ CCamera * CMidView::BuildWebCamera(GM_MapData & inWebData)
 	}
 	// 计算视频窗口编号...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
 	int nDBCameraID = atoi(itorID->second.c_str());
 	int nVideoWndID = ID_VIDEO_WND_BEGIN + nDBCameraID;
 	CString strTitle = theConfig.GetDBCameraTitle(nDBCameraID);
@@ -355,17 +382,24 @@ CCamera * CMidView::BuildWebCamera(GM_MapData & inWebData)
 	CVideoWnd * lpVideo = new CVideoWnd(m_BitArray, nVideoWndID);
 	lpVideo->SetTitleFont(&m_VideoFont);
 	lpVideo->SetWebTitleText(strTitle);
-	// 创建窗口并保存到列表当中...
+	// 创建窗口并保存到列表当中 => 由大到小的集合排列视频窗口...
 	lpVideo->Create(WS_CHILD | WS_VISIBLE, CRect(0, 0, 0, 0), this);
 	ASSERT( lpVideo->m_hWnd != NULL );
 	m_MapVideo[nDBCameraID] = lpVideo;
+	// 计算总页数 => 注意加1的情况...
+	int nTotalWnd = m_MapVideo.size();
+	m_nMaxPage  = nTotalWnd / nPerPageSize;
+	m_nMaxPage += ((nTotalWnd % nPerPageSize) ? 1 : 0);
+	// map对象按窗口编号降序排列 => 获取它的数据库编号...
+	m_nFirstID = m_MapVideo.begin()->first;
+	// 设定当前页为第一页，因为有新窗口，需要重新开始...
+	m_nCurPage = 1;
 	// 对子窗口进行布局重绘操作...
 	CRect rcRect;
 	this->GetClientRect(rcRect);
-	if( rcRect.Width() > 0 && rcRect.Height() > 0 ) {
-		this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
-		this->Invalidate(true);
-	}
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
 	// 根据配置的数据，创建摄像头...
 	lpVideo->BuildCamera(inWebData);
 	// 2017.08.06 - by jackey => 对象创建完毕，再设置窗口标题...
@@ -435,18 +469,23 @@ void CMidView::DrawNotice(CDC * pDC)
 void CMidView::DrawBackLine(CDC * pDC)
 {
 	// 窗口列表必须大于0...
-	GM_MapVideo::iterator itorItem = m_MapVideo.begin();
+	if( m_MapVideo.size() <= 0 )
+		return;
+	// 找到第一个窗口的算子对象 => map对象已经是降序排列...
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(m_nFirstID);
 	if( itorItem == m_MapVideo.end() )
 		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
 	// 获取客户区矩形...
 	CRect rcRect;
 	this->GetClientRect(rcRect);
 	// 首先，计算需要的行、列数字...
-	float fData = sqrt(m_MapVideo.size() * 1.0f);
-	int nCol  = (int)fData + (((fData - (int)fData) == 0.0f) ? 0 : 1);
-	int nRow  = nCol;
-	int	nWidth	= (rcRect.Width() - 1) / nCol - 1;
-	int	nHigh	= (rcRect.Height() - 1) / nRow - 1;
+	int nCol = ceil(sqrt(nPerPageSize * 1.0f));
+	int nRow = nCol;
+	int	nWidth = (rcRect.Width() - 1) / nCol - 1;
+	int	nHigh  = (rcRect.Height() - 1) / nRow - 1;
 	// 创建画刷对象...
 	HBRUSH hBrush = ::CreateSolidBrush(RGB(89, 147, 200));
 	// 开始进行窗口排列操作...
@@ -489,26 +528,50 @@ void CMidView::OnSize(UINT nType, int cx, int cy)
 void CMidView::LayoutVideoWnd(int cx, int cy)
 {
 	// 窗口列表必须大于0...
-	GM_MapVideo::iterator itorItem = m_MapVideo.begin();
+	if( m_MapVideo.size() <= 0 )
+		return;
+	// 找到第一个窗口的算子对象 => map对象已经是降序排列...
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(m_nFirstID);
 	if( itorItem == m_MapVideo.end() )
 		return;
+	// 将第一个窗口对象保存起来...
+	CVideoWnd * lpFirstWnd = NULL;
+	lpFirstWnd = itorItem->second;
+	if( lpFirstWnd == NULL )
+		return;
+	ASSERT( lpFirstWnd != NULL );
+	// 先将第一个算子前面的窗口都隐藏起来...
+	GM_MapVideo::iterator itorBegin = m_MapVideo.begin();
+	while( itorBegin != itorItem ) {
+		if( itorBegin->second != NULL ) {
+			itorBegin->second->ShowWindow(SW_HIDE);
+		}
+		++itorBegin;
+	}
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
 	// 首先，计算需要的行、列数字...
-	float fData = sqrt(m_MapVideo.size() * 1.0f);
-	int nCol  = (int)fData + (((fData - (int)fData) == 0.0f) ? 0 : 1);
-	int nRow  = nCol;
+	int nCol = ceil(sqrt(nPerPageSize * 1.0f));
+	int nRow = nCol;
 	int	nWidth	= (cx - 1) / nCol - 1;
 	int	nHigh	= (cy - 1) / nRow - 1;
-	// 开始进行窗口排列操作...
+	// 然后，开始进行窗口排列操作...
 	for(int i = 0; i < nRow; ++i) {
 		for(int j = 0; j < nCol; ++j) {
-			if( itorItem == m_MapVideo.end() )
+			// 达到最后一个窗口，退出前将第一个窗口设置成焦点窗口...
+			if( itorItem == m_MapVideo.end() ) {
+				lpFirstWnd->doFocusAction();
 				return;
+			}
 			// 视频窗口无效，继续下一个窗口...
 			CVideoWnd * lpVideo = itorItem->second;
 			if( lpVideo == NULL ) {
 				++itorItem;
 				continue;
 			}
+			// 把当前窗口显示出来...
+			lpVideo->ShowWindow(SW_SHOW);
 			int	nLeft = j * (nWidth + 1) + 1;
 			int	nTop  = i * (nHigh  + 1) + 1;
 			// Fix状态，才需要移动窗口位置...
@@ -519,6 +582,16 @@ void CMidView::LayoutVideoWnd(int cx, int cy)
 			++itorItem;
 		}
 	}
+	// 接着，将从末尾窗口到最后窗口都隐藏起来...
+	while( itorItem != m_MapVideo.end() ) {
+		if( itorItem->second != NULL ) {
+			itorItem->second->ShowWindow(SW_HIDE);
+		}
+		++itorItem;
+	}
+	// 最后，将第一个窗口设置成焦点窗口...
+	ASSERT( lpFirstWnd != NULL );
+	lpFirstWnd->doFocusAction();
 }
 //
 // 将所有窗口都固定，不要漂浮...
@@ -552,7 +625,7 @@ void CMidView::ReleaseFocus()
 // 响应左侧树焦点事件...
 void CMidView::doLeftFocus(int nCameraID)
 {
-	// 首先，查找对应的视频窗口对象...
+	// 计算选中通道是否在当前分页当中...
 	GM_MapVideo::iterator itorItem;
 	itorItem = m_MapVideo.find(nCameraID);
 	if( itorItem == m_MapVideo.end() )
@@ -561,10 +634,35 @@ void CMidView::doLeftFocus(int nCameraID)
 	CVideoWnd * lpVideo = itorItem->second;
 	if( lpVideo == NULL )
 		return;
-	// 释放所有的焦点窗口，设置当前窗口为焦点...
-	this->ReleaseFocus();
-	lpVideo->m_bFocus = true;
-	lpVideo->DrawFocus(CVideoWnd::kFocusColor);
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 计算选中通道所在分页号码 => 需要包含自己的计数...
+	int nTotalNum = std::distance(m_MapVideo.begin(), itorItem) + 1;
+	int nThisPage = nTotalNum / nPerPageSize;
+	nThisPage += ((nTotalNum % nPerPageSize) ? 1 : 0);
+	// 如果选中通知不属于当前页，进行窗口重排处理...
+	if( m_nCurPage != nThisPage ) {
+		// 找到所在页的第一个窗口...
+		itorItem = m_MapVideo.begin();
+		std::advance(itorItem, (nThisPage-1)*nPerPageSize);
+		m_nFirstID = itorItem->first;
+		m_nCurPage = nThisPage;
+		// 获取整个客户矩形区...
+		CRect rcRect;
+		this->GetClientRect(rcRect);
+		// 对窗口进行重新排列...
+		ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+		this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+		this->Invalidate(true);
+		// 如果选中通道不是第一个窗口，将它设置成焦点窗口...
+		if( nCameraID != m_nFirstID ) {
+			lpVideo->doFocusAction();
+		}
+	} else {
+		// 在同一页，窗口不用重排，只将选中窗口设置成焦点窗口...
+		lpVideo->doFocusAction();
+	}
 }
 //
 // 移动窗口，会触发 OnSize 事件...
@@ -616,4 +714,118 @@ BOOL CMidView::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode, LPCTSTR
 	if( m_lpParentDlg == NULL ) 
 		return false;
 	return m_lpParentDlg->doWebStatCamera(nDBCamera, nStatus, nErrCode, lpszErrMsg);
+}
+//
+// 点击上一页...
+void CMidView::OnPagePrev()
+{
+	// 判断当前页码是否有效...
+	if( m_nCurPage <= 1 )
+		return;
+	// 找到第一个窗口的算子对象 => map对象已经是降序排列...
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(m_nFirstID);
+	if( itorItem == m_MapVideo.end() )
+		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 当前页向前推进一页...
+	m_nCurPage -= 1;
+	// 算子向前推进一页 => 使用STL扩展...
+	std::advance(itorItem, -nPerPageSize);
+	// 得到最新的第一个窗口编号...
+	if( itorItem == m_MapVideo.end() )
+		return;
+	m_nFirstID = itorItem->first;
+	// 对子窗口进行布局重绘操作...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
+	// 焦点事件已经在Layout当中处理了，这里就不用处理了...
+}
+//
+// 点击跳转页...
+void CMidView::OnPageJump()
+{
+	// 弹出跳转页选择框...
+	CDlgJump dlg(m_nCurPage, m_nMaxPage, this);
+	if( IDOK != dlg.DoModal() )
+		return;
+	// 判断选择页码的有效性...
+	int nCurSelPage = dlg.GetCurSelPage();
+	if( nCurSelPage <= 0 || nCurSelPage == m_nCurPage || nCurSelPage > m_nMaxPage )
+		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 找到所在页的第一个窗口...
+	GM_MapVideo::iterator itorItem = m_MapVideo.begin();
+	std::advance(itorItem, (nCurSelPage-1)*nPerPageSize);
+	m_nFirstID = itorItem->first;
+	m_nCurPage = nCurSelPage;
+	// 获取整个客户矩形区...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	// 对窗口进行重新排列...
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
+	// 焦点事件已经在Layout当中处理了，这里就不用处理了...
+}
+//
+// 点击下一页...
+void CMidView::OnPageNext()
+{
+	// 判断当前页码是否有效...
+	if( m_nCurPage >= m_nMaxPage )
+		return;
+	// 找到第一个窗口的算子对象 => map对象已经是降序排列...
+	GM_MapVideo::iterator itorItem = m_MapVideo.find(m_nFirstID);
+	if( itorItem == m_MapVideo.end() )
+		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 当前页向后推进一页...
+	m_nCurPage += 1;
+	// 算子向后推进一页 => 使用STL扩展...
+	std::advance(itorItem, nPerPageSize);
+	// 得到最新的第一个窗口编号...
+	if( itorItem == m_MapVideo.end() )
+		return;
+	m_nFirstID = itorItem->first;
+	// 对子窗口进行布局重绘操作...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
+	// 焦点事件已经在Layout当中处理了，这里就不用处理了...
+}
+//
+// 响应分页变化事件...
+void CMidView::doChangePageSize()
+{
+	// 如果没有窗口，直接返回...
+	if( m_MapVideo.size() <= 0 )
+		return;
+	// 获取配置文件里面的每页大小...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nPerPageSize = theConfig.GetPerPageSize();
+	// 计算总页数 => 注意加1的情况...
+	int nTotalWnd = m_MapVideo.size();
+	m_nMaxPage  = nTotalWnd / nPerPageSize;
+	m_nMaxPage += ((nTotalWnd % nPerPageSize) ? 1 : 0);
+	// map对象按窗口编号降序排列 => 获取它的数据库编号...
+	m_nFirstID = m_MapVideo.begin()->first;
+	// 设定当前页为第一页，因为有新窗口，需要重新开始...
+	m_nCurPage = 1;
+	// 对子窗口进行布局重绘操作...
+	CRect rcRect;
+	this->GetClientRect(rcRect);
+	ASSERT( rcRect.Width() > 0 && rcRect.Height() > 0 );
+	this->LayoutVideoWnd(rcRect.Width(), rcRect.Height());
+	this->Invalidate(true);
 }

@@ -31,12 +31,12 @@
         <view class="weui-form-preview__value">{{item.version}}</view>
       </view>
       <view class="weui-form-preview__item">
-        <view class="weui-form-preview__label">机器名称</view>
-        <view class="weui-form-preview__value">{{item.name_pc}}</view>
-      </view>
-      <view class="weui-form-preview__item">
         <view class="weui-form-preview__label">网络地址</view>
         <view class="weui-form-preview__value">{{item.ip_addr}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">机器名称</view>
+        <view class="weui-form-preview__value">{{item.name_pc}}</view>
       </view>
       <view class="weui-form-preview__item">
         <view class="weui-form-preview__label">所在节点</view>

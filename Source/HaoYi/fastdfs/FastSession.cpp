@@ -984,18 +984,27 @@ GM_Error CRemoteSession::doPHPSetGatherSys(LPCTSTR lpData, int nSize)
 	int nSnapVal = atoi(CUtilTool::getJsonString(value["snap_val"]).c_str());
 	BOOL bAutoLinkDVR = atoi(CUtilTool::getJsonString(value["auto_dvr"]).c_str());
 	BOOL bAutoLinkFDFS = atoi(CUtilTool::getJsonString(value["auto_fdfs"]).c_str());
+	BOOL bAutoDetectIPC = atoi(CUtilTool::getJsonString(value["auto_ipc"]).c_str());
+	int nPageSize = atoi(CUtilTool::getJsonString(value["page_size"]).c_str());
+	// 对每页窗口数进行重新适配判断计算...
+	nPageSize = ((nPageSize <= 1 || nPageSize > 36) ? DEF_PER_PAGE_SIZE : nPageSize);
+	int nColNum = ceil(sqrt(nPageSize * 1.0f));
+	nPageSize = nColNum * nColNum;
 	// 存放新增的采集端配置信息...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nOldPageSize = theConfig.GetPerPageSize();
 	theConfig.SetMainName(strMainName);
 	theConfig.SetMainKbps(nMainKbps);
 	theConfig.SetSubKbps(nSubKbps);
 	theConfig.SetInterVal(nInterVal);
 	theConfig.SetSliceVal(nSliceVal);
 	theConfig.SetSnapVal(nSnapVal);
+	theConfig.SetAutoDetectIPC(bAutoDetectIPC);
 	theConfig.SetAutoLinkFDFS(bAutoLinkFDFS);
 	theConfig.SetAutoLinkDVR(bAutoLinkDVR);
-	// 通知主视图层，系统配置发生变化...
-	m_lpHaoYiView->PostMessage(WM_SYS_CONFIG);
+	theConfig.SetPerPageSize(nPageSize);
+	// 通知主视图层，系统配置发生变化 => 如果分页发生变化，需要重排窗口...
+	m_lpHaoYiView->PostMessage(WM_SYS_CONFIG, nPageSize != nOldPageSize);
 	return GM_NoErr;
 }
 //

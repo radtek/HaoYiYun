@@ -262,6 +262,12 @@ BOOL CWebThread::RegisterGather()
 	int nSnapVal = atoi(CUtilTool::getJsonString(value["snap_val"]).c_str());
 	BOOL bAutoLinkDVR = atoi(CUtilTool::getJsonString(value["auto_dvr"]).c_str());
 	BOOL bAutoLinkFDFS = atoi(CUtilTool::getJsonString(value["auto_fdfs"]).c_str());
+	BOOL bAutoDetectIPC = atoi(CUtilTool::getJsonString(value["auto_ipc"]).c_str());
+	int nPageSize = atoi(CUtilTool::getJsonString(value["page_size"]).c_str());
+	// 对每页窗口数进行重新适配判断计算...
+	nPageSize = ((nPageSize <= 1 || nPageSize > 36) ? DEF_PER_PAGE_SIZE : nPageSize);
+	int nColNum = ceil(sqrt(nPageSize * 1.0f));
+	nPageSize = nColNum * nColNum;
 	// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
 	int nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	int nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
@@ -351,6 +357,8 @@ BOOL CWebThread::RegisterGather()
 	theConfig.SetSnapVal(nSnapVal);
 	theConfig.SetAutoLinkFDFS(bAutoLinkFDFS);
 	theConfig.SetAutoLinkDVR(bAutoLinkDVR);
+	theConfig.SetAutoDetectIPC(bAutoDetectIPC);
+	theConfig.SetPerPageSize(nPageSize);
 	// 注意：已经获取了通道编号列表...
 	return true;
 }

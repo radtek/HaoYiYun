@@ -3,7 +3,7 @@
 .layui-form-item { margin-bottom: 5px; }
 </style>
 
-<div class="layui-field-box" style="margin-top: 5px;">
+<div class="layui-field-box">
   <form class="layui-form layui-form-pane" action="">
     <div class="layui-form-item">
       <label class="layui-form-label">所在学校</label>
@@ -57,11 +57,25 @@
       <div class="layui-form-mid" style="color: #555">(每隔1分钟~10分钟，启动中的通道自动截图)</div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label" style="width:170px">自动重连网络摄像机</label>
+      <label class="layui-form-label">每页窗口</label>
+      <div class="layui-input-inline" style="width:60px">
+        <input type="text" name="myPageSize" maxlength="2" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_gather.page_size}}">
+      </div>
+      <div class="layui-form-mid" style="color: #555">(每页窗口数，默认9个窗口开始分页)</div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label" style="width:170px">自动探测网络摄像机</label>
+      <div class="layui-input-inline" style="width:75px">
+        <input type="checkbox" name="myAutoIPC" <eq name='my_gather.auto_ipc' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
+      </div>
+      <div class="layui-form-mid" style="color: #555">(会不断探测同一网络内的IPC)</div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label" style="width:170px">自动重连已离线通道</label>
       <div class="layui-input-inline" style="width:75px">
         <input type="checkbox" name="myAutoDVR" <eq name='my_gather.auto_dvr' value='1'>checked</eq> lay-skin="switch" lay-text="开启|关闭">
       </div>
-      <div class="layui-form-mid" style="color: #555">(会不断尝试重连离线通道)</div>
+      <div class="layui-form-mid" style="color: #555">(会不断尝试重连已离线通道)</div>
     </div>
     <div class="layui-form-item">
       <label class="layui-form-label" style="width:170px">自动重连存储服务器</label>
@@ -70,7 +84,7 @@
       </div>
       <div class="layui-form-mid" style="color: #555">(会不断尝试重连存储服务器)</div>
     </div>
-    <div class="layui-form-item" style="margin-bottom:10px;margin-top:20px;text-align:center;">
+    <div class="layui-form-item" style="margin-bottom:0px;margin-top:10px;text-align:center;">
       <button class="layui-btn" lay-submit lay-filter="formGather">立即保存</button>&nbsp;
       <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
     </div>

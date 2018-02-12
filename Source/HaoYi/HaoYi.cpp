@@ -253,6 +253,8 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	SetIcon(AfxGetApp()->LoadIcon(IDR_MAINFRAME), FALSE);
+
 	CMainFrame * lpMain = (CMainFrame*)AfxGetMainWnd();
 	CHaoYiView * lpView = (CHaoYiView*)lpMain->GetActiveView();
 	CString & theMacAddr = lpView->m_strMacAddr;

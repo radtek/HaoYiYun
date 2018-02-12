@@ -44,6 +44,9 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_UPDATE_COMMAND_UI(ID_LOGOUT_DVR, &CHaoYiView::OnCmdUpdateLogoutDVR)
 	ON_UPDATE_COMMAND_UI(ID_RECONNECT, &CHaoYiView::OnCmdUpdateReConnect)
 	ON_UPDATE_COMMAND_UI(ID_BIND_MINI, &CHaoYiView::OnCmdUpdateBindMini)
+	ON_UPDATE_COMMAND_UI(ID_PAGE_PREV, &CHaoYiView::OnCmdUpdatePagePrev)
+	ON_UPDATE_COMMAND_UI(ID_PAGE_JUMP, &CHaoYiView::OnCmdUpdatePageJump)
+	ON_UPDATE_COMMAND_UI(ID_PAGE_NEXT, &CHaoYiView::OnCmdUpdatePageNext)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE_DEVICE, &CHaoYiView::OnSelchangedTreeDevice)
 	ON_NOTIFY(TVN_KEYDOWN, IDC_TREE_DEVICE, &CHaoYiView::OnKeydownTreeDevice)
 	ON_NOTIFY(NM_RCLICK, IDC_TREE_DEVICE, &CHaoYiView::OnRclickTreeDevice)
@@ -64,6 +67,9 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_COMMAND(ID_ADD_DVR, &CHaoYiView::OnAddDVR)
 	ON_COMMAND(ID_MOD_DVR, &CHaoYiView::OnModDVR)
 	ON_COMMAND(ID_DEL_DVR, &CHaoYiView::OnDelDVR)
+	ON_COMMAND(ID_PAGE_PREV, &CHaoYiView::OnPagePrev)
+	ON_COMMAND(ID_PAGE_JUMP, &CHaoYiView::OnPageJump)
+	ON_COMMAND(ID_PAGE_NEXT, &CHaoYiView::OnPageNext)
 END_MESSAGE_MAP()
 
 CHaoYiView::CHaoYiView()
@@ -217,6 +223,7 @@ void CHaoYiView::OnSelchangedTreeDevice(NMHDR *pNMHDR, LRESULT *pResult)
 		m_DeviceTree.ScreenToClient(&ptPoint);
 		hHitItem = m_DeviceTree.HitTest(ptPoint);
 	}
+	// 选中区无效，直接返回...
 	if( hHitItem == NULL || m_lpMidView == NULL )
 		return;
 	// 获取该节点的有效监控通道编号...
@@ -224,11 +231,16 @@ void CHaoYiView::OnSelchangedTreeDevice(NMHDR *pNMHDR, LRESULT *pResult)
 	int nDBCameraID = m_DeviceTree.GetItemData(hHitItem);
 	if( nDBCameraID <= 0 )
 		return;
+	// 只需要通知中心窗口，进行窗口重排就可以了...
+	m_lpMidView->doLeftFocus(nDBCameraID);
+	// 只要选中是有效的，重设树形控件为焦点...
+	m_DeviceTree.SetFocus();
+	// 2018.02.11 - by jackey => 进行了优化处理...
 	// 通知中心窗口、右侧窗口，焦点发生了变化...
 	// 必须先保存焦点，否则右侧显示混乱...
-	m_nFocusDBCamera = nDBCameraID;
-	m_lpMidView->doLeftFocus(nDBCameraID);
-	m_RightView.doFocusDBCamera(nDBCameraID);
+	//m_nFocusDBCamera = nDBCameraID;
+	//m_lpMidView->doLeftFocus(nDBCameraID);
+	//m_RightView.doFocusDBCamera(nDBCameraID);
 }
 //
 // 响应键盘事件...
@@ -248,17 +260,20 @@ void CHaoYiView::OnCreateCamera(int nDBCameraID, CString & strTitle)
 	ASSERT( m_hRootItem != NULL );
 	HTREEITEM hItemTree = NULL;
 	// 创建左侧树状节点，并将通道编号记录起来...
-	hItemTree = m_DeviceTree.InsertItem(strTitle, 1, 1, m_hRootItem);
+	strTitle.Format("ID: %d - %s", nDBCameraID, strTitle);
+	// 注意：新建通道编号总是比之前的大，节点总是插入到最前面...
+	hItemTree = m_DeviceTree.InsertItem(strTitle, 1, 1, m_hRootItem, TVI_FIRST);
 	m_DeviceTree.SetItemData(hItemTree, nDBCameraID);
 	m_DeviceTree.Expand(m_hRootItem,TVE_EXPAND);
+	// 2018.02.11 - by jackey => 新建通道会引发窗口重排，每次窗口重排都会强制设置成焦点...
 	// 选中节点，保存焦点编号, 通知中间视图、右侧视图焦点变化...
 	// 必须先保存焦点，否则右侧窗口状态显示混乱...
-	if( m_nFocusDBCamera <= 0 && m_lpMidView != NULL ) {
+	/*if( m_nFocusDBCamera <= 0 && m_lpMidView != NULL ) {
 		m_nFocusDBCamera = nDBCameraID;
 		m_DeviceTree.SelectItem(hItemTree);
 		m_lpMidView->doLeftFocus(nDBCameraID);
 		m_RightView.doFocusDBCamera(nDBCameraID);
-	}
+	}*/
 }
 //
 // 响应监控通道窗口的焦点事件...
@@ -400,7 +415,10 @@ void CHaoYiView::doUpdateFrameTitle()
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	string & strMainName = theConfig.GetMainName();
 	string & strWebName = theConfig.GetWebName();
-	strTitle.Format("%s - %s", strWebName.c_str(), strMainName.c_str());
+	string & strWebAddr = theConfig.GetWebAddr();
+	int nWebPort = theConfig.GetWebPort();
+	strTitle.Format("%s - %s - %s:%d", strWebName.c_str(),
+					strMainName.c_str(), strWebAddr.c_str(), nWebPort);
 	lpFrame->SetWindowText(strTitle);
 }
 //
@@ -412,15 +430,8 @@ LRESULT CHaoYiView::OnMsgWebLoadResource(WPARAM wParam, LPARAM lParam)
 	// 根据网站配置建立通道...
 	ASSERT( m_lpMidView != NULL );
 	m_lpMidView->BuildVideoByWeb();
-	// 启动频道查询线程...
-	GM_Error theErr = GM_NoErr;
-	m_lpHKUdpThread = new CHKUdpThread(this);
-	theErr = m_lpHKUdpThread->InitMulticast();
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
-		return S_OK;
-	}
 	// 启动fastdfs会话管理线程...
+	GM_Error theErr = GM_NoErr;
 	m_lpFastThread = new CFastThread(this->m_hWnd);
 	theErr = m_lpFastThread->Initialize();
 	if( theErr != GM_NoErr ) {
@@ -644,6 +655,36 @@ void CHaoYiView::doCheckFDFS()
 	this->doCheckTracker();
 	this->doCheckStorage();
 	this->doCheckTransmit();
+	this->doCheckDetect();
+}
+//
+// 自动检测创建IPC探测线程...
+void CHaoYiView::doCheckDetect()
+{
+	// 如果采集端没有注册成功，直接返回...
+	GM_Error theErr = GM_NoErr;
+	if( m_lpFastThread == NULL )
+		return;
+	ASSERT( m_lpFastThread != NULL );
+	// 查看系统配置，如果不允许探测IPC，理解删除探测线程...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	if( !theConfig.GetAutoDetectIPC() ) {
+		this->ClearDetectThread();
+		return;
+	}
+	// 如果允许探测IPC，并且，探测线程有效，直接返回...
+	if( m_lpHKUdpThread != NULL )
+		return;
+	ASSERT( m_lpHKUdpThread == NULL );
+	// 如果探测线程无效，创建新的探测线程...
+	m_lpHKUdpThread = new CHKUdpThread(this);
+	theErr = m_lpHKUdpThread->InitMulticast();
+	// 如果创建线程失败，删除之，等待新轮回...
+	if( theErr != GM_NoErr ) {
+		this->ClearDetectThread();
+		MsgLogGM(theErr);
+		return;
+	}
 }
 //
 // 自动检测并创建RemoteSession...
@@ -836,7 +877,7 @@ BOOL CHaoYiView::IsHasUploadFile()
 	return false;
 }
 //
-// 每隔一秒钟尝试连接DVR...
+// 每隔2秒钟尝试连接DVR...
 void CHaoYiView::doCheckDVR()
 {
 	// 检查是否允许自动连接DVR服务器...
@@ -894,11 +935,8 @@ void CHaoYiView::DestroyResource()
 	// 删除左侧节点内容...
 	m_DeviceTree.DeleteAllItems();
 	m_ImageList.DeleteImageList();
-	// 释放频道查询线程...
-	if( m_lpHKUdpThread != NULL ) {
-		delete m_lpHKUdpThread;
-		m_lpHKUdpThread = NULL;
-	}
+	// 释放IPC自动探测线程...
+	this->ClearDetectThread();
 	// 首先，释放fastdfs会话管理线程...
 	this->ClearFastThreads();
 	// 然后，释放所有的会话对象资源...
@@ -908,6 +946,15 @@ void CHaoYiView::DestroyResource()
 	m_nFocusDBCamera = 0;
 	m_nAnimateIndex = 0;
 	m_hRootItem = NULL;
+}
+//
+// 删除IPC自动探测线程...
+void CHaoYiView::ClearDetectThread()
+{
+	if( m_lpHKUdpThread != NULL ) {
+		delete m_lpHKUdpThread;
+		m_lpHKUdpThread = NULL;
+	}
 }
 //
 // 释放会话管理线程...
@@ -1555,7 +1602,8 @@ void CHaoYiView::OnModDVR()
 	HTREEITEM hSelItem = m_DeviceTree.GetSelectedItem();
 	if( hSelItem == NULL || m_DeviceTree.GetItemData(hSelItem) != m_nFocusDBCamera )
 		return;
-	// 修改左侧Tree的标题名称...
+	// 修改左侧Tree的标题名称 => 增加通道编号...
+	strDVRName.Format("ID: %d - %s", m_nFocusDBCamera, strDVRName);
 	m_DeviceTree.SetItemText(hSelItem, strDVRName);
 	// 修改完毕，直接运行该通道...
 	this->OnLoginDVR();
@@ -1573,6 +1621,7 @@ void CHaoYiView::UpdateFocusTitle(int nDBCameraID, CString & strTitle)
 	while( hChildItem != NULL ) {
 		// 如果编号一致，修改这个节点的标题名称...
 		if( nDBCameraID == m_DeviceTree.GetItemData(hChildItem) ) {
+			strTitle.Format("ID: %d - %s", nDBCameraID, strTitle);
 			m_DeviceTree.SetItemText(hChildItem, strTitle);
 			break;
 		}
@@ -1645,7 +1694,7 @@ void CHaoYiView::OnSysSet()
 }
 //
 // 通用的系统配置发生变化需要处理的过程...
-void CHaoYiView::doSysConfigChanged()
+void CHaoYiView::doSysConfigChanged(BOOL bChangePageSize/* = false */)
 {
 	// 更新标题栏名称...
 	this->doUpdateFrameTitle();
@@ -1656,6 +1705,15 @@ void CHaoYiView::doSysConfigChanged()
 		m_lpTrackerSession = NULL;
 		this->DelByEventThread(m_lpStorageSession);
 		m_lpStorageSession = NULL;
+	}
+	// 如果停止自动探测IPC，立即删除探测线程...
+	if( !theConfig.GetAutoDetectIPC() ) {
+		this->ClearDetectThread();
+	}
+	// 如果每页窗口数发生变化，进行窗口重排...
+	if( bChangePageSize && m_lpMidView != NULL ) {
+		m_lpMidView->doChangePageSize();
+		return;
 	}
 }
 //
@@ -1693,7 +1751,7 @@ LRESULT CHaoYiView::OnMsgReloadView(WPARAM wParam, LPARAM lParam)
 LRESULT CHaoYiView::OnMsgSysConfig(WPARAM wParam, LPARAM lParam)
 {
 	// 响应系统配置发生变化的操作...
-	this->doSysConfigChanged();
+	this->doSysConfigChanged(wParam);
 	return S_OK;
 }
 //
@@ -1713,4 +1771,49 @@ BOOL CHaoYiView::IsLoadSuccess()
 		return false;
 	ASSERT( m_lpWebThread != NULL );
 	return m_lpWebThread->IsLoadSuccess();
+}
+//
+// 点击上一页菜单按钮...
+void CHaoYiView::OnPagePrev()
+{
+	if( m_lpMidView == NULL )
+		return;
+	m_lpMidView->OnPagePrev();
+}
+//
+// 点击跳转页菜单按钮...
+void CHaoYiView::OnPageJump()
+{
+	if( m_lpMidView == NULL )
+		return;
+	m_lpMidView->OnPageJump();
+}
+//
+// 点击下一页菜单按钮...
+void CHaoYiView::OnPageNext()
+{
+	if( m_lpMidView == NULL )
+		return;
+	m_lpMidView->OnPageNext();
+}
+//
+// 更新上一页菜单按钮...
+void CHaoYiView::OnCmdUpdatePagePrev(CCmdUI *pCmdUI)
+{
+	// 如果当前页大于1，按钮才有效...
+	pCmdUI->Enable((m_lpMidView != NULL) && (m_lpMidView->GetVideoCurPage() > 1));
+}
+//
+// 更新跳转页菜单按钮...
+void CHaoYiView::OnCmdUpdatePageJump(CCmdUI *pCmdUI)
+{
+	// 如果最大页大于1，按钮才有效...
+	pCmdUI->Enable((m_lpMidView != NULL) && (m_lpMidView->GetVideoMaxPage() > 1));
+}
+//
+// 更新下一页菜单按钮...
+void CHaoYiView::OnCmdUpdatePageNext(CCmdUI *pCmdUI)
+{
+	// 如果当前页小于最大页，按钮才有效...
+	pCmdUI->Enable((m_lpMidView != NULL) && (m_lpMidView->GetVideoCurPage() < m_lpMidView->GetVideoMaxPage()));
 }

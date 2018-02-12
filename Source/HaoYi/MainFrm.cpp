@@ -16,7 +16,6 @@
 IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
-	ON_WM_SIZE()
 	ON_WM_CLOSE()
 	ON_WM_TIMER()
 	ON_WM_CREATE()
@@ -70,6 +69,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	/*if (!m_InfoBar.Create(IDD_INFOBAR,this))
 	{
 		TRACE0("Failed to create toolbar\n");
+		MsgLogGM(GM_Err_Config);
 		return -1;      // fail to create
 	}*/
 
@@ -90,7 +90,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// 将信息栏加入到控制窗口中...
 	/*if (!m_wndReBar.AddBar(&m_InfoBar, RGB(224,224,224), RGB(224,224,224), NULL, RBBS_NOGRIPPER) ){
 		TRACE0("Failed to create rebar\n");
-		return -1;									// fail to create
+		MsgLogGM(GM_Err_Config);
+		return -1;		// fail to create
 	}*/
 	// 创建状态信息栏...
 	if( !m_wndStatusBar.Create(this) ||
@@ -233,15 +234,17 @@ void CMainFrame::LoadMyToolBar()
 {
 	// 设置工具栏位图高宽...
 	SIZE sizeButton, sizeImage;
-	sizeButton.cx = 55;	sizeButton.cy = 52;
-	sizeImage.cx = 32;	sizeImage.cy = 32;
+	sizeButton.cx = kToolBarButtonCX;
+	sizeButton.cy = kToolBarButtonCY;
+	sizeImage.cx = kToolBarImageCX;
+	sizeImage.cy = kToolBarImageCX;
 	m_wndToolBar.SetSizes(sizeButton, sizeImage);
 
 	//取到ToolBar的CToolBarCtrl
     CToolBarCtrl& oBarCtrl = m_wndToolBar.GetToolBarCtrl();
 
 	// 设置命令...
-	const int nItemCount = 10;
+	const int nItemCount = kToolBarCount;
 	UINT uCtrlID[nItemCount] = {
 		ID_VIEW_FULL,
 		ID_ADD_DVR, ID_DEL_DVR, ID_MOD_DVR, 
@@ -249,14 +252,16 @@ void CMainFrame::LoadMyToolBar()
 		ID_SYS_SET, ID_APP_ABOUT, 
 		ID_RECONNECT,
 		ID_BIND_MINI,
+		ID_PAGE_PREV, ID_PAGE_JUMP, ID_PAGE_NEXT,
 	};
 	LPCTSTR lpszCtrl[nItemCount] = {
 		"全屏模式", 
 		"添加通道", "删除通道", "修改通道", 
-		"登录通道", "注销通道", 
+		"启动通道", "停止通道", 
 		"系统设置", "显示版本", 
 		"断开重连",
 		"绑定小程序",
+		"上一页", "跳转页", "下一页",
 	};
 
 	// 分隔符按钮...
@@ -279,7 +284,7 @@ void CMainFrame::LoadMyToolBar()
 		// 添加按钮...
 		VERIFY( oBarCtrl.AddButtons(1, &pTBButtons[nIndex]) );
 		// 添加空格...
-		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 7 || nIndex == 8 ) {
+		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 7 || nIndex == 8 || nIndex == 9 ) {
 			VERIFY( oBarCtrl.AddButtons(1, &sepButton) );
 		}
     }

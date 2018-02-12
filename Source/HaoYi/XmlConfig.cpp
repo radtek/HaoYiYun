@@ -16,9 +16,11 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 CXmlConfig::CXmlConfig(void)
-  : m_nMaxCamera(DEF_MAX_CAMERA)
+  : m_nPageSize(DEF_PER_PAGE_SIZE)
+  , m_nMaxCamera(DEF_MAX_CAMERA)
   , m_nMainKbps(DEF_MAIN_KBPS)
   , m_nSubKbps(DEF_SUB_KBPS)
+  , m_bAutoDetectIPC(false)
   , m_bAutoLinkFDFS(false)
   , m_bAutoLinkDVR(false)
   , m_bAuthLicense(false)
@@ -161,7 +163,12 @@ BOOL CXmlConfig::GMLoadConfig()
 		const string & strValue = lpChildElem->ValueStr();
 		if( strValue == "SavePath" ) {
 			m_strSavePath = ((lpszText != NULL && strlen(lpszText) > 0 ) ? CUtilTool::UTF8_ANSI(lpszText) : DEF_REC_PATH);
-		}/* else if( strValue == "WebAddr" ) {
+		}/* else if( strValue == "PageSize" ) {
+			m_nPageSize = ((lpszText != NULL && strlen(lpszText) > 0) ? atoi(lpszText) : DEF_PER_PAGE_SIZE);
+			m_nPageSize = ((m_nPageSize <= 1 || m_nPageSize > 36) ? DEF_PER_PAGE_SIZE : m_nPageSize);
+			int nColNum = ceil(sqrt(nPageSize * 1.0f));
+			m_nPageSize = nColNum * nColNum;
+		} else if( strValue == "WebAddr" ) {
 			m_strWebAddr = ((lpszText != NULL && strlen(lpszText) > 0 ) ? lpszText : DEF_CLOUD_MONITOR);
 		} else if( strValue == "WebPort" ) {
 			m_nWebPort = ((lpszText != NULL && strlen(lpszText) > 0 ) ? atoi(lpszText) : DEF_WEB_PORT);
@@ -256,6 +263,10 @@ BOOL CXmlConfig::GMSaveConfig()
 		theElem = this->BuildXmlElem("SavePath", CUtilTool::ANSI_UTF8(m_strSavePath.c_str()));
 		commElem.InsertEndChild(theElem);
 	}
+	// 2018.02.12 - by jackey => 通过网站端配置...
+	// 保存每页窗口数目到配置文件当中...
+	//theElem = this->BuildXmlElem("PageSize", m_nPageSize);
+	//commElem.InsertEndChild(theElem);
 	// 如果服务器列表为空，自动加入默认的连接地址...
 	if( m_MapServer.size() <= 0 ) {
 		m_MapServer[DEF_CLOUD_MONITOR] = DEF_WEB_PORT;

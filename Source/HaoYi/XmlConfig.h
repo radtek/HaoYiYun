@@ -49,7 +49,9 @@ public:
 	int		 GetSnapVal()  { return m_nSnapVal; }
 	BOOL	 GetAutoLinkDVR() { return m_bAutoLinkDVR; }
 	BOOL	 GetAutoLinkFDFS() { return m_bAutoLinkFDFS; }
+	BOOL	 GetAutoDetectIPC() { return m_bAutoDetectIPC; }
 	int		 GetMaxCamera() { return m_nMaxCamera; }
+	int		 GetPerPageSize() { return m_nPageSize; }
 
 	string & GetWebVer()  { return m_strWebVer; }
 	string & GetWebTag()  { return m_strWebTag; }
@@ -87,7 +89,9 @@ public:
 	void	 SetSnapVal(int nSnapVal)   { m_nSnapVal = nSnapVal; }
 	void	 SetAutoLinkDVR(BOOL bAutoLinkDVR) { m_bAutoLinkDVR = bAutoLinkDVR; }
 	void	 SetAutoLinkFDFS(BOOL bAutoLinkFDFS) { m_bAutoLinkFDFS = bAutoLinkFDFS; }
+	void	 SetAutoDetectIPC(BOOL bAutoDetectIPC) { m_bAutoDetectIPC = bAutoDetectIPC; }
 	void	 SetMaxCamera(int nMaxCamera) { m_nMaxCamera = nMaxCamera; }
+	void	 SetPerPageSize(int nPageSize) { m_nPageSize = nPageSize; }
 
 	void	 SetSavePath(const string & strPath) { m_strSavePath = strPath; }
 	void	 SetFocusServer(const string & inWebAddr, int inWebPort);
@@ -132,6 +136,8 @@ private:
 	int				    m_nSnapVal;						// 通道截图间隔(1~10分钟)
 	BOOL				m_bAutoLinkDVR;					// 自动重连DVR摄像头...
 	BOOL				m_bAutoLinkFDFS;				// 自动重连FDFS服务器...
+	BOOL				m_bAutoDetectIPC;				// 自动探测IPC标志...
+	int					m_nPageSize;					// 每页窗口数目...
 
 	string				m_strWebAddr;					// 焦点网站的IP或域名...
 	int					m_nWebPort;						// 焦点网站的端口地址...

@@ -87,7 +87,7 @@ Page({
           wx.redirectTo({ url: '../bind/bind' })
         } else {
           // 注意：只能用switchTab，跳转tab页面...
-          wx.switchTab({ url: '../share/share' })
+          wx.switchTab({ url: '../gather/gather' })
         }
       },
       fail: function (res) {

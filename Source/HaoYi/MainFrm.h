@@ -30,7 +30,12 @@ protected:
 	DECLARE_MESSAGE_MAP()
 private:
 	enum {
-		kStatusTimerID	 =  1,
+		kStatusTimerID	 = 1,
+		kToolBarCount	 = 13,
+		kToolBarImageCX  = 32,
+		kToolBarImageCY  = 32,
+		kToolBarButtonCX = 55,
+		kToolBarButtonCY = 52,
 	};
 private:
 	void		LoadMyToolBar();

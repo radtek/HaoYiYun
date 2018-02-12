@@ -60,31 +60,31 @@ body {
 <div>
   <ul class="layui-nav nav_bg_white" lay-filter="hori">
     <li class="layui-nav-item layui-this">
-      <a href="javascript:doLoadMiniQR();">微信小程序入口</a>
-    </li>
-    <li class="layui-nav-item">
       <a href="javascript:doLoadWebQR();">手机浏览器入口</a>
     </li>
+    <!--<li class="layui-nav-item">
+      <a href="javascript:doLoadMiniQR();">微信小程序入口</a>
+    </li>-->
   </ul>
 </div>
 
 <div class="main_box">
-  <div id="myMini">
-    <div>
-      <img class="qrcode" src="/wxapi/public/images/mini.png"></img>
-    </div>
-    <div class="info">
-      <p>请使用微信扫描访问“浩一云”</p>
-      <p>{{$my_web_title}} - 小程序</p>
-    </div>
-  </div>
-  <div id="myWeb" style="display: none">
+  <div id="myWeb">
     <div>
       <img class="qrcode" src="{{:__APP__}}/{{$my_web_action}}/qrcode/"></img>
     </div>
     <div class="info">
       <p>请使用微信、QQ、支付宝等APP扫描访问</p>
       <p>{{$my_web_title}} - 移动端</p>
+    </div>
+  </div>
+  <div id="myMini" style="display: none">
+    <div>
+      <img class="qrcode" src="/wxapi/public/images/mini.png"></img>
+    </div>
+    <div class="info">
+      <p>请使用微信扫描访问“浩一云”</p>
+      <p>{{$my_web_title}} - 小程序</p>
     </div>
   </div>
 </div>

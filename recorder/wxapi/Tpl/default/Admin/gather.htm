@@ -71,7 +71,7 @@ function doModify(inGatherID, inMacAddr, objTr)
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['500px', '520px'],
+        area: ['520px', '580px'],
         title: "<i class='fa fa-cloud-upload'>&nbsp;&nbsp;配置 - 采集端</i>",
         content: ajaxData,
         success: function() {
@@ -81,8 +81,21 @@ function doModify(inGatherID, inMacAddr, objTr)
           form.on('submit(formGather)', function(data) {
             // 云录播模式...
             var theNameSet = data.field.myNameSet;
+            var thePageSize = data.field.myPageSize;
             var theAutoDVR = (data.field.myAutoDVR == "on" ? 1 : 0);
             var theAutoFDFS = (data.field.myAutoFDFS == "on" ? 1 : 0);
+            var theAutoIPC = (data.field.myAutoIPC == "on" ? 1 : 0);
+            // 判断分页窗口数是否有效...
+            if( isNaN(thePageSize) || thePageSize <= 1 || thePageSize >= 36 ) {
+              layer.msg('【每页窗口】有效区间[2,36]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+                $("input[name='myPageSize']").addClass('layui-form-danger');
+                $("input[name='myPageSize']").focus();
+              });
+              return false;
+            }
+            // 重新计算每页窗口数，是数字的平方...
+            var nColNum = Math.ceil(Math.sqrt(thePageSize));
+            thePageSize = nColNum * nColNum;
             // 判断输入数据的有效性...
             var theSchoolID = data.field.mySchool;
             var theSchoolName = $("select[name='mySchool']").find("option:selected").text();
@@ -148,6 +161,8 @@ function doModify(inGatherID, inMacAddr, objTr)
             arrData['slice_val'] = theSliceVal;
             arrData['inter_val'] = theInterVal;
             arrData['snap_val'] = theSnapVal;
+            arrData['auto_ipc'] = theAutoIPC;
+            arrData['page_size'] = thePageSize;
             // 通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({

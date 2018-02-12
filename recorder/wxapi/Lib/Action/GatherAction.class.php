@@ -73,6 +73,8 @@ class GatherAction extends Action
       $arrErr['snap_val'] = $dbGather['snap_val'];
       $arrErr['auto_dvr'] = $dbGather['auto_dvr'];
       $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
+      $arrErr['auto_ipc'] = $dbGather['auto_ipc'];
+      $arrErr['page_size'] = $dbGather['page_size'];
       // 返回采集端需要的参数配置信息...
       $arrErr['web_ver'] = C('VERSION');
       $arrErr['web_tag'] = $dbSys['web_tag'];

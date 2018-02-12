@@ -38,7 +38,7 @@ void CDlgPushDVR::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_AUTO, m_bPushAuto);
 	DDX_Check(pDX, IDC_RTSP_USE_TCP, m_bUseTCP);
 	DDX_Text(pDX, IDC_EDIT_NAME, m_strDVRName);
-	DDV_MaxChars(pDX, m_strDVRName, 32);
+	DDV_MaxChars(pDX, m_strDVRName, 64);
 }
 
 BEGIN_MESSAGE_MAP(CDlgPushDVR, CDialogEx)
@@ -171,6 +171,10 @@ void CDlgPushDVR::FillEditValue()
 	if( m_nDBCameraID <= 0 )
 		return;
 	ASSERT( m_nDBCameraID > 0 );
+	// 重新设置窗口名称...
+	CString strTitle;
+	strTitle.Format("ID：%d - 通道设置 - 修改", m_nDBCameraID);
+	this->SetWindowText(strTitle);
 	// 需要首先判断 stream_prop 是否有效...
 	CXmlConfig & theConfig = CXmlConfig::GMInstance();
 	theConfig.GetCamera(m_nDBCameraID, m_MapData);

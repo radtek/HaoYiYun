@@ -126,7 +126,7 @@ Page({
         console.log(thePostData)
         // 如果点了 确认绑定 或 取消，都直接跳转到 个人中心 页面...
         if (inSubCmd == BIND_SAVE || inSubCmd == BIND_CANCEL) {
-          wx.switchTab({ url: '../person/person' })
+          wx.switchTab({ url: '../gather/gather' })
         }
       },
       fail: function (res) {

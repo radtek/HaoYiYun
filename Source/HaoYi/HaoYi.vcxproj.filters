@@ -308,6 +308,9 @@
     <ClInclude Include="DlgMini.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="DlgJump.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -1013,6 +1016,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="DlgMini.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgJump.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

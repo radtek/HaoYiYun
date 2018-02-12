@@ -236,6 +236,7 @@
     <ClInclude Include="curl\multi.h" />
     <ClInclude Include="curl\stdcheaders.h" />
     <ClInclude Include="curl\types.h" />
+    <ClInclude Include="DlgJump.h" />
     <ClInclude Include="DlgMini.h" />
     <ClInclude Include="DlgPushDVR.h" />
     <ClInclude Include="DlgSetDVR.h" />
@@ -303,6 +304,7 @@
     <ClCompile Include="common\UDPSocket.cpp" />
     <ClCompile Include="common\UtilTool.cpp" />
     <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="DlgJump.cpp" />
     <ClCompile Include="DlgMini.cpp" />
     <ClCompile Include="DlgPushDVR.cpp" />
     <ClCompile Include="DlgSetDVR.cpp" />
