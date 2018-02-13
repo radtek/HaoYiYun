@@ -46,6 +46,43 @@
   <div class="site-content">
     <h1 class="site-h1">更新日志</h1>
     <ul class="layui-timeline">
+      <!-- 1.3.0 版本 -->
+      <li class="layui-timeline-item">
+        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+        <div class="layui-timeline-content layui-text">
+          <div class="layui-timeline-title">
+            <h2>1.3.0</h2>
+            <span class="layui-badge-rim">2018-02-13</span>
+          </div>
+          <ul>
+            <li>
+              <h3>采集端：</h3>
+              <ul>
+                <li>新增 《使用手册》启动时报告“创建空文档失败”，需要打开安装目录写入权限；</li>
+                <li>新增 绑定小程序功能，采集端可以连接到小程序，可以在小程序中管理采集端；</li>
+                <li>新增 解除小程序绑定，可以将已经绑定的小程序解除，重新绑定其它的微信用户；</li>
+                <li>新增 限制采集端在一台机器上只能启动一个进程，启动多个进程会造成逻辑混乱；</li>
+                <li>新增 录像分片时产生一个分片标志，让录像分片能够相互关联；</li>
+                <li>新增 通道可以进行分页显示，每页窗口数可配置，通过网站端配置；</li>
+              </ul>
+            </li>
+            <li>
+              <h3>云录播、云监控：</h3>
+              <ul>
+                <li>新增 小程序调用接口；</li>
+                <li>新增 《使用手册》和安装脚本需要注意安装 gd 和 perl-DBI 模块；</li>
+                <li>修正 API接口 play_camera 和 play_record 返回的错误连接地址；</li>
+                <li>新增 数据库动态升级，网站静态升级；</li>
+                <li>新增 播放页面可以下载录像相关分片；</li>
+                <li>完善 组件设置 | 直播服务器 展现方式，可以查看挂载通道列表，查看通道下的观看用户列表；</li>
+                <li>完善 组件设置 | 中转客户端 展现方式，可以查看更详细的信息；</li>
+                <li>新增 可以在网站端配置采集端每页窗口数量，最小4，最大36，默认9；</li>
+                <li>新增 可以在网站端配置开启或关闭摄像头探测功能；</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </li>
       <!-- 1.2.1 版本 -->
       <li class="layui-timeline-item">
         <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
