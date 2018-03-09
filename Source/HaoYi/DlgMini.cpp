@@ -31,6 +31,7 @@ BEGIN_MESSAGE_MAP(CDlgMini, CDialogEx)
 	ON_WM_DESTROY()
 	ON_WM_ERASEBKGND()
 	ON_MESSAGE(WM_BIND_MINI_MSG, &CDlgMini::OnMsgBindMini)
+	ON_MESSAGE(WM_UNBIND_MINI_MSG, &CDlgMini::OnMsgUnBindMini)
 	ON_COMMAND(kButtonUnBind, &CDlgMini::OnClickUnBindButton)
 END_MESSAGE_MAP()
 
@@ -101,6 +102,22 @@ LRESULT	CDlgMini::OnMsgBindMini(WPARAM wParam, LPARAM lParam)
 		// 如果是取消操作，隐藏解除绑定按钮...
 		m_btnUnBind.ShowWindow(SW_HIDE);
 	}
+	return S_OK;
+}
+//
+// 响应绑定小程序命令事件...
+LRESULT	CDlgMini::OnMsgUnBindMini(WPARAM wParam, LPARAM lParam)
+{
+	// 重置全部的数据变量...
+	this->ResetData();
+	// 注意：这里不能调用解除绑定接口，由小程序触发的...
+	// 解除绑定成功，重置全局绑定用户编号...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	theConfig.SetDBHaoYiUserID(-1);
+	// 隐藏解除绑定按钮...
+	m_btnUnBind.ShowWindow(SW_HIDE);
+	// 重新启动线程...
+	this->Start();
 	return S_OK;
 }
 //
@@ -441,8 +458,11 @@ BOOL CDlgMini::doWebGetMiniToken()
 	// 清空上一次遗留的缓存...
  	m_strUTF8Data.clear();
 	// 准备需要的汇报数据 => POST数据包...
+	// 新增 miniName 参数 => 小程序名称...
 	CString strPost, strUrl;
-	strPost.Format("gather_id=%d", nDBHaoYiGatherID);
+	// 2018.03.09 - by jackey => 采集端只能绑定一个小程序，目前是绑定到"浩一云服务"的小程序上...
+	strPost.Format("gather_id=%d&miniName=%s", nDBHaoYiGatherID, "device");
+	//strPost.Format("gather_id=%d&miniName=%s", nDBHaoYiGatherID, "cloud");
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
 	strUrl.Format("%s/wxapi.php/Mini/getToken", DEF_WEB_HOME);
 	// 调用Curl接口，汇报摄像头数据...

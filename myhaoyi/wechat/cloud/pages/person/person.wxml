@@ -1,0 +1,45 @@
+<!--pages/person/person.wxml-->
+
+<view class="feed-head">
+  <image mode="aspectFill" lazy-load="true" src="{{m_headUrl}}" bindload="doHeadLoad" binderror="doHeadErr"></image>
+  <view class="feed-name">{{m_nickName}}</view>
+</view>
+<view class="weui-cells weui-cells_after-title">
+  <navigator url="../gather/gather" class="weui-cell weui-cell_access" hover-class="weui-cell_active">
+    <view class="fa fa-cloud-upload feed-icon feed-orange"></view>
+    <view class="weui-cell__bd">我的采集端</view>
+    <view class="weui-cell__ft weui-cell__ft_in-access"></view>
+  </navigator>
+</view>
+<view class="weui-cells weui-cells_after-title" style="margin-top: 20rpx;">
+  <button open-type="share" class="feed-share"></button>
+  <view class="weui-cell weui-cell_access" hover-class="weui-cell_active">
+    <view class="fa fa-share-square feed-icon feed-green"></view>
+    <view class="weui-cell__bd">推荐给朋友</view>
+    <view class="weui-cell__ft weui-cell__ft_in-access"></view>
+  </view>
+</view>
+<view class="weui-cells weui-cells_after-title" style="margin-top: 20rpx;">
+  <view class="weui-cell weui-cell_access">
+    <view class="fa fa-question-circle feed-icon feed-blue"></view>
+    <view class="weui-cell__bd">意见反馈</view>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <contact-button type="default-light"></contact-button>
+    <view class="weui-cell__ft weui-cell__ft_in-access"></view>
+  </view>
+</view>
+<view class="weui-cells weui-cells_after-title" style="margin-top: 20rpx;">
+  <navigator url="../about/about" class="weui-cell weui-cell_access" hover-class="weui-cell_active">
+    <view class="fa fa-heart-o feed-icon feed-red"></view>
+    <view class="weui-cell__bd">关于我们</view>
+    <view class="weui-cell__ft weui-cell__ft_in-access"></view>
+  </navigator>
+</view>

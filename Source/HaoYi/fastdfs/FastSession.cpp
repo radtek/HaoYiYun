@@ -834,6 +834,7 @@ GM_Error CRemoteSession::ForRead()
 		switch( lpCmdHeader->m_cmd )
 		{
 		case kCmd_Gather_Bind_Mini:       theErr = this->doCmdGatherBindMini(lpDataPtr, lpCmdHeader->m_pkg_len); break;
+		case kCmd_Gather_UnBind_Mini:     theErr = this->doCmdGatherUnBindMini(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Gather_Camera_List:     theErr = this->doCmdGatherCameraList(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Play_Login:			  theErr = this->doCmdPlayLogin(lpDataPtr, lpCmdHeader->m_pkg_len); break;
 		case kCmd_Live_Vary:			  theErr = this->doCmdLiveVary(lpDataPtr, lpCmdHeader->m_pkg_len); break;
@@ -887,6 +888,32 @@ GM_Error CRemoteSession::doCmdGatherBindMini(LPCTSTR lpData, int nSize)
 		strUserHead = CUtilTool::getJsonString(value["user_head"]);
 	}
 	m_lpHaoYiView->doBindMiniCmd(nBindCmd, nUserID, strUserName, strUserHead);
+	return GM_NoErr;
+}
+//
+// 处理中转服务器反馈的小程序解除绑定命令 => 不用反馈数据给中转服务器...
+GM_Error CRemoteSession::doCmdGatherUnBindMini(LPCTSTR lpData, int nSize)
+{
+	// 判断输入数据的有效性...
+	if( nSize <= 0 || lpData == NULL )
+		return GM_NoErr;
+	ASSERT( nSize > 0 && lpData != NULL );
+	string strUTF8Data;
+	Json::Reader reader;
+	Json::Value  value;
+	// 将UTF8网站数据转换成ANSI格式 => 由于是php编码过的，转换后无效，获取具体数据之后，还要转换一遍...
+	GM_Error theErr = GM_Err_Json;
+	strUTF8Data.assign(lpData, nSize);
+	// 解析转换后的JSON数据包 => PHP编码后的数据，转换无效，仍然是UTF8格式...
+	if( !reader.parse(strUTF8Data, value) ) {
+		MsgLogGM(theErr);
+		return GM_NoErr;
+	}
+	// 获取解除绑定命令的数据...
+	int nUserID = atoi(CUtilTool::getJsonString(value["user_id"]).c_str());
+	int nGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
+	// 调用界面接口，处理解除绑定命令操作...
+	m_lpHaoYiView->doUnBindMiniCmd(nUserID, nGatherID);
 	return GM_NoErr;
 }
 //

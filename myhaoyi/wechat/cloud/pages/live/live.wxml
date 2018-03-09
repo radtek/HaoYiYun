@@ -1,0 +1,110 @@
+<!--pages/live/live.wxml-->
+
+<import src="../../template/common.wxml"/>
+
+<template is="zan-toast" data="{{ zanToast }}"></template>
+
+<view class="feed-container">
+  <view class="feed-item">
+    <view class="feed-video">
+      <block wx:if="{{m_play_state == 0}}">
+        <view class="feed-top-padding">
+          <template is="more" data="{{show_more: true}}" />
+        </view>
+      </block>
+      <block wx:elif="{{m_play_state == 1}}">
+        <template is="error" data="{{title: m_err_msg, desc: m_err_desc}}" />
+      </block>
+      <block wx:elif="{{m_play_state == 2}}">
+        <block wx:if="{{m_is_live}}">
+          <live-player id="myLivePlayer" class="feed-video"
+            autoplay mode="live"
+            background-mute="true"
+            bindfullscreenchange="onLiveFullChange"
+            bindstatechange="onLiveStateChange"
+            orientation="{{m_live_orientation}}"
+            object-fit="{{m_live_objectFit}}"
+            src="{{m_live_data.rtmp_url}}">
+            <cover-view class="feed-live-area" bindtap="doLiveClickArea">
+              <cover-view wx:if="{{m_live_show_snap}}">
+                <cover-image style="width:100%;height:{{m_live_poster_height}}px;"
+                  src="{{m_live_data.image_fdfs ? m_live_data.image_fdfs : '../../images/snap.png'}}">
+                </cover-image>
+              </cover-view>
+              <cover-view class="feed-live-control" wx:if="{{m_live_show_control}}">
+                <cover-view class="feed-live-back"></cover-view>
+                <cover-view class="feed-live-left" catchtap="doLiveClickPlay">
+                  <cover-image class="feed-live-img" 
+                    src="../../images/{{m_live_is_paused?'play':'pause'}}.png">
+                  </cover-image>
+                </cover-view>
+                <cover-view class="feed-live-text">{{m_live_is_paused ? '已停止' : '直播中'}}</cover-view>
+                <cover-view class="feed-live-right" catchtap="doLiveClickFull">
+                  <cover-image class="feed-live-img" 
+                    src="../../images/{{m_live_is_fullscreen?'restore':'full'}}.png">
+                  </cover-image>
+                </cover-view>
+              </cover-view>
+            </cover-view>
+          </live-player>
+        </block>
+        <block wx:else>
+          <video class="feed-video" 
+            autoplay objectFit="fill" 
+            poster="{{m_vod_data.image_fdfs}}" 
+            src="{{m_vod_data.file_fdfs}}"
+            bindended="doVodPlayEnded">
+          </video>
+        </block>
+      </block>
+    </view>
+    <view class="feed-link">
+      <view class="feed-owner">
+        <image mode="aspectFill" lazy-load="true" src="{{m_live_data.wx_headurl}}"></image>
+        <text>{{m_live_data.wx_nickname}}</text>
+      </view>
+      <view class="feed-right">
+        <!--<view class="fa fa-share feed-step {{m_is_share ? 'feed-focus' : ''}}" catchtap="onShareAppMessage"></view>-->
+        <view class="fa fa-retweet feed-step {{m_is_switch ? 'feed-focus' : ''}}" catchtap="onSwitchLive"></view>
+        <view class="fa fa-play-circle-o feed-step"></view>
+        <view class="feed-click">{{m_is_live?m_live_data.clicks:m_vod_data.clicks}}次</view>
+      </view>
+    </view>
+  </view>
+  <!-- 2017.02.06 - by jackey => 打开录像回放...-->
+  <view class="feed-list {{m_arrRecord.length ? 'feed-top-line' : ''}}">
+    <view wx:for="{{m_arrRecord}}" wx:key="unique" class="feed-media-box" 
+      data-index="{{index}}" data-record="{{item}}" bindtap="doTapRecord">
+      <view class="feed-media-hd">
+        <view class="feed-down">
+          <view class="feed-thumb-back"></view>
+          <view class="feed-thumb-time">{{item.disptime}}</view>
+        </view>
+        <image mode="aspectFill" lazy-load="false"
+          data-err-img="{{index}}" binderror="doErrSnap"
+          src="{{item.image_fdfs ? item.image_fdfs + '_240x140' : '../../images/snap.png'}}">
+        </image>
+      </view>
+      <view class="feed-media-bd">
+        <view class="feed-media-title {{m_vod_data.record_id==item.record_id ? 'feed-focus' : 'feed-normal'}}">
+          <view class="fa fa-file-video-o">
+            <text>{{item.camera_name}}</text>
+          </view>
+        </view>
+        <view class="feed-media-desc">
+          <view class="feed-media-time">
+            <view class="fa fa-clock-o">
+              <text>{{item.created}}</text>
+            </view>
+          </view>
+          <view class="feed-media-play">
+            <view class="fa fa-play-circle-o">
+              <text>{{item.clicks}}次</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <template is="more" data="{{show_more: m_show_more, no_more: m_no_more}}" />
+</view>

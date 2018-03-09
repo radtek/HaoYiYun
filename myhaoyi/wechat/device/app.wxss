@@ -1,0 +1,5 @@
+/**app.wxss**/
+
+@import 'style/weui.wxss';
+@import 'style/font-awesome.wxss';
+@import 'template/common.wxss';

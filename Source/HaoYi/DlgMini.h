@@ -23,6 +23,7 @@ protected:
 	afx_msg void OnClickUnBindButton();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg LRESULT	OnMsgBindMini(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT	OnMsgUnBindMini(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 public:
 	void			doPostCurl(char *pData, size_t nSize);	// 处理汇报反馈...

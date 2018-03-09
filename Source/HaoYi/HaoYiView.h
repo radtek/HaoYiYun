@@ -128,6 +128,7 @@ public:
 	void			UpdateFocusTitle(int nDBCameraID, CString & strTitle);
 	void			doCourseChanged(int nOperateID, int nDBCameraID, GM_MapData & inData);
 	void			doBindMiniCmd(int nBindCmd, int nUserID, string & inUserName, string & inUserHead);
+	void			doUnBindMiniCmd(int nUserID, int nGatherID);
 public:
 	CMidView    *	GetMidView()     { return m_lpMidView; }
 	CTreeCtrl   &	GetTreeCtrl()	 { return m_DeviceTree; }

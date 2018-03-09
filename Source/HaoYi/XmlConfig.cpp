@@ -145,12 +145,12 @@ BOOL CXmlConfig::GMLoadConfig()
 		const string & strValue = lpChildElem->ValueStr();
 		if( strValue == "CopyRight" ) {
 			m_strCopyRight = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
-		} else if( strValue == "Version" ) {
-			m_strVersion = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		} else if( strValue == "Phone" ) {
 			m_strPhone = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		} else if( strValue == "WebSite" ) {
 			m_strWebSite = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
+		//} else if( strValue == "Version" ) {
+		//	m_strVersion = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		//} else if( strValue == "Address" ) {
 		//	m_strAddress = ((lpszText != NULL && strlen(lpszText) > 0) ? CUtilTool::UTF8_ANSI(lpszText) : "");
 		}
@@ -309,12 +309,12 @@ BOOL CXmlConfig::GMSaveConfig()
 	// 保存关于配置节点信息...
 	theElem = this->BuildXmlElem("CopyRight", CUtilTool::ANSI_UTF8(m_strCopyRight.c_str()));
 	aboutElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("Version", CUtilTool::ANSI_UTF8(m_strVersion.c_str()));
+	theElem = this->BuildXmlElem("WebSite", CUtilTool::ANSI_UTF8(m_strWebSite.c_str()));
 	aboutElem.InsertEndChild(theElem);
 	theElem = this->BuildXmlElem("Phone", CUtilTool::ANSI_UTF8(m_strPhone.c_str()));
 	aboutElem.InsertEndChild(theElem);
-	theElem = this->BuildXmlElem("WebSite", CUtilTool::ANSI_UTF8(m_strWebSite.c_str()));
-	aboutElem.InsertEndChild(theElem);
+	//theElem = this->BuildXmlElem("Version", CUtilTool::ANSI_UTF8(m_strVersion.c_str()));
+	//aboutElem.InsertEndChild(theElem);
 	//theElem = this->BuildXmlElem("Address", CUtilTool::ANSI_UTF8(m_strAddress.c_str()));
 	//aboutElem.InsertEndChild(theElem);
 	// 2017.10.27 - by jackey => 通道配置全部放置到网站端，不存盘到本地...

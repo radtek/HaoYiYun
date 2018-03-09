@@ -297,7 +297,7 @@ BOOL CAboutDlg::OnInitDialog()
 	GetDlgItem(IDC_ABOUT_AUTHORIZE)->SetWindowText(strAuthorize);
 
 	// 设置标题信息...
-	strTitle.Format("关于 - %s", strMainName.c_str());
+	strTitle.Format("关于 - %s - V%s", strMainName.c_str(), CUtilTool::GetServerVersion());
 	this->SetWindowText(strTitle);
 
 	//CString strVersion;

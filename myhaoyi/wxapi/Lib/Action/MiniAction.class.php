@@ -82,11 +82,14 @@ class WXBizDataCrypt
 ///////////////////////////////////////////////
 class MiniAction extends Action
 {
-  public function _initialize() {
-    $this->m_weMini = C('WECHAT_MINI');
+  public function _initialize()
+  {
+    // 支持多个小程序的接入...
+    $this->m_cloudMini = C('CLOUD_MINI');
+    $this->m_deviceMini = C('DEVICE_MINI');
   }
   //
-  // 获取小程序的access_token的值 => 附带返回绑定的微信用户信息...
+  // 获取小程序的access_token的值 => 附带返回绑定的微信用户信息 => 采集端调用的接口...
   public function getToken()
   {
     // 准备返回信息...
@@ -95,13 +98,26 @@ class MiniAction extends Action
     // 注意：这里使用的是 $_POST 数据...
     do {
       // 判断输入参数的有效性...
-      if( !isset($_POST['gather_id']) ) {
+      if( !isset($_POST['gather_id']) || !isset($_POST['miniName']) ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = '输入的参数无效';
         break;
       }
+      // 根据小程序名称分发小程序appid...
+      switch( $_POST['miniName'] )
+      {
+        case 'cloud':  $this->m_weMini = $this->m_cloudMini;  break;
+        case 'device': $this->m_weMini = $this->m_deviceMini; break;
+      }
+      // 判断miniName是否有效...
+      if( !is_array($this->m_weMini) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = 'miniName参数无效';
+        break;
+      }
       // 获取绑定的微信用户信息...
-      $dbUser = D('GatherUser')->where($_POST)->find();
+      $condition['gather_id'] = $_POST['gather_id'];
+      $dbUser = D('GatherUser')->where($condition)->find();
       if( !isset($dbUser['gather_id']) ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = '没有找到指定的采集端';
@@ -139,7 +155,7 @@ class MiniAction extends Action
     echo json_encode($arrErr);
   }
   //
-  // 处理小程序登录事件...
+  // 处理小程序登录事件 => 小程序调用的接口...
   public function login()
   {
     // 准备返回信息...
@@ -147,10 +163,22 @@ class MiniAction extends Action
     $arrErr['err_msg'] = 'ok';
     // 注意：这里使用的是 $_POST 数据...
     do {
-      // 判断输入参数的有效性 => 没有设置或数据为空，返回错误...
-      if( !isset($_POST['code']) || !isset($_POST['encrypt']) || !isset($_POST['iv']) ) {
+      // 判断输入参数的有效性 => 没有设置或数据为空，返回错误 => 新增 miniName 字段...
+      if( !isset($_POST['code']) || !isset($_POST['encrypt']) || !isset($_POST['iv']) || !isset($_POST['miniName']) ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = '输入的参数无效';
+        break;
+      }
+      // 根据小程序名称分发小程序appid...
+      switch( $_POST['miniName'] )
+      {
+        case 'cloud':  $this->m_weMini = $this->m_cloudMini;  break;
+        case 'device': $this->m_weMini = $this->m_deviceMini; break;
+      }
+      // 判断miniName是否有效...
+      if( !is_array($this->m_weMini) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = 'miniName参数无效';
         break;
       }
       // 准备请求需要的url地址...
@@ -189,12 +217,18 @@ class MiniAction extends Action
       // 微信昵称中去除emoji表情符号的操作...
       $arrUser['nickName'] = trimEmo($arrUser['nickName']);
       // 将获取到的用户关键值查找数据库内容...
+      // 这里是小程序，注意有些字段有大写字母，字段标识也有区别...
       $where['wx_unionid'] = $arrUser['unionId'];
       $dbUser = D('user')->where($where)->find();
+      // 根据小程序名称设置openid...
+      switch( $_POST['miniName'] )
+      {
+        case 'cloud':  $dbUser['wx_cloud_mini'] = $arrUser['openId']; break;
+        case 'device': $dbUser['wx_device_mini'] = $arrUser['openId']; break;
+      }
       // 从微信获取的信息更新到数据库当中...
       // 这里是小程序，注意有些字段有大写字母，字段标识也有区别...
       $dbUser['wx_unionid'] = $arrUser['unionId'];    // 全局唯一ID
-      $dbUser['wx_openid_mini'] = $arrUser['openId']; // 本应用的openid
       $dbUser['wx_nickname'] = $arrUser['nickName'];  // 微信昵称
       $dbUser['wx_language'] = $arrUser['language'];  // 语言
       $dbUser['wx_headurl'] = $arrUser['avatarUrl'];  // 0,46,64,96,132
@@ -466,7 +500,7 @@ class MiniAction extends Action
     echo json_encode($arrErr);
   }
   //
-  // 绑定采集端接口命令 => 有三个子命令...
+  // 绑定采集端接口命令 => 有三个子命令 => 转发命令给节点服务器 => 节点再中转给采集端...
   public function bindGather()
   {
     // 准备返回信息...
@@ -520,7 +554,8 @@ class MiniAction extends Action
     echo json_encode($arrErr);
   }
   //
-  // 解除绑定采集端...
+  // 解除绑定采集端 => 转发命令给节点服务器 => 节点再中转给采集端...
+  // 注意：这个接口 小程序 和 采集端 都有可能调用到...
   public function unbindGather()
   {
     // 准备返回信息...
@@ -538,6 +573,31 @@ class MiniAction extends Action
       $dbSave['user_id'] = 0;
       $dbSave['updated'] = date('Y-m-d H:i:s');
       D('gather')->where($_POST)->save($dbSave);
+      // 获取采集端所在节点信息...
+      $condition['gather_id'] = $_POST['gather_id'];
+      $dbGather = D('GatherView')->where($condition)->field('gather_id,user_id,mac_addr,node_proto,node_addr')->find();
+      // 判断采集端是否存在...
+      if( !isset($dbGather['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '无法找到指定采集端';
+        break;
+      }
+      // 准备访问节点接口地址 => 通知采集端解除绑定...
+      $strUrl = sprintf("%s://%s/wxapi.php/Mini/unbindGather", $dbGather['node_proto'], $dbGather['node_addr']);
+      // 移除不需要的汇报参数，并更新user_id...
+      unset($dbGather['node_addr']);
+      unset($dbGather['node_proto']);
+      $dbGather['user_id'] = $_POST['user_id'];
+      // 调用post接口，返回汇报结果...
+      $result = http_post($strUrl, $dbGather);
+      // 调用失败，返回错误信息...
+      if( !$result ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '汇报解除绑定状态失败';
+        break;
+      }
+      // 解析返回的数据记录...
+      $arrErr = json_decode($result, true);
     } while( false );
     // 返回最终的json数据包...
     echo json_encode($arrErr);

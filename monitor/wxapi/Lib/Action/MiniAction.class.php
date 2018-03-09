@@ -309,5 +309,50 @@ class MiniAction extends Action
     // 返回json编码数据包...
     echo json_encode($arrErr);
   }
+  //
+  // 转发解除绑定状态命令给采集端...
+  public function unbindGather()
+  {
+    // 准备返回结果状态...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = 'ok';
+    // 注意：这里使用的是 $_POST 数据...
+    do {
+      // 判断输入的参数是否有效...
+      if( !isset($_POST['mac_addr']) || !isset($_POST['gather_id']) || !isset($_POST['user_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入参数无效！';
+        break;
+      }
+      // 尝试链接中转服务器...
+      $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
+      // 通过php扩展插件连接中转服务器 => 性能高...
+      $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+      // 链接中转服务器失败，直接返回...
+      if( !$transmit ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '无法连接中转服务器';
+        break;
+      }
+      // 中转服务器需要的参数 => 转换成json...
+      $dbParam = $_POST;
+      $saveJson = json_encode($dbParam);
+      $json_data = transmit_command(kClientPHP, kCmd_Gather_UnBind_Mini, $transmit, $saveJson);
+      // 关闭中转服务器链接...
+      transmit_disconnect_server($transmit);
+      // 获取的JSON数据有效，转成数组，直接返回...
+      $arrData = json_decode($json_data, true);
+      if( !$arrData ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '从中转服务器转发解除绑定命令失败';
+        break;
+      }
+      // 通过错误码，获得错误信息 => 有可能 err_code 没有设定...
+      $arrErr['err_code'] = (($arrData['err_code'] > 0) ? $arrData['err_code'] : false);
+      $arrErr['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    } while( false );
+    // 返回json编码数据包...
+    echo json_encode($arrErr);
+  }
 }
 ?>

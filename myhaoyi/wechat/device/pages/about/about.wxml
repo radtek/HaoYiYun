@@ -1,0 +1,27 @@
+<!--pages/about/about.wxml-->
+
+<view class="feed-head">
+  <navigator url="../home/home" class="weui-footer__link">
+    <image mode="aspectFill" lazy-load="true" src="../../images/logo.png"></image>
+    <view class="feed-name">浩一云</view>
+  </navigator>
+</view>
+<view class="feed-text">“浩一云”是云监控、云录播的全平台解决方案！</view>
+<view class="feed-text">云监控：适用于学校机关、大型场馆的实时网络监控、存储、回放；实现低延时的手机巡查、实时巡课！</view>
+<view class="feed-text">云监控：适用于商超、物业、厂矿，密集摄像头场所的网络化监控；普通PC建集群，多级备份，永不丢失！</view>
+<view class="feed-text">云监控：特别适合区域分散，又想集中控制、巡查的应用场景，比如：多校区、连锁超市、连锁机构！</view>
+<view class="feed-text">云录播：适用于单个学校精确到每个教室的常态化录播，快速建立校本资源库！</view>
+<view class="feed-text">云录播：适用于教委级别的大规模资源库建设，快速整合各个学校资源！</view>
+<view class="feed-text">云录播：实现高度自动化，无需上课老师干预，方便系统维护，大大降低了录播使用难度！</view>
+<view style="margin-top: 40rpx;">
+  <view class="feed-contact" data-group='630379661' bindtap='doCopyClip' hover-class='feed-hover'>
+  云监控QQ群：630379661（点我复制）</view>
+  <view class="feed-contact" data-group='483663026' bindtap='doCopyClip' hover-class='feed-hover'>
+  云录播QQ群：483663026（点我复制）</view>
+</view>
+<view class="weui-footer weui-footer_fixed-bottom">
+  <view class="weui-footer__links">
+    <navigator url="../home/home" class="weui-footer__link">浩一科技</navigator>
+  </view>
+  <view class="weui-footer__text">Copyright © 2018<navigator url="../home/home" class="weui-footer__link feed-link">myhaoyi.com</navigator></view>
+</view>

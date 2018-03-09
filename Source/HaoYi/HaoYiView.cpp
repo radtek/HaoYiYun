@@ -1630,22 +1630,27 @@ void CHaoYiView::UpdateFocusTitle(int nDBCameraID, CString & strTitle)
 	}
 }
 //
-// 响应小程序发送的命令事件通知...
+// 响应小程序发送的绑定命令事件通知...
 void CHaoYiView::doBindMiniCmd(int nBindCmd, int nUserID, string & inUserName, string & inUserHead)
 {
 	// 如果用户编号无效，直接返回...
 	if( nUserID <= 0 ) {
-		CUtilTool::MsgLog(kTxtLogger, "== 无效的微信用户 => UserID(%d) ==\r\n", nBindCmd);
+		CUtilTool::MsgLog(kTxtLogger, "== 绑定：无效的微信用户 => UserID(%d) ==\r\n", nUserID);
 		return;
 	}
 	// 如果绑定命令的子命令编号越界，直接打印错误，返回...
 	if( nBindCmd <= 0 || nBindCmd > 3 ) {
-		CUtilTool::MsgLog(kTxtLogger, "== 无效的绑定子命令 => BindCmd(%d) ==\r\n", nBindCmd);
+		CUtilTool::MsgLog(kTxtLogger, "== 绑定：无效的绑定子命令 => BindCmd(%d) ==\r\n", nBindCmd);
 		return;
 	}
 	// 判断绑定对话框是否有效 => 无效，打印错误，返回...
 	if( !::IsWindow(m_dlgMini.m_hWnd) ) {
-		CUtilTool::MsgLog(kTxtLogger, "== 绑定窗口已经关闭了 => BindCmd(%d) ==\r\n", nBindCmd);
+		CUtilTool::MsgLog(kTxtLogger, "== 绑定：绑定窗口已经关闭了 => BindCmd(%d) ==\r\n", nBindCmd);
+		// 如果是【确认绑定】，并且用户编号大于0，则保存绑定用户编号...
+		if( nBindCmd == CDlgMini::kSaveCmd && nUserID > 0 ) {
+			CXmlConfig & theConfig = CXmlConfig::GMInstance();
+			theConfig.SetDBHaoYiUserID(nUserID);
+		}
 		return;
 	}
 	// 如果是【确认绑定】状态，需要保存用户信息...
@@ -1655,6 +1660,39 @@ void CHaoYiView::doBindMiniCmd(int nBindCmd, int nUserID, string & inUserName, s
 	}
 	// 向绑定窗口发送命令消息，显示状态更新...
 	m_dlgMini.PostMessage(WM_BIND_MINI_MSG, nBindCmd, nUserID);
+}
+//
+// 响应小程序发送的解除绑定命令事件通知...
+void CHaoYiView::doUnBindMiniCmd(int nUserID, int nGatherID)
+{
+	// 如果用户编号无效，直接返回...
+	if( nUserID <= 0 ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 解除绑定：无效的微信用户 => UserID(%d) ==\r\n", nUserID);
+		return;
+	}
+	// 如果采集端编号无效，直接返回...
+	if( nGatherID <= 0 ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 解除绑定：无效的采集端编号 => GatherID(%d) ==\r\n", nGatherID);
+		return;
+	}
+	// 判断绑定对话框是否有效 => 无效，打印错误，重置绑定用户编号...
+	if( !::IsWindow(m_dlgMini.m_hWnd) ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 解除绑定：绑定窗口已经关闭了 ==\r\n");
+		CXmlConfig & theConfig = CXmlConfig::GMInstance();
+		theConfig.SetDBHaoYiUserID(-1);
+		return;
+	}
+	// 判断用户编号和采集端编号是否与当前绑定数据一致...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nBindGatherID = theConfig.GetDBHaoYiGatherID();
+	int nBindUserID = theConfig.GetDBHaoYiUserID();
+	// 如果数据不一致，只是打印警告信息，继续进行解绑操作...
+	if( (nUserID != nBindUserID) || (nGatherID != nBindGatherID) ) {
+		CUtilTool::MsgLog(kTxtLogger, "== 解除绑定：输入数据与实际绑定数据不一致 => InputUserID(%d), BindUserID(%d) ==\r\n", nUserID, nBindUserID);
+		CUtilTool::MsgLog(kTxtLogger, "== 解除绑定：输入数据与实际绑定数据不一致 => InputGatherID(%d), BindGatherID(%d) ==\r\n", nGatherID, nBindGatherID);
+	}
+	// 向解除绑定窗口发送命令消息，显示状态更新...
+	m_dlgMini.PostMessage(WM_UNBIND_MINI_MSG, nUserID, nGatherID);
 }
 //
 // 点击菜单 => 绑定小程序...

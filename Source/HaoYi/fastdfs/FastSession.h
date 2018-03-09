@@ -128,6 +128,7 @@ public:
 	GM_Error	SendCameraListCmd();
 private:
 	GM_Error    doCmdGatherBindMini(LPCTSTR lpData, int nSize);
+	GM_Error    doCmdGatherUnBindMini(LPCTSTR lpData, int nSize);
 	GM_Error    doCmdGatherCameraList(LPCTSTR lpData, int nSize);
 	GM_Error	doCmdLiveVary(LPCTSTR lpData, int nSize);
 	GM_Error    doCmdPlayLogin(LPCTSTR lpData, int nSize);

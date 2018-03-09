@@ -1,0 +1,34 @@
+<!--pages/default/default.wxml-->
+<block wx:if="{{m_nAuthState == 0 || m_nAuthState == 1}}">
+  <view class="container">
+    <view class="fa fa-cog fa-spin fa-3x text-danger"></view>
+    <view class="weui-loadmore">
+      <view class="weui-loading"></view>
+      <view class="weui-loadmore__tips">{{m_strAuthInfo}}</view>
+    </view>
+  </view>
+</block>
+<block wx:elif="{{m_nAuthState == 2}}">
+  <view class="weui-msg">
+    <view class="weui-msg__icon-area">
+      <icon type="warn" size="93"></icon>
+    </view>
+    <view class="weui-msg__text-area">
+      <view class="weui-msg__title">{{m_strErrInfo}}</view>
+      <view class="weui-msg__desc">获取授权失败，将无法正常使用本小程序的功能，请点击下面的按钮，重新授权！</view>
+    </view>
+    <view class="weui-msg__opr-area">
+      <view class="weui-btn-area">
+        <button class="weui-btn btn_auth" type="primary" lang="zh_CN" open-type="getUserInfo" bindgetuserinfo="getUserInfo">点击重新授权</button>
+      </view>
+    </view>
+    <view class="weui-msg__extra-area">
+      <view class="weui-footer">
+        <view class="weui-footer__links">
+          <view class="weui-footer__link">浩一科技</view>
+        </view>
+      </view>
+      <view class="weui-footer__text">Copyright © 2017-2020 浩一云</view>
+    </view>
+  </view>
+</block>

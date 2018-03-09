@@ -1,0 +1,72 @@
+<!--pages/gather/gather.wxml-->
+
+<import src="../../template/common.wxml" />
+
+<view class="weui-cells weui-cells_after-title feed-bind" bindtap="doScanCode">
+  <view class="weui-cell weui-cell_access" hover-class="weui-cell_active">
+    <view class="weui-cell__bd">点击扫码绑定采集端</view>
+    <view class="fa-stack fa-lg feed-scan">
+      <view class="fa fa-square-o fa-stack-2x"></view>
+      <view class="fa fa-qrcode fa-stack-1x"></view>
+    </view>
+    <view class="weui-cell__ft weui-cell__ft_in-access"></view>
+  </view>
+</view>
+<block wx:if="{{m_show_feed}}">
+  <view class="weui-cells__title">已经绑定 {{m_arrGather.length}} 个采集端：</view>
+  <view wx:for="{{m_arrGather}}" wx:key="unique" class="weui-form-preview feed-item">
+    <view class="weui-form-preview__hd">
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">设定名称</view>
+        <view class="weui-form-preview__value_in-hd">{{item.name_set}}</view>
+      </view>
+    </view>
+    <view class="weui-form-preview__bd">
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">运行状态</view>
+        <view class="weui-form-preview__value">{{item.status>0?'在线':'离线'}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">软件版本</view>
+        <view class="weui-form-preview__value">{{item.version}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">网络地址</view>
+        <view class="weui-form-preview__value">{{item.ip_addr}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">机器名称</view>
+        <view class="weui-form-preview__value">{{item.name_pc}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">所在节点</view>
+        <view class="weui-form-preview__value">{{item.node_wan>0?'互联网':'局域网'}} - {{item.node_addr}}</view>
+      </view>
+      <view class="weui-form-preview__item">
+        <view class="weui-form-preview__label">操作系统</view>
+        <view class="weui-form-preview__value">{{item.os_name}}</view>
+      </view>
+    </view>
+    <view class="weui-form-preview__ft">
+      <view data-gather="{{item.gather_id}}" bindtap='doUnbind' 
+            class="weui-form-preview__btn feed-unbind"
+            hover-class="feed-unbind-active">解除绑定
+      </view>
+    </view>
+  </view>
+  <view style="height: 20rpx;"></view>
+  <!--<view class="feed-more">
+    <view class="feed-none">没有更多内容了</view>
+  </view>-->
+</block>
+<!-- 当前用户没有采集端 -->
+<block wx:else>
+  <view class="feed-steps-title">
+    <text>绑定“我的采集端”步骤</text>
+  </view>
+  <view class="feed-steps-container">
+    <view class="feed-steps-content">
+      <template is="zan-steps" data="{{ type: 'vertical', steps: m_steps }}"></template>
+    </view>
+  </view>
+</block>
