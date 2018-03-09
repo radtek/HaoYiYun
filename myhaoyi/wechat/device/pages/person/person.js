@@ -38,7 +38,7 @@ Page({
     if (res.from == 'button') {
       return {
         title: '云监控、云录播',
-        path: 'pages/share/share',
+        path: 'pages/gather/gather',
         success: function (res) {
           console.log(res)
         },
