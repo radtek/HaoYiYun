@@ -105,9 +105,10 @@ LRESULT	CDlgMini::OnMsgBindMini(WPARAM wParam, LPARAM lParam)
 	return S_OK;
 }
 //
-// 响应绑定小程序命令事件...
+// 响应由小程序发起的解除绑定命令事件...
 LRESULT	CDlgMini::OnMsgUnBindMini(WPARAM wParam, LPARAM lParam)
 {
+	TRACE("== OnMsgUnBindMini == \n");
 	// 重置全部的数据变量...
 	this->ResetData();
 	// 注意：这里不能调用解除绑定接口，由小程序触发的...
@@ -229,7 +230,8 @@ void CDlgMini::DispMiniCode(CDC * pDC)
 	txtRect.bottom = txtRect.top + 20;
 	// 根据绑定命令，显示不同的提示...
 	if( m_eBindCmd == kScanCmd ) {
-		// 扫描成功之后的事件通知...
+		// 扫描成功之后的事件通知，隐藏解除绑定按钮...
+		m_btnUnBind.ShowWindow(SW_HIDE);
 		strQRNotice = "扫描成功，请在微信中点击【确认绑定】";
 		this->ShowText(pDC, strQRNotice, txtRect, RGB(0,0,0), 18, true);
 	} else if( m_eBindCmd == kSaveCmd ) {
@@ -304,7 +306,7 @@ BOOL CDlgMini::OnEraseBkgnd(CDC* pDC)
 	CRect rcRect;
 	this->GetClientRect(&rcRect);
 	pDC->FillSolidRect(rcRect, RGB(255, 255, 255));//RGB(242, 245, 233));
-	// 更具状态显示不同的信息...
+	// 根据状态显示不同的信息...
 	if( m_eMiniState == kMiniToken ) {
 		// 显示获取access_token状态...
 		this->DispMiniToken(pDC);
@@ -609,7 +611,8 @@ BOOL CDlgMini::doWebUnBindMini()
 	CString strPost, strUrl;
 	strPost.Format("gather_id=%d&user_id=%d", nDBHaoYiGatherID, nDBHaoYiUserID);
 	// 这里需要用到 https 模式，因为，myhaoyi.com 全站都用 https 模式...
-	strUrl.Format("%s/wxapi.php/Mini/unbindGather", DEF_WEB_HOME);
+	// 注意：需要通知中心服务器不要调用中转服务器转发这个解除绑定命令，会引发线程混乱，崩溃...
+	strUrl.Format("%s/wxapi.php/Mini/unbindGather/gather/1", DEF_WEB_HOME);
 	// 调用Curl接口，汇报摄像头数据...
 	CURLcode res = CURLE_OK;
 	CURL  *  curl = curl_easy_init();
@@ -645,6 +648,7 @@ BOOL CDlgMini::doWebUnBindMini()
 	}
 	// 解除绑定成功，重置全局绑定用户编号...
 	theConfig.SetDBHaoYiUserID(-1);
+	m_strUTF8Data.clear();
 	return true;
 }
 //

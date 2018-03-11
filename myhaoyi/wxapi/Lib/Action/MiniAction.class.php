@@ -574,6 +574,10 @@ class MiniAction extends Action
       $dbSave['user_id'] = 0;
       $dbSave['updated'] = date('Y-m-d H:i:s');
       D('gather')->where($_POST)->save($dbSave);
+      // 2018.03.09 - by jackey => 如果是采集端发起的调用 => 不转发中转命令...
+      if( isset($_GET['gather']) && $_GET['gather'] > 0 ) {
+        break;
+      }
       // 获取采集端所在节点信息...
       $condition['gather_id'] = $_POST['gather_id'];
       $dbGather = D('GatherView')->where($condition)->field('gather_id,user_id,mac_addr,node_proto,node_addr')->find();

@@ -16,7 +16,7 @@ App({
   globalData: {
     m_urlPrev: 'https://myhaoyi.com/wxapi.php/',
     m_nBindGatherID: -1,
-    m_bLoadShare: false,
+    m_bLoadGather: false,
     m_userInfo: null,
     m_sysInfo: null,
     m_nUserID: 0

@@ -24,9 +24,26 @@ Page({
       }
     ]
   },
+  // 用户点击右上角分享
+  onShareAppMessage: function () {
+  },
+  // 生命周期函数--监听页面显示
+  onShow: function () {
+    // 判断是否需要重新加载采集端列表数据...
+    if (!g_app.globalData.m_bLoadGather)
+      return
+    // 打印提示，并将重新加载状态复位...
+    console.log('gather - onShow')
+    g_app.globalData.m_bLoadGather = false
+    // 直接调用下拉刷新，重新加载采集端列表...
+    this.onPullDownRefresh()
+  },
   // 生命周期函数--监听页面加载
   onLoad: function (options) {
+    // 预先重置，避免 onShow 重复加载...
+    g_app.globalData.m_bLoadGather = false
     // 如果没有获取到用户编号或用户信息，跳转到默认的授权页面，重新获取授权...
+    // 注意：如果跳转到default页面，default调用wx.switchTab()跳转回来，只会执行onShow，不会执行onLoad
     if (g_app.globalData.m_nUserID <= 0 || g_app.globalData.m_userInfo == null) {
       wx.navigateTo({ url: '../default/default' })
       return
