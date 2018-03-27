@@ -100,6 +100,8 @@ GM_Error CHKUdpThread::SendCmdQuiry()
 	TCHAR szCmd[MAX_PATH] = {0};
 	sprintf(szCmd, "%s\r\n<Probe><Uuid>%s</Uuid><Types>inquiry</Types></Probe>", XML_DECLARE_UTF8, strGuid.c_str());
 	theErr = m_UDPSocket.SendTo(szCmd, strlen(szCmd));
+	// 将探测命令记录在日志文件当中...
+	//CUtilTool::MsgLog(kTxtLogger, "%s", szCmd);
 	// 发送数据包失败的处理...
 	if( theErr != GM_NoErr ) {
 		MsgLogGM(theErr);
@@ -200,6 +202,7 @@ GM_Error CHKUdpThread::ForRead()
 		return theErr;
 	}
 	// 打印获取的数据信息...
+	//CUtilTool::MsgLog(kTxtLogger, "%s\r\n", szBuffer);
 	//TRACE("%s\r\n", szBuffer);
 	// 扔掉来自本机的数据包...
 	if( iRemoteAddr == uRomAddr )
