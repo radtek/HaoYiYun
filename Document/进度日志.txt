@@ -136,7 +136,11 @@
 /weike/mysql/bin/mysql -h 127.0.0.1 -u root -p haoyi
 repair table wk_camera;
 repair table wk_camera USE_FRM;
-7.（未完成）用新的虚拟机安装一遍云录播，看看是否出现wk_camera损坏的问题。
+7.（已完成）MacBook上的“拖移锁定”通过“辅助功能”打开，就能单指双击锁定。
+8.（已完成）用新的虚拟机安装一遍云录播，看看是否出现wk_camera损坏的问题。
+   A：（已完成）确实存在wk_camera损坏的问题，需要更新打包软件。
+   B：（已完成）数据库haoyi->wk_camera与monitor->wk_camera都损坏了。
+9.（已完成）安装脚本中新增 libgomp 服务器CentOS6.8最小化安装时需要。
 
 2018.01.31 - 2018.03.09 => 有关小程序开发、审核的记录
 =========================================================================
