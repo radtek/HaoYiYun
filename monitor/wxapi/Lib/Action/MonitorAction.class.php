@@ -114,7 +114,7 @@ class MonitorAction extends Action
     // 获取采集器列表...
     $arrDrop = D('gather')->order('gather_id ASC')->select();
     // 设置一些返回数据...
-    $my_nav['type'] = $activeType;          // 0(首页激活), 1(实时激活), 2(采集器激活), 3(更多激活)
+    $my_nav['type'] = $activeType;          // 0(首页激活), 1(实时激活), 2(巡查激活), 3(科目激活), 4(更多激活)
     $my_nav['active_id'] = $activeID;       // 激活的采集器编号...
     $my_nav['drop_more'] = "更多";          // 默认的下拉名称...
     // 如果是采集器状态，需要进一步的判断...
@@ -192,6 +192,57 @@ class MonitorAction extends Action
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_rec', $arrRec);
     echo $this->fetch('pageIndex');
+  }
+  //
+  // 巡课页面...
+  public function tour()
+  {
+    // 获取巡课导航数据...
+    $my_nav = $this->getNavData(NAV_ACTIVE_TOUR, 0);
+    // 对模板对象进行赋值...
+    $this->assign('my_title', $this->m_webTitle . ' - 巡查');
+    $this->assign('my_nav', $my_nav);
+    // 得到每页通道数，总记录数，计算总页数...
+    $pagePer = 12; //C('PAGE_PER');
+    $totalNum = D('camera')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
+    $this->assign('max_page', $max_page);
+    // 设置模版参数，显示巡课页面...
+    $this->display('tour');
+  }
+  //
+  // 巡课分页...
+  public function pageTour()
+  {
+    // 准备需要的分页参数...
+    $pagePer = 12; //C('PAGE_PER'); // 每页显示的通道数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 读取通道列表 => 通道编号优先排序 => 按每页6个通道拆分...
+    $arrCamera = D('LiveView')->limit($pageLimit)->order('camera_id ASC')->field('camera_id,camera_name,stream_prop,status,clicks,image_fdfs')->select();
+    $arrWall = array_chunk($arrCamera, 6);
+    $this->assign('my_cur_page', $pageCur);
+    $this->assign('my_list', $arrWall);
+    // 同时返回数据和页面...
+    $arrErr['data'] = $arrCamera;
+    $arrErr['html'] = $this->fetch('pageTour');
+    // web_tracker_addr 已经自带了协议头 http://或https://
+    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
+    $arrErr['tracker'] = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
+    // 直接返回数据...
+    echo json_encode($arrErr);
+  }
+  //
+  // 获取直播通道的快照地址...
+  public function getImage()
+  {
+    $condition['camera_id'] = $_GET['camera_id'];
+    $dbCamera = D('LiveView')->where($condition)->field('camera_id,image_fdfs,status')->find();
+    echo json_encode($dbCamera);
   }
   //
   // 点击实时页面...
@@ -412,9 +463,10 @@ class MonitorAction extends Action
     } else if( strcasecmp($_GET['type'], "live") == 0 ) {
       // 首先，判断通道是否处于直播状态...
       $map['camera_id'] = $_GET['camera_id'];
+      $bHideIcon = (($_GET['width'] <= 300) ? true : false);
       $dbCamera = D('LiveView')->where($map)->field('camera_id,clicks,status,gather_id,mac_addr')->find();
       if( $dbCamera['status'] <= 0 ) {
-        $this->dispError(true, '当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。');
+        $this->dispError(true, '当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。', $bHideIcon);
         return;
       }
       // 中转服务器需要的参数...
@@ -424,7 +476,7 @@ class MonitorAction extends Action
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...
       if( $dbResult['err_code'] > 0 ) {
-        $this->dispError(true, $dbResult['err_msg'], '请联系管理员，汇报错误信息。');
+        $this->dispError(true, $dbResult['err_msg'], '请联系管理员，汇报错误信息。', $bHideIcon);
         return;
       }
       // 连接中转服务器成功 => 设置flvjs地址、rtmp地址、hls地址，播放器编号...
@@ -454,7 +506,7 @@ class MonitorAction extends Action
     }
     // 获取传递过来的视频窗口大小...
     $dbShow['width'] = isset($_GET['width']) ? ($_GET['width'] - 2) : 840;
-    $dbShow['height'] = isset($_GET['height']) ? ($_GET['height'] - 3) : 545;
+    $dbShow['height'] = isset($_GET['height']) ? ($_GET['height'] - 2) : 545;
     //print_r($dbShow); exit;
     // 赋值给播放器模板页面...
     $this->assign('my_show', $dbShow);
@@ -462,8 +514,9 @@ class MonitorAction extends Action
   }
   //
   // 显示超时模板信息...
-  private function dispError($bIsDownload, $inMsgTitle, $inMsgDesc)
+  private function dispError($bIsDownload, $inMsgTitle, $inMsgDesc, $bHideIcon = false)
   {
+    $this->assign('my_icon', $bHideIcon);
     $this->assign('my_download', $bIsDownload);
     $this->assign('my_title', '糟糕，出错了');
     $this->assign('my_msg_title', $inMsgTitle);
