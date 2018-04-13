@@ -83,12 +83,28 @@ function getPage(inSubject, inGrade, inPage) {
     }
   });
 }
+// 处理懒加载前的操作...
+function doLazyAppear(left, setting) {
+  var objCur = $(this);
+  // 在当前对象之前创建一个加载等待框...
+  objCur.before('<span class="rsPreloader"></span>');
+  // 两秒之后，强制删除加载等待框...
+  setTimeout(function() {
+    objCur.parent().find('.rsPreloader').remove();
+  }, 2000);
+}
+// 处理懒加载后的操作...
+function doLazyLoad(left, setting) {
+  $(this).parent().find('.rsPreloader').remove();
+}
 // 页面已经加载完毕...
 $(document).ready( function () {
   // 延时加载图片...
   $(function() {
     $("img.lazy").lazyload({
       effect : "fadeIn",
+      load: doLazyLoad,
+      appear: doLazyAppear,
       placeholder: "/wxapi/public/images/snap.png"
     });
   });

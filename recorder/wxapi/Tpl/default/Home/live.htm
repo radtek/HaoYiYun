@@ -1,14 +1,6 @@
 
 <include file = "Common:home_header" />
-
 <include file = "Common:home_nav" />
-
-<style>
-.tline {
-  padding-bottom: 7px;
-  border-bottom: 1px solid #e67e22;
-}
-</style>
 
 <section class="content-wrap">
   <div class="container">
@@ -28,6 +20,21 @@
 <script>
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
+
+// 处理懒加载前的操作...
+function doLazyAppear(left, setting) {
+  var objCur = $(this);
+  // 在当前对象之前创建一个加载等待框...
+  objCur.before('<span class="rsPreloader"></span>');
+  // 两秒之后，强制删除加载等待框...
+  setTimeout(function() {
+    objCur.parent().find('.rsPreloader').remove();
+  }, 2000);
+}
+// 处理懒加载后的操作...
+function doLazyLoad(left, setting) {
+  $(this).parent().find('.rsPreloader').remove();
+}
 
 // 处理 layui 过程...
 layui.use(['flow','layer'], function(){
@@ -51,6 +58,8 @@ layui.use(['flow','layer'], function(){
           // 分页单独懒加载，否则，每次都要全部懒加载...
           $("#page_"+page+" img.lazy").lazyload({
             effect : "fadeIn",
+            load: doLazyLoad,
+            appear: doLazyAppear,
             placeholder: "/wxapi/public/images/snap.png"
           });
         },

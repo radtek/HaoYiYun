@@ -21,6 +21,20 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 
+// 处理懒加载前的操作...
+function doLazyAppear(left, setting) {
+  var objCur = $(this);
+  // 给当前对象创建一个子对象 => 加载等待框...
+  objCur.append('<div class="rsPreloader"></div>');
+  // 两秒之后，强制删除加载等待框...
+  setTimeout(function() {
+    objCur.find('.rsPreloader').remove();
+  }, 2000);
+}
+// 处理懒加载后的操作...
+function doLazyLoad(left, setting) {
+  $(this).find('.rsPreloader').remove();
+}
 // 对页面数据进行重组...
 function doBuildThumb(pageTag, data, tracker) {
   var $ = layui.jquery;
@@ -45,8 +59,7 @@ function doBuildThumb(pageTag, data, tracker) {
       $(thumb).css('cursor', 'pointer');
       $(thumb).css('background-color', '#000');
       $(thumb).css('background-position', 'center');
-      var theImage = (video.image_fdfs ? (tracker+video.image_fdfs) : '/wxapi/public/images/snap.png');
-      $(thumb).css('background-image', 'url('+theImage+')');
+      $(thumb).attr('data-original', (video.image_fdfs ? (tracker+video.image_fdfs) : '/wxapi/public/images/snap.png'));
       // 绑定点击事件...
       $(thumb).unbind("click").click(function(e){
         // 重新更新当前通道的直播快照...
@@ -169,6 +182,14 @@ layui.use(['flow','layer'], function(){
           next(arrJson.html, page < max_page);
           // 通过数据进行页面重组...
           doBuildThumb("#page_"+page, arrJson.data, arrJson.tracker);
+          // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
+          // 分页单独懒加载，否则，每次都要全部懒加载...
+          // placeholder参数针对background-image没用...
+          $("#page_"+page+" div.thumb").lazyload({
+            effect : "fadeIn",
+            load: doLazyLoad,
+            appear: doLazyAppear
+          });
         },
         error: function(XMLHttpRequest, textStatus, errorThrown) {
           layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});

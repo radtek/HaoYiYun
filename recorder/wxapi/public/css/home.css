@@ -181,6 +181,7 @@ h6 {
   border:#cccccc solid 1px;
   background-color:#FFF;
   margin-bottom: 4px;
+  position: relative;
 }
 .post ul.thumb_view .live .thumb {
   width:260px;
@@ -190,6 +191,7 @@ h6 {
   border:#cccccc solid 1px;
   background-color:#FFF;
   margin-bottom: 5px;
+  position: relative;
 }
 .post ul.thumb_view .thumb .p-time {
   text-align: center;
@@ -396,4 +398,15 @@ h6 {
 }
 .rsHide {
   display: none;
+}
+.rsPreloader {
+  width: 20px;
+  height: 20px;
+  background-image: url(../images/preloader-white.gif);
+  left: 50%;
+  top: 50%;
+  margin-left: -10px;
+  margin-top: -10px;
+  position: absolute;
+  z-index: 0;
 }
