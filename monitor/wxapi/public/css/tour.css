@@ -2,32 +2,33 @@
 .video-wall {
   font-family: 'Quicksand', sans-serif;
   font-weight: 500;
-  display: flex;
   margin: 0 auto;
   background: #000;
-  flex-direction: column;
   border: 1px solid #ccc;
+  /*flex-direction: column;*/
+  /*display: flex;*/
 }
 .header-bar {
-  background-color: #fff;
   color: #000;
   font-size: 24px;
+  line-height: 60px;
+  align-items: center;
+  text-align: center;
+  background-color: #fff;
+  /*padding: 10px 20px;
   justify-content: center;
   text-transform: uppercase;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  padding: 10px 20px;
+  display: flex;*/
 }
-.row-flex-2,
+
+/*.row-flex-2,
 .row-flex-6 {
   display: flex;
 }
-
 .column {
   display: flex;
   flex-direction: column;
-}
+}*/
 
 .thumb {
   min-width: 285px;
@@ -57,6 +58,7 @@
   position: absolute;
   bottom: -20px;
   opacity: 0;
+  filter: alpha(opacity=0);
   pointer-events: none;
   transition: all .2s ease-in-out .1s;
   -webkit-transition: all .2s ease-in-out .1s;
@@ -84,6 +86,7 @@
 }
 
 .thumb:hover .title-text {
+  filter: alpha(opacity=100);
   opacity: 1;
   bottom: 0;
 }

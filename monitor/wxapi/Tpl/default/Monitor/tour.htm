@@ -60,7 +60,13 @@ function doBuildThumb(pageTag, data, tracker) {
       $(thumb).css('cursor', 'pointer');
       $(thumb).css('background-color', '#000');
       $(thumb).css('background-position', 'center');
-      $(thumb).attr('data-original', (video.image_fdfs ? (tracker+video.image_fdfs) : '/wxapi/public/images/snap.png'));
+      // 针对IE8需要做特殊的兼容处理 => 通过判断是否支持 backgroud-size 样式...
+      var strSrcImage = (video.image_fdfs ? (tracker+video.image_fdfs) : '/wxapi/public/images/snap.png');
+      if(typeof($(thumb).css('background-size')) == 'undefined') {
+        $(thumb).css('filter', "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='"+strSrcImage+"', sizingMethod='scale')");
+      } else {
+        $(thumb).attr('data-original', strSrcImage);
+      }
       // 绑定点击事件...
       $(thumb).unbind("click").click(function(e){
         // 重新更新当前通道的直播快照...
@@ -201,4 +207,4 @@ layui.use(['flow','layer'], function(){
 });
 </script>
 
-<include file = "Common:home_footer" />
+<include file = "Common:monitor_footer" />
