@@ -49,6 +49,13 @@
               </div>
             </div>
             </gt>
+            <div class="layui-form-item">
+              <label class="layui-form-label">录像保留</label>
+              <div class="layui-input-inline" style="width:60px">
+                <input type="text" name="mySaveDays" maxlength="3" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_sys.web_save_days}}">
+              </div>
+              <div class="layui-form-mid" style="color: #555">天（每个通道的录像在多少天之后自动删除，0表示不自动删除永久保留）</div>
+            </div>
             <div class="layui-form-item" style="margin-top:30px;text-align:center;">
               <button class="layui-btn" lay-submit lay-filter="formSystem">立即保存</button>&nbsp;
               <button type="reset" class="layui-btn layui-btn-primary">重置还原</button>
@@ -76,9 +83,18 @@ layui.use(['element','layer','form'], function(){
   // 响应保存设置对话框...
   form.on('submit(formSystem)', function(data) {
     // 获取输入数据，调用接口立即存盘...
+    var theSaveDays = data.field.mySaveDays;
     var thePhone = data.field.myWebPhone;
     var theTitle = data.field.myWebTitle;
     var theSite = data.field.mySysSite;
+    // 判断录像保留天数是否有效...
+    if( isNaN(theSaveDays) || theSaveDays < 0 || theSaveDays > 360 ) {
+      layer.msg('【录像保留】有效区间[0,360]，请更正！', {anim: 6,closeBtn: 1,time: 0, shade: 0.2}, function(){
+        $("input[name='mySaveDays']").addClass('layui-form-danger');
+        $("input[name='mySaveDays']").focus();
+      });
+      return false;
+    }
     // 判断连接地址是否正确 => 先去掉左右的空格字符...
     theSite = theSite.replace(/(^\s*)|(\s*$)/g, "");
     var reg = /^([hH][tT][tT][pP]:\/\/|[hH][tT][tT][pP][sS]:\/\/)(.)+$/;
@@ -94,11 +110,12 @@ layui.use(['element','layer','form'], function(){
     layer.load(2);
     $.ajax({
       type: "post",
-      url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_title: theTitle, web_phone: thePhone, sys_site: theSite},
       async: true,
+      url: siteurl+"/Admin/system",
+      data: {operate: 'save', web_title: theTitle, web_phone: thePhone, sys_site: theSite, web_save_days: theSaveDays},
       success: function(ajaxData) {
         layer.closeAll('loading');
+        $("input[name='mySaveDays']").val(theSaveDays);
         $("input[name='myWebPhone']").val(thePhone);
         $("input[name='myWebTitle']").val(theTitle);
         $("input[name='mySysSite']").val(theSite);

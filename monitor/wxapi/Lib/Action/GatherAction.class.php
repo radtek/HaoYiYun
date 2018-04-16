@@ -483,16 +483,65 @@ class GatherAction extends Action
           $dbRec['updated'] = $arrData['updated'];
           D('record')->save($dbRec);
           $arrErr['record_id'] = $dbRec['record_id'];
+          // 更新创建时间，以便后续统一使用...
+          $arrData['created'] = $dbRec['created'];
         } else {
           // 新增录像记录 => 创建时间用传递过来的时间...
           $arrData['gather_id'] = $dbCamera['gather_id'];
           $arrData['created'] = date('Y-m-d H:i:s', $arrSrc[2]);
           $arrErr['record_id'] = D('record')->add($arrData);
         }
+        // 检测并触发通道的过期删除过程...
+        $this->doCheckExpire($arrData['camera_id'], $arrData['created']);
       }
     }while( false );
     // 直接返回运行结果 => json...
     echo json_encode($arrErr);
   }
+  //
+  // 检测并触发通道的过期删除过程...
+  private function doCheckExpire($inCameraID, $inCreated)
+  {
+    // 查找系统配置记录...
+    $dbSys = D('system')->find();
+    // 如果不处理删除操作，直接返回...
+    if( $dbSys['web_save_days'] <= 0 )
+      return;
+    // 时间从当前时间向前推进指定天数...
+    $strFormat = sprintf("%s -%d days", $inCreated, $dbSys['web_save_days']);
+    $strExpire = date('Y-m-d H:i:s', strtotime($strFormat));
+    // 准备查询条件内容 => 小于过期内容...
+    $condition['camera_id'] = $inCameraID;
+    $condition['created'] = array('lt', $strExpire);
+    // 删除该通道下对应的过期录像文件、录像截图...
+    $arrList = D('RecordView')->where($condition)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs,created')->select();
+    foreach ($arrList as &$dbVod) {
+      // 删除图片和视频文件，逐一删除...
+      fastdfs_storage_delete_file1($dbVod['file_fdfs']);
+      fastdfs_storage_delete_file1($dbVod['image_fdfs']);
+      // 删除图片记录和视频记录...
+      D('record')->delete($dbVod['record_id']);
+      D('image')->delete($dbVod['image_id']);
+    }
+  }
+  // 删除事件测试函数...
+  /*public function testCheck()
+  {
+    $inCameraID = 16;
+    $inCreated = "2018-04-15 20:24:52";
+    $dbSys = D('system')->find();
+    // 如果不处理删除操作，直接返回...
+    if( $dbSys['web_save_days'] <= 0 )
+      return;
+    // 时间从当前时间向前推进指定天数...
+    $strFormat = sprintf("%s -%d days", $inCreated, $dbSys['web_save_days']);
+    $strExpire = date('Y-m-d H:i:s', strtotime($strFormat));
+    // 准备查询条件内容 => 小于过期内容...
+    $condition['camera_id'] = $inCameraID;
+    $condition['created'] = array('lt', $strExpire);
+    // 删除该通道下对应的过期录像文件、录像截图...
+    $arrList = D('RecordView')->where($condition)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs,created')->select();
+    print_r($arrList);
+  }*/
 }
 ?>
