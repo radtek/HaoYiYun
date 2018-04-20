@@ -1,0 +1,11 @@
+
+<volist name="my_list" id="vo">
+<tr height="50px" onclick="doTrClick({{$vo.title_id}},this);">
+  <td>{{$vo.title_id}}</td>
+  <td>{{$vo.title_name}}</td>
+  <td>{{$vo.created}}</td>
+  <td>
+    <button class="layui-btn layui-btn-small" onclick="doDelete({{$vo.title_id}});"><i class="layui-icon">&#xe640;&nbsp;删除</i></button>
+  </td>
+</tr>
+</volist>

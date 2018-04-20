@@ -64,7 +64,7 @@ function stopPropagation(e) {
   <div class="layui-header header header-demo">
     <div class="layui-main">
       <a class="logo" href="{{:__APP__}}">
-        <span class="brand">浩一云™</span>
+        <span class="brand">{{$my_system.web_trade}}</span>
         <span class="version label">{{$my_web_version}}</span>
       </a>
       <ul class="layui-nav" lay-filter="hori">
@@ -72,6 +72,9 @@ function stopPropagation(e) {
           <a href="javascript:doUserInfo();">
             <img class="loading" width="36px" height="36px" src="{{$my_headurl|str_replace='/0','/96',###}}" onload="doHeadLoad();" onerror="doErrUser();">
           </a>
+        </li>
+        <li class="layui-nav-item">
+          <a href="/" target="front">前&nbsp;台</a>
         </li>
         <li class="layui-nav-item">
           <a href="{{:__APP__}}/Admin/logout">退&nbsp;出</a>
@@ -92,12 +95,13 @@ function stopPropagation(e) {
           </dl>
         </li>
         <li class="layui-nav-item layui-nav-itemed">
-          <a href="javascript:;">教学管理</a>
+          <a href="javascript:;">{{$my_system.name_nav}}</a>
           <dl class="layui-nav-child">
-            <dd <eq name='my_command' value='school'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/school"><i class="fa fa-graduation-cap"></i><cite>学校</cite></a></dd>
-            <dd <eq name='my_command' value='subject'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/subject"><i class="fa fa-book"></i><cite>科目</cite></a></dd>
-            <dd <eq name='my_command' value='grade'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/grade"><i class="fa fa-file-text-o"></i><cite>年级</cite></a></dd>
-            <dd <eq name='my_command' value='teacher'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/teacher"><i class="fa fa-address-book-o"></i><cite>教师</cite></a></dd>
+            <dd <eq name='my_command' value='school'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/school"><i class="fa fa-university"></i><cite>{{$my_system.name_first}}</cite></a></dd>
+            <dd <eq name='my_command' value='subject'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/subject"><i class="fa fa-book"></i><cite>{{$my_system.name_second}}</cite></a></dd>
+            <dd <eq name='my_command' value='grade'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/grade"><i class="fa fa-file-text-o"></i><cite>{{$my_system.name_three}}</cite></a></dd>
+            <dd <eq name='my_command' value='teacher'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/teacher"><i class="fa fa-address-book-o"></i><cite>{{$my_system.name_four}}</cite></a></dd>
+            <dd <eq name='my_command' value='title'>class="layui-this"</eq> ><a href="{{:__APP__}}/Admin/title"><i class="fa fa-graduation-cap"></i><cite>{{$my_system.name_five}}</cite></a></dd>
           </dl>
         </li>
         <li class="layui-nav-item layui-nav-itemed">

@@ -64,7 +64,7 @@ function stopPropagation(e) {
   <div class="layui-header header header-demo">
     <div class="layui-main">
       <a class="logo" href="{{:__APP__}}">
-        <span class="brand">浩一云™</span>
+        <span class="brand">{{$my_system.web_trade}}</span>
         <span class="version label">{{$my_web_version}}</span>
       </a>
       <ul class="layui-nav" lay-filter="hori">
@@ -72,6 +72,9 @@ function stopPropagation(e) {
           <a href="javascript:doUserInfo();">
             <img class="loading" width="36px" height="36px" src="{{$my_headurl|str_replace='/0','/96',###}}" onload="doHeadLoad();" onerror="doErrUser();">
           </a>
+        </li>
+        <li class="layui-nav-item">
+          <a href="/" target="front">前&nbsp;台</a>
         </li>
         <li class="layui-nav-item">
           <a href="{{:__APP__}}/Admin/logout">退&nbsp;出</a>

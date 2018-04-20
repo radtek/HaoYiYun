@@ -18,11 +18,9 @@
       <label class="layui-form-label">职称</label>
       <div class="layui-input-block">
         <select name="myTitle" lay-verify="required">
-          <option value="0" <eq name='my_teacher.title_id' value='0'>selected</eq> >正高级教师</option>
-          <option value="1" <eq name='my_teacher.title_id' value='1'>selected</eq> >高级教师</option>
-          <option value="2" <eq name='my_teacher.title_id' value='2'>selected</eq> >一级教师</option>
-          <option value="3" <eq name='my_teacher.title_id' value='3'>selected</eq> >二级教师</option>
-          <option value="4" <eq name='my_teacher.title_id' value='4'>selected</eq> >三级教师</option>
+          <volist name="my_list_title" id="itemTitle">
+          <option value="{{$itemTitle.title_id}}">{{$itemTitle.title_name}}</option>
+          </volist>
         </select>
       </div>
     </div>
@@ -38,3 +36,8 @@
     </div>
   </form>
 </div>
+
+<script>
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('myTitle')[0].value = {{$my_teacher.title_id|default=0}};
+</script>

@@ -11,10 +11,8 @@ class MonitorAction extends Action
     // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
     Load('extend');
     // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
-    $dbSys = D('system')->field('web_type,web_title,web_phone,sys_site')->find();
-    $this->m_webPhone = $dbSys['web_phone'];
-    $this->m_webTitle = $dbSys['web_title'];
-    $this->m_sysSite = $dbSys['sys_site'];
+    $this->m_dbSys = D('system')->find();
+    $this->m_webTitle = $this->m_dbSys['web_title'];
     $this->m_webType = kCloudMonitor;
     // 创建一个新的移动检测对象...
     $this->m_detect = new Mobile_Detect();
@@ -38,9 +36,7 @@ class MonitorAction extends Action
     $this->m_webAction = "Monitor";
     // 直接给模板变量赋值...
     $this->assign('my_web_action', $this->m_webAction);
-    $this->assign('my_sys_site', $this->m_sysSite);
-    $this->assign('my_web_title', $this->m_webTitle);
-    $this->assign('my_web_phone', $this->m_webPhone);
+    $this->assign('my_system', $this->m_dbSys);
   }
   //
   // 移动手机二维码页面...
@@ -187,8 +183,7 @@ class MonitorAction extends Action
       $arrRec[$theName]['data'] = D('RecordView')->where($map)->limit(8)->order('created DESC')->select();
     }
     // 对模板对象进行赋值 => web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_rec', $arrRec);
     echo $this->fetch('pageIndex');
@@ -231,8 +226,7 @@ class MonitorAction extends Action
     $arrErr['data'] = $arrCamera;
     $arrErr['html'] = $this->fetch('pageTour');
     // web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $arrErr['tracker'] = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
+    $arrErr['tracker'] = sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']);
     // 直接返回数据...
     echo json_encode($arrErr);
   }
@@ -278,8 +272,7 @@ class MonitorAction extends Action
     // 读取通道列表 => 在线优先排序
     $arrCamera = D('LiveView')->limit($pageLimit)->order('status DESC, updated DESC')->select();
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
     // 设置模板参数 => 使用 pageLive 的模版...
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_list', $arrCamera);
@@ -324,8 +317,7 @@ class MonitorAction extends Action
     $map['gather_id'] = $_GET['gather_id'];
     $arrCamera = D('LiveView')->where($map)->limit($pageLimit)->order('status DESC, updated DESC')->select();
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $this->assign('my_web_tracker', sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']));
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
     // 设置模板参数 => 使用 pageLive 的模版...
     $this->assign('my_cur_page', $pageCur);
     $this->assign('my_list', $arrCamera);
@@ -336,8 +328,7 @@ class MonitorAction extends Action
   public function play()
   {
     // 计算web_tracker地址 => 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $theWebTracker = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
+    $theWebTracker = sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']);
     // 获取通道详细信息...
     $theGoToSlideID = 0;
     $camera_id = $_GET['camera_id'];
@@ -439,9 +430,8 @@ class MonitorAction extends Action
       // 获取点播记录信息 => web_tracker_addr 已经自带了协议头 http://或https://
       $map['record_id'] = $_GET['record_id'];
       $dbVod = D('record')->where($map)->field('record_id,file_fdfs,clicks')->find();
-      $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
       // 设置播放页面需要的数据内容 => 这里为source做特殊处理...
-      $arrSource[0]['src'] = sprintf("%s:%d/%s", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['file_fdfs']);
+      $arrSource[0]['src'] = sprintf("%s:%d/%s", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port'], $dbVod['file_fdfs']);
       $arrSource[0]['type'] = "video/mp4";
       $dbShow['source'] = json_encode($arrSource);
       // 为了与直播兼容设置的数据...
@@ -530,9 +520,6 @@ class MonitorAction extends Action
   // 失败 => false
   private function getRtmpUrlFromTransmit(&$dbParam)
   {
-    // 尝试链接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    
     /*// 获取直播频道所在的URL地址...
     $saveJson = json_encode($dbParam);
     $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPlay, kCmd_Play_Login, $saveJson);
@@ -548,7 +535,7 @@ class MonitorAction extends Action
     return $arrData['rtmp_url'];*/
     
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 链接中转服务器失败，直接返回...
     if( !$transmit ) {
       $arrData['err_code'] = true;
@@ -595,8 +582,7 @@ class MonitorAction extends Action
     $arrShow['list'] = D('record')->where($condition)->order('slice_inx ASC')->select();
     $arrShow['total_num'] = count($arrShow['list']);
     // 获取视频播放地址连接...
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
-    $arrShow['vod_addr'] = sprintf("%s:%d/", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port']);
+    $arrShow['vod_addr'] = sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']);
     // 设置模版参数，显示模版文件...
     $this->assign('my_show', $arrShow);
     $this->display();

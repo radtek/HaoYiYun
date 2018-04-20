@@ -171,6 +171,24 @@ $(document).ready( function () {
     // 然后，直接播放...
     this.play();
   });
+  // 针对Html5模式下的双击全屏事件，Flash模式下不起作用...
+  //player.on(player.tech_, 'dblclick', doubleClick);
+  player.on('dblclick', function(event) {
+    var doc = document;
+    var pEl = this.el();
+    // When controls are disabled, hotkeys will be disabled as well
+    if (this.controls()) {
+      // Don't catch clicks if any control buttons are focused
+      var activeEl = event.relatedTarget || event.toElement || doc.activeElement;
+      if (activeEl == pEl || activeEl == pEl.querySelector('.vjs-tech') || activeEl == pEl.querySelector('.iframeblocker')) {
+        if (this.isFullscreen()) {
+          this.exitFullscreen();
+        } else {
+          this.requestFullscreen();
+        }
+      }
+    }
+  });
   // 播放器播放错误...
   player.on('error', function() {
     // 打印错误信息...

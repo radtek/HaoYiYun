@@ -91,9 +91,9 @@ function doTestTracker() {
           layer.msg('连接失败！请确认地址和端口是否正确！', {icon: 5});
         }
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
   });
@@ -157,9 +157,9 @@ function doFormTracker() {
         $("input[name='myWebTrackerAddr']").val(theWebAddr);
         layer.msg('恭喜！保存成功！', {icon: 1});
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
     // 避免form页面跳转...
@@ -190,9 +190,9 @@ function doTestTransmit() {
           layer.msg('连接失败！请确认地址和端口是否正确！', {icon: 5});
         }
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
   });
@@ -226,9 +226,9 @@ function doFormTransmit() {
         $("input[name='myTransmitAddr']").val(theAddr);
         layer.msg('恭喜！保存成功！', {icon: 1});
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
     // 避免form页面跳转...
@@ -265,9 +265,9 @@ function doTabChange(inTabItem) {
         doTestTracker();
       }
     },
-    error: function(e) {
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
       layer.closeAll('loading');
-      layer.alert(e, {icon: 2});
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
     }
   });
 }

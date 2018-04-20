@@ -7,7 +7,7 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置 - 云监控模式</i></legend>
+          <legend><i class="fa fa-gears">&nbsp;&nbsp;网站系统设置</i></legend>
         </fieldset>
         <div class="layui-field-box" style="padding: 0px 0px; width: 50%;">
           <form class="layui-form layui-form-pane" action="">
@@ -20,25 +20,31 @@
             <div class="layui-form-item">
               <label class="layui-form-label">本站标记</label>
               <div class="layui-input-block">
-                <input type="text" name="myWebTag" autocomplete="off" class="layui-input" value="{{$my_sys.web_tag}}" readonly>
+                <input type="text" name="myWebTag" autocomplete="off" class="layui-input" value="{{$my_system.web_tag}}" readonly>
+              </div>
+            </div>
+            <div class="layui-form-item">
+              <label class="layui-form-label">本站商标</label>
+              <div class="layui-input-block">
+                <input type="text" name="myWebTrade" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入本站商标" class="layui-input" value="{{$my_system.web_trade}}">
               </div>
             </div>
             <div class="layui-form-item">
               <label class="layui-form-label">本站名称</label>
               <div class="layui-input-block">
-                <input type="text" name="myWebTitle" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入本站名称" class="layui-input" value="{{$my_sys.web_title}}">
+                <input type="text" name="myWebTitle" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入本站名称" class="layui-input" value="{{$my_system.web_title}}">
               </div>
             </div>
             <div class="layui-form-item">
               <label class="layui-form-label">官网地址</label>
               <div class="layui-input-block">
-                <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_sys.sys_site}}">
+                <input type="text" name="mySysSite" maxlength="120" lay-verify="required" autocomplete="off" placeholder="请输入官网地址" class="layui-input" value="{{$my_system.sys_site}}">
               </div>
             </div>
             <div class="layui-form-item">
               <label class="layui-form-label">客服电话</label>
               <div class="layui-input-block">
-                <input type="text" name="myWebPhone" maxlength="30" lay-verify="required" autocomplete="off" placeholder="请输入客服电话" class="layui-input" value="{{$my_sys.web_phone}}">
+                <input type="text" name="myWebPhone" maxlength="30" lay-verify="required" autocomplete="off" placeholder="请输入客服电话" class="layui-input" value="{{$my_system.web_phone}}">
               </div>
             </div>
             <gt name='my_is_admin' value='0'>
@@ -52,7 +58,7 @@
             <div class="layui-form-item">
               <label class="layui-form-label">录像保留</label>
               <div class="layui-input-inline" style="width:60px">
-                <input type="text" name="mySaveDays" maxlength="3" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_sys.web_save_days}}">
+                <input type="text" name="mySaveDays" maxlength="3" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_system.web_save_days}}">
               </div>
               <div class="layui-form-mid" style="color: #555">天（每个通道的录像在多少天之后自动删除，0表示不自动删除永久保留）</div>
             </div>
@@ -86,6 +92,7 @@ layui.use(['element','layer','form'], function(){
     var theSaveDays = data.field.mySaveDays;
     var thePhone = data.field.myWebPhone;
     var theTitle = data.field.myWebTitle;
+    var theTrade = data.field.myWebTrade;
     var theSite = data.field.mySysSite;
     // 判断录像保留天数是否有效...
     if( isNaN(theSaveDays) || theSaveDays < 0 || theSaveDays > 360 ) {
@@ -112,18 +119,19 @@ layui.use(['element','layer','form'], function(){
       type: "post",
       async: true,
       url: siteurl+"/Admin/system",
-      data: {operate: 'save', web_title: theTitle, web_phone: thePhone, sys_site: theSite, web_save_days: theSaveDays},
+      data: {operate: 'save', web_title: theTitle, web_phone: thePhone, sys_site: theSite, web_save_days: theSaveDays, web_trade: theTrade},
       success: function(ajaxData) {
         layer.closeAll('loading');
         $("input[name='mySaveDays']").val(theSaveDays);
         $("input[name='myWebPhone']").val(thePhone);
         $("input[name='myWebTitle']").val(theTitle);
+        $("input[name='myWebTrade']").val(theTrade);
         $("input[name='mySysSite']").val(theSite);
         layer.msg('恭喜！保存成功！', {icon: 1});
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
     // 避免form页面跳转...

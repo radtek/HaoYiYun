@@ -35,6 +35,7 @@
       <gt name="vo.status" value="0"><i class="fa fa-stop-circle-o">&nbsp;停止</i><else/><i class="fa fa-play-circle-o">&nbsp;启动</i></gt>
     </button>
     <button class="layui-btn layui-btn-small" onclick="doCourse({{$vo.camera_id}},{{$vo.gather_id}})"><i class="fa fa-file-video-o">&nbsp;录像表</i></button>
+    <button class="layui-btn layui-btn-small" onclick="doAddress({{$vo.camera_id}})" style="font-size: 16px;">播放地址</button>
   </td>
 </tr>
 </volist>

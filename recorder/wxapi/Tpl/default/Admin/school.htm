@@ -7,10 +7,10 @@
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-graduation-cap">&nbsp;&nbsp;学校管理</i></legend>
+          <legend><i class="fa fa-university">&nbsp;&nbsp;{{$my_system.name_first}}管理</i></legend>
         </fieldset>
         <span class="layui-breadcrumb">
-          <a><cite>学校列表</cite></a>
+          <a><cite>{{$my_system.name_first}}列表</cite></a>
           <a><cite>共 {{$my_total_num}} 条记录</cite></a>
         </span>
         <div style="width:100%">
@@ -55,16 +55,15 @@ var siteurl="{{:__APP__}}";
 // 点击某一行事件...
 function doTrClick(inSchoolID, objTr) {
   // 向服务器发送直播状态查看命令...
-  var theTitle = "添加 - 学校";
   var index = layer.load(2);
   var $ = layui.jquery;
   // 先将背景色进行修改...
   if( inSchoolID > 0 && objTr != null ) {
     $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
-    theTitle = "编辑 - 学校";
+    theTitle = "编辑 - {{$my_system.name_first}}";
   } else {
     $('tbody tr').css('background-color', '#FFFFFF');
-    theTitle = "添加 - 学校";
+    theTitle = "添加 - {{$my_system.name_first}}";
   }
   // 异步获取通道信息...
   $.ajaxSetup({ cache:false });
@@ -147,7 +146,8 @@ function doDelete(inID) {
   // 阻止继续冒泡 => 需要兼容 IE8
   stopPropagation(event);
   // 确认删除询问...
-  layer.confirm('确实要删除选中记录？', {title: '删除 - 学校', btn: ['确定','取消']}, function(index){
+  var theTitle = "删除 - {{$my_system.name_first}}";
+  layer.confirm('确实要删除选中记录？', {title: theTitle, btn: ['确定','取消']}, function(index){
     layer.close(index);
     // 加载动画层，获取jquery对象...
     var index = layer.load(2);

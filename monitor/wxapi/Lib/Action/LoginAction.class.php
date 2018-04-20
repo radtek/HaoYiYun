@@ -10,13 +10,10 @@ class LoginAction extends Action
   public function _initialize()
   {
     // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
-    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
-    $this->m_webTitle = $dbSys['web_title'];
+    $this->m_dbSys = D('system')->find();
     $this->m_webType = kCloudMonitor;
-    // 直接给模板变量赋值...
-    $this->assign('my_sys_site', $dbSys['sys_site']);
-    $this->assign('my_web_title', $this->m_webTitle);
-    $this->assign('my_login_title', $this->m_webTitle . " - 微信登录");
+    // 直接给模板变量赋值 => 跟foot统一...
+    $this->assign('my_system', $this->m_dbSys);
   }
   //
   // 显示微信登录的二维码...

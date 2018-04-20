@@ -1,37 +1,16 @@
 
 <include file = "Common:admin_header" />
 
-<style>
-.layui-form-label {
-  padding: 6px 0px;
-  width: 75px;
-}
-.layui-layer-input {
-  display: block;
-  width: 190px;
-  height: 30px;
-  margin: 0 15px;
-  line-height: 30px;
-  padding: 0 5px;
-  border: 1px solid #ccc;
-  box-shadow: 1px 1px 5px rgba(0,0,0,.1) inset;
-  color: #333;
-}
-.layui-input-block {
-  margin-left: 70px;
-}
-</style>
-
 <!-- 中心数据区 -->
 <div class="layui-tab layui-tab-brief">
   <div class="layui-body layui-tab-content site-demo">
     <div class="layui-tab-item layui-show">
       <div class="layui-main">
         <fieldset class="layui-elem-field layui-field-title">
-          <legend><i class="fa fa-file-text-o">&nbsp;&nbsp;{{$my_system.name_three}}管理</i></legend>
+          <legend><i class="fa fa-book">&nbsp;&nbsp;{{$my_system.name_five}}管理</i></legend>
         </fieldset>
         <span class="layui-breadcrumb">
-          <a><cite>{{$my_system.name_three}}列表</cite></a>
+          <a><cite>{{$my_system.name_five}}列表</cite></a>
           <a><cite>共 {{$my_total_num}} 条记录</cite></a>
         </span>
         <div style="width:100%">
@@ -40,19 +19,17 @@
               <col width="50">
               <col width="150">
               <col width="150">
-              <col width="150">
               <col width="50">
             </colgroup>
             <thead>
               <tr>
                 <th>编号</th>
-                <th>类型</th>
                 <th>名称</th>
                 <th>时间</th>
                 <th>操作</th>
               </tr> 
             </thead>
-            <tbody class="js_grade"></tbody>
+            <tbody class="js_title"></tbody>
           </table>
           <div style="display: inline-block;">
             <button class="layui-btn layui-btn-small btn-add" onclick="doAdd();">
@@ -68,56 +45,41 @@
 
 <script>
 //
-//获取网站地址...
+// 获取网站地址...
 var siteurl="{{:__APP__}}";
 //
 // 修改和添加合并操作...
-function doAction(inID, objTr) {
+function doAction(inID, inName, objTr) {
   // 先将背景色进行修改...
   var $ = layui.jquery;
   if( inID > 0 && objTr != null ) {
     $(objTr).css('background-color', '#87CEFA').siblings().css('background-color', '#FFFFFF');
-    theTitle = "编辑 - {{$my_system.name_three}}";
-    theType  = $(objTr).children('td').eq(1).text();
-    theName  = $(objTr).children('td').eq(2).text(); 
+    theTitle = "编辑 - {{$my_system.name_five}}";
   } else {
     $('tbody tr').css('background-color', '#FFFFFF');
-    theTitle = "添加 - {{$my_system.name_three}}";
-    theType = ""; theName = "";
+    theTitle = "添加 - {{$my_system.name_five}}";
   }
   // 弹出操作框..
-  var strContent;
-  strContent ='<div style="margin-top:25px"><label class="layui-form-label">类  型</label><div class="layui-input-block"><input type="text" id="myType" class="layui-layer-input" value='+theType+'></div></div>';
-  strContent += '<div style="margin-top:15px"><label class="layui-form-label">名  称</label><div class="layui-input-block"><input type="text" id="myName" class="layui-layer-input" value='+theName+'></div></div>';
-  layer.open({type: 1, resize: false, area: ['310px', '220px'], title: theTitle, btn: ['确定','取消'], content: strContent, success: function(){ $('#myType').focus(); }, yes: function(index){
-    // 判断输入数据的有效性...
-    var strType = $('#myType').val();
-    var strName = $('#myName').val();
-    if( strType.length <= 0 || strName.length <= 0 ) {
-      layer.msg('【类 型】或【名 称】不能为空！', {icon: 2});
-      $('#myType').focus();
+  layer.prompt({title: theTitle, value: inName}, function(val, index){
+    if( val.length >= 20 ) {
+      layer.msg('输入名称太长，请重新输入！', {icon: 2});
       return;
     }
-    if( strType.length >= 20 || strName.length >= 20 ) {
-      layer.msg('【类 型】或【名 称】太长！', {icon: 2});
-      $('#myType').focus();
-      return;
-    }
+    // 兼容 IE8 的ajax调用...
+    $.ajaxSetup({ cache:false });
     layer.close(index);
     // 加载动画层，获取jquery对象...
     layer.load(2);
     // 向服务器发送保存命令...
-    $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
+      url: siteurl+"/Admin/saveTitle",
+      data: {title_id: inID, title_name: val},
       async: true,
-      url: siteurl+"/Admin/saveGrade",
-      data: {grade_id: inID, grade_type: strType, grade_name: strName},
       success: function(ajaxData) {
         layer.closeAll('loading');
         if( inID > 0 ) {
-          $(objTr).children('td').eq(1).text(strType);
-          $(objTr).children('td').eq(2).text(strName);
+          $(objTr).children('td').eq(1).text(val);
         } else {
           location.reload();
         }
@@ -127,27 +89,29 @@ function doAction(inID, objTr) {
         layer.alert(e, {icon: 2});
       }
     });
-  }});
+  });
 }
 //
 // 执行添加操作...
 function doAdd()
 {
-  doAction(0, null);
+  doAction(0, "", null);
 }
 //
 // 执行修改操作...
-function doEdit(inID, objTr)
+function doTrClick(inID, objTr)
 {
-  doAction(inID, objTr);
+  var $ = layui.jquery;
+  var strName = $(objTr).children('td').eq(1).text();
+  doAction(inID, strName, objTr);
 }
 //
 // 执行删除操作...
-function doDelete(inID) {
+function doDelete(inID){
   // 阻止继续冒泡 => 需要兼容 IE8...
   stopPropagation(event);
   // 确认删除询问...
-  var theTitle = "删除 - {{$my_system.name_three}}";
+  var theTitle = "删除 - {{$my_system.name_five}}";
   layer.confirm('确实要删除选中记录？', {title: theTitle, btn: ['确定','取消']}, function(index){
     layer.close(index);
     // 加载动画层，获取jquery对象...
@@ -157,8 +121,8 @@ function doDelete(inID) {
     $.ajaxSetup({ cache:false });
     $.ajax({
       type: "post",
-      url: siteurl+"/Admin/delGrade",
-      data: {grade_id: inID},
+      url: siteurl+"/Admin/delTitle",
+      data: {title_id: inID},
       async: true,
       success: function(ajaxData) {
         layer.closeAll('loading');
@@ -188,10 +152,10 @@ layui.use(['element','laypage','layer','form'], function(){
       $.ajax({
         type: "get",
         async: true,
-        url: siteurl+"/Admin/pageGrade/p/"+obj.curr,
+        url: siteurl+"/Admin/pageTitle/p/"+obj.curr,
         success: function(ajaxData) {
           layer.closeAll('loading');
-          $('.js_grade').html(ajaxData);
+          $('.js_title').html(ajaxData);
           $('tbody tr').css('cursor','pointer');
         },
         error: function(e) {

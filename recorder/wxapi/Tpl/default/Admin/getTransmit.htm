@@ -9,7 +9,7 @@
       <label class="layui-form-label">运行状态</label>
       <div class="layui-input-block">
         <label class="status-form-label js_transmit_status">
-        <switch name="my_sys.status">
+        <switch name="my_system.status">
           <case value="0"><i class="fa fa-power-off fa-wait">&nbsp;等待中</i></case>
           <case value="1"><i class="fa fa-tv fa-run">&nbsp;运行中</i></case>
           <default /><i class="fa fa-power-off fa-wait">&nbsp;等待中</i>
@@ -20,13 +20,13 @@
     <div class="layui-form-item">
       <label class="layui-form-label">中转地址</label>
       <div class="layui-input-block">
-        <input type="text" name="myTransmitAddr" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入中转服务器地址" class="layui-input" value="{{$my_sys.transmit_addr}}">
+        <input type="text" name="myTransmitAddr" maxlength="50" lay-verify="required" autocomplete="off" placeholder="请输入中转服务器地址" class="layui-input" value="{{$my_system.transmit_addr}}">
       </div>
     </div>
     <div class="layui-form-item">
       <label class="layui-form-label">中转端口</label>
       <div class="layui-input-block">
-        <input type="text" name="myTransmitPort" maxlength="5" lay-verify="required" autocomplete="off" placeholder="请输入中转服务器端口" class="layui-input" value="{{$my_sys.transmit_port}}">
+        <input type="text" name="myTransmitPort" maxlength="5" lay-verify="required" autocomplete="off" placeholder="请输入中转服务器端口" class="layui-input" value="{{$my_system.transmit_port}}">
       </div>
     </div>
     <div class="layui-form-item" style="margin-top:30px;text-align:center;">

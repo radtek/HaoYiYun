@@ -10,9 +10,8 @@ class AdminAction extends Action
   public function _initialize()
   {
     // 获取系统配置，根据配置设置相关变量 => 强制设置成云录播...
-    $dbSys = D('system')->field('web_type,web_title,sys_site')->find();
-    $this->m_webTitle = $dbSys['web_title'];
-    $this->m_sysSite = $dbSys['sys_site'];
+    $this->m_dbSys = D('system')->find();
+    $this->m_webTitle = $this->m_dbSys['web_title'];
     $this->m_webType = kCloudRecorder;
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
@@ -23,11 +22,9 @@ class AdminAction extends Action
       $this->m_wxHeadUrl = str_replace('http://', 'https://', $this->m_wxHeadUrl);
     }
     // 直接给模板变量赋值...
-    $this->assign('my_web_type', $this->m_webType);
     $this->assign('my_headurl', $this->m_wxHeadUrl);
-    $this->assign('my_sys_site', $this->m_sysSite);
-    $this->assign('my_web_title', $this->m_webTitle);
     $this->assign('my_web_version', C('VERSION'));
+    $this->assign('my_system', $this->m_dbSys);
   }
   //
   // 接口 => 根据cookie判断用户是否已经处于登录状态...
@@ -163,9 +160,9 @@ class AdminAction extends Action
   public function getTransmit()
   {
     // 查找系统设置记录...
-    $dbSys = D('system')->find();
+    $dbSys = $this->m_dbSys;
     $dbSys['status'] = $this->connTransmit($dbSys['transmit_addr'], $dbSys['transmit_port']);
-    $this->assign('my_sys', $dbSys);
+    $this->assign('my_system', $dbSys);
     echo $this->fetch('getTransmit');
   }
   //
@@ -173,9 +170,9 @@ class AdminAction extends Action
   public function getTracker()
   {
     // 查找系统设置记录...
-    $dbSys = D('system')->find();
+    $dbSys = $this->m_dbSys;
     $dbSys['status'] = $this->connTracker($dbSys['tracker_addr'], $dbSys['tracker_port']);
-    $this->assign('my_sys', $dbSys);
+    $this->assign('my_system', $dbSys);
     $my_err = true;
     // 获取存储服务器列表...
     $arrLists = fastdfs_tracker_list_groups();
@@ -208,16 +205,14 @@ class AdminAction extends Action
     echo $this->fetch('getTracker');
   }
   //
-  // 获取中转核心数据接口...
-  private function getTransmitCoreData($inCmdID, $inTplName, $inJson = NULL)
+  // 只获取中转服务器的数据接口函数...
+  private function getTransmitRawData($inCmdID, $inJson = NULL)
   {
     // 设置默认的返回值...
     $dbShow['err_code'] = false;
     $dbShow['err_msg'] = 'ok';
-    // 查找系统设置记录...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     do {
       // 判断连接中转服务器是否成功...
       if( !$transmit ) {
@@ -260,6 +255,15 @@ class AdminAction extends Action
     if( $transmit ) {
       transmit_disconnect_server($transmit);
     }
+    // 返回原始数据结果...
+    return $dbShow;
+  }
+  //
+  // 获取中转核心数据接口...
+  private function getTransmitCoreData($inCmdID, $inTplName, $inJson = NULL)
+  {
+    // 获取中转服务器的原始数据接口内容...
+    $dbShow = $this->getTransmitRawData($inCmdID, $inJson);
     // 设置模版内容，返回模版数据...
     $this->assign('my_show', $dbShow);
     echo $this->fetch($inTplName);
@@ -304,37 +308,49 @@ class AdminAction extends Action
     echo $this->connTransmit($_POST['addr'], $_POST['port']);
   }
   //
+  // 获取常规配置页面...
+  public function getNormalSet()
+  {
+    // 获取授权状态信息...
+    $nAuthDays = Cookie::get('auth_days');
+    $bAuthLicense = Cookie::get('auth_license');
+    $strWebAuth = $bAuthLicense ? "【永久授权版】，无使用时间限制！" : sprintf("剩余期限【 %d 】天，请联系供应商获取更多授权！", $nAuthDays);
+    $this->assign('my_web_auth', $strWebAuth);
+    // 获取用户类型，是管理员还是普通用户...
+    $strTicker = Cookie::get('wx_ticker');
+    $strUnionID = base64_encode(Cookie::get('wx_unionid'));
+    $bIsAdmin = ((strcmp($strTicker, USER_ADMIN_TICK)==0) ? true : false);
+    // 设置是否显示API标识凭证信息...
+    $this->assign('my_is_admin', $bIsAdmin);
+    $this->assign('my_api_unionid', $strUnionID);   
+    echo $this->fetch();
+  }
+  //
+  // 获取名称配置页面...
+  public function getNameSet()
+  {
+    echo $this->fetch();
+  }
+  //
   // 获取系统配置页面...
   public function system()
   {
     // 设置标题内容...
-    $this->assign('my_title', $this->m_webTitle . " - 网站管理");
+    $this->assign('my_title', $this->m_webTitle . " - 系统设置");
     $this->assign('my_command', 'system');
-    // 查找系统设置记录...
-    $dbSys = D('system')->find();
     // 获取传递过来的参数...
     $theOperate = $_POST['operate'];
     if( $theOperate == 'save' ) {
       // http:// 符号已经在前端输入时处理完毕了...
-      $_POST['sys_site'] = trim(strtolower($_POST['sys_site']));
+      // 注意：在行业名称设置当中，不会设置网站地址...
+      if( isset($_POST['sys_site']) ) {
+        $_POST['sys_site'] = trim(strtolower($_POST['sys_site']));
+      }
       // 更新数据库记录，直接存POST数据...
-      $_POST['system_id'] = $dbSys['system_id'];
+      $_POST['system_id'] = $this->m_dbSys['system_id'];
       D('system')->save($_POST);
     } else {
-      // 获取授权状态信息...
-      $nAuthDays = Cookie::get('auth_days');
-      $bAuthLicense = Cookie::get('auth_license');
-      $strWebAuth = $bAuthLicense ? "【永久授权版】，无使用时间限制！" : sprintf("剩余期限【 %d 】天，请联系供应商获取更多授权！", $nAuthDays);
-      $this->assign('my_web_auth', $strWebAuth);
-      // 获取用户类型，是管理员还是普通用户...
-      $strTicker = Cookie::get('wx_ticker');
-      $strUnionID = base64_encode(Cookie::get('wx_unionid'));
-      $bIsAdmin = ((strcmp($strTicker, USER_ADMIN_TICK)==0) ? true : false);
-      // 设置是否显示API标识凭证信息...
-      $this->assign('my_is_admin', $bIsAdmin);
-      $this->assign('my_api_unionid', $strUnionID);
-      // 设置模板参数，并返回数据...
-      $this->assign('my_sys', $dbSys);
+      // 直接返回数据...
       $this->display();
     }
   }
@@ -343,19 +359,16 @@ class AdminAction extends Action
   public function server()
   {
     // 设置标题内容...
-    $this->assign('my_title', $this->m_webTitle . " - 组件管理");
+    $this->assign('my_title', $this->m_webTitle . " - 组件设置");
     $this->assign('my_command', 'server');
-    // 查找系统设置记录...
-    $dbSys = D('system')->find();
     // 获取传递过来的参数...
     $theOperate = $_POST['operate'];
     if( $theOperate == 'save' ) {
       // 更新数据库记录，直接存POST数据...
-      $_POST['system_id'] = $dbSys['system_id'];
+      $_POST['system_id'] = $this->m_dbSys['system_id'];
       D('system')->save($_POST);
     } else {
-      // 设置模板参数，并返回数据...
-      $this->assign('my_sys', $dbSys);
+      // 直接返回数据...
       $this->display();
     }
   }
@@ -515,10 +528,65 @@ class AdminAction extends Action
     echo json_encode($arrErr);
   }*/
   //
+  // 获取职称页面...
+  public function title()
+  {
+    $theTitle = sprintf("%s - %s管理", $this->m_webTitle, $this->m_dbSys['name_five']);
+    $this->assign('my_title', $theTitle);
+    $this->assign('my_command', 'title');
+
+    // 得到每页条数，总记录数，计算总页数...
+    $pagePer = C('PAGE_PER');
+    $totalNum = D('title')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+
+    // 设置最大页数，设置模板参数...
+    $this->assign('my_total_num', $totalNum);
+    $this->assign('max_page', $max_page);
+    $this->display();
+  }
+  //
+  // 获取职称分页数据...
+  public function pageTitle()
+  {
+    // 准备需要的分页参数...
+    $pagePer = C('PAGE_PER'); // 每页显示的条数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    
+    // 查询分页数据，设置模板...
+    $arrTitle = D('title')->limit($pageLimit)->order('title_id DESC')->select();
+    $this->assign('my_list', $arrTitle);
+    echo $this->fetch('pageTitle');
+  }
+  //
+  // 保存职称数据...
+  public function saveTitle()
+  {
+    if( $_POST['title_id'] <= 0 ) {
+      unset($_POST['title_id']);
+      $_POST['created'] = date('Y-m-d H:i:s');
+      $_POST['updated'] = date('Y-m-d H:i:s');
+      D('title')->add($_POST);
+    } else {
+      $_POST['updated'] = date('Y-m-d H:i:s');
+      D('title')->save($_POST);
+    }
+  }
+  //
+  // 删除职称数据...
+  public function delTitle()
+  {
+    D('title')->where('title_id='.$_POST['title_id'])->delete();
+  }
+  //
   // 获取科目页面...
   public function subject()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 科目管理");
+    $theTitle = sprintf("%s - %s管理", $this->m_webTitle, $this->m_dbSys['name_second']);
+    $this->assign('my_title', $theTitle);
     $this->assign('my_command', 'subject');
 
     // 得到每页条数，总记录数，计算总页数...
@@ -571,7 +639,8 @@ class AdminAction extends Action
   // 获取年级页面...
   public function grade()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 年级管理");
+    $theTitle = sprintf("%s - %s管理", $this->m_webTitle, $this->m_dbSys['name_three']);
+    $this->assign('my_title', $theTitle);
     $this->assign('my_command', 'grade');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -622,7 +691,8 @@ class AdminAction extends Action
   // 获取教师页面...
   public function teacher()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 教师管理");
+    $theTitle = sprintf("%s - %s管理", $this->m_webTitle, $this->m_dbSys['name_four']);
+    $this->assign('my_title', $theTitle);
     $this->assign('my_command', 'teacher');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -645,7 +715,7 @@ class AdminAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     
     // 查询分页数据，设置模板...
-    $arrTeacher = D('teacher')->limit($pageLimit)->order('teacher_id DESC')->select();
+    $arrTeacher = D('TeacherView')->limit($pageLimit)->order('teacher_id DESC')->select();
     $this->assign('my_teacher', $arrTeacher);
     echo $this->fetch('pageTeacher');
   }
@@ -691,6 +761,8 @@ class AdminAction extends Action
       $this->assign('my_new_title', "添加 - 教师");
     }
     $this->display();*/
+    $arrTitle = D('title')->field('title_id,title_name')->select();
+    $this->assign('my_list_title', $arrTitle);
     $theID = $_GET['teacher_id'];
     if( $theID > 0 ) {
       $dbTeacher = D('teacher')->where('teacher_id='.$theID)->find();
@@ -710,7 +782,8 @@ class AdminAction extends Action
   // 获取学校页面...
   public function school()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 学校管理");
+    $theTitle = sprintf("%s - %s管理", $this->m_webTitle, $this->m_dbSys['name_first']);
+    $this->assign('my_title', $theTitle);
     $this->assign('my_command', 'school');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
@@ -880,8 +953,7 @@ class AdminAction extends Action
       return;
     }
     // 将数据转发给指定的采集端...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 连接失败...
     if( !$transmit ) {
       echo '连接中转服务器失败！';
@@ -912,8 +984,7 @@ class AdminAction extends Action
     $dbGather = D('gather')->where($condition)->field('mac_addr')->find();
     $dbCamera['mac_addr'] = $dbGather['mac_addr'];
     // 连接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 连接成功，执行中转命令...
     if( $transmit ) {
       // 将参数转换成json数据包，发起添加命令...
@@ -935,8 +1006,7 @@ class AdminAction extends Action
     // 组合通道查询条件...
     $map['camera_id'] = array('in', $_POST['list']);
     // 连接中转服务器...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 连接成功，执行中转命令...
     if( $transmit ) {
       // 查询通道列表...
@@ -1015,10 +1085,9 @@ class AdminAction extends Action
     D('camera')->save($_POST);
 
     // 再将摄像头名称转发给对应的采集端...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
     
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     if( !$transmit ) {
       $arrData['err_code'] = true;
       $arrData['err_msg'] = '无法连接中转服务器。';
@@ -1048,11 +1117,10 @@ class AdminAction extends Action
     $camera_id = $_GET['camera_id'];
     $map['camera_id'] = $camera_id;
     $dbLive = D('LiveView')->where($map)->field('camera_id,status,mac_addr')->find();
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
     // 准备命令需要的数据 => 当前是停止状态，则发起启动；是启动状态，则发起停止...
     $theCmd = (($dbLive['status'] > 0) ? kCmd_PHP_Stop_Camera : kCmd_PHP_Start_Camera );
     // 开始连接中转服务器...
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 链接中转服务器失败，直接返回...
     if( !$transmit ) {
       $arrData['err_code'] = true;
@@ -1094,7 +1162,7 @@ class AdminAction extends Action
   {
     // 读取科目列表，读取教师列表...
     $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
+    $arrTeacher = D('TeacherView')->field('teacher_id,teacher_name,title_name')->select();
     // 设置模版参数...
     $this->assign('my_list_teacher', $arrTeacher);
     $this->assign('my_list_subject', $arrSubject);
@@ -1226,8 +1294,7 @@ class AdminAction extends Action
   private function postCourseRecordToGather($inCameraID, $inGatherID, &$arrCourse)
   {
     // 通过php扩展插件连接中转服务器 => 性能高...
-    $dbSys = D('system')->field('transmit_addr,transmit_port')->find();
-    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     if( !$transmit ) return false;
     // 保存转发需要的数据...
     $dbTrasmit['data'] = $arrCourse;
@@ -1627,6 +1694,29 @@ class AdminAction extends Action
     echo $this->fetch('liveCamera');
   }
   //
+  // 获取直播播放地址...
+  public function getLiveAddress()
+  {
+    // 传递过来的通道编号...
+    $theLiveID = $_GET['camera_id'];
+    // 首先，获取中转服务器的原始数据内容 => 直播服务器列表...
+    $dbShow = $this->getTransmitRawData(kCmd_PHP_Get_Live_Server);
+    if( $dbShow['err_code'] ) {
+      // 获取直播服务器失败的处理...
+      $this->assign('my_msg_title', $dbShow['err_msg']);
+      $this->assign('my_msg_desc', '糟糕，出错了');
+      $this->display('Common:error_page');
+    } else {
+      // 获取直播服务器成功的处理...
+      $dbServer = $dbShow['list'][0];
+      $this->assign('my_rtmp', sprintf("rtmp://%s/live/live%d", $dbServer[0], $theLiveID));
+      $this->assign('my_flv', sprintf("http://%s/live/live%d.flv", $dbServer[1], $theLiveID));
+      $this->assign('my_hls', sprintf("http://%s/live/live%d.m3u8", $dbServer[1], $theLiveID));
+      // 直接返回直播播放地址页面内容...
+      $this->display('liveAddress');
+    }
+  }
+  //
   // 获取点播管理页面...
   public function vod()
   {
@@ -1666,14 +1756,13 @@ class AdminAction extends Action
   {
     // 云录播 => 读取科目列表，读取教师列表...
     $arrSubject = D('subject')->field('subject_id,subject_name')->select();
-    $arrTeacher = D('teacher')->field('teacher_id,teacher_name,title_name')->select();
+    $arrTeacher = D('TeacherView')->field('teacher_id,teacher_name,title_name')->select();
     $this->assign('my_list_teacher', $arrTeacher);
     $this->assign('my_list_subject', $arrSubject);
     // 获取录像记录需要的信息 => web_tracker_addr 已经自带了协议头 http://或https://
-    $dbSys = D('system')->field('web_tracker_addr,web_tracker_port')->find();
     $map['record_id'] = $_GET['record_id'];
     $dbVod = D('RecordView')->where($map)->find();
-    $dbVod['image_url'] = sprintf("%s:%d/%s_470x250", $dbSys['web_tracker_addr'], $dbSys['web_tracker_port'], $dbVod['image_fdfs']);
+    $dbVod['image_url'] = sprintf("%s:%d/%s_470x250", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port'], $dbVod['image_fdfs']);
     $this->assign('my_vod', $dbVod);
     // 获取模板数据...
     echo $this->fetch('getVod');
