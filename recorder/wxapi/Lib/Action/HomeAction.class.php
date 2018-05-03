@@ -90,6 +90,24 @@ class HomeAction extends Action
     A('Login')->login(false);
   }
   //
+  // 获取是否登录状态...
+  private function isLogin()
+  {
+    return ((Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker')) ? true : false);
+  }
+  //
+  // 获取登录用户的编号...
+  private function getLoginUserID()
+  {
+    // 用户未登录，返回0...
+    if( !$this->isLogin() )
+      return 0;
+    // 从cookie获取unionid，再查找用户编号...
+    $theMap['wx_unionid'] = Cookie::get('wx_unionid');
+    $dbLogin = D('user')->where($theMap)->field('user_id,wx_nickname')->find();
+    return (isset($dbLogin['user_id']) ? $dbLogin['user_id'] : 0);
+  }
+  //
   // 得到导航数据...
   private function getNavData($activeType, $activeID)
   {
@@ -468,34 +486,369 @@ class HomeAction extends Action
           $arrVod = array_merge($arrVod, $arrPrev);
         }
       }
-      // 准备播放标题栏需要的数据...
-      $my_base['subject_id'] = $subject_id;
-      $my_base['subject_title'] = $my_nav['subject_title'];
-      $my_base['play_title'] = sprintf("%s %s %s %s %s %s", $curPlay['grade_type'], $curPlay['grade_name'], $curPlay['camera_name'], $curPlay['teacher_name'], $curPlay['title_name'], $curPlay['created']);
       // 设置点播模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
       $this->assign('my_title', $this->m_webTitle . ' - 录像播放');
-      $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrVod);
     } else {
       // 直播模式 => 播放直播列表...
       $camera_id = $_GET['camera_id'];
       // 获取直播播放页导航数据...
       $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
-      $map['camera_id'] = $camera_id;
-      $dbLive = D('LiveView')->where($map)->find();
+      $condition['camera_id'] = $camera_id;
+      $dbLive = D('LiveView')->where($condition)->find();
       // 右侧第一条记录一定是直播...
-      unset($map); $arrList[0] = $dbLive;
+      $arrList[0] = $dbLive;
       // 开始设置模版参数信息...
-      $my_base['stream_prop'] = $dbLive['stream_prop'];
-      $my_base['play_title'] = sprintf("%s - %s %s %s", $dbLive['school_name'], $dbLive['grade_type'], $dbLive['grade_name'], $dbLive['camera_name']);
       $this->assign('my_title', $this->m_webTitle . ' - 直播播放');
-      $this->assign('my_base', $my_base);
       $this->assign('my_play', $arrList);
     }
     // 设置其它公共的模板参数...
     $this->assign('my_web_tracker', $theWebTracker);
     $this->assign('my_nav', $my_nav);
     $this->display('play');
+  }
+  //
+  // 删除 评论 的过程...
+  public function delComment()
+  {
+    // 找到当前评论的数据记录...
+    $condition['comment_id'] = $_POST['comment_id'];
+    $dbItem = D('comment')->where($condition)->find();
+    // 如果父节点大于0，需要将父节点的回复数减1 => 当前记录为回复评论...
+    if( $dbItem['parent_id'] > 0 ) {
+      $theQuery['comment_id'] = $dbItem['parent_id'];
+      D('comment')->where($theQuery)->setDec('childs');
+    }
+    // 删除当前评论记录和相关点赞记录...
+    D('comment')->where($condition)->delete();
+    D('zan')->where($condition)->delete();
+    // 查询所有的当前评论的回复列表...
+    $theMap['parent_id'] = $_POST['comment_id'];
+    $arrChild = D('comment')->where($theMap)->select();
+    // 删除所有子评论相关的点赞记录...
+    foreach($arrChild as &$dbChild) {
+      $condition['comment_id'] = $dbChild['comment_id'];
+      D('zan')->where($condition)->delete();
+    }
+    // 删除所有子评论本身的记录...
+    D('comment')->where($theMap)->delete();
+  }
+  //
+  // 保存 评论 的操作结果...
+  public function saveComment()
+  {
+    // 设置返回状态..
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    // 获取登录用户编号...
+    $theLoginUserID = $this->getLoginUserID();
+    if( $theLoginUserID <= 0 ) {
+      $arrErr['err_code'] = true;
+      $arrErr['err_msg'] = '请先登录，再评论！';
+      echo json_encode($arrErr);
+      return;
+    }
+    // 对传递过来的数据进行重新整合...
+    // $_POST['type'] = 0 => camera_id
+    // $_POST['type'] = 1 => record_id
+    // $_POST['type'] = 2 => parent_id
+    switch( $_POST['type'] )
+    {
+      case 0: $dbSave['camera_id'] = $theMap['camera_id'] = $_POST['id']; break;
+      case 1: $dbSave['record_id'] = $theMap['record_id'] = $_POST['id']; break;
+      case 2: $dbSave['parent_id'] = $theMap['parent_id'] = $_POST['id']; break;
+    }
+    // 对其它字段进行处理...
+    $dbSave['content'] = $_POST['content'];
+    $dbSave['created'] = date('Y-m-d H:i:s');
+    $dbSave['updated'] = date('Y-m-d H:i:s');
+    $dbSave['user_id'] = $theLoginUserID;
+    $dbSave['comment_id'] = D('comment')->add($dbSave);
+    // 构造新的模版数据内容...
+    $condition['comment_id'] = $dbSave['comment_id'];
+    $arrComment = D('CommentView')->where($condition)->select();
+    $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
+    $this->assign('my_list', $arrComment);
+    // 计算总的评论数量和返回的新增页面数据...
+    $arrErr['total'] = D('comment')->where($theMap)->count();
+    $arrErr['html'] = $this->fetch('pageComment');
+    echo json_encode($arrErr);
+  }
+  //
+  // 保存 赞/踩 的操作结果...
+  public function saveLike()
+  {
+    // 设置默认的返回数据...
+    $arrData['likes_num'] = 0;
+    $arrData['kicks_num'] = 0;
+    // 获取登录用户编号...
+    $theLoginUserID = $this->getLoginUserID();
+    if( $theLoginUserID <= 0 ) {
+      echo json_encode($arrData);
+      return;
+    }
+    // 记录返回的数组内容...
+    $arrData['likes_num'] = $_POST['likes_num'];
+    $arrData['kicks_num'] = $_POST['kicks_num'];
+    // 登录状态有效的情况...
+    // $_POST['type'] = 0 => camera_id
+    // $_POST['type'] = 1 => record_id
+    // $_POST['type'] = 2 => comment_id
+    // $_POST['is_like'] = 0 => 踩 => kick
+    // $_POST['is_like'] = 1 => 赞 => like
+    switch( $_POST['type'] ) {
+      case 0: $dbSave['camera_id'] = $_POST['id']; break;
+      case 1: $dbSave['record_id'] = $_POST['id']; break;
+      case 2: $dbSave['comment_id'] = $_POST['id']; break;
+    }
+    $dbSave['user_id'] = $theLoginUserID;
+    // 通过当前条件，查找记录...
+    $dbZan = D('zan')->where($dbSave)->field('zan_id,is_like')->find();
+    // 如果记录存在，需要进行修改...
+    if( isset($dbZan['zan_id']) ) {
+      // 如果新点击与数据库记录一致，进行删除操作...
+      if( $dbZan['is_like'] == $_POST['is_like'] ) {
+        $theMap['zan_id'] = $dbZan['zan_id'];
+        D('zan')->where($theMap)->delete();
+        // 设置减少字段...
+        if( $_POST['is_like'] ) {
+          $theDecField = 'likes';
+          $arrData['likes_num'] -= 1;
+        } else {
+          $theDecField = 'kicks';
+          $arrData['kicks_num'] -= 1;
+        }
+        // 在对应的关联数据中进行减少处理...
+        if( $_POST['type'] == 0 ) {
+          $condition['camera_id'] = $_POST['id'];
+          D('camera')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 1 ) {
+          $condition['record_id'] = $_POST['id'];
+          D('record')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 2 ) {
+          $condition['comment_id'] = $_POST['id'];
+          D('comment')->where($condition)->setDec($theDecField);
+        }
+      } else {
+        // 如果新点击与数据库记录不一致，进行修改操作...
+        $dbSave['zan_id'] = $dbZan['zan_id'];
+        $dbSave['is_like'] = $_POST['is_like'];
+        D('zan')->save($dbSave);
+        // 设置增长字段和减少字段...
+        if( $_POST['is_like'] ) {
+          $theIncField = 'likes';
+          $theDecField = 'kicks';
+          $arrData['likes_num'] += 1;
+          $arrData['kicks_num'] -= 1;
+        } else {
+          $theIncField = 'kicks';
+          $theDecField = 'likes';
+          $arrData['likes_num'] -= 1;
+          $arrData['kicks_num'] += 1;
+        }
+        // 在对应的关联数据中进行修正处理...
+        if( $_POST['type'] == 0 ) {
+          $condition['camera_id'] = $_POST['id'];
+          D('camera')->where($condition)->setInc($theIncField);
+          D('camera')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 1 ) {
+          $condition['record_id'] = $_POST['id'];
+          D('record')->where($condition)->setInc($theIncField);
+          D('record')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 2 ) {
+          $condition['comment_id'] = $_POST['id'];
+          D('comment')->where($condition)->setInc($theIncField);
+          D('comment')->where($condition)->setDec($theDecField);
+        }
+      }
+    } else {
+      // 如果记录不存在，进行新建处理...
+      $dbSave['is_like'] = $_POST['is_like'];
+      $dbSave['created'] = date('Y-m-d H:i:s');
+      $dbSave['updated'] = date('Y-m-d H:i:s');
+      D('zan')->add($dbSave);
+      // 设置增长字段...
+      if( $_POST['is_like'] ) {
+        $theIncField = 'likes';
+        $arrData['likes_num'] += 1;
+      } else {
+        $theIncField = 'kicks';
+        $arrData['kicks_num'] += 1;
+      }
+      // 在对应的关联数据中进行修正处理...
+      if( $_POST['type'] == 0 ) {
+        $condition['camera_id'] = $_POST['id'];
+        D('camera')->where($condition)->setInc($theIncField);
+      } else if( $_POST['type'] == 1 ) {
+        $condition['record_id'] = $_POST['id'];
+        D('record')->where($condition)->setInc($theIncField);
+      } else if( $_POST['type'] == 2 ) {
+        $condition['comment_id'] = $_POST['id'];
+        D('comment')->where($condition)->setInc($theIncField);
+      }
+    }
+    // 直接返回计算后的赞|踩数量...
+    echo json_encode($arrData);
+  }
+  //
+  // 保存回复内容...
+  public function saveReply()
+  {
+    // 设置返回状态..
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    // 获取登录用户编号...
+    $theLoginUserID = $this->getLoginUserID();
+    if( $theLoginUserID <= 0 ) {
+      $arrErr['err_code'] = true;
+      $arrErr['err_msg'] = '请先登录，再回复评论！';
+      echo json_encode($arrErr);
+      return;
+    }
+    // 设置常规的新记录信息...
+    $dbNew['user_id'] = $theLoginUserID;
+    $dbNew['content'] = $_POST['content'];
+    $dbNew['created'] = date('Y-m-d H:i:s');
+    $dbNew['updated'] = date('Y-m-d H:i:s');
+    $dbNew['parent_id'] = $_POST['parent_id'];
+    // 先找到父节点的评论记录...
+    $condition['comment_id'] = $_POST['parent_id'];
+    $dbParent = D('comment')->where($condition)->find();
+    // 如果父节点本身就是子评论...
+    if( $dbParent['parent_id'] > 0 ) {
+      // 把父节点的父节点当成自己的父节点...
+      $dbNew['parent_id'] = $dbParent['parent_id'];
+    }
+    // 将修正后父节点的计数器增加1...
+    $condition['comment_id'] = $dbNew['parent_id'];
+    D('comment')->where($condition)->setInc('childs');
+    // 新建一条评论记录，返回新记录的编号...
+    $condition['comment_id'] = D('comment')->add($dbNew);
+    // 返回新建记录的页面内容 => 设置登录状态和模版参数...
+    $arrComment = D('CommentView')->where($condition)->select();
+    $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
+    $this->assign('my_list', $arrComment);
+    // 解析并返回获取到的页面内容结果...
+    $arrErr['html'] = $this->fetch('pageComment');
+    echo json_encode($arrErr);
+  }
+  //
+  // 获取主评论特殊的扩展页面信息...
+  public function getExpand()
+  {
+    $condition['comment_id'] = $_GET['comment_id'];
+    $dbComment = D('comment')->where($condition)->find();
+    $this->assign('my_comment', $dbComment);
+    $arrErr['childs'] = $dbComment['childs'];
+    $arrErr['html'] = $this->fetch();
+    echo json_encode($arrErr);
+  }
+  //
+  // 获取回复模版页面内容...
+  public function getReply()
+  {
+    echo $this->fetch();
+  }
+  //
+  // 获取记录信息 => 录像或直播...
+  public function getFeed()
+  {
+    // 如果是点播记录...
+    if( $_GET['type'] > 0 ) {
+      $condition['record_id'] = $_GET['id'];
+      $dbItem = D('RecordView')->where($condition)->find();
+      $dbItem['play_title'] = sprintf("%s %s %s %s %s %s", $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name'], $dbItem['teacher_name'], $dbItem['title_name'], $dbItem['created']);
+    } else {
+      // 如果是直播记录...
+      $condition['camera_id'] = $_GET['id'];
+      $dbItem = D('LiveView')->where($condition)->find();
+      $dbItem['play_title'] = sprintf("%s - %s %s %s", $dbItem['school_name'], $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name']);
+    }
+    // 获取总的评论条数...
+    $pagePer = C('PAGE_PER');
+    $nTotalComment = D('comment')->where($condition)->count();
+    $max_comm_page = intval($nTotalComment / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_comm_page += (($nTotalComment % $pagePer) ? 1 : 0);
+    // 判断是否已经处于登录状态...
+    $dbItem['totalComment'] = $nTotalComment;
+    $dbItem['isLogin'] = $this->isLogin();
+    $dbItem['holder'] = '请先登录，再评论...';
+    // 直接保存编号和类型...
+    $dbItem['id'] = $_GET['id'];
+    $dbItem['type'] = $_GET['type'];
+    // 如果是已经登录状态...
+    $theLoginUserID = $this->getLoginUserID();
+    if( $theLoginUserID > 0 ) {
+      $condition['user_id'] = $theLoginUserID;
+      $dbZan = D('zan')->where($condition)->field('zan_id,is_like')->find();
+      $dbItem['is_like'] = (isset($dbZan['zan_id']) ? $dbZan['is_like'] : -1);
+      $dbItem['headurl'] = Cookie::get('wx_headurl');
+      $dbItem['holder'] = '请输入评论内容...';
+    }
+    // 直接设置通用的模版参数...
+    $this->assign('my_base', $dbItem);
+    $arrData['feedHtml'] = $this->fetch('getFeed');
+    // 返回页面需要的其它特定数据信息...
+    $arrData['maxCommPage'] = $max_comm_page;
+    // 计算右侧热点推荐的点播记录数量 => 不要超过20条记录...
+    $nRecTotal = D('record')->count();
+    $nCalcPage = intval($nRecTotal / $pagePer);
+    $nCalcPage+= (($nRecTotal % $pagePer) ? 1 : 0);
+    $arrData['maxHotPage'] = (($nCalcPage <= 2) ? $nCalcPage : 2);
+    // 返回json数据内容...
+    echo json_encode($arrData);
+  }
+  //
+  // 获取相关评论分页内容...
+  public function pageComment()
+  {
+    // $_GET['type'] = 0 => camera_id
+    // $_GET['type'] = 1 => record_id
+    // $_GET['type'] = 2 => parent_id
+    switch( $_GET['type'] ) {
+      case 0: $condition['camera_id'] = $_GET['id']; break;
+      case 1: $condition['record_id'] = $_GET['id']; break;
+      case 2: $condition['parent_id'] = $_GET['id']; break;
+    }
+    // 准备需要的分页参数...
+    $pagePer = C('PAGE_PER'); // 每页显示的通道数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 查找对应的评论列表...
+    $arrComment = D('CommentView')->where($condition)->limit($pageLimit)->order('created DESC')->select();
+    // 如果已经登录，遍历评论，查看当前登录用户是否点赞...
+    $theLoginUserID = $this->getLoginUserID();
+    if( $theLoginUserID > 0 ) {
+      foreach($arrComment as &$dbItem) {
+        // 当前登录用户对当前评论的赞或踩的情况...
+        $arrQuery['user_id'] = $theLoginUserID;
+        $arrQuery['comment_id'] = $dbItem['comment_id'];
+        // 三种状态 -1无 0踩 1赞...
+        $dbZan = D('zan')->where($arrQuery)->field('zan_id,is_like')->find();
+        $dbItem['is_like'] = (isset($dbZan['zan_id']) ? $dbZan['is_like'] : -1);
+      }
+    }
+    // 直接设定模版参数内容，并设置登录状态...
+    $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
+    $this->assign('my_list', $arrComment);
+    echo $this->fetch('pageComment');
+  }
+  //
+  // 获取热点推荐分页内容...
+  public function pageHot()
+  {
+    // 准备需要的分页参数...
+    $pagePer = C('PAGE_PER'); // 每页显示的通道数...
+    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
+    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
+    // 查找对应的热点内容，按点击次数排列...
+    $arrList = D('RecordView')->limit($pageLimit)->order('clicks DESC')->select();
+    // 直接设定模版参数内容...
+    $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
+    $this->assign('my_cur_page', $pageCur);
+    $this->assign('my_list', $arrList);
+    echo $this->fetch('pageHot');
   }
   /**
   +----------------------------------------------------------
@@ -552,7 +905,7 @@ class HomeAction extends Action
       $dbShow['tech'] = json_encode($arrTech);
       // 反馈点击次数给显示层，当前播放录像编号...
       $dbShow['clicks'] = intval($dbVod['clicks']) + 1;
-      $dbShow['click_id'] = "vod_" . $dbVod['record_id'];
+      $dbShow['click_id'] = $dbVod['record_id'];
       $dbShow['record_id'] = $dbVod['record_id'];
       // 累加点播计数器，写入数据库...
       $dbSave['clicks'] = $dbShow['clicks'];
@@ -564,6 +917,7 @@ class HomeAction extends Action
       $bHideIcon = (($_GET['width'] <= 300) ? true : false);
       $dbCamera = D('LiveView')->where($map)->field('camera_id,clicks,status,gather_id,mac_addr')->find();
       if( $dbCamera['status'] <= 0 ) {
+        $this->assign('my_camera', $dbCamera);
         $this->dispError('当前通道处于离线状态，无法播放！', '请联系管理员，开启通道。', $bHideIcon);
         return;
       }
@@ -574,6 +928,7 @@ class HomeAction extends Action
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...
       if( $dbResult['err_code'] > 0 ) {
+        $this->assign('my_camera', $dbCamera);
         $this->dispError($dbResult['err_msg'], '请联系管理员，汇报错误信息。', $bHideIcon);
         return;
       }
@@ -596,7 +951,7 @@ class HomeAction extends Action
       $dbShow['tech'] = json_encode($arrTech);
       // 反馈点击次数给显示层，当前播放录像编号...
       $dbShow['clicks'] = intval($dbCamera['clicks']) + 1;
-      $dbShow['click_id'] = "live_" . $dbCamera['camera_id'];
+      $dbShow['click_id'] = $dbCamera['camera_id'];
       $dbShow['record_id'] = 0;
       // 累加点播计数器，写入数据库...
       $dbCamera['clicks'] = $dbShow['clicks'];

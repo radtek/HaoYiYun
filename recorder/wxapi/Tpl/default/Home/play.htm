@@ -1,44 +1,15 @@
 
 <include file = "Common:home_header" />
-
 <include file = "Common:home_nav" />
 
 <script src="/wxapi/public/js/jquery.royalslider.js"></script>
 <link href="/wxapi/public/css/royalslider.css" rel="stylesheet">
 <link href="/wxapi/public/css/play.css" rel="stylesheet">
 
-<style>
-.feed-down-title {
-  font-style: normal;
-}
-</style>
-
 <section class="content-wrap">
   <div class="container">
     <div class="row">
-      <article class="base">
-        <div class="base_info">
-          <h1 class="base_title">
-            <!-- 录像文件 -->
-            <notempty name='my_base.subject_id'>
-            <a href="#" class="js_down" onclick="doRecDown();" style="margin-right: 10px">[下载]</a>
-            <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">[{{$my_base.subject_title}}]&nbsp;</a>
-            </notempty>
-            <!-- 直播通道 -->
-            <notempty name="my_base.stream_prop">
-              <switch name="my_base.stream_prop">
-                <case value="0"><i class="fa fa-camera" title="摄像头"></i></case>
-                <case value="1"><i class="fa fa-file-video-o" title="MP4文件"></i></case>
-                <case value="2"><i class="fa fa-arrow-circle-o-down" title="流转发"></i></case>
-              </switch>&nbsp;
-            </notempty>
-            <span class="js_title">{{$my_base.play_title}}</span>
-          </h1>
-        </div>
-      </article>
-    </div>
-    <div class="row">
-      <article style="margin-bottom:20px;">
+      <article>
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
@@ -96,12 +67,27 @@
       </article>
     </div>
     <div class="row">
-      <article style="height:130px;margin-bottom:20px;"></article>
+      <article class="main-area">
+        <div class="l-main">
+          <div class="loading-main">
+            <div class="loading-img"></div>
+            <div class="loading-text">正在加载...</div>
+          </div>
+        </div>
+        <div class="l-side">
+          <div class="float-title">热点推荐</div>
+          <div class="float-fix"></div>
+          <div id="myHot"></div>
+        </div>
+        <div class="float-fix"></div>
+      </article>
     </div>
   </div>
 </section>
 
 <script>
+// 获取网站地址...
+var siteurl="{{:__APP__}}";
 // 保存全局的当前播放录像编号...
 var g_record_id = 0;
 
@@ -119,20 +105,405 @@ function doEndedEvent() {
   slider.next();
 }
 
-// 由子窗口调用的修改点击播放次数的接口...
+// 处理懒加载前的操作...
+function doLazyAppear(left, setting) {
+  var objCur = $(this);
+  // 在当前对象之前创建一个加载等待框...
+  objCur.before('<span class="rsPreloader"></span>');
+  // 两秒之后，强制删除加载等待框...
+  setTimeout(function() {
+    objCur.parent().find('.rsPreloader').remove();
+  }, 2000);
+}
+// 处理懒加载后的操作...
+function doLazyLoad(left, setting) {
+  $(this).parent().find('.rsPreloader').remove();
+}
+
+// 由子窗口调用的修改点击播放次数，触发加载评论列表...
 function doClicks(inItemID, inClicks, isVod) {
-  if( isVod ) {
-    $('#'+inItemID).html(inClicks + "次播放");
+  // 获取标题名称和定位对象...
+  var theTitle = isVod ? (inClicks + "次播放") : ("&nbsp;" + inClicks + "&nbsp;次");
+  var theItem = isVod ? ('vod_'+inItemID) : ('live_'+inItemID);
+  // 更新播放器右侧次数...
+  $('#'+theItem).html(theTitle);
+  // 发起异步获取记录信息，兼容IE8...
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Home/getFeed/id/"+inItemID+"/type/"+isVod,
+    success: function(ajaxData) {
+      // 获取评论区内容...
+      var arrJson = $.parseJSON(ajaxData);
+      $('.l-main').html(arrJson.feedHtml);
+      // 响应 发表评论 的点击事件...
+      $('.input-submit').unbind("click").click( function() {
+        var theArea = $('#myTextArea');
+        var strText = theArea.val();
+        // 如果是禁用状态，直接返回...
+        if( theArea.attr('disabled') == 'disabled' )
+          return;
+        // 计算错误提示框显示位置...
+        var nLeftPos = theArea.offset().left + theArea.width()/2 - 50;
+        var nTopPos = theArea.offset().top - $(document).scrollTop() + 20;
+        // 判断输入数据是否有效...
+        if( strText.length <= 0 ) {
+          layer.msg('评论内容不能为空！', {offset: [nTopPos+'px', nLeftPos+'px']});
+          return;
+        }
+        // 先添加加载框...
+        $('#myComment').prepend('<div class="wait-main"><div class="wait-img"></div><div class="wait-text">正在加载...</div></div>');
+        // 保存评论并在顶部显示出来...
+        $.ajaxSetup({ cache:false });
+        $.ajax({
+          type: "post",
+          async: true,
+          url: siteurl+"/Home/saveComment",
+          data: {id: inItemID, type: isVod, content: strText},
+          success: function(ajaxData) {
+            var arrJson = $.parseJSON(ajaxData);
+            // 判断处理结果是否正确...
+            if( arrJson.err_code ) {
+              layer.msg(arrJson.err_msg, {offset: [nTopPos+'px', nLeftPos+'px']});
+              return;
+            }
+            // 将获取到的页面追加到最顶层...
+            $('#myComment').find('.wait-main').remove();
+            $('#myComment').prepend(arrJson.html);
+            $('#myCommFeed').text(arrJson.total);
+            // 将输入框清空处理...
+            $('#myTextArea').val('');
+          },
+          error: function(XMLHttpRequest, textStatus, errorThrown) {
+            layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+          }
+        });
+      });
+      // 获取流加载和页码...
+      var flow = layui.flow;
+      var max_comm_page = arrJson.maxCommPage;
+      var max_hot_page = arrJson.maxHotPage;
+      // 注意：每次点击都会造成#myComment重新加载...
+      // 评论列表进行数据流的加载处理...
+      flow.load({
+        elem: '#myComment',
+        isLazyimg: false,
+        done: function(page, next){
+          // 设置IE8兼容性，加载分页数据...
+          $.ajaxSetup({ cache:false });
+          $.ajax({
+            type: "get",
+            async: true,
+            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inItemID+"/type/"+isVod,
+            success: function(ajaxData) {
+              next(ajaxData, page < max_comm_page);
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+              layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+            }
+          });
+        }
+      });
+      // 如果热点推荐已经加载过，就不用再加载了...
+      if( $('#myHot').children().length > 0 )
+        return;
+      // 重新加载热点推荐数据流...
+      flow.load({
+        end: ' ',
+        elem: '#myHot',
+        isLazyimg: false,
+        done: function(page, next){
+          // 设置IE8兼容性，加载分页数据...
+          $.ajaxSetup({ cache:false });
+          $.ajax({
+            type: "get",
+            async: true,
+            url: siteurl+"/Home/pageHot/p/"+page,
+            success: function(ajaxData) {
+              next(ajaxData, page < max_hot_page);
+              // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
+              // 分页单独懒加载，否则，每次都要全部懒加载...
+              $("#page_"+page+" img.lazy").lazyload({
+                effect : "fadeIn",
+                load: doLazyLoad,
+                appear: doLazyAppear,
+                placeholder: "/wxapi/public/images/snap.png"
+              });
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+              layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+            }
+          });
+        }
+      });
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
+}
+
+// 用户点击回复的处理过程...
+function doReply(inObj, inCommentID) {
+  var index = layer.load(2);
+  var $ = layui.jquery;
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "get",
+    async: true,
+    url: siteurl+"/Home/getReply",
+    success: function(ajaxData) {
+      layer.closeAll('loading');
+      layer.open({
+        type: 1, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
+        closeBtn: 1,
+        fixed: true,
+        shadeClose: false,
+        area: ['500px', '240px'],
+        title: "<i class='fa fa-reply'>&nbsp;&nbsp;回复评论</i>",
+        content: ajaxData,
+        success: function() {
+          var form = layui.form;
+          $("textarea[name='myReText']").focus();
+          form.on('submit(formReply)', function(data) {
+            layer.load(2);
+            $.ajax({
+              type: "post",
+              async: true,
+              url: siteurl+"/Home/saveReply",
+              data: {parent_id: inCommentID, content: data.field.myReText},
+              success: function(ajaxData) {
+                layer.closeAll();
+                var arrJson = $.parseJSON(ajaxData);
+                // 判断执行结果，失败，直接弹框返回...
+                if( arrJson.err_code > 0 ) {
+                  layer.alert(arrJson.err_msg, {icon: 2});
+                  return;
+                }
+                // 如果是子评论中进行的回复操作...
+                var theMyChild = $(inObj).parents('#myChild');
+                if( theMyChild.length > 0 ) {
+                  // 获取子评论的当前数量...
+                  var theExpand = theMyChild.parent();
+                  var theObjSize = theExpand.find('.js-child-size');
+                  var theChildSize = parseInt(theObjSize.text()) || 0;
+                  // 将获取的新记录页面追加到子评论顶部...
+                  theMyChild.prepend(arrJson.html);
+                  // 修改子评论的数量，并显示到页面...
+                  theObjSize.text(theChildSize+1);
+                  return;
+                }
+                // 如果是主评论中进行的回复操作，先删除已加载子评论，再展开子评论...
+                $(inObj).parents('.comment-item').find('.comment-expand').remove();
+                // 先获取新的展开页面头...
+                $.ajax({
+                  type: "get",
+                  async: true,
+                  url: siteurl+"/Home/getExpand/comment_id/"+inCommentID,
+                  success: function(ajaxData) {
+                    // 返回展开页面头和子评论总数...
+                    var arrJson = $.parseJSON(ajaxData);
+                    $(inObj).parents('.comment-item').append(arrJson.html);
+                    // 进行评论回复内容的流加载过程...
+                    var theChildList = $(inObj).parents('.comment-item').find('#myChild');
+                    var max_child_page = Math.ceil(arrJson.childs/10);
+                    var flow = layui.flow;
+                    flow.load({
+                      end: ' ',
+                      isAuto: true,
+                      elem: theChildList,
+                      isLazyimg: false,
+                      done: function(page, next){
+                        // 设置IE8兼容性，加载分页数据...
+                        $.ajaxSetup({ cache:false });
+                        $.ajax({
+                          type: "get",
+                          async: true,
+                          url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
+                          success: function(ajaxData) {
+                            next(ajaxData, page < max_child_page);
+                          },
+                          error: function(XMLHttpRequest, textStatus, errorThrown) {
+                            layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+                          }
+                        });
+                      }
+                    });
+                  },
+                  error: function(XMLHttpRequest, textStatus, errorThrown) {
+                    layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+                  }
+                });
+              },
+              error: function(XMLHttpRequest, textStatus, errorThrown) {
+                layer.closeAll();
+                layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+              }
+            });
+            // 避免form自动跳转...
+            return false;
+          });
+          // 点击取消操作...
+          $('.js_form_close').unbind("click").click( function() {
+            layer.closeAll('page');
+          });
+        }
+      });
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.closeAll('loading');
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
+}
+
+// 用户点击展开或隐藏子评论的处理...
+function doExChild(inObj, inCommentID, inMaxChild) {
+  var theChildList = $(inObj).parent().find('#myChild');
+  var theShowReply = $(inObj).parent().find('#myShowReply');
+  var theHideReply = $(inObj).parent().find('#myHideReply');
+  var max_child_page = Math.ceil(inMaxChild/10);
+  var flow = layui.flow;
+  if( theShowReply.css('display') == 'block' ) {
+    // 显示子评论数据内容...
+    theShowReply.css('display', 'none');
+    theHideReply.css('display', 'block');
+    theChildList.css('display', 'block');
+    // 评论列表进行数据流的加载处理 => 子评论没有才进行流加载...
+    if( theChildList.children().length <= 0 ) {
+      flow.load({
+        end: ' ',
+        isAuto: true,
+        elem: theChildList,
+        isLazyimg: false,
+        done: function(page, next){
+          // 设置IE8兼容性，加载分页数据...
+          $.ajaxSetup({ cache:false });
+          $.ajax({
+            type: "get",
+            async: true,
+            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
+            success: function(ajaxData) {
+              next(ajaxData, page < max_child_page);
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+              layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+            }
+          });
+        }
+      });
+    }
   } else {
-    $('#'+inItemID).html("&nbsp;" + inClicks + "&nbsp;次");
+    theShowReply.css('display', 'block');
+    theHideReply.css('display', 'none');
+    theChildList.css('display', 'none');
   }
+}
+
+// 用户点击 删除 评论 的处理...
+function doDelComment(inObj, inCommentID) {
+  // 阻止事件继续分发下去...
+  event.stopPropagation();
+  // 如果是评论回复的删除，需要特殊处理...
+  var theDelChild = $(inObj).parents('#myChild');
+  if( theDelChild.length > 0 ) {
+    // 首先，删除当前评论节点对象...
+    $(inObj).parent().parent().parent().parent().remove();
+    // 获取当前的子评论数量，并添加正在删除等待框...
+    var theExpand = theDelChild.parent();
+    var theObjSize = theExpand.find('.js-child-size');
+    var theChildSize = parseInt(theObjSize.text()) || 0;
+    theDelChild.prepend('<div class="wait-main"><div class="wait-img"></div><div class="wait-text">正在删除...</div></div>');
+    // 向服务器发起异步删除操作...
+    $.ajaxSetup({ cache:false });
+    $.ajax({
+      type: "post",
+      async: true,
+      url: siteurl+"/Home/delComment",
+      data: {comment_id: inCommentID},
+      success: function(ajaxData) {
+        // 删除等待框，调整评论总数...
+        theChildSize = ((theChildSize > 0) ? theChildSize - 1 : 0);
+        theDelChild.find('.wait-main').remove();
+        theObjSize.text(theChildSize);
+        // 如果子评论数为0，删除扩展对象...
+        if( theChildSize <= 0 ) {
+          theExpand.remove();
+        }
+      },
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+      }
+    });
+    return;
+  }
+  // 主体评论的处理，先删除本地界面信息...
+  $(inObj).parents('.comment-item').remove();
+  // 获取当前的评论总数，显示等待加载框...
+  var theTotal = parseInt($('#myCommFeed').text()) || 0;
+  $('#myComment').prepend('<div class="wait-main"><div class="wait-img"></div><div class="wait-text">正在删除...</div></div>');
+  // 向服务器发起异步删除操作...
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "post",
+    async: true,
+    url: siteurl+"/Home/delComment",
+    data: {comment_id: inCommentID},
+    success: function(ajaxData) {
+      // 删除等待框，调整评论总数...
+      theTotal = ((theTotal > 0) ? theTotal - 1 : 0);
+      $('#myComment').find('.wait-main').remove();
+      $('#myCommFeed').text(theTotal);
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
+}
+
+// 用户点击 赞/踩 的处理...
+function doLike(inObj, inID, inType, inFlag) {
+  // 阻止事件继续分发下去...
+  event.stopPropagation();
+  // inType = 0 => camera_id
+  // inType = 1 => record_id
+  // inType = 2 => comment_id
+  // inFlag = 0 => 踩 => kick
+  // inFlag = 1 => 赞 => like
+  // 获取赞/踩的当前次数...
+  var theObjIconDown = $(inObj).parent().parent().find('#myIconDown');
+  var theObjIconUp = $(inObj).parent().parent().find('#myIconUp');
+  var theObjLikes = $(inObj).parent().parent().find('#myLikes')
+  var theObjKicks = $(inObj).parent().parent().find('#myKicks');
+  var theLikesNum = parseInt(theObjLikes.text()) || 0;
+  var theKicksNum = parseInt(theObjKicks.text()) || 0;
+  // 发起异步推送信息，兼容IE8...
+  $.ajaxSetup({ cache:false });
+  $.ajax({
+    type: "post",
+    async: true,
+    url: siteurl+"/Home/saveLike",
+    data: {id: inID, type: inType, is_like: inFlag, likes_num: theLikesNum, kicks_num: theKicksNum},
+    success: function(ajaxData) {
+      var arrJson = $.parseJSON(ajaxData);
+      theObjLikes.text(arrJson.likes_num > 0 ? arrJson.likes_num : '');
+      theObjKicks.text(arrJson.kicks_num > 0 ? arrJson.kicks_num : '');
+      if( arrJson.likes_num > theLikesNum ) theObjIconUp.addClass('feed-like');
+      if( arrJson.likes_num < theLikesNum ) theObjIconUp.removeClass('feed-like');
+      if( arrJson.kicks_num > theKicksNum ) theObjIconDown.addClass('feed-like');
+      if( arrJson.kicks_num < theKicksNum ) theObjIconDown.removeClass('feed-like');
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
+    }
+  });
 }
 
 // 由子窗口调用的修改下载连接地址...
 function doDownLoadUrl(inRecordID) {
   // 保存当前正在播放的录像编号...
   g_record_id = inRecordID;
-  //$('.js_down').attr('href', inVodUrl);
 }
 
 // 具体响应用户点击下载的命令...
@@ -142,14 +513,14 @@ function doRecDown() {
     layer.msg('录像编号无效，无法下载！', {icon: 2});
     return;
   }
-  // 弹出下载列表框...
+  // 弹出下载列表框 => 自动显示滚动条...
   layer.open({
     type: 2, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
     closeBtn: 1,
     fixed: true,
     scrollbar: false,
     shadeClose: false,
-    area: ['600px', '450px'],
+    area: ['650px', '450px'],
     content: "{{:__APP__}}/{{$my_web_action}}/downRecord/record_id/"+g_record_id,
     title: "<i class='layui-icon'>&#xe601;</i><i class='feed-down-title'>&nbsp;&nbsp;下载相关录像片段</i>"
   });
@@ -200,16 +571,18 @@ $(document).ready( function () {
     this.playVideo();
   });
   // 当slider发生变化之后的事件响应...
-  slider.ev.on('rsAfterSlideChange', function(event) {
+  /*slider.ev.on('rsAfterSlideChange', function(event) {
     // 直接用jquery的样式特征定位比较简单，然后给标题赋值...
-    var theHeadLine = $('.rsNav .rsNavSelected .headline').html();
+    //var theHeadLine = $('.rsNav .rsNavSelected .headline').html();
     //$('.rsNav .rsNavSelected .status').children(":first");
-    $('.js_title').html(theHeadLine);
-  });
+    //$('.js_title').html(theHeadLine);
+  });*/
   // 第一个视频在0.5秒之后自动播放...
   setTimeout(function() {
     slider.toggleVideo();
   }, 500);
+  // 载入流加载对象...
+  layui.use(['flow','form']);
 });
 </script>
 

@@ -49,8 +49,8 @@ CXmlConfig::CXmlConfig(void)
 	strVersion.Format("V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
 	m_strVersion = strVersion;
 	m_strCopyRight = "北京浩一科技有限公司 版权所有(C) 2017-2020";
-	m_strPhone = "15010119735";
-	m_strWebSite = DEF_WEB_HOME;	
+	m_strPhone = "400-050-1080 或 15010119735";
+	m_strWebSite = DEF_WEB_HOME;
 	//m_strAddress = "北京市海淀区北四环西路68号6层C16";
 }
 

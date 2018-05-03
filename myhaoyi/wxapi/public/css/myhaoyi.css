@@ -444,6 +444,23 @@ body, button, input, select, textarea {
 .foot_copy {bottom: 35px;}
 .contact {margin-top: 40px;}
 
+.title4 {
+  width: 50%;
+  margin: 0 auto;
+  font-size: 40px;
+  line-height: 75px;
+  border-bottom: 1px solid #d2d2d2;
+}
+.title5 {
+   width: 40%;
+   margin: 20px auto;
+   font-size: 18px;
+   text-align: left;
+   color:#000;
+}
+.title5 img {
+  width: 100%;
+}
 /******************************************
 首页移动端的特殊样式处理...
 ******************************************/
@@ -455,6 +472,8 @@ body, button, input, select, textarea {
   .title1 {font-size: 28px; line-height: 40px;}
   .title2 {font-size: 16px; line-height: 30px;}
   .title3 {font-size: 16px; line-height: 20px; margin: 10px 5px 5px 5px;}
+  .title4 {font-size: 28px; line-height: 40px; width: 80%;}
+  .title5 {font-size: 14px; width: 90%;}
   .DemoBtn {margin: 25px auto 0; width: 120px; height: 36px; line-height: 36px; font-size: 16px; border-radius: 30px;}
   .DemoBtn a {color: #fff;}
   .DemoBtn a:hover {color: #222;}

@@ -89,6 +89,7 @@ function doLogout() {
     url: "{{:__APP__}}/{{$my_web_action}}/logout",
     success: function(ajaxData) {
       $('#menuLogin').html(ajaxData);
+      location.reload();
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
       layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});

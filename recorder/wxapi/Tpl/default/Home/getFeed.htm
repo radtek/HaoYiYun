@@ -1,0 +1,57 @@
+
+<div class="feed-area">
+  <div class="feed-title">{{$my_base.play_title}}</div>
+  <div class="feed-item">{{$my_base.clicks}}次播放</div>
+  <notempty name='my_base.subject_id'>
+  <div class="feed-item feed-hand" onclick="doRecDown();">
+    <div class="fa fa-cloud-download"></div>
+    <div class="feed-text">下载</div>
+  </div>
+  <div class="feed-href">
+    <a href="{{:__APP__}}/Home/subject/id/{{$my_base.subject_id}}">
+      <div class="fa fa-th-list"></div>
+      <div class="feed-text">{{$my_base.subject_name}}</div>
+    </a>
+  </div>
+  </notempty>
+  <div class="feed-item">
+    <div id="myIconUp" class="fa fa-thumbs-up feed-hand <eq name='my_base.is_like' value='1'>feed-like</eq>"
+      <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},1);"
+     <else />onclick="javascript:doLogin();"
+     </if> ></div>
+    <div id="myLikes" class="feed-text"><gt name='my_base.likes' value='0'>{{$my_base.likes}}</gt></div>
+  </div>
+  <div class="feed-item">
+    <div id="myIconDown" class="fa fa-thumbs-down feed-hand <eq name='my_base.is_like' value='0'>feed-like</eq>"
+      <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},0);"
+     <else />onclick="javascript:doLogin();"
+     </if> ></div>
+    <div id="myKicks" class="feed-text"><gt name='my_base.kicks' value='0'>{{$my_base.kicks}}</gt></div>
+  </div>
+</div>
+<div class="comment-area">
+  <div class="comment-input">
+    <div class="input-img">
+      <if condition="$my_base.isLogin gt 0">
+      <a href="javascript:doUserInfo();">
+        <img class="loading" src="{{$my_base.headurl|str_replace='/0','/96',###}}" onload="doHeadLoad();" onerror="doErrUser();">
+      </a>
+      <else />
+      <div class="input-login">
+        <a href="javascript:doLogin();">登录</a>
+      </div>
+      </if>
+    </div>
+    <div class="input-text">
+      <textarea id="myTextArea" class="layui-textarea" maxlength="500" lay-verify="required" autocomplete="off"
+       <elt name='my_base.isLogin' value='0'> disabled </elt> placeholder="{{$my_base.holder}}"></textarea>
+    </div>
+    <button class="layui-btn layui-btn-normal input-submit <elt name='my_base.isLogin' value='0'>layui-btn-disabled</elt>">发表评论</button>
+    <div class="float-title">
+      <div id="myCommFeed" class="input-feeds-size">{{$my_base.totalComment}}</div>
+      <div class="input-feeds-name">条评论</div>
+    </div>
+    <div class="float-fix"></div>
+  </div>
+  <div id="myComment"></div>
+</div>

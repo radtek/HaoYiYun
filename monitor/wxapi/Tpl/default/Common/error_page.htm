@@ -36,7 +36,7 @@ body {
 <!-- 错误信息栏 -->
 <div class="weui_msg" style="margin-top:20px;">
   <elt name='my_icon' value='0'>
-  <div class="weui_icon_area">
+  <div class="weui_icon_area" style="margin-top:20px;">
     <i class="weui_icon_safe weui_icon_safe_warn"></i>
   </div>
   </elt>
@@ -58,6 +58,15 @@ body {
 <include file = "Common:foot" />
 </div>
 </gt>
+
+<!-- 是否调用父窗口的点击事件 -->
+<present name='my_camera'>
+<script>
+if( typeof(window.parent.doClicks) == "function" ) {
+  window.parent.doClicks('{{$my_camera.camera_id}}', {{$my_camera.clicks}}, 0);
+}
+</script>
+</present>
 
 <!-- 是否调用父窗口接口 -->
 <gt name='my_download' value='0'>

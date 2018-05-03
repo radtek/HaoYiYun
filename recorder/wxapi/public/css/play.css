@@ -97,36 +97,344 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   display: inline-block;
   margin-right: 5px;
 }
-
+/*
 .base {
   position: relative;
-  height: 60px;
   background: #fff;
   overflow: hidden;
 }
 .base .base_info {
-  float: left;
   width: 100%;
-  padding: 13px 0 17px 20px;
+  padding: 15px 0 10px 20px;
 }
 .base .base_title {
-  display: inline-block;
-  margin-right: 12px;
+  margin-bottom: 5px;
   zoom: 1;
   vertical-align: middle;
-  /*height: 30px;*/
-  line-height: 36px;
+  line-height: 30px;
   max-width: 710px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 18px;
   font-weight: 400;
-  color: #555;
+  color: #333;
   font-family: 'microsoft yaHei','微软雅黑',arial;
 }
 .base .base_title a {
   font-size: 18px;
   font-weight: 400;
   color: #3399E0;
+}*/
+.main-area {
+  background: #fff;
+  position: relative;
+}
+.l-main {
+  width: 850px;
+  float: left;
+}
+.l-side {
+  margin-bottom: 10px;
+  background: #fff;
+  width: 320px;
+  float: right;
+  /*position: absolute;
+  right: 0px;
+  top: 0px;*/
+}
+.loading-main {
+  height: 80px;
+  text-align: center;
+}
+.loading-img {
+  top: 35px;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  display: inline-block;
+  background-image: url(../images/preloader-white.gif);
+}
+.loading-text {
+  display: inline-block;
+  position: absolute;
+  padding-left: 25px;
+  font-size: 16px;  
+  top: 35px;
+}
+.wait-main {
+  height: 40px;
+  text-align: center;
+}
+.wait-img {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  display: inline-block;
+  background-image: url(../images/preloader-white.gif);
+}
+.wait-text {
+  display: inline-block;
+  position: absolute;
+  padding-left: 25px;
+  font-size: 16px;  
+}
+.feed-area {
+  padding: 15px 20px 10px 20px;
+}
+.feed-down-title {
+  font-style: normal;
+}
+.feed-title {
+  font-family: 'microsoft yaHei','微软雅黑',arial;
+  margin-bottom: 5px;
+  vertical-align: middle;
+  line-height: 26px;
+  font-size: 18px;
+  font-weight: 400;
+  color: #333;
+  /*text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;*/
+}
+.feed-item, .feed-href {
+  color: #9b9b9b;
+  font-size: 18px;
+  line-height: 30px;
+  margin-right: 30px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.feed-href a {
+  color: #9b9b9b;
+}
+.feed-href a:hover {
+  color: #212121;
+}
+.feed-hand {
+  cursor: pointer;
+}
+.feed-hand:hover {
+  color: #212121; /*#2692ff;*/
+}
+.feed-like {
+  color: #212121;
+}
+.feed-text {
+  font-size: 18px;
+  margin-left: 5px;
+  display: inline-block;
+}
+.comment-area {
+  margin: 15px 20px;
+}
+.comment-input {
+  margin-top: 15px;
+}
+.input-login {
+  text-align: center;
+  line-height: 32px;
+  font-size: 16px;
+}
+.input-login a:hover {
+  text-decoration: none;
+  color: #e67e22;
+}
+.input-img {
+  float: left;
+  width: 40px;
+  height: 40px;
+}
+.input-img img {
+  width: 40px;
+  height: 40px;
+}
+.input-text {
+  padding-left: 56px;
+}
+.input-text textarea {
+  font-size: 16px;
+  color: #000;
+}
+.input-submit {
+  float: right;
+  margin: 15px;
+}
+.input-feeds-size {
+  display: inline-block;
+  margin-right: 5px;
+  font-size: 18px;
+}
+.input-feeds-name {
+  display: inline-block;
+  font-size: 18px;
+}
+.comment-none {
+  border-bottom: none;
+}
+.comment-item {
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+  /*border-bottom: 1px solid #e4e4e4;*/
+}
+.comment-img {
+  display: table-cell;
+  vertical-align: top;
+  padding-right: 16px;
+  overflow: hidden;
+}
+.comment-img img {
+  height: 40px;
+  width: 40px;
+}
+.comment-main {
+  display: table-cell;
+}
+.comment-header {
+  margin-bottom: 2px;
+}
+.comment-name {
+  color: #111;
+  font-weight: 500;
+  font-size: 1.3rem;
+  line-height: 1.8rem;
+  margin-bottom: 2px;
+  margin-right: 8px;
+  display: inline-block;
+}
+.comment-time {
+  color: #888;
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.8rem;
+  text-transform: none;
+  display: inline-block;
+}
+.comment-content {
+  color: #111;
+  font-weight: 400;
+  font-size: 1.4rem;
+  line-height: 2.0rem;
+}
+.comment-button {
+  margin-top: 4px;
+  color: #9b9b9b;
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 32px;
+}
+.comment-like {
+  vertical-align: middle;
+  display: inline-block;
+  font-size: 16px;
+  padding: 2px 0px;
+}
+.comment-text {
+  vertical-align: middle;
+  display: inline-block;
+  font-size: 1.3rem;
+  margin-left: 5px;
+  margin-right: 20px;
+}
+.comment-expand {
+  color: #666;
+  text-transform: none;
+  margin: 5px 5px 5px 56px;
+}
+.comment-reply {
+  display: inline-block;
+  margin-bottom: 10px;
+  margin-right: 5px;
+  font-size: 1.4rem;
+  font-weight: 500;
+  line-height: 1.6rem;
+}
+.comment-arrow {
+  display: inline-block;
+}
+.removeBlock {
+  opacity: 0;
+}
+.comment-body:hover .removeBlock {
+  opacity: 1;
+}
+.hot-item {
+  margin: 0px 10px 10px 0px;
+  overflow: hidden;
+  color: #333;
+}
+.hot-cover {
+  text-decoration: none;
+  position: relative;
+  margin-right: 10px;
+  height: 90px;
+  float: left;
+}
+.hot-cover img {
+  width: 160px;
+  height: 90px;
+}
+.hot-title {
+  font-size: 14px;
+  line-height: 20px;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.hot-link:link, :visited {
+  text-decoration: none;
+  color: #333;
+}
+.hot-link:hover {
+  text-decoration: none;
+  color: #2692ff;  
+}
+.hot-status {
+  white-space: nowrap;
+  margin-top: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  color: #909096;
+}
+.hot-thumb-down {
+  position: absolute;
+  color: #FFF;
+  height: 20px;
+  line-height: 20px;
+  right: 6px;
+  bottom: 6px;
+  border-radius: 4px;
+}
+.hot-thumb-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+  z-index: 0;
+  border-radius: 2px;
+  background: #000;
+}
+.hot-thumb-time {
+  position: relative;
+  display: inline-block;
+  padding: 0 6px;
+  height: 16px;
+  line-height: 16px;
+  z-index: 10;
+  margin-right: 0;
+  font-size: 12px;
+}
+.float-title {
+  float: left;
+  color: #333;
+  font-size: 18px;
+  margin: 15px 0px;
+  padding: 3px 10px;
+  border-bottom: 2px solid #2692ff;  
+}
+.float-fix {
+  clear: both;
 }
