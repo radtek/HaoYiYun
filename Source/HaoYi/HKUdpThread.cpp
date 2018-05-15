@@ -230,9 +230,8 @@ GM_Error CHKUdpThread::ForRead()
 		lpDataElem = lpNode->ToElement();
 		lpszValue = lpDataElem->Value();
 		lpszText = lpDataElem->GetText();
-		ASSERT( lpszValue != NULL && lpszText != NULL );
-		// 去掉 Uuid 这个节点数据...
-		if( stricmp(lpszValue, "Uuid") != 0 ) {
+		// 2018.05.09 - by jackey => 都有效才处理，同时，去掉 Uuid 这个节点数据...
+		if( (lpszValue != NULL) && (lpszText != NULL) && (stricmp(lpszValue, "Uuid") != 0) ) {
 			theMapData[lpszValue] = lpszText;
 		}
 		// 继续下一个节点...

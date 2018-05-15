@@ -791,11 +791,11 @@ class HomeAction extends Action
     $arrData['feedHtml'] = $this->fetch('getFeed');
     // 返回页面需要的其它特定数据信息...
     $arrData['maxCommPage'] = $max_comm_page;
-    // 计算右侧热点推荐的点播记录数量 => 不要超过20条记录...
+    // 计算右侧热点推荐的点播记录数量 => 不要超过10条记录...
     $nRecTotal = D('record')->count();
     $nCalcPage = intval($nRecTotal / $pagePer);
     $nCalcPage+= (($nRecTotal % $pagePer) ? 1 : 0);
-    $arrData['maxHotPage'] = (($nCalcPage <= 2) ? $nCalcPage : 2);
+    $arrData['maxHotPage'] = (($nCalcPage <= 1) ? $nCalcPage : 1);
     // 返回json数据内容...
     echo json_encode($arrData);
   }

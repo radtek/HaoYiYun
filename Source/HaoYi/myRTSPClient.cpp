@@ -560,7 +560,7 @@ DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, char co
 	fStreamId = strDup(streamId);
 	fReceiveBuffer = new u_int8_t[DUMMY_SINK_RECEIVE_BUFFER_SIZE];
 
-	//fSTimeVal.tv_sec = fSTimeVal.tv_usec = 0;
+	fSTimeVal.tv_sec = fSTimeVal.tv_usec = 0;
 	memset(&m_llTimCountFirst, 0, sizeof(m_llTimCountFirst));
 }
 
@@ -597,20 +597,24 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 	// 把第一帧时间戳作为起点时间...
 	string			strFrame;
 	uint32_t		dwTimeStamp = 0;
-	ULARGE_INTEGER	llTimCountCur = {0};
+	
 	// 得到当前时间，时间单位是0.1微妙...
+	/*ULARGE_INTEGER	llTimCountCur = {0};
 	::GetSystemTimeAsFileTime((FILETIME *)&llTimCountCur);
 	if( m_llTimCountFirst.QuadPart <= 0 ) {
 		m_llTimCountFirst.QuadPart = llTimCountCur.QuadPart;
 	}
 	// 计算时间戳（毫秒)，需要除以10000...
-	dwTimeStamp = (llTimCountCur.QuadPart - m_llTimCountFirst.QuadPart)/10000;
-	
-	/*if((fSTimeVal.tv_sec <= 0) && (fSTimeVal.tv_usec <= 0)) {
+	dwTimeStamp = (llTimCountCur.QuadPart - m_llTimCountFirst.QuadPart)/10000;*/
+
+	// 2018.05.09 - by jackey => 利用硬件时间进行时间戳的计算...
+	// DS-2CV3Q21FD-IW 无线小企鹅，必须使用RTSP传递来的时间戳...
+	// DS-2DE2402IW-D3/W 无线IPC，必须使用RTSP传递来的时间戳...
+	if((fSTimeVal.tv_sec <= 0) && (fSTimeVal.tv_usec <= 0)) {
 		fSTimeVal = presentationTime;
 	}
 	// 计算时间戳(毫秒)，tv_sec是秒，tv_usec是微秒...
-	dwTimeStamp = uint32_t((presentationTime.tv_sec - fSTimeVal.tv_sec)*1000.0f + (presentationTime.tv_usec - fSTimeVal.tv_usec)/1000.0f);*/
+	dwTimeStamp = uint32_t((presentationTime.tv_sec - fSTimeVal.tv_sec)*1000.0f + (presentationTime.tv_usec - fSTimeVal.tv_usec)/1000.0f);
 
 	//char szBuf[MAX_PATH] = {0};
 
@@ -647,7 +651,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 	// 获取音频标志，关键帧标志 => 需要判断是否需要向上传递音频数据...
 	if( fRtspClient->m_bHasAudio && strcmp(fSubsession.mediumName(), "audio") == 0 ) {
 		strFrame.assign((char*)fReceiveBuffer, frameSize);
-		//TRACE("[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
+		//TRACE("[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, true);
 		//sprintf(szBuf, "[Audio] TimeStamp = %lu, Size = %lu, KeyFrame = %d\n", dwTimeStamp, frameSize, bIsKeyFrame);
 		//DoTextLog(szBuf);
 		// 向上层传递音频数据帧 => 必须在这里单独处理，因为有可能不要音频...

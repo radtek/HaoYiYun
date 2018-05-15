@@ -128,6 +128,55 @@
 13.（未完成）腾讯推出了一个类似GoogleDoc的多终端同步文档，可以将日志或敏感信息记录在上面，保持多终端同步，顺便整理一下有用的资料，而不是像现在这样到处都是。
 14.（未完成）测试发现，H5的flv模式，播放aac音频时，声音会一卡一卡，hls和flash播放正常。
 
+15.（未完成）有关评论的修改意见：
+   A：（未完成）后台需要新增铭感词设置；
+   B：（未完成）后台需要新增评论开启或禁用开关；
+   C：（未完成）后台需要新增flv/flash/hls播放优先顺序的配置；
+   D：（已完成）播放页热点推荐的数量从20个减少到10个；
+   E：（未完成）后台管理员可以对已有的评论进行管理；
+16.（未完成）移动端也需要新增评论、点赞功能，通过公众号授权获取用户信息；
+17.（未完成）需要新增互动聊天功能，在PC端和移动端都需要开通这个功能；
+   A：（已完成）互动聊天功能，在播放页的右侧，需要实验是否可以关闭，专门放置聊天界面，模仿youtube的简洁模式；
+   B：（已完成）实验成功，controlNavigation: 'none', $('#video-gallery').css('width', '850px'); 动态修改视频窗口宽度；
+18.（未完成）互动聊天功能开通之后，需要给浩一云申请开通微信支付功能，可以让观看者给直播者打赏；打赏的分账由节点服务器进行标记；
+19.（未完成）打赏功能分为移动端打赏（拉取公众号的支付接口）和PC端打赏（弹出支付二维码，用户扫码支付）
+20.（未完成）在PC端完成了互动聊天之后，可以考虑改进移动端的页面，参考目睹直播的思路：播放器下面使用tab标签；主播介绍|课程回看|互动聊天（有一个打赏按钮浮动，随时点击打赏支付）
+
+21.（未完成）srs的直播延时在关闭gop时大概在3秒左右，开启gop在7秒左右；而且播放时间越长，延时越大，需要排查 采集端、srs、播放器 的流堆积情况；
+
+27.（未完成）网站后台配置 将录像保留最大值扩大至少730天（可最多保留2年的视频数据）
+28.（未完成）网站后台配置 将录像切片由【0，30】扩大至【0，60】；
+
+2018.05.01 - 2018.05.31
+=========================================================================
+1.（已完成）海康人脸系统分为三种层次：
+    A：人脸检测 => IPC检测到人脸会通过报警回调接口反馈信息；http://www.hikvision.com/cn/prlb_841.html
+    B：人脸抓拍 => IPC检测到人脸不仅报警还会抓拍图像一起反馈；http://www.hikvision.com/cn/prlb_1608.html
+    C：人脸比对 => IPC检测到人脸不仅抓拍还要跟已有的人脸库进行比对，然后一并进行回调反馈通知；http://www.hikvision.com/cn/prlb_1609.html
+    D：因此，三种形式的IPC是不同的类型，处理的复杂度是不一样的；人脸比对的IPC淘宝价在4500元左右；
+2.（未完成）DS-2CD2432F-I/W，300万像素，无线卡片式IPC，音频格式需要转换成AAC格式；12V移动电源可用；英文版，不带电源适配器；
+    A：（未完成）由于是WIFI模式，开启预览再拉流，感觉有时网络会不稳定，需要降低视频大小，降低至1280*720；或直接关闭预览；
+    B：（未完成）某些自动配置无法执行，后续需要进一步的优化，详情查看 CCamera::onDeviceLoginSuccess() 函数；
+    C：（已完成）不要使用这款设备，音频和配置都有问题，可以用“小企鹅”完全代替；
+3.（已完成）DS-2CV3Q21FD-IW，200万像素，无线小企鹅IPC，目前测试结果如下：
+    A：（已完成）可以用组播探测软件访问配置，IP地址 => 192.168.1.24，登录密码 => adminBBORSE，在摄像头底部的六位验证码；
+    B：（已完成）自动链接萤石云，不能用网页访问，iVMS-4200可以远程配置；http://www.hikvision.com/cn/download_more_390.html
+    C：（已完成）支持 H264+AAC 方式，开启声音的降噪功能，效果很好；
+    D：（已完成）时间戳不能使用PC的时间戳，必须使用硬件本身的时间戳，否则，音视频不同，画面卡顿严重；在Chrome控制台能看到黄色警告信息；
+    E：（已完成）目前看来最大的问题是延时比较大，采集端、服务器、播放终端都有可能造成较大的延时问题，这个需要后续专门进行优化处理；
+    F：（已完成）音频开启环境噪声过滤、关闭移动侦测、固定无线IP地址(192.168.1.24)；小企鹅完全能满足需求；
+    G：（已完成）主码流 => STD_H264 | 1280*720 | 变码率 | 1024kbps | 复合流 | I帧间隔20 | 视频帧率15fps | AAC | 音频32kbps | 采样率16kHz
+    H：（已完成）子码流 => STD_H264 | 704*576 | 定码率 | 512kbps | 复合流 | I帧间隔20 | 视频帧率15fps | AAC | 音频32kbps | 采样率16kHz
+4.（未完成）DS-2DE2402IW-D3/W，400万像素，无线IPC，目前测试结果如下：
+    A：（未完成）组播探测方式改动了，使用标准的ONVIF模式，不是通过组播回应的方式，需要在采集端加入标准的ONVIF协议；使用第三方SDK来完成ONVIF；
+    B：（已完成）可以用网页进行配置管理，登录IP地址 => 192.168.1.29，登录帐号 => admin:admin123
+    C：（已完成）主码流 => STD_H264 | 1280*720 | 变码率 | 1024kbps | 复合流 | I帧间隔20 | 视频帧率15fps | AAC | 音频32kbps | 采样率16kHz
+    D：（已完成）子码流 => STD_H264 | 704*576 | 定码率 | 512kbps | 复合流 | I帧间隔20 | 视频帧率15fps | AAC | 音频32kbps | 采样率16kHz
+    E：（已完成）音频开启环境噪音过滤功能，可以有效解决环境杂音；
+    F：（已完成）1M码流的效果，感觉和“小企鹅”的效果差不多；
+5.（已完成）采集端 IPC 时间戳不能使用PC端时间，必须使用RTSP传递时间，否则，会造成图像卡顿，Chrome的控制台提示音视频的时间戳有问题；上次Tim提到的卡顿也是这个原因；
+    A：（未完成）如果这样修改之后，需要考虑RTSP时间戳发生跳变的问题，现有的摄像头就能测试；
+
 2018.04.01 - 2018.04.30
 =========================================================================
 1.（已完成）有关“采集端”与“节点网站”的注册说明：
@@ -170,7 +219,7 @@
    C.（已完成）优化wk_system内容，只留一份代码；
 12.（已完成）完成了《直播教室-设计.docx》，目录 => E:\GitHub\HaoYiYun\Document\方案
    A：（已完成）就是一种直播课堂方案，老师在北京上课，学生通过网络投影观看学习；
-   B：（已完成）开源的obs能够完全满足要求，需要改进，涉及到 VS2015|QT|cmake；在itellyou上下载vs2015安装；
+   B：（已完成）开源的obs能够完全满足要求，需要改进，涉及到 VS2015|QT|cmake；在itellyou上下载vs2015安装；professional_2015_x86_x64
    C：（已完成）有关obs的详细编译过程，https://blog.csdn.net/gengxt2003/article/details/79070741
    D：（已完成）清华大学开源软件镜像站，https://mirrors.tuna.tsinghua.edu.cn/
 13.（已完成）云录播 网站升级注释写成了 云监控 的升级注释；
@@ -182,6 +231,105 @@
    D：（已完成）直播没启动，评论区无法触发刷新事件，在error_page当中做特殊处理；
    E：（已完成）云监控 播放页面的录像按日期选择功能还没有完成；
 16.（已完成）升级版本为1.3.3
+17.（已完成）有关USB高清摄像机的信息记录：
+   A：优点 => 免驱、免采集卡、模拟COM口（免云台控制线），给的软件据说是为了模拟COM口用的；
+   B：缺点 => 对机器的配置要求较高，CPU占用高；
+   C：云台控制标准协议 => VISCA、PELCO-D、PELCO-P，都是通过RS232串口通讯；USB可以模拟串口，也能实现云台控制，可以免去串口线；会议摄像机里面用的多；
+   D：还有一种云台控制协议 PTZ，通常通过 ONVIF 协议控制，目前在海康监控摄像头里面用的多；PTZ应该是网络协议，其它的是串口通讯协议；
+   E：这样，就能通过自己的软件实现全部的云台操作，所以，使用USB模式的摄像机非常有必要，完全没有必要采用HDMI+高清采集卡的方式；
+   F：实物展台可以采用定焦摄像头，没有必要采用20倍变焦的摄像头；
+18.（已完成）obs的源码分析文章：
+   A：（已完成）第一篇 => https://cloud.tencent.com/developer/article/1004548
+   B：（已完成）第二篇 => https://segmentfault.com/p/1210000009106399
+   C：（已完成）第三篇 => https://blog.csdn.net/laohuangniu/article/details/70313303
+19.（已完成）obs调试过程中的问题总结：
+   A：需要将vsbuild\rundir\Debug\bin\32bit的内容全部拷贝到vsbuild\UI\Debug，才能调试，修改编译目录的方式无法设置调试断点；（这种方式调试起来麻烦，后面改进了）
+   B：https://blog.csdn.net/laohuangniu/article/details/70313303，这篇文章讲解了test工程运行中的问题，这个工程很重要，通过它来不断改进，将obs的功能体现出来，但不用obs的界面；
+   C：现在的关键是完成界面和数据采集功能；
+   D：调试win-test成功，现在需要建立一个vs2015的工程，对话框的形式，建立场景、显示窗口等等，搭建雏形；
+   E：调试模式需要设定特殊的模块目录，obs-windows.c:module_data:"../../data/obs-plugins/%module%"
+   F：需要利用obs实验出虚拟画布功能，不要显示黑色的画布，然后，隐藏屏幕流，就能实现最初的设想；
+   G：需要改变思路，不要违背obs的核心思想，顺着obs的思想走，对界面进行调整；固定数据源；不断优化使用体验；
+20.（未完成）根据对obs的全新认识，顺着obs的思路，重新调整方案：
+   A：（未完成）使用QT搭建界面，有利于直接将obs的界面使用到自己的软件当中；
+   B：（未完成）使用左侧设定一个基于桌面的画布窗口，右侧仍然是对话框形式的浮动界面，所有的操作都针对左侧画布窗口；
+   C：（未完成）画布大小就是显示器桌面大小，锁定显示器捕获，画布窗口里的元素：最底层是一个显示器捕获+老师摄像头+展台摄像头+互动学生摄像头；
+   D：（未完成）需要解决显示器隐藏的情况下，仍然捕获桌面内容，进行压缩、上传、录像；现在的obs只要预览不显示，就不会处理数据；
+   E：（已完成）第一步是需要解决当前obs编译调试的问题，而不是每次编译相关dll都需要拷贝到UI/Debug目录下；
+   F：（已完成）直接在rundir/Debug/bin/32bit下运行，应该是编译目录设定有问题，造成无法设置调试断点；
+       C:\Users\Jackey\AppData\Roaming\obs-studio
+       Output Directory => E:\obs-studio\vsbuild\rundir\Debug\bin\32bit
+       Intermediate Directory => E:\obs-studio\vsbuild\UI\obs.dir\Debug
+       Debug Command => E:\obs-studio\vsbuild\rundir\Debug\bin\32bit\obs32.exe
+       Working Directory => E:\obs-studio\vsbuild\rundir\Debug\bin\32bit\
+       注意：调试目录与工作目录保持一致，否则dll无法加载；
+       注意：obs本身在编译完成之后会执行post脚本，会把obs32bit.exe发送到vsbuild\rundir\Debug\bin\32bit，因此Output Directory可以不动，Teacher工程才需要修改；
+   G：（未完成）重点研究obs-ui，使用QT重组界面，完全不用以前的代码，就是将obs界面代码进行简单重组，现在的obs编译版本全部达到了预期的需要。就是对界面进行重组。
+   H：（已完成）obs的目录结构：
+      bin -> 32bit -> obs32.exe     => 界面和模块编译后的动态库
+      data -> libos|obs-plugins     => 模块和插件用到的数据
+      obs-plugins -> 32bit -> *.dll => 插件编译后的动态库
+   I：（已完成）VS2015需要安装扩展组件，新建一个QT界面的工程，obs是利用cmake外挂编译了QT模块，可以直接调试，新建的工程，必须与QT绑定，重新绑定编译才行；
+   J：（已完成）.ui是QT生成的页面配置文件，可直接编辑，编译时会自动生成ui_xxx.h文件，.qrc是资源配置文件；QT工程会新增一些配置项，会提前预编译一些文件，然后供vs2015使用；
+   K：（已完成）成功将Teacher用obs的界面编译完成，现在需要进一步对界面进行调整；
+   L：（已完成）重新在E:/obs-studio创建目录，从https://github.com/HaoYiTech/obs-studio上拉取数据；
+   M：（已完成）需要对QT的界面设计器进行系统学习，要不然后续针对obs界面改造会非常费劲；
+      https://blog.csdn.net/a10929/article/details/78114261
+      https://blog.csdn.net/GoForwardToStep/article/details/53792702 => QQ风格窗口
+      https://blog.csdn.net/goforwardtostep/article/details/53494800 => 自定义窗口
+      https://blog.csdn.net/goforwardtostep/article/details/77825598 => 有关布局的
+      https://blog.csdn.net/goforwardtostep/article/details/52085030 => 有关信号槽
+      https://blog.csdn.net/zhuyingqingfen/article/details/44019915  => QT小技巧
+      https://blog.csdn.net/iaccepted/article/details/24426875
+      https://www.cnblogs.com/sfy5848/p/4835458.html
+   N：（已完成）可以参考的obs界面，陆续增加中：
+      https://github.com/Bilibili/biliobs
+      https://github.com/alibaba/tblive
+21.（未完成）对obs界面的修改操作：
+   A：（已完成）隐藏scenesDock|transitionsDock，设置sourcesDock|mixerDock最小尺寸为(300,200)
+   B：（已完成）修复预览开启与关闭菜单项，修改图标，修改标题名称；setStyleSheet("QListView::item:selected {background: #4FC3F7;}")，设置选中条背景色；
+   C：（已完成）修改 默认语言环境从 en-US => zh-CN；优化右键菜单，删除一些无用的，去掉“滤镜”“交互”，保留“属性”；
+   D：（已完成）修改 来源 => 数据源 - 将多种图层混合输出，混音器 - 将所有音频混合输出，通过修改UI\data\locale\zh-CN.ini => data\obs-studio\locale\zh-CN.ini 完成；
+   E：（已完成）修改 添加 => 添加(源)，重命名 => 重命名(源)，移除 => 移除(源)；
+   F：（已完成）修正 右键菜单 重命名 对来源名称的修改错误；SourceItemNameEdited()当中currentItem有可能不是selectedItems
+   G：（已完成）去掉 自动更新升级功能；EnableAutoUpdates，去掉自动日志上传功能；UploadLog()；profile_data没有去掉，可以跟踪运行状态；
+   H：（已完成）开启 状态栏，显示在窗口底部；预览窗口的缩放方式有问题，没有安装配置的方式显示，造成操作问题；fixedScaling强制锁定；
+   I：（已完成）解决停靠栏右键菜单显示问题；选择CustomContextMenu项就行，构造void on_xxx_customContextMenuRequested(const QPoint &pos);会自动响应右键菜单事件；
+   J：（已完成）点击关闭之前，弹框询问，不要直接关闭程序；OBSBasic::closeEvent(QCloseEvent *event) => event->ignore();
+   K：（已完成）进程关闭之后，窗口界面的配置信息没有存盘 => 需要打开OBSBasic::Save()之前屏蔽的代码；SceneItem就是SourceItem；
+   L：（已完成）启动两个进程时的报错处理过程，有问题，需要修正；
+   M：（已完成）第一次启动，修改默认的配置目录和名称为 default ，以前是中文的“未命名”，界面主题采用 Default，不要采用 Dark；
+       MakeUserDirs() => 创建大量默认的配置目录信息；
+       InitGlobalConfig() => 创建 obs-studio/global.ini
+       MakeUserProfileDirs() => 创建用户信息配置目录
+       去掉自动向导配置功能，全部采用手动配置...
+   N：（已完成）需要解决obs-studio/plugin_config里面隐藏访问的问题，跟加载模块相关，已经去掉了不常用的模块；
+   O：（已完成）有四种资源类型 => obs->source_types => OBS_SOURCE_TYPE_INPUT | OBS_SOURCE_TYPE_FILTER | OBS_SOURCE_TYPE_TRANSITION | OBS_SOURCE_TYPE_SCENE
+       enc-amf | obs-browser | obs-vst | libdshowcapture => 这几个扩展模块是子工程，需要单独下载，否则，不会生成工程文件；
+   P：（已完成）开启数据源的 添加 | 修改 | 删除 功能；
+       “添加”功能，CreateAddSourcePopupMenu()，有两个地方弹出菜单 => 预览右键 | 停靠栏点击加号；一个模块dll中可能包含一种资源类型，但可包含多种资源；
+       “添加”功能，数据源数量就是扩展模块数量 => obs->input_types => obs_register_source_s(OBS_SOURCE_TYPE_INPUT) => obs_load_all_modules => obs-plugins\32bit
+       “添加”功能，只保留有限的几种数据输入源 => 视频捕获设备 | 显示器捕获 | 窗口捕获 | 音频输入捕获 | 媒体源，禁用game_capture|wasapi_output_capture => obs_enable_source_type()
+        删除image_source.dll(有3个数据源)，删除test_input.dll(有5个数据源)，删除text_freetype2.dll(有1个数据源)，删除obs_text.dll(有1个数据源)
+   Q：（已完成）新增 网络流 数据源 => 直接使用“媒体源”的网络流就可以，内核是ffmpeg，本身就是支持rtmp|flv|hls|rtsp数据流；就可以不用费劲去加载vlc-video.dll（牵涉大量工作）
+   R：（已完成）注意：工程重新编译时，会对locale资源进行重新拷贝到data目录下，需要提前做好备份工作或直接修改UI\data\locale下的zh-CN.ini文件；
+   S：（已完成）新增 双击数据源预览框 全屏投影 功能 => OBSQTDisplay::mouseDoubleClickEvent() => OpenSourceMonitor()
+      （已完成）修改 双击数据源预览框 移至顶部 并 拉伸至全屏功能，而不是全屏投影，因为，全屏投影并不会反应在实时的直播画面当中，只是全屏在投影预览当中 => OBSBasic::DoDisplayDbClicked()
+   T：（已完成）修改 数据源预览框 的缩放方式，目前只能按等比例缩放，看看能否修改成任意比例的缩放；每一个数据源都可以配置transform变换参数，开启变换对话框界面 => OBSBasicTransform.ui
+   U：（已完成）新增 按钮控制 停靠栏 => 开始直播（自动录像mp4）| 常规配置（输出窗口大小等等基本配置信息，还是在原有界面上进行简单的调整）
+   V：（已完成）新增 统计信息 按钮 => statsButton 与 statsAction关联；
+   W：（已完成）修改 开始推流 背景色 和 按钮高度 => setStyleSheet("QPushButton{background-color: #FFA500; height: 35px; font-size: 20px; color: black;}");
+   X：（未完成）改造 媒体源 为 学生互动 => 枚举所有当前教室里的采集端上的有效IPC列表，
+   Y：（已完成）修改 ffmpeg_source 时的资源界面，OBSPropertiesView，通过资源属性来动态创建窗口对象；
+       现在，需要隐藏文件模式，只留下一个QListView框，写入在线采集端摄像头列表，每一个Item就是一个rtmp链接地址，就是一个动态获取流地址的界面；
+       OBSBasicProperties当中，隐藏preview对象，隐藏文件模式，始终用非文件模式；ffmpeg_source_defaults() => is_local_file => false;
+       需要新建一个ListView，选择Item之后，直接找到对应的obs_property_t，赋值即可 => obs_data_set_string() => RefreshProperties()
+   Z：（未完成）Teacher端必须先加入一个直播间Room之后，才能开始直播，没有加入房间之前不能开始直播，一个房间只能有一个Teacher端在线；
+      （未完成）Teacher端必须在主界面启动前就要选择房间；
+
+22.（未完成）开始 edu.ihaoyi.cn 的开发设计当中：
+   A：（未完成）创建新的目录 => E:\GitHub\HaoYiYun\educate，对应 monitor|recorder，创建新数据库 educate；
+   B：（未完成）搭建网站雏形 => 首页 | 直播间 | 巡课 | 登录
 
 2018.03.01 - 2018.03.31
 =========================================================================

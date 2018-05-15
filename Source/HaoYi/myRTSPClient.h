@@ -90,5 +90,6 @@ private:
 	u_int8_t		*	fReceiveBuffer;			// 帧缓冲区
 	MediaSubsession &	fSubsession;			// 会话引用对象
 	ourRTSPClient	*	fRtspClient;			// RTSP客户端对象
+	timeval				fSTimeVal;				// 硬件时间戳计时起点...
 	ULARGE_INTEGER		m_llTimCountFirst;		// 音视频的0点时间 => 单位是0.1微妙...
 };

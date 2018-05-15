@@ -1,0 +1,40 @@
+
+<blockquote class="layui-elem-quote" style="margin-top:5px;">
+  温馨提示：【直播服务器】支持 hls、rtmp，能够按需上传，自动分配上传地址，无需人工干预。
+</blockquote>
+
+<!-- 错误信息栏 -->
+<gt name="my_show.err_code" value="0"> 
+<div class="feed-error">
+  <i class="fa fa-frown-o">&nbsp;{{$my_show.err_msg}}</i>
+</div>
+<else/>
+<table class="layui-table">
+  <colgroup>
+    <col width="10%">
+    <col width="20%">
+    <col width="20%">
+    <col width="20%">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>序号</th>
+      <th>状态</th>
+      <th>RTMP地址</th>
+      <th>HLS地址</th>
+      <th>已挂载通道数</th>
+    </tr>
+  </thead>
+  <tbody>
+    <volist name="my_show.list" id="vo">
+    <tr class="feed-cursor" onclick="doCameraList('{{$vo[0]}}');">
+      <td>{{$key+1}}</td>
+      <td class="feed-online">ONLINE</td>
+      <td>{{$vo[0]}}</td>
+      <td>{{$vo[1]}}</td>
+      <td>{{$vo[2]}}</td>
+    </tr>
+    </volist>
+  </tbody>
+</table>
+</gt>
