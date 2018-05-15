@@ -54,7 +54,7 @@ function doMobile() {
     title: false,
     shadeClose: true,
     area: ['480px', '480px'],
-    content: "{{:__APP__}}/{{$my_web_action}}/mobile/"
+    content: "{{:__APP__}}/Home/mobile/"
   });
 }
 // 响应头像点击事件...
@@ -66,7 +66,7 @@ function doUserInfo() {
     fixed: true,
     shadeClose: true,
     area: ['450px', '450px'],
-    content: "{{:__APP__}}/{{$my_web_action}}/userInfo/",
+    content: "{{:__APP__}}/Home/userInfo/",
     title: "<i class='fa fa-user'>&nbsp;&nbsp;</i>已登录用户信息"
   });
 }
@@ -86,7 +86,7 @@ function doLogout() {
   $.ajax({
     type: "get",
     async: true,
-    url: "{{:__APP__}}/{{$my_web_action}}/logout",
+    url: "{{:__APP__}}/Home/logout",
     success: function(ajaxData) {
       $('#menuLogin').html(ajaxData);
       location.reload();
@@ -106,12 +106,12 @@ function doLogin() {
     title: false,
     shadeClose: true,
     area: ['450px', '450px'],
-    content: "{{:__APP__}}/{{$my_web_action}}/login/"
+    content: "{{:__APP__}}/Home/login/"
   });
 }
 // cookie有效时iframe内部访问...
 function doReload() {
-  location.href = "{{:__APP__}}/{{$my_web_action}}/index";
+  location.href = "{{:__APP__}}/Home/index";
 }
 // 加载layui的layer模块...
 layui.use(['layer']);

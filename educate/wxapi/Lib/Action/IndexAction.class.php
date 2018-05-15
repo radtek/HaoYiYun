@@ -12,12 +12,12 @@ class IndexAction extends Action
     //////////////////////////////////////////////
     // 直接对页面进行跳转...
     // 移动设备 => /Mobile
-    // 电脑终端 => /wxapi.php/Monitor/index
+    // 电脑终端 => /wxapi.php/Home/index
     //////////////////////////////////////////////
     if( $this->m_detect->isMobile() ) {
       header("location: /Mobile");
     } else {
-      header("location:".__APP__.'/Monitor/index');
+      header("location:".__APP__.'/Home/index');
     }
   }
   /**

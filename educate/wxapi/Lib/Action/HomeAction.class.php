@@ -4,16 +4,16 @@
 
 *************************************************************/
 
-class MonitorAction extends Action
+class HomeAction extends Action
 {
   public function _initialize()
   {
     // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
     Load('extend');
-    // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
+    // 获取系统配置，根据配置设置相关变量 => 强制配置成云教室...
     $this->m_dbSys = D('system')->find();
     $this->m_webTitle = $this->m_dbSys['web_title'];
-    $this->m_webType = kCloudMonitor;
+    $this->m_webType = kCloudEducate;
     // 创建一个新的移动检测对象...
     $this->m_detect = new Mobile_Detect();
     //////////////////////////////////////////////
@@ -32,10 +32,7 @@ class MonitorAction extends Action
     if( !empty($data) && is_array($data) ) {
       $this->m_isIEBrowser = (($data[2] >= '11.0') ? 0 : 1);
     }
-    // 如果是监控模式，设置常量信息...
-    $this->m_webAction = "Monitor";
     // 直接给模板变量赋值...
-    $this->assign('my_web_action', $this->m_webAction);
     $this->assign('my_system', $this->m_dbSys);
   }
   //
@@ -83,7 +80,7 @@ class MonitorAction extends Action
     
     $my_nav['is_login'] = false;
     $this->assign('my_nav', $my_nav);
-    $this->display('Common:monitor_login');
+    $this->display('Common:home_login');
   }
   //
   // 点击登录导航页...

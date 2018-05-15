@@ -2,7 +2,7 @@
 <ul class="thumb_view" id="page_{{$my_cur_page}}">
   <volist name="my_list" id="item">
   <li class="live">
-    <a href="{{:__APP__}}/Monitor/play/camera_id/{{$item.camera_id}}" class="thumb" id="c_{{$item.camera_id}}">
+    <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}" class="thumb" id="c_{{$item.camera_id}}">
       <span class="p-time">
         <span <if condition="$item.status gt 0">class="ibg online"<else/>class="ibg offline"</if> ></span>
         <span class="itg"><switch name="item.status"><case value="0">离线中</case><case value="1">直播中</case><case value="2">录像中</case><default/>离线中</switch></span>
@@ -10,7 +10,7 @@
       <img class="lazy" data-original="{{$my_web_tracker}}{{$item.image_fdfs}}_252x162" width="252px" height="162px"></img>
     </a>
     <div class="thumb_title" title="{{$item.camera_name}}">
-      <a href="{{:__APP__}}/Monitor/play/camera_id/{{$item.camera_id}}">
+      <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}">
         <switch name="item.stream_prop">
           <case value="0"><i class="fa fa-camera"></i></case>
           <case value="1"><i class="fa fa-file-video-o"></i></case>

@@ -7,12 +7,12 @@
           <ul class="menu">
             <!--首页 | 实时-->
             <li <eq name='my_nav.type' value='0'>class="nav-current"</eq> role="presentation"><a href="/">首页</a></li>
-            <li <eq name='my_nav.type' value='1'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Monitor/live">实时</a></li>
-            <li <eq name='my_nav.type' value='2'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Monitor/tour">巡查</a></li>
+            <li <eq name='my_nav.type' value='1'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/live">实时</a></li>
+            <li <eq name='my_nav.type' value='2'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/tour">巡查</a></li>
             <!-- 横向采集器 -->
             <volist name="my_nav.list" id="vo">
             <li title="{{$vo.name_set}}" <eq name='my_nav.type' value='3'> <eq name='my_nav.active_id' value='$vo.gather_id'>class="nav-current"</eq> </eq> role="presentation">
-            <a href="{{:__APP__}}/Monitor/gather/id/{{$vo.gather_id}}">{{$vo.name_set|msubstr=0,5,"utf-8",false}}</a></li>
+            <a href="{{:__APP__}}/Home/gather/id/{{$vo.gather_id}}">{{$vo.name_set|msubstr=0,5,"utf-8",false}}</a></li>
             </volist>
             <!-- 下拉采集器 -->
             <if condition="$my_nav.drop_num gt 0">
@@ -21,14 +21,14 @@
               <ul class="dropdown-menu">
                 <volist name="my_nav.drop" id="vo">
                 <li role="presentation" title="{{$vo.name_set}}">
-                  <a href="{{:__APP__}}/Monitor/gather/id/{{$vo.gather_id}}/more/1">{{$vo.name_set|msubstr=0,5,"utf-8",false}}</a>
+                  <a href="{{:__APP__}}/Home/gather/id/{{$vo.gather_id}}/more/1">{{$vo.name_set|msubstr=0,5,"utf-8",false}}</a>
                 </li>
                 </volist>
               </ul>
             </li>
             </if>
             <div id="menuLogin" style="float:right;">
-              <include file = "Common:monitor_login" />
+              <include file = "Common:home_login" />
             </div>
           </ul>
         </div>

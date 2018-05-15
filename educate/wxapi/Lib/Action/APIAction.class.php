@@ -832,8 +832,8 @@ class APIAction extends Action
       // 没有设置宽度，默认850px，没有设置高度，默认550px
       $theWidth = (isset($_GET['width']) ? $_GET['width'] : 850);
       $theHeight = (isset($_GET['height']) ? $_GET['height'] : 550);
-      // 组合需要返回的播放地址内容 => Monitor
-      $strUrl = sprintf("%s://%s/wxapi.php/Monitor/show/type/live/camera_id/%d/width/%d/height/%d", 
+      // 组合需要返回的播放地址内容 => Home
+      $strUrl = sprintf("%s://%s/wxapi.php/Home/show/type/live/camera_id/%d/width/%d/height/%d", 
                         $_SERVER['REQUEST_SCHEME'], $_SERVER['HTTP_HOST'],
                         $camera_id, $theWidth, $theHeight); 
       // 将获取到的播放地址，设置到返回对象当中...
@@ -858,8 +858,8 @@ class APIAction extends Action
       // 没有设置宽度，默认850px，没有设置高度，默认550px
       $theWidth = (isset($_GET['width']) ? $_GET['width'] : 850);
       $theHeight = (isset($_GET['height']) ? $_GET['height'] : 550);
-      // 组合需要返回的播放地址内容 => Monitor
-      $strUrl = sprintf("%s://%s/wxapi.php/Monitor/show/type/vod/record_id/%d/width/%d/height/%d", 
+      // 组合需要返回的播放地址内容 => Home
+      $strUrl = sprintf("%s://%s/wxapi.php/Home/show/type/vod/record_id/%d/width/%d/height/%d", 
                         $_SERVER['REQUEST_SCHEME'], $_SERVER['HTTP_HOST'],
                         $record_id, $theWidth, $theHeight); 
       // 将获取到的播放地址，设置到返回对象当中...

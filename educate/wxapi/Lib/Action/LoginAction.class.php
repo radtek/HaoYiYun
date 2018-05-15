@@ -9,9 +9,9 @@ class LoginAction extends Action
   // 初始化页面的默认操作...
   public function _initialize()
   {
-    // 获取系统配置，根据配置设置相关变量 => 强制配置成云监控...
+    // 获取系统配置，根据配置设置相关变量 => 强制配置成云教室...
     $this->m_dbSys = D('system')->find();
-    $this->m_webType = kCloudMonitor;
+    $this->m_webType = kCloudEducate;
     // 直接给模板变量赋值 => 跟foot统一...
     $this->assign('my_system', $this->m_dbSys);
   }
@@ -113,7 +113,7 @@ class LoginAction extends Action
         header("location:".$strJump);
       } else {
         // 不一致，跳转到首页...
-        A('Monitor')->index();
+        A('Home')->index();
       }
       return;
     }
@@ -159,7 +159,7 @@ class LoginAction extends Action
     // 拼接当前访问页面的完整链接地址 => 登录服务器会反向调用 => 前后端跳转地址不一样...
     $dbJson['node_proto'] = $_SERVER['REQUEST_SCHEME'];
     $dbJson['node_addr'] = $_SERVER['HTTP_HOST'];
-    $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Monitor/login");
+    $dbJson['node_url'] = __APP__ . ($bIsAdmin ? "/Login/index" : "/Home/login");
     $dbJson['node_tag'] = $dbSys['web_tag'];
     $dbJson['node_type'] = $dbSys['web_type'];
     $dbJson['node_name'] = $dbSys['web_title'];
@@ -168,13 +168,13 @@ class LoginAction extends Action
     // 对链接地址进行base64加密...
     $state = urlsafe_b64encode($state);
 
-    // 给模板设定数据 => default/Login/login.htm => default/Monitor/login.htm
+    // 给模板设定数据 => default/Login/login.htm => default/Home/login.htm
     $this->assign('my_state', $state);
     $this->assign('my_scope', $this->m_weLogin['scope']);
     $this->assign('my_appid', $this->m_weLogin['appid']);
     //$this->assign('my_href', $this->m_weLogin['href']);
     $this->assign('my_redirect_uri', urlencode($this->m_weLogin['redirect_uri']));
-    $this->display($bIsAdmin ? "Login:login" : "Monitor:login");
+    $this->display($bIsAdmin ? "Login:login" : "Home:login");
   }
   //
   // 显示错误模板信息...

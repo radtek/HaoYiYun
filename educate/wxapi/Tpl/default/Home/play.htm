@@ -1,6 +1,6 @@
 
-<include file = "Common:monitor_header" />
-<include file = "Common:monitor_nav" />
+<include file = "Common:home_header" />
+<include file = "Common:home_nav" />
 
 <script src="/wxapi/public/js/jquery.royalslider.js" language="javascript"></script>
 <script src="/wxapi/public/js/jquery.jedate.js" language="javascript"></script>
@@ -16,7 +16,7 @@
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
           <notempty name='vo.record_id'>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/vod/record_id/{{$vo.record_id}}" 
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" 
              <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
             <div class="rsTmb">
               <div class="serial">
@@ -36,7 +36,7 @@
             </div>
           </a>
           <else/>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Monitor/show/type/live/camera_id/{{$vo.camera_id}}" 
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" 
              <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
             <div class="rsTmb">
               <div class="serial">
@@ -150,7 +150,7 @@ function doClicks(inItemID, inClicks, isVod) {
   $.ajax({
     type: "get",
     async: true,
-    url: siteurl+"/Monitor/getFeed/id/"+inItemID+"/type/"+isVod,
+    url: siteurl+"/Home/getFeed/id/"+inItemID+"/type/"+isVod,
     success: function(ajaxData) {
       // 获取评论区内容...
       var arrJson = $.parseJSON(ajaxData);
@@ -177,7 +177,7 @@ function doClicks(inItemID, inClicks, isVod) {
         $.ajax({
           type: "post",
           async: true,
-          url: siteurl+"/Monitor/saveComment",
+          url: siteurl+"/Home/saveComment",
           data: {id: inItemID, type: isVod, content: strText},
           success: function(ajaxData) {
             var arrJson = $.parseJSON(ajaxData);
@@ -213,7 +213,7 @@ function doClicks(inItemID, inClicks, isVod) {
           $.ajax({
             type: "get",
             async: true,
-            url: siteurl+"/Monitor/pageComment/p/"+page+"/id/"+inItemID+"/type/"+isVod,
+            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inItemID+"/type/"+isVod,
             success: function(ajaxData) {
               next(ajaxData, page < max_comm_page);
             },
@@ -237,7 +237,7 @@ function doClicks(inItemID, inClicks, isVod) {
           $.ajax({
             type: "get",
             async: true,
-            url: siteurl+"/Monitor/pageHot/p/"+page,
+            url: siteurl+"/Home/pageHot/p/"+page,
             success: function(ajaxData) {
               next(ajaxData, page < max_hot_page);
               // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
@@ -270,7 +270,7 @@ function doReply(inObj, inCommentID) {
   $.ajax({
     type: "get",
     async: true,
-    url: siteurl+"/Monitor/getReply",
+    url: siteurl+"/Home/getReply",
     success: function(ajaxData) {
       layer.closeAll('loading');
       layer.open({
@@ -289,7 +289,7 @@ function doReply(inObj, inCommentID) {
             $.ajax({
               type: "post",
               async: true,
-              url: siteurl+"/Monitor/saveReply",
+              url: siteurl+"/Home/saveReply",
               data: {parent_id: inCommentID, content: data.field.myReText},
               success: function(ajaxData) {
                 layer.closeAll();
@@ -318,7 +318,7 @@ function doReply(inObj, inCommentID) {
                 $.ajax({
                   type: "get",
                   async: true,
-                  url: siteurl+"/Monitor/getExpand/comment_id/"+inCommentID,
+                  url: siteurl+"/Home/getExpand/comment_id/"+inCommentID,
                   success: function(ajaxData) {
                     // 返回展开页面头和子评论总数...
                     var arrJson = $.parseJSON(ajaxData);
@@ -338,7 +338,7 @@ function doReply(inObj, inCommentID) {
                         $.ajax({
                           type: "get",
                           async: true,
-                          url: siteurl+"/Monitor/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
+                          url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
                           success: function(ajaxData) {
                             next(ajaxData, page < max_child_page);
                           },
@@ -401,7 +401,7 @@ function doExChild(inObj, inCommentID, inMaxChild) {
           $.ajax({
             type: "get",
             async: true,
-            url: siteurl+"/Monitor/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
+            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inCommentID+"/type/2",
             success: function(ajaxData) {
               next(ajaxData, page < max_child_page);
             },
@@ -438,7 +438,7 @@ function doDelComment(inObj, inCommentID) {
     $.ajax({
       type: "post",
       async: true,
-      url: siteurl+"/Monitor/delComment",
+      url: siteurl+"/Home/delComment",
       data: {comment_id: inCommentID},
       success: function(ajaxData) {
         // 删除等待框，调整评论总数...
@@ -466,7 +466,7 @@ function doDelComment(inObj, inCommentID) {
   $.ajax({
     type: "post",
     async: true,
-    url: siteurl+"/Monitor/delComment",
+    url: siteurl+"/Home/delComment",
     data: {comment_id: inCommentID},
     success: function(ajaxData) {
       // 删除等待框，调整评论总数...
@@ -501,7 +501,7 @@ function doLike(inObj, inID, inType, inFlag) {
   $.ajax({
     type: "post",
     async: true,
-    url: siteurl+"/Monitor/saveLike",
+    url: siteurl+"/Home/saveLike",
     data: {id: inID, type: inType, is_like: inFlag, likes_num: theLikesNum, kicks_num: theKicksNum},
     success: function(ajaxData) {
       var arrJson = $.parseJSON(ajaxData);
@@ -539,7 +539,7 @@ function doRecDown() {
     scrollbar: false,
     shadeClose: false,
     area: ['600px', '450px'],
-    content: "{{:__APP__}}/{{$my_web_action}}/downRecord/record_id/"+g_record_id,
+    content: "{{:__APP__}}/Home/downRecord/record_id/"+g_record_id,
     title: "<i class='layui-icon'>&#xe601;</i><i class='feed-down-title'>&nbsp;&nbsp;下载相关录像片段</i>"
   });
 }
@@ -559,7 +559,7 @@ function doRecDown() {
       $.ajax({
         type: "get",
         async: true,
-        url: siteurl+"/Monitor/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
+        url: siteurl+"/Home/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
         success: function(ajaxData) {
           next(ajaxData, page < max_page);
           // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
@@ -596,10 +596,10 @@ $(document).ready( function () {
     format: "YYYY-MM-DD",
     marks: [{{$my_rec_marks}}],
     choosefun:function(elem, val, date) {
-      location.href = siteurl+"/Monitor/play/camera_id/"+nCameraID+"/date/"+val;
+      location.href = siteurl+"/Home/play/camera_id/"+nCameraID+"/date/"+val;
     },
     okfun:function(elem, val, date) {
-      location.href = siteurl+"/Monitor/play/camera_id/"+nCameraID+"/date/"+val;
+      location.href = siteurl+"/Home/play/camera_id/"+nCameraID+"/date/"+val;
     },
   });
   // 视频集合窗口的处理 => 初始化卡片参数...
@@ -657,4 +657,4 @@ $(document).ready( function () {
 });
 </script>
 
-<include file = "Common:monitor_footer" />
+<include file = "Common:home_footer" />

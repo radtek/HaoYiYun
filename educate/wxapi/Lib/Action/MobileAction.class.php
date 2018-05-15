@@ -13,7 +13,7 @@ class MobileAction extends Action
     // 电脑端访问了移动端页面，直接对页面进行跳转...
     //////////////////////////////////////////////
     if( !$this->m_detect->isMobile() ) {
-      header("location:".__APP__.'/Monitor/index');
+      header("location:".__APP__.'/Home/index');
     }*/
   }
   /**

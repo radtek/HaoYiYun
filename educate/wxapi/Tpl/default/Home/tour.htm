@@ -1,6 +1,6 @@
 
-<include file = "Common:monitor_header" />
-<include file = "Common:monitor_nav" />
+<include file = "Common:home_header" />
+<include file = "Common:home_nav" />
 
 <link href="/wxapi/public/css/tour.css" rel="stylesheet">
 
@@ -88,7 +88,7 @@ function doUpdateImage(thumb, video, tracker) {
   $.ajax({
     type: "get",
     async: true,
-    url: siteurl+"/Monitor/getImage/camera_id/"+video.camera_id,
+    url: siteurl+"/Home/getImage/camera_id/"+video.camera_id,
     success: function(ajaxData) {
       var arrJson = $.parseJSON(ajaxData);
       if( !arrJson ) return;
@@ -124,7 +124,7 @@ function handleActivePlayer(thumb, video) {
   // 准备iframe的url地址...
   var nWidth = $(thumb).width() + 2;
   var nHeight = $(thumb).height() + 2;
-  var strUrl = "/wxapi.php/Monitor/show/type/live/camera_id/"+video.camera_id+"/width/"+nWidth+"/height/"+nHeight;
+  var strUrl = "/wxapi.php/Home/show/type/live/camera_id/"+video.camera_id+"/width/"+nWidth+"/height/"+nHeight;
   var haoYiCode = '<iframe src="%s%" frameborder="no" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>';
   // 创建frame和holder对象...
   var objFrame = $(haoYiCode.replace("%s%", strUrl));
@@ -182,7 +182,7 @@ layui.use(['flow','layer'], function(){
       $.ajax({
         type: "get",
         async: true,
-        url: siteurl+"/Monitor/pageTour/p/"+page,
+        url: siteurl+"/Home/pageTour/p/"+page,
         success: function(ajaxData) {
           // 解析json数据包，将页面数据加载...
           var arrJson = $.parseJSON(ajaxData);
@@ -207,4 +207,4 @@ layui.use(['flow','layer'], function(){
 });
 </script>
 
-<include file = "Common:monitor_footer" />
+<include file = "Common:home_footer" />

@@ -1,6 +1,6 @@
 
-<include file = "Common:monitor_header" />
-<include file = "Common:monitor_nav" />
+<include file = "Common:home_header" />
+<include file = "Common:home_nav" />
 
 <section class="content-wrap">
   <div class="container">
@@ -15,7 +15,7 @@
             <volist name="my_news" id="vo">
             <div class="item">
               <label <elt name="key" value="2">class="hot"</elt> >{{$key+1}}</label>
-              <a href="{{:__APP__}}/Monitor/play/record_id/{{$vo.record_id}}/camera_id/{{$vo.camera_id}}" class="name">通道{{$vo.camera_id}} - {{$vo.disptime}} - {{$vo['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</a>
+              <a href="{{:__APP__}}/Home/play/record_id/{{$vo.record_id}}/camera_id/{{$vo.camera_id}}" class="name">通道{{$vo.camera_id}} - {{$vo.disptime}} - {{$vo['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</a>
               <span class="extend" title="{{$vo.created}}">{{$vo.created|substr=0,10}}</span>
             </div>
             </volist>
@@ -29,7 +29,7 @@
             <volist name="my_clicks" id="item">
             <div class="item">
               <label <elt name="key" value="2">class="hot"</elt> >{{$key+1}}</label>
-              <a href="{{:__APP__}}/Monitor/play/record_id/{{$item.record_id}}/camera_id/{{$item.camera_id}}" class="name">通道{{$item.camera_id}} - {{$item.disptime}} - {{$item['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</a>
+              <a href="{{:__APP__}}/Home/play/record_id/{{$item.record_id}}/camera_id/{{$item.camera_id}}" class="name">通道{{$item.camera_id}} - {{$item.disptime}} - {{$item['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</a>
               <span class="extend" title="播放"><i class="fa fa-play-circle-o"></i>&nbsp;{{$item.clicks}}&nbsp;次</span>
             </div>
             </volist>
@@ -71,7 +71,7 @@ layui.use(['flow','layer'], function(){
       $.ajax({
         type: "get",
         async: true,
-        url: siteurl+"/Monitor/pageIndex/p/"+page,
+        url: siteurl+"/Home/pageIndex/p/"+page,
         success: function(ajaxData) {
           next(ajaxData, page < max_page);
           // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
@@ -93,4 +93,4 @@ layui.use(['flow','layer'], function(){
 });
 </script>
 
-<include file = "Common:monitor_footer" />
+<include file = "Common:home_footer" />

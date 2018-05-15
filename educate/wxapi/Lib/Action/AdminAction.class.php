@@ -9,10 +9,10 @@ class AdminAction extends Action
   // 调用本模块之前需要调用的接口...
   public function _initialize()
   {
-    // 获取系统配置，根据配置设置相关变量 => 强制设置成云监控...
+    // 获取系统配置，根据配置设置相关变量 => 强制设置成云教室...
     $this->m_dbSys = D('system')->find();
     $this->m_webTitle = $this->m_dbSys['web_title'];
-    $this->m_webType = kCloudMonitor;
+    $this->m_webType = kCloudEducate;
     // 获取微信登录配置信息...
     $this->m_weLogin = C('WECHAT_LOGIN');
     // 获取登录用户头像，没有登录，直接跳转登录页面...
@@ -120,7 +120,7 @@ class AdminAction extends Action
     // 获取用户标识信息，如果不是管理员，直接跳转到前端首页...
     $strTicker = Cookie::get('wx_ticker');
     if( strcmp($strTicker, USER_ADMIN_TICK) != 0 ) {
-      header("location:".__APP__.'/Monitor/index');
+      header("location:".__APP__.'/Home/index');
       exit; // 注意：这里最好用exit，终止后续代码的执行...
     }
     // 重定向到默认的系统页面...
@@ -374,7 +374,7 @@ class AdminAction extends Action
   {
     // 构造接口需要的连接地址...
     $strUrl = sprintf("https://myhaoyi.com/wxapi.php/Upgrade/upDbase/type/%d", $this->m_webType);
-    $theDBRoot = ($this->m_webType > 0 ? '/weike/mysql/data/monitor' : '/weike/mysql/data/haoyi');
+    $theDBRoot = '/weike/mysql/data/educate';
     // 调用接口，获取数据库列表文件...
     $result = http_get($strUrl);
     $arrJson = json_decode($result, true);
@@ -472,7 +472,7 @@ class AdminAction extends Action
         $theDB->execute($theCreateSQL);
       }
       // 获取修改后的表结构文件的大小和修改时间...
-      $theDBRoot = ($this->m_webType > 0 ? '/weike/mysql/data/monitor' : '/weike/mysql/data/haoyi');
+      $theDBRoot = '/weike/mysql/data/educate';
       $theFullPath = sprintf("%s/%s.frm", $theDBRoot, $tbName);
       $theFileSize = filesize($theFullPath);
       $arrErr['localSize'] = ($theFileSize <= 0 ? 0 : $theFileSize);

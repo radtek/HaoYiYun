@@ -1,6 +1,6 @@
 
-<include file = "Common:monitor_header" />
-<include file = "Common:monitor_nav" />
+<include file = "Common:home_header" />
+<include file = "Common:home_nav" />
 
 <style>
 .tline {
@@ -57,7 +57,7 @@ layui.use(['flow','layer'], function(){
       $.ajax({
         type: "get",
         async: true,
-        url: siteurl+"/Monitor/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
+        url: siteurl+"/Home/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
         success: function(ajaxData) {
           next(ajaxData, page < max_page);
           // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
@@ -79,4 +79,4 @@ layui.use(['flow','layer'], function(){
 });
 </script>
 
-<include file = "Common:monitor_footer" />
+<include file = "Common:home_footer" />
