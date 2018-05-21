@@ -174,7 +174,7 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   right: 0px;
   top: 0px;*/
 }
-.loading-main {
+/*.loading-main {
   height: 80px;
   text-align: center;
 }
@@ -192,22 +192,22 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   padding-left: 25px;
   font-size: 16px;  
   top: 35px;
-}
+}*/
 .wait-main {
-  height: 40px;
+  height: 30px;
+  margin-top: 20px;
   text-align: center;
 }
 .wait-img {
   width: 20px;
   height: 20px;
-  position: absolute;
   display: inline-block;
-  background-image: url(../images/preloader-white.gif);
+  background: url(../images/preloader-white.gif) no-repeat;
 }
 .wait-text {
   display: inline-block;
   position: absolute;
-  padding-left: 25px;
+  padding-left: 5px;
   font-size: 16px;  
 }
 .feed-area {

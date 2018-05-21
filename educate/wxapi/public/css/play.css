@@ -174,7 +174,26 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   right: 0px;
   top: 0px;*/
 }
-.loading-main {
+.l-main .feed-live {
+  color: #fff;
+  float: left;
+  font-size: 16px;
+  padding: 3px 6px;
+  background: #e62117;
+  border: 1px solid #e62117;
+}
+.l-main .feed-lesson {
+  padding: 3px 0px 3px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  overflow: hidden;
+}
+.l-main .feed-eye {
+  margin-right: 8px;
+  font-size: 20px;
+}
+/*.loading-main {
   height: 80px;
   text-align: center;
 }
@@ -192,22 +211,22 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   padding-left: 25px;
   font-size: 16px;  
   top: 35px;
-}
+}*/
 .wait-main {
-  height: 40px;
+  height: 30px;
+  margin-top: 20px;
   text-align: center;
 }
 .wait-img {
   width: 20px;
   height: 20px;
-  position: absolute;
   display: inline-block;
-  background-image: url(../images/preloader-white.gif);
+  background: url(../images/preloader-white.gif) no-repeat;
 }
 .wait-text {
   display: inline-block;
   position: absolute;
-  padding-left: 25px;
+  padding-left: 5px;
   font-size: 16px;  
 }
 .feed-area {
@@ -218,8 +237,8 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
 }
 .feed-title {
   font-family: 'microsoft yaHei','微软雅黑',arial;
-  margin-bottom: 5px;
   vertical-align: middle;
+  margin-bottom: 8px;
   line-height: 26px;
   font-size: 18px;
   font-weight: 400;

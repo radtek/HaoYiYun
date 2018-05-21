@@ -2,9 +2,12 @@
 
 class LiveViewModel extends ViewModel {
     public $viewFields = array(
-        'Camera'=>array('*','_type'=>'LEFT'), //Must be LEFT 返回左表所有数据，即使右表没有匹配的
-        'Gather'=>array('gather_id','mac_addr','ip_addr','name_pc','name_set','_on'=>'Gather.gather_id=Camera.gather_id','_type'=>'LEFT'), //Must be LEFT
-        'Image'=>array('image_id','file_fdfs'=>'image_fdfs','_on'=>'Image.image_id=Camera.image_id'),
+        'Live'=>array('*','_type'=>'LEFT'), //Must be LEFT 返回左表所有数据，即使右表没有匹配的
+        'Room'=>array('room_id','room_name','room_addr','room_desc','_on'=>'Live.room_id=Room.room_id','_type'=>'LEFT'), //Must be LEFT
+        'Teacher'=>array('teacher_id','teacher_name','title_name','sex_name','detail_short','detail_info','_on'=>'Live.teacher_id=Teacher.teacher_id','_type'=>'LEFT'),
+        'Lesson'=>array('lesson_id','grade_id','subject_id','lesson_order','lesson_name','lesson_desc','_on'=>'Live.lesson_id=Lesson.lesson_id','_type'=>'LEFT'),
+        'Grade'=>array('grade_id','grade_type','grade_name','_on'=>'Lesson.grade_id=Grade.grade_id','_type'=>'LEFT'),
+        'Subject'=>array('subject_id','subject_name','lesson_count','_on'=>'Lesson.subject_id=Subject.subject_id')
     );
 }
 ?>

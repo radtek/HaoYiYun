@@ -7,8 +7,8 @@
           <ul class="menu">
             <!--首页 | 直播间-->
             <!--<li <eq name='my_nav.type' value='0'>class="nav-current"</eq> role="presentation"><a href="/">首页</a></li>-->
-            <li <eq name='my_nav.type' value='1'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/live">直播间</a></li>
-            <li <eq name='my_nav.type' value='2'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/tour">直播墙</a></li>
+            <li <eq name='my_nav.type' value='1'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/live">云教室</a></li>
+            <!--<li <eq name='my_nav.type' value='2'>class="nav-current"</eq> role="presentation"><a href="{{:__APP__}}/Home/tour">教室墙</a></li>-->
             <!-- 横向采集器 -->
             <volist name="my_nav.list" id="vo">
             <li title="{{$vo.name_set}}" <eq name='my_nav.type' value='3'> <eq name='my_nav.active_id' value='$vo.gather_id'>class="nav-current"</eq> </eq> role="presentation">

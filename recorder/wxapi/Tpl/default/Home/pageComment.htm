@@ -29,7 +29,7 @@
         <div class="comment-like feed-hand" <if condition="$my_is_login gt 0">onclick="doReply(this,{{$vo.comment_id}});"<else />onclick="javascript:doLogin();"</if> >
           <div class="comment-text">回复</div>
         </div>
-        <gt name='my_is_login' value='0'>
+        <gt name='vo.can_del' value='0'>
         <div class="comment-like feed-hand removeBlock" onclick="doDelComment(this,{{$vo.comment_id}});">
           <div class="comment-text">删除</div>
         </div>

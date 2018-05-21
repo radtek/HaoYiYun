@@ -125,7 +125,7 @@ class HomeAction extends Action
     // 获取采集器列表...
     $arrDrop = D('gather')->order('gather_id ASC')->select();
     // 设置一些返回数据...
-    $my_nav['type'] = $activeType;          // 0(首页激活), 1(直播间激活), 2(巡查激活), 3(科目激活), 4(更多激活)
+    $my_nav['type'] = $activeType;          // 0(首页激活), 1(直播教室激活), 2(教室墙激活), 3(科目激活), 4(更多激活)
     $my_nav['active_id'] = $activeID;       // 激活的采集器编号...
     $my_nav['drop_more'] = "更多";          // 默认的下拉名称...
     // 如果是采集器状态，需要进一步的判断...
@@ -210,7 +210,7 @@ class HomeAction extends Action
     // 获取巡课导航数据...
     $my_nav = $this->getNavData(NAV_ACTIVE_TOUR, 0);
     // 对模板对象进行赋值...
-    $this->assign('my_title', $this->m_webTitle . ' - 巡查');
+    $this->assign('my_title', $this->m_webTitle . ' - 教室墙');
     $this->assign('my_nav', $my_nav);
     // 得到每页通道数，总记录数，计算总页数...
     $pagePer = 12; //C('PAGE_PER');
@@ -254,22 +254,22 @@ class HomeAction extends Action
     echo json_encode($dbCamera);
   }
   //
-  // 点击直播间页面...
+  // 点击直播教室页面...
   public function live()
   {
     // 获取直播导航数据...
     $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
     // 对模板对象进行赋值...
-    $this->assign('my_title', $this->m_webTitle . ' - 直播间');
+    $this->assign('my_title', $this->m_webTitle . ' - 直播教室');
     $this->assign('my_nav', $my_nav);
     // 得到每页通道数，总记录数，计算总页数...
-    $pagePer = 16; //C('PAGE_PER');
-    $totalNum = D('camera')->count();
+    $pagePer = 9; //C('PAGE_PER');
+    $totalNum = D('live')->count();
     $max_page = intval($totalNum / $pagePer);
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
-    $onlineNum = D('camera')->where('status > 0')->count();
+    $onlineNum = D('live')->where('status > 0')->count();
     $this->assign('my_online_num', $onlineNum);
     $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
@@ -277,20 +277,21 @@ class HomeAction extends Action
     $this->display('live');    
   }
   //
-  // 直播间页面流加载...
+  // 直播教室页面流加载...
   public function pageLive()
   {
     // 准备需要的分页参数...
-    $pagePer = 16; //C('PAGE_PER'); // 每页显示的通道数...
+    $pagePer = 9; //C('PAGE_PER'); // 每页显示的通道数...
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取通道列表 => 在线优先排序
-    $arrCamera = D('LiveView')->limit($pageLimit)->order('status DESC, updated DESC')->select();
+    $arrLive = D('LiveView')->limit($pageLimit)->order('start_time DESC')->select();
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
     $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
     // 设置模板参数 => 使用 pageLive 的模版...
+    $this->assign('my_live_begin', LIVE_BEGIN_ID);
     $this->assign('my_cur_page', $pageCur);
-    $this->assign('my_list', $arrCamera);
+    $this->assign('my_list', $arrLive);
     $this->display('pageLive');
   }
   //
@@ -342,91 +343,15 @@ class HomeAction extends Action
   // 播放页面...
   public function play()
   {
-    // 计算web_tracker地址 => 已经自带了协议头 http://或https://
-    $theWebTracker = sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']);
-    // 获取通道详细信息...
-    $theGoToSlideID = 0;
-    $camera_id = $_GET['camera_id'];
-    $map['camera_id'] = $camera_id;
-    $dbCamera = D('LiveView')->where($map)->find();
-    // 给通道模版赋值...
-    $this->assign('my_camera', $dbCamera);
-    // 右侧第一条记录一定是直播...
-    unset($map); $arrList[0] = $dbCamera;
-    // 获取播放页导航数据 => 内部会进行下来导航纠正...
-    $gather_id = $dbCamera['gather_id'];
-    $my_nav = $this->getNavData(NAV_ACTIVE_SUBJECT, $gather_id);
-    // 根据传递参数判断是vod或live...
-    $bIsVod = (isset($_GET['record_id']) ? 1 : 0);
-    if( $bIsVod ) {
-      // 如果是点播模式，先找到当前点播记录...
-      $record_id = $_GET['record_id'];
-      $map['Record.record_id'] = $record_id;
-      $dbCurVod = D('VodView')->where($map)->find();
-      $strCurDate = substr($dbCurVod['created'], 0, 10);
-      $strStart = sprintf("%s 00:00:00", $strCurDate);
-      $strEnd = sprintf("%s 23:59:59", $strCurDate);
-      // 再找到当前记录同一天的点播列表，加入通道筛选条件...
-      $where['Record.camera_id'] = $camera_id;
-      $where['Record.created'] = array('BETWEEN', array($strStart, $strEnd));
-      $arrVod = D('VodView')->where($where)->order('Record.created ASC')->select();
-      $arrList = array_merge($arrList, $arrVod);
-      // 找到跳转录像的索引编号...
-      foreach($arrList as $key => &$dbItem) {
-        if( isset($dbItem['record_id']) && $dbItem['record_id'] == $record_id ) {
-          $theGoToSlideID = $key; break;
-        }
-      }
-    } else {
-      // 处理直播模式 => 如果没有日期参数，就用当前日期...
-      $strCurDate = (isset($_GET['date']) ? $_GET['date'] : date('Y-m-d'));
-      $strStart = sprintf("%s 00:00:00", $strCurDate);
-      $strEnd = sprintf("%s 23:59:59", $strCurDate);
-      // 找到同一天的点播列表，加入通道筛选条件...
-      $where['Record.camera_id'] = $camera_id;
-      $where['Record.created'] = array('BETWEEN', array($strStart, $strEnd));
-      $arrVod = D('VodView')->where($where)->order('Record.created ASC')->select();
-      // 查询到了录像数据才进行合并，否则会出错...
-      if( count($arrVod) > 0 ) {
-        $arrList = array_merge($arrList, $arrVod);
-      }
-      // 有筛选日期，则查看录像记录，录像记录大于0，使用第一条录像...
-      if( isset($_GET['date']) ) {
-        $theGoToSlideID = ((count($arrVod) > 0) ? 1 : 0);
-      }
-    }
-    // 查询该通道下所有有录像的日期列表，注意合并相同日期...
-    unset($map); $map['camera_id'] = $camera_id;
-    $strField = "DATE_FORMAT(created,'%Y-%m-%d') days";
-    $arrMarks = D('record')->where($map)->field($strField)->group('days')->order('days ASC')->select();
-    // 设置日期标注点...
-    if( count($arrMarks) > 0 ) {
-      $strMarks = implode('\',\'', array_column($arrMarks, 'days'));
-      $strMarks = sprintf("'%s'", $strMarks);
-      $this->assign('my_rec_marks', $strMarks);
-    }
-    // 设置初始日期，跳转滑块编号...
-    $this->assign('my_init_date', $strCurDate);
-    $this->assign('my_goto', $theGoToSlideID);
+    // 获取直播导航数据...
+    $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
+    // 获取直播间相关详细内容...
+    $condition['live_id'] = $_GET['live_id'];
+    $arrList = D('LiveView')->where($condition)->select();
     $this->assign('my_play', $arrList);
-    
-    // 2018.05.02 - by jackey => 相关通道 替换成评论区...
-    // 相关通道 => 得到每页通道数，总记录数，计算总页数...
-    /*unset($map); $pagePer = 16; //C('PAGE_PER');
-    $map['gather_id'] = $gather_id;
-    $totalNum = D('camera')->where($map)->count();
-    $max_page = intval($totalNum / $pagePer);
-    // 判断是否是整数倍的页码...
-    $max_page += (($totalNum % $pagePer) ? 1 : 0);
-    // 设置最大页数，设置模板参数...
-    $map['status'] = array('gt', 0);
-    $onlineNum = D('camera')->where($map)->count();
-    $this->assign('my_gather_id', $gather_id);
-    $this->assign('my_online_num', $onlineNum);
-    $this->assign('my_total_num', $totalNum);
-    $this->assign('max_page', $max_page);*/
-   
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
+    $theWebTracker = sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']);
+    // 对模板对象进行赋值，呈现页面内容...
     $this->assign('my_web_tracker', $theWebTracker);
     $this->assign('my_title', $this->m_webTitle . ' - 播放');
     $this->assign('my_nav', $my_nav);
@@ -477,11 +402,13 @@ class HomeAction extends Action
     // $_POST['type'] = 0 => camera_id
     // $_POST['type'] = 1 => record_id
     // $_POST['type'] = 2 => parent_id
+    // $_POST['type'] = 3 => live_id
     switch( $_POST['type'] )
     {
       case 0: $dbSave['camera_id'] = $theMap['camera_id'] = $_POST['id']; break;
       case 1: $dbSave['record_id'] = $theMap['record_id'] = $_POST['id']; break;
       case 2: $dbSave['parent_id'] = $theMap['parent_id'] = $_POST['id']; break;
+      case 3: $dbSave['live_id']   = $theMap['live_id']   = $_POST['id']; break;
     }
     // 对其它字段进行处理...
     $dbSave['content'] = $_POST['content'];
@@ -492,6 +419,11 @@ class HomeAction extends Action
     // 构造新的模版数据内容...
     $condition['comment_id'] = $dbSave['comment_id'];
     $arrComment = D('CommentView')->where($condition)->select();
+    // 当前用户就是评论创建者，设置可删除标志...
+    foreach($arrComment as &$dbItem) {
+      $dbItem['can_del'] = 1;
+    }
+    // 设置当前用户登录状态，设置评论记录列表...
     $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
     $this->assign('my_list', $arrComment);
     // 计算总的评论数量和返回的新增页面数据...
@@ -519,12 +451,14 @@ class HomeAction extends Action
     // $_POST['type'] = 0 => camera_id
     // $_POST['type'] = 1 => record_id
     // $_POST['type'] = 2 => comment_id
+    // $_POST['type'] = 3 => live_id
     // $_POST['is_like'] = 0 => 踩 => kick
     // $_POST['is_like'] = 1 => 赞 => like
     switch( $_POST['type'] ) {
       case 0: $dbSave['camera_id'] = $_POST['id']; break;
       case 1: $dbSave['record_id'] = $_POST['id']; break;
       case 2: $dbSave['comment_id'] = $_POST['id']; break;
+      case 3: $dbSave['live_id'] = $_POST['id']; break;
     }
     $dbSave['user_id'] = $theLoginUserID;
     // 通过当前条件，查找记录...
@@ -553,6 +487,9 @@ class HomeAction extends Action
         } else if( $_POST['type'] == 2 ) {
           $condition['comment_id'] = $_POST['id'];
           D('comment')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 3 ) {
+          $condition['live_id'] = $_POST['id'];
+          D('live')->where($condition)->setDec($theDecField);          
         }
       } else {
         // 如果新点击与数据库记录不一致，进行修改操作...
@@ -584,6 +521,10 @@ class HomeAction extends Action
           $condition['comment_id'] = $_POST['id'];
           D('comment')->where($condition)->setInc($theIncField);
           D('comment')->where($condition)->setDec($theDecField);
+        } else if( $_POST['type'] == 3 ) {
+          $condition['live_id'] = $_POST['id'];
+          D('live')->where($condition)->setInc($theIncField);
+          D('live')->where($condition)->setDec($theDecField);          
         }
       }
     } else {
@@ -610,6 +551,9 @@ class HomeAction extends Action
       } else if( $_POST['type'] == 2 ) {
         $condition['comment_id'] = $_POST['id'];
         D('comment')->where($condition)->setInc($theIncField);
+      } else if( $_POST['type'] == 3 ) {
+        $condition['live_id'] = $_POST['id'];
+        D('live')->where($condition)->setInc($theIncField);
       }
     }
     // 直接返回计算后的赞|踩数量...
@@ -651,6 +595,11 @@ class HomeAction extends Action
     $condition['comment_id'] = D('comment')->add($dbNew);
     // 返回新建记录的页面内容 => 设置登录状态和模版参数...
     $arrComment = D('CommentView')->where($condition)->select();
+    // 当前用户就是评论创建者，设置可删除标志...
+    foreach($arrComment as &$dbItem) {
+      $dbItem['can_del'] = 1;
+    }
+    // 直接设定模版参数内容，并设置当前用户是否处于登录状态...
     $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
     $this->assign('my_list', $arrComment);
     // 解析并返回获取到的页面内容结果...
@@ -678,16 +627,17 @@ class HomeAction extends Action
   // 获取记录信息 => 录像或直播...
   public function getFeed()
   {
+    // $_GET['type'] = 0 => camera_id
+    // $_GET['type'] = 1 => record_id
+    // $_GET['type'] = 3 => live_id
     // 如果是点播记录...
-    if( $_GET['type'] > 0 ) {
+    if( $_GET['type'] == 1 ) {
       $condition['record_id'] = $_GET['id'];
       $dbItem = D('RecordView')->where($condition)->find();
-      //$dbItem['play_title'] = sprintf("%s %s %s %s %s %s", $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name'], $dbItem['teacher_name'], $dbItem['title_name'], $dbItem['created']);
-    } else {
+    } else if( $_GET['type'] == 3 ) {
       // 如果是直播记录...
-      $condition['camera_id'] = $_GET['id'];
+      $condition['live_id'] = $_GET['id'];
       $dbItem = D('LiveView')->where($condition)->find();
-      //$dbItem['play_title'] = sprintf("%s - %s %s %s", $dbItem['school_name'], $dbItem['grade_type'], $dbItem['grade_name'], $dbItem['camera_name']);
     }
     // 获取总的评论条数...
     $pagePer = C('PAGE_PER');
@@ -731,10 +681,12 @@ class HomeAction extends Action
     // $_GET['type'] = 0 => camera_id
     // $_GET['type'] = 1 => record_id
     // $_GET['type'] = 2 => parent_id
+    // $_GET['type'] = 3 => live_id
     switch( $_GET['type'] ) {
       case 0: $condition['camera_id'] = $_GET['id']; break;
       case 1: $condition['record_id'] = $_GET['id']; break;
       case 2: $condition['parent_id'] = $_GET['id']; break;
+      case 3: $condition['live_id'] = $_GET['id']; break;
     }
     // 准备需要的分页参数...
     $pagePer = C('PAGE_PER'); // 每页显示的通道数...
@@ -742,7 +694,7 @@ class HomeAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 查找对应的评论列表...
     $arrComment = D('CommentView')->where($condition)->limit($pageLimit)->order('created DESC')->select();
-    // 如果已经登录，遍历评论，查看当前登录用户是否点赞...
+    // 如果已经登录，遍历评论，查看当前登录用户是否点赞，是否能删除评论...
     $theLoginUserID = $this->getLoginUserID();
     if( $theLoginUserID > 0 ) {
       foreach($arrComment as &$dbItem) {
@@ -752,9 +704,11 @@ class HomeAction extends Action
         // 三种状态 -1无 0踩 1赞...
         $dbZan = D('zan')->where($arrQuery)->field('zan_id,is_like')->find();
         $dbItem['is_like'] = (isset($dbZan['zan_id']) ? $dbZan['is_like'] : -1);
+        // 当前登录用户就是当前评论的创建者，则可以显示删除按钮...
+        $dbItem['can_del'] = (($dbItem['user_id'] == $theLoginUserID) ? 1 : 0);
       }
     }
-    // 直接设定模版参数内容，并设置登录状态...
+    // 直接设定模版参数内容，并设置当前用户是否处于登录状态...
     $this->assign('my_is_login', (($theLoginUserID > 0) ? 1 : 0));
     $this->assign('my_list', $arrComment);
     echo $this->fetch('pageComment');
@@ -781,6 +735,64 @@ class HomeAction extends Action
   +----------------------------------------------------------
   */
   public function show()
+  {
+    // 统一设置设置是否是IE浏览器类型...
+    $this->assign('my_isIE', $this->m_isIEBrowser);
+    // 如果输入参数无效，直接返回错误信息框...
+    if( (strcasecmp($_GET['type'], "live") != 0) || !isset($_GET['live_id']) ) {
+      $this->dispError(false, '输入参数无效！', '请确认输入参数内容是否正确。');
+      return;
+    }
+    // 获取当前直播记录信息...
+    $condition['live_id'] = $_GET['live_id'];
+    $dbLive = D('LiveView')->where($condition)->find();
+    if( !isset($dbLive['live_id']) ) {
+      $this->dispError(false, '没有找到指定的直播间！', '请确认输入参数内容是否正确。');
+      return;
+    }
+    // 构造中转服务器需要的参数 => 直播编号 => LIVE_BEGIN_ID + live_id
+    $dbParam['rtmp_live'] = LIVE_BEGIN_ID + $dbLive['live_id'];
+    // 从中转服务器获取云教室直播链接地址...
+    $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
+    // 如果获取连接中转服务器失败...
+    if( $dbResult['err_code'] > 0 ) {
+      $this->assign('my_live', $dbLive);
+      $this->dispError(false, $dbResult['err_msg'], '请联系管理员，汇报错误信息。');
+      return;
+    }
+    // 连接中转服务器成功 => 设置flvjs地址、rtmp地址、hls地址，播放器编号...
+    $arrSource[0]['src'] = $dbResult['flv_url'];
+    $arrSource[0]['type'] = $dbResult['flv_type'];
+    $arrSource[1]['src'] = $dbResult['rtmp_url'];
+    $arrSource[1]['type'] = $dbResult['rtmp_type'];
+    $arrSource[2]['src'] = $dbResult['hls_url'];
+    $arrSource[2]['type'] = $dbResult['hls_type'];
+    $dbShow['source'] = json_encode($arrSource);
+    // 这3个参数是直播播放器汇报时需要的数据...
+    $dbShow['player_camera'] = $dbParam['rtmp_live'];
+    $dbShow['player_id'] = $dbResult['player_id'];
+    $dbShow['player_vod'] = 0;
+    // 直播flvjs(替代flash)，flash以优先(延时小)，html5垫后(延时大)...
+    $arrTech[0] = "flvjs";
+    $arrTech[1] = "flash";
+    $arrTech[2] = "html5";
+    $dbShow['tech'] = json_encode($arrTech);
+    // 反馈点击次数给显示层，当前默认录像编号...
+    $dbShow['clicks'] = intval($dbLive['clicks']) + 1;
+    $dbShow['click_id'] = $dbLive['live_id'];
+    $dbShow['record_id'] = 0;
+    // 累加点击计数器，写入数据库...
+    $dbSave['live_id'] = $dbLive['live_id'];
+    $dbSave['clicks'] = $dbShow['clicks'];
+    D('live')->save($dbSave);
+    // 获取传递过来的视频窗口大小...
+    $dbShow['width'] = isset($_GET['width']) ? ($_GET['width'] - 2) : 840;
+    $dbShow['height'] = isset($_GET['height']) ? ($_GET['height'] - 2) : 545;
+    // 赋值给播放器模板页面...
+    $this->assign('my_show', $dbShow);
+    $this->display('show');
+  }
+  /*public function show()
   {
     // 统一设置设置是否是IE浏览器类型...
     $this->assign('my_isIE', $this->m_isIEBrowser);
@@ -863,7 +875,7 @@ class HomeAction extends Action
     // 赋值给播放器模板页面...
     $this->assign('my_show', $dbShow);
     $this->display('show');
-  }
+  }*/
   //
   // 显示超时模板信息...
   private function dispError($bIsDownload, $inMsgTitle, $inMsgDesc, $bHideIcon = false)
@@ -882,20 +894,6 @@ class HomeAction extends Action
   // 失败 => false
   private function getRtmpUrlFromTransmit(&$dbParam)
   {
-    /*// 获取直播频道所在的URL地址...
-    $saveJson = json_encode($dbParam);
-    $json_data = php_transmit_command($dbSys['transmit_addr'], $dbSys['transmit_port'], kClientPlay, kCmd_Play_Login, $saveJson);
-    // 获取的JSON数据有效，转成数组，并判断有没有错误码...
-    $arrData = json_decode($json_data, true);
-    return $arrData;
-    if( !is_array($arrData) || ($arrrData['err_code'] > 0) )
-      return;
-    // 判断获取到的URL是否有效...
-    if( !isset($arrData['rtmp_url']) )
-      return;
-    // 返回最终获取到的URL地址...
-    return $arrData['rtmp_url'];*/
-    
     // 通过php扩展插件连接中转服务器 => 性能高...
     $transmit = transmit_connect_server($this->m_dbSys['transmit_addr'], $this->m_dbSys['transmit_port']);
     // 链接中转服务器失败，直接返回...

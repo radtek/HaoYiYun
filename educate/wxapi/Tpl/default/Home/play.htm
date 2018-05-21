@@ -3,10 +3,8 @@
 <include file = "Common:home_nav" />
 
 <script src="/wxapi/public/js/jquery.royalslider.js" language="javascript"></script>
-<script src="/wxapi/public/js/jquery.jedate.js" language="javascript"></script>
 
 <link href="/wxapi/public/css/royalslider.css" type="text/css" rel="stylesheet">
-<link href="/wxapi/public/css/jedate.css" type="text/css" rel="stylesheet">
 <link href="/wxapi/public/css/play.css" type="text/css" rel="stylesheet">
 
 <section class="content-wrap">
@@ -15,28 +13,7 @@
       <article>
         <div id="video-gallery" class="royalSlider videoGallery rsDefault">
           <volist name="my_play" id="vo">
-          <notempty name='vo.record_id'>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/vod/record_id/{{$vo.record_id}}" 
-             <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
-            <div class="rsTmb">
-              <div class="serial">
-                <span class="fa fa-play"></span>
-              </div>
-              <div class="cover">
-                <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrSnap();">
-                <span class="c-time"><i class="bg"></i><span>{{$vo.disptime}}</span></span>
-              </div>
-              <div class="headline">{{$vo.created}}</div>
-              <div class="status">
-                <span><i class="fa fa-file-video-o"></i>&nbsp;{{$vo['file_size']/1024/1024|number_format=###,2,'.',''}}&nbsp;MB</span>
-                <span style="margin-left: 10px">
-                  <i class="fa fa-play-circle-o" id="vod_{{$vo.record_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
-                </span>
-              </div>
-            </div>
-          </a>
-          <else/>
-          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/live/camera_id/{{$vo.camera_id}}" 
+          <a class="rsImg rsHide" data-rsVideo="{{:__APP__}}/Home/show/type/live/live_id/{{$vo.live_id}}" 
              <empty name='vo.image_fdfs'>href="/wxapi/public/images/snap.png"<else/>href="{{$my_web_tracker}}{{$vo.image_fdfs}}"</empty> >
             <div class="rsTmb">
               <div class="serial">
@@ -45,29 +22,17 @@
               <div class="cover">
                 <img src="{{$my_web_tracker}}{{$vo.image_fdfs}}_90x50" onerror="doErrSnap();">
               </div>
-              <div class="headline">
-              通道{{$vo.camera_id}} - 
-              <switch name="vo.stream_prop">
-                <case value="0">摄像头</case>
-                <case value="1">MP4文件</case>
-                <case value="2">流转发</case>
-              </switch>
-              - {{$vo.camera_name}}</div>
+              <div class="headline">{{$vo.lesson_name}}</div>
               <div class="status">
                 <span>
-                <switch name="vo.stream_prop">
-                  <case value="0"><i class="fa fa-camera"></i></case>
-                  <case value="1"><i class="fa fa-file-video-o"></i></case>
-                  <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
-                </switch>
-                实时直播</span>
+                  <i class="fa fa-list-ul">&nbsp;{{$vo.lesson_order}}/{{$vo.lesson_count}}&nbsp;课</i>
+                </span>
                 <span style="margin-left: 10px">
-                  <i class="fa fa-play-circle-o" id="live_{{$vo.camera_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
+                  <i class="fa fa-play-circle-o" id="live_{{$vo.live_id}}">&nbsp;{{$vo.clicks}}&nbsp;次</i>
                 </span>
               </div>
             </div>
           </a>
-          </notempty>
           </volist>
         </div>
       </article>
@@ -75,39 +40,25 @@
     <div class="row">
       <article class="main-area">
         <div class="l-main">
-          <div class="loading-main">
-            <div class="loading-img"></div>
-            <div class="loading-text">正在加载...</div>
+          <div class="wait-main">
+            <div class="wait-img"></div>
+            <div class="wait-text">正在加载...</div>
           </div>
         </div>
         <div class="l-side">
-          <div class="date-cont">
-            <span class="date-title">筛选录制日期：</span>
-            <input id="myRecDate" type="text" class="date-workinput date-datainp date-wicon" value="{{$my_init_date}}" readonly>
-          </div>
-          <div class="float-title">热点推荐</div>
+          <div class="float-title">相关课程</div>
           <div class="float-fix"></div>
           <div id="myHot"></div>
         </div>
         <div class="float-fix"></div>
       </article>
     </div>
-    <!--<div class="row">
-     <article class="post" style="padding:15px 0px 5px 20px;">
-       <h4 class="title">
-         <span class="tline">相关通道，总共 {{$my_total_num}} 路，在线 {{$my_online_num}} 路</span>
-       </h4>
-       <div id="myView"></div>
-     </article>
-    </div>-->
   </div>
 </section>
 
 <script>
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
-// 保存全局的当前播放录像编号...
-var g_record_id = 0;
 
 // 处理直播、点播缩略图无法加载的问题...
 function doErrSnap() {
@@ -143,6 +94,7 @@ function doClicks(inItemID, inClicks, isVod) {
   // 获取标题名称和定位对象...
   var theTitle = "&nbsp;" + inClicks + "&nbsp;次";
   var theItem = isVod ? ('vod_'+inItemID) : ('live_'+inItemID);
+  var theType = isVod ? 1 : 3;
   // 更新播放器右侧次数...
   $('#'+theItem).html(theTitle);
   // 发起异步获取记录信息，兼容IE8...
@@ -150,7 +102,7 @@ function doClicks(inItemID, inClicks, isVod) {
   $.ajax({
     type: "get",
     async: true,
-    url: siteurl+"/Home/getFeed/id/"+inItemID+"/type/"+isVod,
+    url: siteurl+"/Home/getFeed/id/"+inItemID+"/type/"+theType,
     success: function(ajaxData) {
       // 获取评论区内容...
       var arrJson = $.parseJSON(ajaxData);
@@ -178,7 +130,7 @@ function doClicks(inItemID, inClicks, isVod) {
           type: "post",
           async: true,
           url: siteurl+"/Home/saveComment",
-          data: {id: inItemID, type: isVod, content: strText},
+          data: {id: inItemID, type: theType, content: strText},
           success: function(ajaxData) {
             var arrJson = $.parseJSON(ajaxData);
             // 判断处理结果是否正确...
@@ -213,7 +165,7 @@ function doClicks(inItemID, inClicks, isVod) {
           $.ajax({
             type: "get",
             async: true,
-            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inItemID+"/type/"+isVod,
+            url: siteurl+"/Home/pageComment/p/"+page+"/id/"+inItemID+"/type/"+theType,
             success: function(ajaxData) {
               next(ajaxData, page < max_comm_page);
             },
@@ -228,9 +180,9 @@ function doClicks(inItemID, inClicks, isVod) {
         return;
       // 重新加载热点推荐数据流...
       flow.load({
-        end: ' ',
         elem: '#myHot',
         isLazyimg: false,
+        end: (max_hot_page>0) ? ' ' : '没有相关课程',
         done: function(page, next){
           // 设置IE8兼容性，加载分页数据...
           $.ajaxSetup({ cache:false });
@@ -487,6 +439,7 @@ function doLike(inObj, inID, inType, inFlag) {
   // inType = 0 => camera_id
   // inType = 1 => record_id
   // inType = 2 => comment_id
+  // inType = 3 => live_id
   // inFlag = 0 => 踩 => kick
   // inFlag = 1 => 赞 => like
   // 获取赞/踩的当前次数...
@@ -518,90 +471,9 @@ function doLike(inObj, inID, inType, inFlag) {
   });
 }
 
-// 由子窗口调用的修改下载连接地址...
-function doDownLoadUrl(isVod, inRecordID) {
-  // 保存当前正在播放的录像编号，显示或隐藏下载连接...
-  g_record_id = inRecordID;
-}
-
-// 具体响应用户点击下载的命令...
-function doRecDown() {
-  // 判断录像编号是否有效...
-  if( g_record_id <= 0 ) {
-    layer.msg('录像编号无效，无法下载！', {icon: 2});
-    return;
-  }
-  // 弹出下载列表框...
-  layer.open({
-    type: 2, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
-    closeBtn: 1,
-    fixed: true,
-    scrollbar: false,
-    shadeClose: false,
-    area: ['600px', '450px'],
-    content: "{{:__APP__}}/Home/downRecord/record_id/"+g_record_id,
-    title: "<i class='layui-icon'>&#xe601;</i><i class='feed-down-title'>&nbsp;&nbsp;下载相关录像片段</i>"
-  });
-}
-
-// 处理 layui 过程...
-/*layui.use(['flow','layer','form'], function(){
-  var nFocusCamera = {{$my_camera.camera_id}};
-  var max_page = {{$max_page}};
-  var flow = layui.flow;
-  // 流加载过程，不用弹等待框...
-  flow.load({
-    elem: '#myView',
-    isLazyimg: false,
-    done: function(page, next){
-      // 设置IE8兼容性，加载分页数据...
-      $.ajaxSetup({ cache:false });
-      $.ajax({
-        type: "get",
-        async: true,
-        url: siteurl+"/Home/pageGather/p/"+page+"/gather_id/"+{{$my_gather_id}},
-        success: function(ajaxData) {
-          next(ajaxData, page < max_page);
-          // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
-          // <article>不是标准html标签，必须在外面增加一层<div>...
-          // 分页单独懒加载，否则，每次都要全部懒加载...
-          $("#page_"+page+" img.lazy").lazyload({
-            effect : "fadeIn",
-            placeholder: "/wxapi/public/images/snap.png"
-          });
-          // 查找焦点通道，并设置边框颜色为橘红色...
-          $("#page_"+page+" .thumb").each(function(){
-            if( $(this).attr('id').split('_')[1] == nFocusCamera ) {
-              $(this).css('border-color', '#e67e22');
-              return false;
-            }
-          });
-        },
-        error: function(XMLHttpRequest, textStatus, errorThrown) {
-          layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
-        }
-      });
-    }
-  });
-});*/
-
 $(document).ready( function () {
-  // 记录跳转滑块索引编号 => 从0开始...
-  var nCameraID = {{$my_camera.camera_id}};
-  var nGoToID = {{$my_goto}};
-  // 更新录制筛选日期...
-  $('#myRecDate').jeDate({
-    zIndex: 3000,
-    isinitVal: false,
-    format: "YYYY-MM-DD",
-    marks: [{{$my_rec_marks}}],
-    choosefun:function(elem, val, date) {
-      location.href = siteurl+"/Home/play/camera_id/"+nCameraID+"/date/"+val;
-    },
-    okfun:function(elem, val, date) {
-      location.href = siteurl+"/Home/play/camera_id/"+nCameraID+"/date/"+val;
-    },
-  });
+  // 动态修改播放器的宽度信息 => thumbnails
+  //$('#video-gallery').css('width', '850px');
   // 视频集合窗口的处理 => 初始化卡片参数...
   $('#video-gallery').royalSlider({
     arrowsNav: false,
@@ -650,7 +522,7 @@ $(document).ready( function () {
   });*/
   // 第一个视频在0.5秒之后自动播放...
   setTimeout(function() {
-    ((nGoToID > 0) ? slider.goTo(nGoToID) : slider.toggleVideo());
+    slider.toggleVideo();
   }, 500);
   // 载入流加载对象...
   layui.use(['flow','layer','form']);

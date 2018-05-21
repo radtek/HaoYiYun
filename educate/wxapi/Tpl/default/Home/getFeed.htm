@@ -1,44 +1,25 @@
 
 <div class="feed-area">
   <div class="feed-title">
-    <switch name="my_base.stream_prop">
-      <case value="0"><i class="fa fa-camera"></i></case>
-      <case value="1"><i class="fa fa-file-video-o"></i></case>
-      <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
-    </switch>
-    &nbsp;通道{{$my_base.camera_id}} - 
-    <switch name="my_base.stream_prop">
-      <case value="0">摄像头</case>
-      <case value="1">MP4文件</case>
-      <case value="2">流转发</case>
-    </switch>
-    - {{$my_base.camera_name}}
-    <if condition="$my_base.type gt 0">
-    &nbsp;- 录制回放，录制时间：{{$my_base.created}}
-    <else />
-    实时直播
-    </if>
+    <div class="feed-live">正在直播</div>
+    <div class="feed-lesson">{{$my_base.subject_name}} - {{$my_base.lesson_name}}</div>
   </div>
-  <div class="feed-item">{{$my_base.clicks}}次播放</div>
-  <gt name='my_base.type' value='0'>
-  <div class="feed-item feed-hand" onclick="doRecDown();">
-    <div class="fa fa-cloud-download"></div>
-    <div class="feed-text">下载</div>
-  </div>
-  </gt>
-  <div class="feed-item">
-    <div id="myIconUp" class="fa fa-thumbs-up feed-hand <eq name='my_base.is_like' value='1'>feed-like</eq>"
-      <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},1);"
-     <else />onclick="javascript:doLogin();"
-     </if> ></div>
-    <div id="myLikes" class="feed-text"><gt name='my_base.likes' value='0'>{{$my_base.likes}}</gt></div>
-  </div>
-  <div class="feed-item">
-    <div id="myIconDown" class="fa fa-thumbs-down feed-hand <eq name='my_base.is_like' value='0'>feed-like</eq>"
-      <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},0);"
-     <else />onclick="javascript:doLogin();"
-     </if> ></div>
-    <div id="myKicks" class="feed-text"><gt name='my_base.kicks' value='0'>{{$my_base.kicks}}</gt></div>
+  <div>
+    <div class="feed-item"><i class="fa fa-eye feed-eye"></i>{{$my_base.clicks}}次播放</div>
+    <div class="feed-item">
+      <div id="myIconUp" class="fa fa-thumbs-up feed-hand <eq name='my_base.is_like' value='1'>feed-like</eq>"
+        <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},1);"
+       <else />onclick="javascript:doLogin();"
+       </if> ></div>
+      <div id="myLikes" class="feed-text"><gt name='my_base.likes' value='0'>{{$my_base.likes}}</gt></div>
+    </div>
+    <div class="feed-item">
+      <div id="myIconDown" class="fa fa-thumbs-down feed-hand <eq name='my_base.is_like' value='0'>feed-like</eq>"
+        <if condition="$my_base.isLogin gt 0">onclick="doLike(this,{{$my_base.id}},{{$my_base.type}},0);"
+       <else />onclick="javascript:doLogin();"
+       </if> ></div>
+      <div id="myKicks" class="feed-text"><gt name='my_base.kicks' value='0'>{{$my_base.kicks}}</gt></div>
+    </div>
   </div>
 </div>
 <div class="comment-area">

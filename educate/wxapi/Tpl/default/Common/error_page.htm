@@ -67,7 +67,14 @@ if( typeof(window.parent.doClicks) == "function" ) {
 }
 </script>
 </present>
-
+<!-- 是否处理直播点击事件 -->
+<present name='my_live'>
+<script>
+if( typeof(window.parent.doClicks) == "function" ) {
+  window.parent.doClicks('{{$my_live.live_id}}', {{$my_live.clicks}}, 0);
+}
+</script>
+</present>
 <!-- 是否调用父窗口接口 -->
 <gt name='my_download' value='0'>
 <script>

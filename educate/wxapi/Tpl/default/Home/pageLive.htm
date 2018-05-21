@@ -1,34 +1,58 @@
 
 <ul class="thumb_view" id="page_{{$my_cur_page}}">
-  <volist name="my_list" id="item">
-  <li class="live">
-    <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}" class="thumb" id="c_{{$item.camera_id}}">
-      <span class="p-time">
-        <span <if condition="$item.status gt 0">class="ibg online"<else/>class="ibg offline"</if> ></span>
-        <span class="itg"><switch name="item.status"><case value="0">离线中</case><case value="1">直播中</case><case value="2">录像中</case><default/>离线中</switch></span>
-      </span>
-      <img class="lazy" data-original="{{$my_web_tracker}}{{$item.image_fdfs}}_252x162" width="252px" height="162px"></img>
+  <volist name="my_list" id="vo">
+  <li class="feed-live">
+    <a class="feed-link" href="{{:__APP__}}/Home/play/live_id/{{$vo.live_id}}">
+      <div class="l-i-title" title="{{$vo.lesson_name}}">
+        <div class="feed-title">{{$vo.lesson_name}}</div>
+      </div>
+      <div class="l-i-box">
+        <div class="feed-line">
+          <div class="feed-common-name">教室：</div>
+          <div class="feed-common-cont">{{$vo['live_id']+$my_live_begin}}</div>
+        </div>
+        <div class="feed-line">
+          <div class="feed-common-name">讲师：</div>
+          <div class="feed-common-cont">{{$vo.teacher_name}}</div>
+        </div>
+        <div class="feed-line">
+          <div class="feed-common-name">课程：</div>
+          <div class="feed-common-cont">{{$vo.subject_name}}</div>
+        </div>
+        <div class="feed-line" title="{{$vo.start_time}} ~ {{$vo.end_time}}">
+          <div class="feed-common-name">时间：</div>
+          <div class="feed-common-cont">{{$vo.start_time|strtotime|date='m-d H:i',###}} ~ {{$vo.end_time|strtotime|date='m-d H:i',###}}</div>
+        </div>
+        <div class="feed-desc">{{$vo.lesson_desc}}</div>
+        <div class="l-i-attr">
+          <ul>
+            <li>
+              <div class="feed-item">
+                <div class="feed-number">{{$vo.lesson_order}}</div>
+                <div class="feed-text">课时号</div>
+              </div>
+            </li>
+            <li>
+              <div class="feed-item">
+                <div class="feed-number">{{$vo.lesson_count}}</div>
+                <div class="feed-text">总课时</div>
+              </div>
+            </li>
+            <li>
+              <div class="feed-item feed-none">
+                <div class="feed-number">{{$vo.clicks}}</div>
+                <div class="feed-text">浏览数</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="l-i-attr"></div>
+        <div class="feed-play">
+          <div class="layui-icon">&#xe652;</div>
+          <div class="feed-status-text">正在直播</div>
+        </div>
+      </div>
     </a>
-    <div class="thumb_title" title="{{$item.camera_name}}">
-      <a href="{{:__APP__}}/Home/play/camera_id/{{$item.camera_id}}">
-        <switch name="item.stream_prop">
-          <case value="0"><i class="fa fa-camera"></i></case>
-          <case value="1"><i class="fa fa-file-video-o"></i></case>
-          <case value="2"><i class="fa fa-arrow-circle-o-down"></i></case>
-        </switch>
-        &nbsp;通道{{$item.camera_id}} - 
-        <switch name="item.stream_prop">
-          <case value="0">摄像头</case>
-          <case value="1">MP4文件</case>
-          <case value="2">流转发</case>
-        </switch>
-        - {{$item.camera_name}}
-      </a>
-    </div>
-    <div class="thumb_date">
-      <span><i class="fa fa-clock-o"></i>&nbsp;{{$item.updated}}</span>
-      <span style="float: right;"><i class="fa fa-play-circle-o"></i>&nbsp;{{$item.clicks}}&nbsp;次</span>
-    </div>
   </li>
   </volist>
 </ul>
