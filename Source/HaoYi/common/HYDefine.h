@@ -58,6 +58,7 @@ using namespace std;
 #define TXT_LOGGER					"Logger.txt"			// 日志文件
 #define XML_DECLARE_GB2312			"<?xml version=\"1.0\" encoding=\"GB2312\"?>"
 #define XML_DECLARE_UTF8			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+#define DEF_CONFIG_PATH				"HaoYiYun"				// 默认配置目录
 #define DEF_REC_PATH				"C:\\GMSave"			// 默认录像目录
 #define DEF_MAIN_NAME				"采集端"				// 默认主窗口标题
 #define DEF_LOGIN_USER_HK			"admin"					// 默认的登录用户 => 海康网络摄像机

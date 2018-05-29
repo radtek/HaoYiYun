@@ -73,10 +73,17 @@ BOOL CXmlConfig::GMLoadConfig()
 	m_MapNodeCamera.clear();
 	m_MapServer.clear();
 
-	// 得到xml配置文件的全路径...
+	// 得到xml配置文件的全路径 => 用户工作目录...
 	TCHAR	 szPath[MAX_PATH] = {0};
-	CUtilTool::GetFilePath(szPath, XML_CONFIG);
-	ASSERT( strlen(szPath) > 0 );
+	SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, szPath);
+	strcat(szPath, "\\");
+	strcat(szPath, DEF_CONFIG_PATH);
+	// 创建配置存放目录...
+	if( !CUtilTool::CreateDir(szPath) )
+		return false;
+	// 设置配置文件全路劲...
+	strcat(szPath, "\\");
+	strcat(szPath, XML_CONFIG);
 	m_strXMLFile = szPath;
 
 	// 获取截图工具全路径...
