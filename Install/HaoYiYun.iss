@@ -17,8 +17,8 @@ UsePreviousGroup=noUsePreviousLanguage=no
 AllowCancelDuringInstall=no
 OutputDir=..\Product
 
-VersionInfoVersion=1.3.3
-OutputBaseFilename=cloud-gather-1.3.3
+VersionInfoVersion=1.3.4
+OutputBaseFilename=cloud-gather-1.3.4
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
