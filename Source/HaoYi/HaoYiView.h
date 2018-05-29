@@ -5,6 +5,7 @@
 #include "OSMutex.h"
 #include "RightView.h"
 #include "DlgMini.h"
+#include "DlgRoom.h"
 
 class CCamera;
 class CMidView;
@@ -49,6 +50,7 @@ protected:
 	afx_msg void OnLogoutDVR();
 	afx_msg void OnReConnect();
 	afx_msg void OnBindMini();
+	afx_msg void OnBindRoom();
 	afx_msg void OnPagePrev();
 	afx_msg void OnPageJump();
 	afx_msg void OnPageNext();
@@ -62,6 +64,7 @@ protected:
 	afx_msg void OnCmdUpdateLogoutDVR(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateReConnect(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdateBindMini(CCmdUI *pCmdUI);
+	afx_msg void OnCmdUpdateBindRoom(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdatePagePrev(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdatePageJump(CCmdUI *pCmdUI);
 	afx_msg void OnCmdUpdatePageNext(CCmdUI *pCmdUI);
@@ -186,6 +189,7 @@ private:
 	BOOL			m_bTreeKeydown;						// 树的键盘事件...
 	int				m_nAnimateIndex;					// 设备动画索引...
 
+	CDlgRoom		m_dlgRoom;							// 直播间绑定窗口...
 	CDlgMini		m_dlgMini;							// 小程序绑定窗口...
 	CRightView		m_RightView;						// 右侧显示区...
 	CMidView	*	m_lpMidView;						// 视频窗口管理器...

@@ -271,6 +271,19 @@ h6 {
   display: inline-block;
   font-size: 30px;
 }
+.post .feed-stop {
+  color: #fff;
+  height: 52px;
+  line-height: 50px;
+  text-align: center;
+  border-radius: 30px;
+  margin: 14px 50px 0 50px;
+  border: 1px solid #838B8B;
+  transition: all .5s;
+  -webkit-transition: all .5s;
+  background-color: #838B8B;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#838B8B,endColorstr=#838B8B);
+}
 .post .feed-status-text {
   vertical-align: middle;
   display: inline-block;

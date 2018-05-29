@@ -100,6 +100,13 @@ public:
 	void	 GetCamera(int nDBCameraID, GM_MapData & outMapData) { outMapData = m_MapNodeCamera[nDBCameraID]; }
 	GM_MapNodeCamera & GetNodeCamera() { return m_MapNodeCamera; }
 
+	GM_MapRoom & GetMapLiveRoom() { return m_MapLiveRoom; }
+	int		GetBeginRoomID() { return m_nBeginRoomID; }
+	int		GetCurSelRoomID() { return m_nCurSelRoomID; }
+	void	SetMapLiveRoom(GM_MapRoom & inMapRoom) { m_MapLiveRoom = inMapRoom; }
+	void	SetBeginRoomID(int nBeginRoomID) { m_nBeginRoomID = nBeginRoomID; }
+	void	SetCurSelRoomID(int nCurSelRoomID) { m_nCurSelRoomID = nCurSelRoomID; }
+
 	GM_MapServer & GetServerList() { return m_MapServer; }
 
 	void	 SetCourse(int nDBCameraID, GM_MapCourse & inMapCourse);
@@ -159,6 +166,9 @@ private:
 	int					m_nAuthDays;					// 中心服务器反馈的剩余授权天数...
 
 	GM_MapServer		m_MapServer;					// 可连接的服务器列表...
+	GM_MapRoom			m_MapLiveRoom;					// 服务器上有效的直播间...
+	int					m_nBeginRoomID;					// 直播间开始编号...
+	int					m_nCurSelRoomID;				// 当前已选中直播间号...
 
 	int					m_nMaxCamera;					// 能够支持的最大摄像头数（默认为16个）
 	GM_MapNodeCamera	m_MapNodeCamera;				// 监控通道配置信息(数据库CameraID）

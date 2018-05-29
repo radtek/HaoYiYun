@@ -44,6 +44,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_UPDATE_COMMAND_UI(ID_LOGOUT_DVR, &CHaoYiView::OnCmdUpdateLogoutDVR)
 	ON_UPDATE_COMMAND_UI(ID_RECONNECT, &CHaoYiView::OnCmdUpdateReConnect)
 	ON_UPDATE_COMMAND_UI(ID_BIND_MINI, &CHaoYiView::OnCmdUpdateBindMini)
+	ON_UPDATE_COMMAND_UI(ID_BIND_ROOM, &CHaoYiView::OnCmdUpdateBindRoom)
 	ON_UPDATE_COMMAND_UI(ID_PAGE_PREV, &CHaoYiView::OnCmdUpdatePagePrev)
 	ON_UPDATE_COMMAND_UI(ID_PAGE_JUMP, &CHaoYiView::OnCmdUpdatePageJump)
 	ON_UPDATE_COMMAND_UI(ID_PAGE_NEXT, &CHaoYiView::OnCmdUpdatePageNext)
@@ -60,6 +61,7 @@ BEGIN_MESSAGE_MAP(CHaoYiView, CFormView)
 	ON_MESSAGE(WM_RELOAD_VIEW, &CHaoYiView::OnMsgReloadView)
 	ON_MESSAGE(WM_SYS_CONFIG, &CHaoYiView::OnMsgSysConfig)
 	ON_COMMAND(ID_BIND_MINI, &CHaoYiView::OnBindMini)
+	ON_COMMAND(ID_BIND_ROOM, &CHaoYiView::OnBindRoom)
 	ON_COMMAND(ID_LOGIN_DVR, &CHaoYiView::OnLoginDVR)
 	ON_COMMAND(ID_LOGOUT_DVR, &CHaoYiView::OnLogoutDVR)
 	ON_COMMAND(ID_RECONNECT, &CHaoYiView::OnReConnect)
@@ -418,9 +420,15 @@ void CHaoYiView::doUpdateFrameTitle()
 	string & strMainName = theConfig.GetMainName();
 	string & strWebName = theConfig.GetWebName();
 	string & strWebAddr = theConfig.GetWebAddr();
+	int nCurSelRoomID = theConfig.GetCurSelRoomID();
+	int nBeginRoomID = theConfig.GetBeginRoomID();
 	int nWebPort = theConfig.GetWebPort();
-	strTitle.Format("%s - %s - %s:%d", strWebName.c_str(),
-					strMainName.c_str(), strWebAddr.c_str(), nWebPort);
+	// 判断当前采集端是否已经绑定到直播间...
+	if( nCurSelRoomID <= 0 || nBeginRoomID <= 0 ) {
+		strTitle.Format("%s - %s - %s:%d", strWebName.c_str(), strMainName.c_str(), strWebAddr.c_str(), nWebPort);
+	} else {
+		strTitle.Format("%s - %s - %s:%d - 已绑定直播间：%d", strWebName.c_str(), strMainName.c_str(), strWebAddr.c_str(), nWebPort, nCurSelRoomID);
+	}
 	lpFrame->SetWindowText(strTitle);
 }
 //
@@ -1347,6 +1355,13 @@ void CHaoYiView::OnCmdUpdateBindMini(CCmdUI *pCmdUI)
 	pCmdUI->Enable(m_lpFastThread != NULL ? true : false);
 }
 //
+// 更新 绑定直播间 菜单状态...
+void CHaoYiView::OnCmdUpdateBindRoom(CCmdUI *pCmdUI)
+{
+	// 已经在网站注册成功之后才有效...
+	pCmdUI->Enable(m_lpFastThread != NULL ? true : false);
+}
+//
 // 更新 添加通道 菜单状态...
 void CHaoYiView::OnCmdUpdateAddDVR(CCmdUI *pCmdUI)
 {
@@ -1704,6 +1719,15 @@ void CHaoYiView::OnBindMini()
 		m_dlgMini.m_lpBtnFont = m_lpMidView->GetVideoFont();
 	}
 	m_dlgMini.DoModal();
+}
+//
+// 点击菜单 => 绑定直播间...
+void CHaoYiView::OnBindRoom()
+{
+	if( this->m_lpWebThread == NULL )
+		return;
+	m_dlgRoom.m_lpRoomThread = this->m_lpWebThread;
+	m_dlgRoom.DoModal();
 }
 //
 // 点击菜单 => 断开重连...

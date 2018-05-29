@@ -199,6 +199,7 @@
     <None Include="res\bitmapMenuDis.bmp" />
     <None Include="res\bitmapMenuHot.bmp" />
     <None Include="res\bmp00001.bmp" />
+    <None Include="res\check.bmp" />
     <None Include="res\close.bmp" />
     <None Include="res\HaoYi.ico" />
     <None Include="res\HaoYi.rc2" />
@@ -239,6 +240,7 @@
     <ClInclude Include="DlgJump.h" />
     <ClInclude Include="DlgMini.h" />
     <ClInclude Include="DlgPushDVR.h" />
+    <ClInclude Include="DlgRoom.h" />
     <ClInclude Include="DlgSetDVR.h" />
     <ClInclude Include="DlgSetSys.h" />
     <ClInclude Include="fastdfs\fastdfs.h" />
@@ -307,6 +309,7 @@
     <ClCompile Include="DlgJump.cpp" />
     <ClCompile Include="DlgMini.cpp" />
     <ClCompile Include="DlgPushDVR.cpp" />
+    <ClCompile Include="DlgRoom.cpp" />
     <ClCompile Include="DlgSetDVR.cpp" />
     <ClCompile Include="DlgSetSys.cpp" />
     <ClCompile Include="fastdfs\FastSession.cpp" />

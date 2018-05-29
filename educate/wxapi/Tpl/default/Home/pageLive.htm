@@ -47,10 +47,16 @@
           </ul>
         </div>
         <div class="l-i-attr"></div>
+        <gt name='vo.status' value='0'>
         <div class="feed-play">
           <div class="layui-icon">&#xe652;</div>
           <div class="feed-status-text">正在直播</div>
         </div>
+        <else />
+        <div class="feed-stop">
+          <div class="feed-status-text">已结束</div>
+        </div>
+        </gt>
       </div>
     </a>
   </li>

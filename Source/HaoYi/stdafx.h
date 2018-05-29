@@ -48,6 +48,7 @@
 #include <stdint.h>
 
 typedef	map<string, string>		GM_MapData;
+typedef	map<int, GM_MapData>	GM_MapRoom;
 typedef	map<int, GM_MapData>	GM_MapCourse;
 
 typedef struct

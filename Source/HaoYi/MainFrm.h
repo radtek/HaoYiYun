@@ -31,7 +31,7 @@ protected:
 private:
 	enum {
 		kStatusTimerID	 = 1,
-		kToolBarCount	 = 13,
+		kToolBarCount	 = 14,
 		kToolBarImageCX  = 32,
 		kToolBarImageCY  = 32,
 		kToolBarButtonCX = 55,

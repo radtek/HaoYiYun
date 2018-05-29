@@ -249,18 +249,16 @@ void CMainFrame::LoadMyToolBar()
 		ID_VIEW_FULL,
 		ID_ADD_DVR, ID_DEL_DVR, ID_MOD_DVR, 
 		ID_LOGIN_DVR, ID_LOGOUT_DVR,
-		ID_SYS_SET, ID_APP_ABOUT, 
-		ID_RECONNECT,
-		ID_BIND_MINI,
+		ID_SYS_SET, ID_APP_ABOUT, ID_RECONNECT,
+		ID_BIND_MINI, ID_BIND_ROOM,
 		ID_PAGE_PREV, ID_PAGE_JUMP, ID_PAGE_NEXT,
 	};
 	LPCTSTR lpszCtrl[nItemCount] = {
 		"全屏模式", 
 		"添加通道", "删除通道", "修改通道", 
 		"启动通道", "停止通道", 
-		"系统设置", "显示版本", 
-		"断开重连",
-		"绑定小程序",
+		"系统设置", "显示版本", "断开重连",
+		"绑定小程序", "绑定直播间",
 		"上一页", "跳转页", "下一页",
 	};
 
@@ -284,7 +282,7 @@ void CMainFrame::LoadMyToolBar()
 		// 添加按钮...
 		VERIFY( oBarCtrl.AddButtons(1, &pTBButtons[nIndex]) );
 		// 添加空格...
-		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 7 || nIndex == 8 || nIndex == 9 ) {
+		if( nIndex == 0 || nIndex == 3 || nIndex == 5 || nIndex == 8 || nIndex == 10 ) {
 			VERIFY( oBarCtrl.AddButtons(1, &sepButton) );
 		}
     }

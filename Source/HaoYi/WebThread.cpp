@@ -268,6 +268,13 @@ BOOL CWebThread::RegisterGather()
 	nPageSize = ((nPageSize <= 1 || nPageSize > 36) ? DEF_PER_PAGE_SIZE : nPageSize);
 	int nColNum = ceil(sqrt(nPageSize * 1.0f));
 	nPageSize = nColNum * nColNum;
+	// 判断是否需要处理挂载的直播间信息...
+	if( value.isMember("selected") && value.isMember("begin") ) {
+		int nCurSelRoomID = atoi(CUtilTool::getJsonString(value["selected"]).c_str());
+		int nBeginID = atoi(CUtilTool::getJsonString(value["begin"]).c_str());
+		theConfig.SetCurSelRoomID(nCurSelRoomID);
+		theConfig.SetBeginRoomID(nBeginID);
+	}
 	// 获取Tracker|Remote|Local，并存放到配置文件，但不存盘...
 	int nDBGatherID = atoi(CUtilTool::getJsonString(value["gather_id"]).c_str());
 	int nWebType = atoi(CUtilTool::getJsonString(value["web_type"]).c_str());
@@ -833,6 +840,143 @@ BOOL CWebThread::doWebStatCamera(int nDBCamera, int nStatus, int nErrCode/* = 0*
 	if( curl != NULL ) {
 		curl_easy_cleanup(curl);
 	}
+	return true;
+}
+//
+// 获取服务器上的直播间列表...
+BOOL CWebThread::doWebGetLiveRoom()
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 先设置当前状态信息...
+	m_eRegState = kGetLiveRoom;
+	m_strUTF8Data.clear();
+	// 组合访问链接地址...
+	CString strPost, strUrl;
+	strPost.Format("gather_id=%d", theConfig.GetDBGatherID());
+	strUrl.Format("%s:%d/wxapi.php/Gather/getLiveRoom", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
+		// 设定curl参数，采用get模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		// 这里需要网站返回的数据...
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	Json::Value value;
+	// 解析JSON失败，通知界面层...
+	if( !this->parseJson(value) ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 解析直播间数据...
+	GM_MapRoom    dbMapRoom;
+	Json::Value & theLive = value["live"];
+	if( theLive.isArray() ) {
+		// 获取直播间初始编号和已挂载的直播间...
+		int nCurSelRoomID = atoi(CUtilTool::getJsonString(value["selected"]).c_str());
+		int nBeginID = atoi(CUtilTool::getJsonString(value["begin"]).c_str());
+		// 遍历直播间列表...
+		for(int i = 0; i < theLive.size(); ++i) {
+			int nRoomID; GM_MapData theMapData;
+			for(Json::Value::iterator itorItem = theLive[i].begin(); itorItem != theLive[i].end(); ++itorItem) {
+				string theKey = CUtilTool::UTF8_ANSI(itorItem.memberName());
+				theMapData[theKey] =  CUtilTool::UTF8_ANSI(CUtilTool::getJsonString(theLive[i][theKey]).c_str());
+			}
+			// 获取记录编号，存放到集合当中...
+			nRoomID = nBeginID + atoi(theMapData["live_id"].c_str());
+			dbMapRoom[nRoomID] = theMapData;
+		}
+		// 将获取的直播间列表，直接更新到系统配置当中...
+		theConfig.SetCurSelRoomID(nCurSelRoomID);
+		theConfig.SetBeginRoomID(nBeginID);
+		theConfig.SetMapLiveRoom(dbMapRoom);
+	}
+	return true;
+}
+//
+// 将当前采集端挂载到指定的直播间...
+BOOL CWebThread::doWebSetLiveRoom(int nCurSelRoomID)
+{
+	// 获取网站配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nWebPort = theConfig.GetWebPort();
+	string & strWebAddr = theConfig.GetWebAddr();
+	if( nWebPort <= 0 || strWebAddr.size() <= 0 ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 先设置当前状态信息...
+	m_eRegState = kSetLiveRoom;
+	m_strUTF8Data.clear();
+	// 组合访问链接地址...
+	CString strPost, strUrl;
+	strPost.Format("gather_id=%d&room_id=%d", theConfig.GetDBGatherID(), nCurSelRoomID);
+	strUrl.Format("%s:%d/wxapi.php/Gather/setLiveRoom", strWebAddr.c_str(), nWebPort);
+	// 调用Curl接口，汇报摄像头数据...
+	CURLcode res = CURLE_OK;
+	CURL  *  curl = curl_easy_init();
+	do {
+		if( curl == NULL )
+			break;
+		// 如果是https://协议，需要新增参数...
+		if( theConfig.IsWebHttps() ) {
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		}
+		// 设定curl参数，采用get模式...
+		res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strPost);
+		res = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strPost.GetLength());
+		res = curl_easy_setopt(curl, CURLOPT_HEADER, false);
+		res = curl_easy_setopt(curl, CURLOPT_POST, true);
+		res = curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+		res = curl_easy_setopt(curl, CURLOPT_URL, strUrl);
+		// 这里需要网站返回的数据...
+		res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, procPostCurl);
+		res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this);
+		res = curl_easy_perform(curl);
+	}while( false );
+	// 释放资源...
+	if( curl != NULL ) {
+		curl_easy_cleanup(curl);
+	}
+	Json::Value value;
+	// 解析JSON失败，通知界面层...
+	if( !this->parseJson(value) ) {
+		MsgLogGM(GM_NotImplement);
+		return false;
+	}
+	// 设置成功之后，将当前选中房间号保存起来...
+	theConfig.SetCurSelRoomID(nCurSelRoomID);
+	// 将绑定的直播间更新到窗口界面上面...
+	m_lpHaoYiView->doUpdateFrameTitle();
 	return true;
 }
 

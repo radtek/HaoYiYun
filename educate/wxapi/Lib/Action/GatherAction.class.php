@@ -90,6 +90,8 @@ class GatherAction extends Action
       $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
       $arrErr['auto_ipc'] = $dbGather['auto_ipc'];
       $arrErr['page_size'] = $dbGather['page_size'];
+      $arrErr['selected'] = LIVE_BEGIN_ID + $dbGather['live_id'];
+      $arrErr['begin'] = LIVE_BEGIN_ID;
       // 返回采集端需要的参数配置信息...
       $arrErr['web_ver'] = C('VERSION');
       $arrErr['web_tag'] = $dbSys['web_tag'];
@@ -339,6 +341,75 @@ class GatherAction extends Action
     $_POST['updated'] = date('Y-m-d H:i:s');
     D('camera')->save($_POST);
   }
+  //
+  // 处理教师端上传保存...
+  public function liveFDFS()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    // 将获得的数据进行判断和处理...$_GET;//
+    $arrData = $_POST;
+    do {
+      // 判断输入数据是否有效...
+      if( !isset($arrData['ext']) || !isset($arrData['file_src']) || !isset($arrData['file_fdfs']) || !isset($arrData['file_size']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = "文件名称或文件长度不能为空！";
+        break;
+      }
+      // 将file_src进行切分...
+      $arrSrc = explode('_', $arrData['file_src']);
+      // $arrSrc[0] => uniqid
+      // $arrSrc[1] => RoomID
+      // 组合通用数据项...
+      $arrData['file_src'] = (is_null($arrSrc[0]) ? $arrData['file_src'] : $arrSrc[0]);
+      $arrData['live_id'] = (is_null($arrSrc[1]) ? 0 : $arrSrc[1]);
+      $arrData['created'] = date('Y-m-d H:i:s'); // mp4的创建时间 => $arrSrc[2]
+      $arrData['updated'] = date('Y-m-d H:i:s');
+      // 根据文件扩展名进行数据表分发...
+      // jpg => uniqid_RoomID
+      if( (strcasecmp($arrData['ext'], ".jpg") == 0) || (strcasecmp($arrData['ext'], ".jpeg") == 0) ) {
+        // 如果是直播截图，进行特殊处理...
+        if( strcasecmp($arrData['file_src'], "live") == 0 ) {
+          // 重新计算直播间的数据库编号，并在数据库中查找...
+          $arrData['live_id'] = intval($arrData['live_id']) - LIVE_BEGIN_ID;
+          $condition['live_id'] = $arrData['live_id'];
+          $dbLive = D('LiveView')->where($condition)->field('live_id,lesson_id,image_id,image_fdfs')->find();
+          // 如果找到了有效通道...
+          if( is_array($dbLive) ) {
+            if( $dbLive['image_id'] > 0 ) {
+              // 通道下的截图是有效的，先删除这个截图的物理存在...
+              if( isset($dbLive['image_fdfs']) && strlen($dbLive['image_fdfs']) > 0 ) { 
+                if( !fastdfs_storage_delete_file1($dbLive['image_fdfs']) ) {
+                  logdebug("fdfs delete failed => ".$dbLive['image_fdfs']);
+                }
+              }
+              // 将新的截图存储路径更新到截图表当中...
+              $dbImage['image_id'] = $dbLive['image_id'];
+              $dbImage['lesson_id'] = $dbLive['lesson_id'];
+              $dbImage['file_fdfs'] = $arrData['file_fdfs'];
+              $dbImage['file_size'] = $arrData['file_size'];
+              $dbImage['updated'] = $arrData['updated'];
+              D('image')->save($dbImage);
+              // 返回这个有效的图像记录编号...
+              $arrErr['image_id'] = $dbImage['image_id'];
+            } else {
+              // 通道下的截图是无效的，创建新的截图记录...
+              $arrData['lesson_id'] = $dbLive['lesson_id'];
+              $arrErr['image_id'] = D('image')->add($arrData);
+              $dbLive['image_id'] = $arrErr['image_id'];
+              // 将新的截图记录更新到课程表中...
+              $dbLesson['lesson_id'] = $dbLive['lesson_id'];
+              $dbLesson['image_id'] = $dbLive['image_id'];
+              D('lesson')->save($dbLesson);
+            }
+          }
+        }
+      }
+    } while ( false );
+    // 直接返回运行结果 => json...
+    echo json_encode($arrErr);
+  }
   /**
   +----------------------------------------------------------
   * 处理保存录像记录过程...
@@ -375,7 +446,7 @@ class GatherAction extends Action
         if( strcasecmp($arrData['file_src'], "live") == 0 ) {
           $map['camera_id'] = $arrData['camera_id'];
           // 找到该通道下的截图路径和截图编号...
-          $dbLive = D('LiveView')->where($map)->field('camera_id,image_id,image_fdfs')->find();
+          $dbLive = D('CameraView')->where($map)->field('camera_id,image_id,image_fdfs')->find();
           // 如果找到了有效通道...
           if( is_array($dbLive) ) {
             if( $dbLive['image_id'] > 0 ) {
@@ -543,5 +614,238 @@ class GatherAction extends Action
     $arrList = D('RecordView')->where($condition)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs,created')->select();
     print_r($arrList);
   }*/
+  //
+  // 获取直播间列表事件...
+  public function getLiveRoom()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    do {
+      // 传递过来的采集端编号是否有效...
+      $condition['gather_id'] = $_POST['gather_id'];
+      $dbGather = D('gather')->where($condition)->field('gather_id,live_id')->find();
+      if( !isset($dbGather['gather_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '没有找到指定的采集端！';
+        break;
+      }
+      // 返回已经挂载的直播间编号...
+      $arrErr['selected'] = strval(LIVE_BEGIN_ID + $dbGather['live_id']);
+      // 查询当前所有的直播间列表...
+      $arrLive = D('LiveView')->order('live_id DESC')->field('live_id,lesson_name,teacher_name,start_time,end_time')->select();
+      // 如果没有直播间，返回错误...
+      if( !is_array($arrLive) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '服务器上没有直播间！';
+        break;
+      }
+      // 如果找到了有效的直播间，设置直播间编号的偏移量...
+      $arrErr['begin'] = strval(LIVE_BEGIN_ID);
+      $arrErr['live'] = $arrLive;
+    } while( false );
+    // 直接反馈获取的数据内容信息...
+    echo json_encode($arrErr);
+  }
+  //
+  // 将指定的采集端挂载到指定的直播间...
+  public function setLiveRoom()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    do {
+      // 判断输入参数是否有效...
+      if( !isset($_POST['gather_id']) || !isset($_POST['room_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入参数有误！';
+        break;
+      }
+      // 计算需要挂载的直播间的数据库的编号...
+      $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
+      if( $nLiveID <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '输入参数有误！';
+        break;
+      }
+      // 准备数据，执行挂载操作...
+      $dbGather['gather_id'] = $_POST['gather_id'];
+      $dbGather['live_id'] = $nLiveID;
+      D('gather')->save($dbGather);
+    } while( false );
+    // 直接反馈获取的数据内容信息...
+    echo json_encode($arrErr);
+  }
+  //
+  // 处理来自讲师端的云教室登录事件...
+  public function loginLiveRoom()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    do {
+      // 判断输入参数是否有效...
+      if( !isset($_POST['room_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
+        break;
+      }
+      // 计算有效的的直播间的数据库的编号...
+      $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
+      if( $nLiveID <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
+        break;
+      }
+      // 验证云教室是否存在...
+      $condition['live_id'] = $nLiveID;
+      $dbLive = D('live')->where($condition)->field('live_id')->find();
+      if( !isset($dbLive['live_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '没有找到指定的云教室号码，请确认后重新输入！';
+        break;
+      }
+      // 构造中转服务器需要的参数 => 直播编号 => LIVE_BEGIN_ID + live_id
+      $dbParam['rtmp_live'] = LIVE_BEGIN_ID + $dbLive['live_id'];
+      // 从中转服务器获取云教室直播链接地址...
+      $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
+      // 如果获取连接中转服务器失败...
+      if( $dbResult['err_code'] > 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = $dbResult['err_msg'];
+        break;
+      }
+      // 将获取到的rtmp地址进行特殊处理...
+      $strRtmpUrl = $dbResult['rtmp_url'];
+      $strRule = '/(^[rR][tT][mM][pP]:\/\/.*\/[lL][iI][vV][eE]\/)(.*)$/';
+      preg_match($strRule, $strRtmpUrl, $arrMatch);
+      if( empty($arrMatch) || !is_array($arrMatch) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '直播地址错误 => ' . $strRtmpUrl;
+        break;
+      }
+      // 将分解后的直播地址反馈给讲师端...
+      $arrErr['live_server'] = $arrMatch[1];
+      $arrErr['live_key'] = $arrMatch[2];
+      // 填充存储服务器的地址和端口...
+      $dbSys = D('system')->find();
+      $arrErr['tracker_addr'] = $dbSys['tracker_addr'];
+      $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
+      // 修改云教室直播通道的在线状态...
+      $dbLive['status'] = 1;
+      D('live')->save($dbLive);
+    } while( false );
+    // 直接反馈最终验证的结果...
+    echo json_encode($arrErr);
+  }
+  //
+  // 处理教室端退出事件...
+  public function logoutLiveRoom()
+  {
+    // 判断输入的云教室号码是否有效...
+    if( !isset($_POST['room_id']) )
+      return;
+    // 计算有效的的直播间的数据库的编号...
+    $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
+    $dbSave['live_id'] = $nLiveID;
+    $dbSave['status'] = 0;
+    // 直接进行数据库操作...
+    D('live')->save($dbSave);
+  }  
+  // 从中转服务器获取直播地址...
+  // 成功 => array()
+  // 失败 => false
+  private function getRtmpUrlFromTransmit(&$dbParam)
+  {
+    // 获取系统配置信息...
+    $dbSys = D('system')->find();
+    // 通过php扩展插件连接中转服务器 => 性能高...
+    $transmit = transmit_connect_server($dbSys['transmit_addr'], $dbSys['transmit_port']);
+    // 链接中转服务器失败，直接返回...
+    if( !$transmit ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '无法连接中转服务器。';
+      return $arrData;
+    }
+    // 获取直播频道所在的URL地址...
+    $saveJson = json_encode($dbParam);
+    $json_data = transmit_command(kClientPlay, kCmd_Play_Login, $transmit, $saveJson);
+    // 关闭中转服务器链接...
+    transmit_disconnect_server($transmit);
+    // 获取的JSON数据有效，转成数组，直接返回...
+    $arrData = json_decode($json_data, true);
+    if( !$arrData ) {
+      $arrData['err_code'] = true;
+      $arrData['err_msg'] = '从中转服务器获取数据失败。';
+      return $arrData;
+    }
+    // 通过错误码，获得错误信息...
+    $arrData['err_msg'] = getTransmitErrMsg($arrData['err_code']);
+    // 将整个数组返回...
+    return $arrData;
+  }
+  //
+  // 获取指定云教室里面的在线摄像头列表...
+  public function getRoomCameraList()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    do {
+      // 判断输入参数是否有效...
+      if( !isset($_POST['room_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
+        break;
+      }
+      // 计算有效的的直播间的数据库的编号...
+      $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
+      if( $nLiveID <= 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
+        break;
+      }
+      // 设置查询条件 => CameraView 当中status是指wk_camera表...
+      $condition['live_id'] = $nLiveID;
+      $condition['status'] = array('gt', 0);
+      $arrErr['camera'] = D('CameraView')->where($condition)->field('camera_id,camera_name,name_pc,name_set')->select();
+    } while( false );
+    // 直接反馈查询结果...
+    echo json_encode($arrErr);   
+  }
+  //
+  // 获取指定在线摄像头的直播地址 => 触发按需推流机制...
+  public function getRoomCameraUrl()
+  {
+    // 准备返回数据结构...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "OK";
+    do {
+      // 没有找到指定通道，返回错误...
+      $condition['camera_id'] = $_POST['camera_id'];
+      $dbCamera = D('CameraView')->where($condition)->field('camera_id,mac_addr')->find();
+      if( !isset($dbCamera['camera_id']) ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '没有找到指定的摄像头数据！';
+        break;
+      }
+      // 从中转服务器获取摄像头的直播地址，并激发按需推流...
+      $dbParam['mac_addr'] = $dbCamera['mac_addr'];
+      $dbParam['rtmp_live'] = $dbCamera['camera_id'];
+      // 获取直播链接地址...
+      $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
+      // 如果获取连接中转服务器失败...
+      if( $dbResult['err_code'] > 0 ) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = $dbResult['err_msg'];
+        break;
+      }
+      // 保存需要返回的 rtmp 直播地址和用户编号...
+      $arrErr['rtmp_url'] = $dbResult['rtmp_url'];
+      $arrErr['player_id'] = $dbResult['player_id'];
+    } while( false );
+    // 直接反馈查询结果...
+    echo json_encode($arrErr);   
+  }
 }
 ?>

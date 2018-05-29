@@ -123,7 +123,8 @@ class HomeAction extends Action
       $my_nav['is_login'] = false;
     }
     // 获取采集器列表...
-    $arrDrop = D('gather')->order('gather_id ASC')->select();
+    //$arrDrop = D('gather')->order('gather_id ASC')->select();
+    $arrDrop = null;
     // 设置一些返回数据...
     $my_nav['type'] = $activeType;          // 0(首页激活), 1(直播教室激活), 2(教室墙激活), 3(科目激活), 4(更多激活)
     $my_nav['active_id'] = $activeID;       // 激活的采集器编号...

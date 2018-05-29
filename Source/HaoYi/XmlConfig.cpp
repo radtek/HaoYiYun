@@ -44,6 +44,8 @@ CXmlConfig::CXmlConfig(void)
   , m_nSliceVal(0)
   , m_nInterVal(0)
   , m_nSnapVal(2)
+  , m_nBeginRoomID(0)
+  , m_nCurSelRoomID(0)
 {
 	CString strVersion;
 	strVersion.Format("V%s - Build %s", CUtilTool::GetServerVersion(), __DATE__);
