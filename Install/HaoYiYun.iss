@@ -4,8 +4,8 @@
 [Setup]
 AppName={reg:HKLM\Software\HaoYiYun, AppName|采集端}
 AppVerName={reg:HKLM\Software\HaoYiYun, AppVerName|采集端}
-AppPublisher={reg:HKLM\Software\GMBacklot, AppPublisher|北京浩一科技有限公司}
-AppPublisherURL={reg:HKLM\Software\GMBacklot, AppPublisherURL|https://myhaoyi.com}
+AppPublisher={reg:HKLM\Software\HaoYiYun, AppPublisher|北京浩一科技有限公司}
+AppPublisherURL={reg:HKLM\Software\HaoYiYun, AppPublisherURL|https://myhaoyi.com}
 
 DefaultGroupName={reg:HKLM\Software\HaoYiYun, DefaultGroupName|采集端}
 DefaultDirName={reg:HKLM\Software\HaoYiYun, DefaultDirName|{pf}\采集端}
