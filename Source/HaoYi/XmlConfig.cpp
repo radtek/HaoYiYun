@@ -78,9 +78,11 @@ BOOL CXmlConfig::GMLoadConfig()
 	SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, szPath);
 	strcat(szPath, "\\");
 	strcat(szPath, DEF_CONFIG_PATH);
-	// 创建配置存放目录...
-	if( !CUtilTool::CreateDir(szPath) )
-		return false;
+	// 创建配置存放目录 => 没有才创建...
+	if( _access(szPath, 0) < 0 ) {
+		if( !CUtilTool::CreateDir(szPath) )
+			return false;
+	}
 	// 设置配置文件全路劲...
 	strcat(szPath, "\\");
 	strcat(szPath, XML_CONFIG);

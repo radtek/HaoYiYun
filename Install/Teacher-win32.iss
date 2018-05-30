@@ -18,7 +18,7 @@ AllowCancelDuringInstall=no
 OutputDir=..\Product
 
 VersionInfoVersion=1.1.0
-OutputBaseFilename=cloud-teacher-1.1.0
+OutputBaseFilename=cloud-teacher-win32-1.1.0
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
