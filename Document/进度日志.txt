@@ -260,6 +260,12 @@
     E：（未完成）64位系统要调用64位的钩子函数，否则，无法捕捉窗口；尝试编译一个64bit的版本；
     E：（未完成）如何解决Teacher端的内存泄漏问题？
 
+18.（已完成）开始尝试在win32系统下，编译obs的64bit版本，使用msvs2015，在 192.168.1.19 I3主机上安装
+    A：msvs2015 => F:\迅雷下载\VisualStudio，安装 QT VS Tools 
+    B：qt5.8.0  => E:\Qt\qt-opensource-windows-x86-msvc2015_64-5.8.0.exe
+    C：cmake    => E:\cmake\cmake-3.11.2-win64-x64.zip
+    D：obs-deps => E:\obs-deps\dependencies2015.zip
+
 2018.04.01 - 2018.04.30
 =========================================================================
 1.（已完成）有关“采集端”与“节点网站”的注册说明：
@@ -302,7 +308,7 @@
    C.（已完成）优化wk_system内容，只留一份代码；
 12.（已完成）完成了《直播教室-设计.docx》，目录 => E:\GitHub\HaoYiYun\Document\方案
    A：（已完成）就是一种直播课堂方案，老师在北京上课，学生通过网络投影观看学习；
-   B：（已完成）开源的obs能够完全满足要求，需要改进，涉及到 VS2015|QT|cmake；在itellyou上下载vs2015安装；professional_2015_x86_x64
+   B：（已完成）开源的obs能够完全满足要求，需要改进，涉及到 VS2015|QT|cmake；在itellyou上下载vs2015安装；professional_2015_x86_x64 => F:\迅雷下载\VisualStudio
    C：（已完成）有关obs的详细编译过程，https://blog.csdn.net/gengxt2003/article/details/79070741
    D：（已完成）清华大学开源软件镜像站，https://mirrors.tuna.tsinghua.edu.cn/
 13.（已完成）云录播 网站升级注释写成了 云监控 的升级注释；
@@ -353,6 +359,7 @@
       data -> libos|obs-plugins     => 模块和插件用到的数据
       obs-plugins -> 32bit -> *.dll => 插件编译后的动态库
    I：（已完成）VS2015需要安装扩展组件，新建一个QT界面的工程，obs是利用cmake外挂编译了QT模块，可以直接调试，新建的工程，必须与QT绑定，重新绑定编译才行；
+      Tools => Extensions and Updates => Online => QT VS Tools
    J：（已完成）.ui是QT生成的页面配置文件，可直接编辑，编译时会自动生成ui_xxx.h文件，.qrc是资源配置文件；QT工程会新增一些配置项，会提前预编译一些文件，然后供vs2015使用；
    K：（已完成）成功将Teacher用obs的界面编译完成，现在需要进一步对界面进行调整；
    L：（已完成）重新在E:/obs-studio创建目录，从https://github.com/HaoYiTech/obs-studio上拉取数据；
