@@ -6,7 +6,86 @@
 #include "mp4v2.h"
 #include "myRTSPClient.h"
 
+extern "C"
+{
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
+#include "libavutil/opt.h"
+#include "SDL2/SDL.h"
+};
+
 //#define _SAVE_H264_
+
+class CRenderWnd;
+class CPushThread;
+class CVideoThread : public OSThread
+{
+public:
+	CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight);
+	~CVideoThread();
+public:
+	BOOL	InitThread(CPushThread * inPushThread, CRenderWnd * lpRenderWnd);
+	void	PushFrame(string & inFrame, bool bIsKeyFrame);
+private:
+	virtual void	Entry();
+	int     DecodeFrame();
+	void    DisplaySDL();
+private:
+	int				m_nWidth;
+	int				m_nHeight;
+	OSMutex			m_Mutex;
+	string			m_strSPS;
+	string			m_strPPS;
+	string			m_strFrame;
+	CRenderWnd	 *	m_lpRenderWnd;
+	CPushThread  *  m_lpPushThread;
+	SDL_Window   *  m_sdlScreen;
+	SDL_Renderer *  m_sdlRenderer;
+    SDL_Texture  *  m_sdlTexture;
+
+	AVCodecParserContext * m_lpSrcCodecParserCtx;
+    AVCodecContext * m_lpSrcCodecCtx;
+	AVCodec * m_lpSrcCodec;
+	AVFrame	* m_lpSrcFrame;
+};
+
+class CAudioThread : public OSThread
+{
+public:
+	CAudioThread(int nRateIndex, int nChannelNum);
+	~CAudioThread();
+public:
+	BOOL	InitThread(CPushThread * inPushThread);
+	void    DisplaySDL(Uint8 * inStream, int inLen);
+	void	PushFrame(string & inFrame);
+private:
+	virtual void	Entry();
+	int     DecodeFrame();
+private:
+	OSMutex			m_Mutex;
+	string			m_strFrame;
+	CPushThread  *  m_lpPushThread;
+	int				m_audio_rate_index;
+	int				m_audio_channel_num;
+	int             m_audio_sample_rate;
+	int             m_out_buffer_size;
+
+	uint8_t		 *  m_out_buffer;
+	SwrContext   *  m_au_convert_ctx;
+	SDL_AudioDeviceID m_AudioDevID;
+
+	AVCodecParserContext * m_lpSrcCodecParserCtx;
+    AVCodecContext * m_lpSrcCodecCtx;
+	AVCodec * m_lpSrcCodec;
+	AVFrame	* m_lpSrcFrame;
+
+	Uint8  * m_audio_chunk; 
+	Uint32   m_audio_len; 
+	Uint8  * m_audio_pos; 
+
+};
 
 class LibRtmp;
 class CCamera;
@@ -192,6 +271,8 @@ public:
 	BOOL			IsRecording();
 
 	int				PushFrame(FMS_FRAME & inFrame);
+	void			StartAudioThread(int nRateIndex, int nChannelNum);
+	void			StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight);
 private:
 	virtual	void	Entry();
 
@@ -263,6 +344,9 @@ private:
 
 	KH_MapFrame		m_MapMonitor;		// 云监控切片交错缓存区...
 	int				m_nKeyMonitor;		// 云监控已缓存交错关键帧个数...
+
+	CVideoThread  * m_lpVideoThread;	// 视频播放线程...
+	CAudioThread  * m_lpAudioThread;    // 音频播放线程...
 
 #ifdef _SAVE_H264_
 	bool			m_bSave_sps;

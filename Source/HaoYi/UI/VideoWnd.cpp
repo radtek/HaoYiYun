@@ -434,13 +434,14 @@ void CVideoWnd::BuildRenderWnd(int inRenderWndID)
 
 void CVideoWnd::ClearResource()
 {
-	if( m_lpRenderWnd != NULL ) {
-		delete m_lpRenderWnd;
-		m_lpRenderWnd = NULL;
-	}
+	// 先删除通道，再删除窗口...
 	if( m_lpCamera != NULL ) {
 		delete m_lpCamera;
 		m_lpCamera = NULL;
+	}
+	if( m_lpRenderWnd != NULL ) {
+		delete m_lpRenderWnd;
+		m_lpRenderWnd = NULL;
 	}
 	if( this->m_hWnd != NULL ) {
 		this->DestroyWindow();

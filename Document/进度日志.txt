@@ -158,6 +158,46 @@
     E：（未完成）我们没有可卖商品，我们是技术服务商，一次需要申请微信支付服务商，需要首先申请开通一个服务号“浩一云”，认证，申请微信支付服务商；
 32.（未完成）在transmit当中，播放器在线状态通知当中，增加当前通道在线用户数的功能，这样可以实时显示在线观看用户数；
 
+2018.06.01 - 2018.06.30
+=========================================================================
+1.（未完成）需要解决Teacher端交互时的高延时问题，需要解决的问题如下：
+   A：（未完成）采集端推流到服务器，讲师端从服务器获取流，讲师端组包还原音视频数据帧，讲师端解码H264+AAC，讲师端播放；
+   B：（未完成）讲师端推流到服务器，采集端从服务器获取流，采集端组包还原音视频数据帧，采集端解码H264+AAC，采集端播放；
+   C：（未完成）需要在网上找找有关低延时视频会议系统的解决方案；
+   D：（未完成）需要重新编写采集端，专门处理多路RTSP输入，一路讲师端网络输入，选择一路RTSP网络输出；
+   E：（未完成）需要重新编写讲师端，专门处理多路摄像头输入+多路窗口输入+1路麦克风输入+1路采集端网络流输入，输出讲师端网络流；
+   F：（未完成）有关RTMP延时的分析文章收集：
+                http://blog.chinaunix.net/uid-26000296-id-4932817.html
+                https://blog.csdn.net/qq_38810947/article/details/74199967
+                https://blog.csdn.net/king457757706/article/details/51004253
+                https://blog.csdn.net/mandagod/article/details/52559053 => 比较详细
+                https://blog.csdn.net/zhiboshequ/article/details/79955433
+   G：（未完成）简单UDP服务器（Linux）：
+                https://blog.csdn.net/u011922698/article/details/55218313
+                https://blog.csdn.net/yueguanghaidao/article/details/7055985
+                https://blog.csdn.net/aa120515692/article/details/47294335 => UDP并发服务器
+                https://blog.csdn.net/aa120515692/article/details/47299529 => UDP并发服务器Select机制
+                https://www.cnblogs.com/skyfsm/p/6287787.html?utm_source=itdadao&utm_medium=referral
+                https://blog.csdn.net/yang_rong_yong/article/details/49818249
+                https://blog.csdn.net/u010643777/article/details/72190891 => UDP下的epoll并发框架
+                https://blog.csdn.net/dog250/article/details/50557570 => UDP的epoll并发框架
+                http://bbs.chinaunix.net/thread-4175621-1-3.html => UDP服务器性能测试
+                https://blog.csdn.net/libinbin_1014/article/details/50096211
+2.（已完成）先用ffmpeg解析H.264视频帧，再用SDL2.0绘制到窗口上；
+   A：（已完成）尝试使用SDL2.0解码音频，并回放出来；
+   B：（已完成）https://blog.csdn.net/jay100500/article/details/52955232 => AAC帧头格式 => ADTS
+   C：（未完成）两路音频同时播放时，只有一路有声音，关闭时还会卡死在界面；
+   D：（未完成）需要解决音视频自主播放时的同步问题；
+   E：（未完成）进一步研究发现：SDL2.0不支持多路音频播放，支持起来麻烦，还要解决音视频同步问题；
+   F：（未完成）需要将目前的实验代码，转移到NO_DELAY分支，研究obs里面针对网络流的数据播放，它是音视频同步的，而且支持多路；
+   G：（未完成）将需要的模块单独整理出来，进行符合自己要求的封装；
+
+3.（未完成）本地拉取RTSP数据流，进行最快速度的解码显示，也有900毫秒左右的延时，因此，学生端不能用IPC模式，需要对方案进行调整：
+   A：（已完成）海康IPC的SDK回显模式，延时在200毫秒左右，比RTSP拉流的延时要低很多；
+   B：（已完成）ffmpeg解码器配置参数之后，RTSP延时又变成了300毫秒左右，很奇怪，屏蔽参数之后延时也没有变大；
+   B：（未完成）学生端，使用vs2015，利用libobs的函数库，读取USB-Camera的数据，用x264进行压缩编码，去掉B帧模式；最大限度的降低延时；
+   C：（未完成）学生端，使用vs2015，利用UDP获取讲师端推流数据，组合成音视频帧，调用ffmpeg解码，SDL2.0回显；
+
 2018.05.01 - 2018.05.31
 =========================================================================
 1.（已完成）海康人脸系统分为三种层次：

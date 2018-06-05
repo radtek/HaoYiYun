@@ -100,7 +100,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>curl;HKNet;DHNet;libmp4v2;ffmpeg/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libmp4v2D.lib;HCNetSDK.lib;libcurl_imp.lib;Version.lib;Psapi.lib;avcodec.lib;avformat.lib;avutil.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmp4v2D.lib;HCNetSDK.lib;libcurl_imp.lib;Version.lib;Psapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

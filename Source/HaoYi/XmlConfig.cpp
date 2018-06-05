@@ -727,6 +727,7 @@ BOOL CXmlConfig::FFmpegSnapJpeg(const string & inSrcFrame, const CString & inDes
 			if( nResult < 0 || !got_picture )
 				continue;
 			// 解码成功，并且获取了一副图像，进行存盘操作...
+			//this->FFmpegDispSDL(lpSrcCodecCtx, lpSrcFrame);
 			this->FFmpegSaveJpeg(lpSrcCodecCtx, lpSrcFrame, inDestJpgName);
 			// 设置成功标志，中断循环...
 			bReturn = true;
@@ -751,6 +752,64 @@ BOOL CXmlConfig::FFmpegSnapJpeg(const string & inSrcFrame, const CString & inDes
 	// 返回最终的结果...
 	return bReturn;
 }
+//
+// YUV数据通过SDL2.0显示出来 => OpenGL
+/*BOOL CXmlConfig::FFmpegDispSDL(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame)
+{
+	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
+	enum AVPixelFormat nSrcFormat = pOrigCodecCtx->pix_fmt;
+	int nSrcWidth = pOrigCodecCtx->width;
+	int nSrcHeight = pOrigCodecCtx->height;
+	// 不管什么格式，都需要进行像素格式的转换...
+	AVFrame * pDestFrame = av_frame_alloc();
+	int nDestBufSize = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	uint8_t * pDestOutBuf = (uint8_t *)av_malloc(nDestBufSize);
+	avpicture_fill((AVPicture *)pDestFrame, pDestOutBuf, nDestFormat, nSrcWidth, nSrcHeight);
+	// 调用ffmpeg的格式转换接口函数...
+	struct SwsContext * img_convert_ctx = sws_getContext(nSrcWidth, nSrcHeight, nSrcFormat, nSrcWidth, nSrcHeight, nDestFormat, SWS_BICUBIC, NULL, NULL, NULL);
+	int nReturn = sws_scale(img_convert_ctx, (const uint8_t* const*)pOrigFrame->data, pOrigFrame->linesize, 0, nSrcHeight, pDestFrame->data, pDestFrame->linesize);
+	sws_freeContext(img_convert_ctx);
+	// 设置转换后的数据帧内容...
+	pDestFrame->width = nSrcWidth;
+	pDestFrame->height = nSrcHeight;
+	pDestFrame->format = nDestFormat;
+
+	//////////////////////////////////////////////
+	// 使用SDL 进行画面绘制工作...
+	//////////////////////////////////////////////
+	int nResult = 0;
+	BOOL bReturn = false;
+	SDL_Window * sdlScreen = NULL;
+	SDL_Renderer * sdlRenderer = NULL;
+    SDL_Texture * sdlTexture = NULL;
+	SDL_Rect sdlRect = { 0 };
+	do {
+		if( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) )
+			break;
+		sdlScreen = SDL_CreateWindow("Simplest ffmpeg player's Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, nSrcWidth, nSrcHeight, SDL_WINDOW_OPENGL|SDL_WINDOW_BORDERLESS);
+		//sdlScreen = SDL_CreateWindowFrom((void *)GetDesktopWindow());
+		if( sdlScreen == NULL )
+			break;
+		sdlRenderer = SDL_CreateRenderer(sdlScreen, -1, 0);
+		if( sdlRenderer == NULL )
+			break;
+		sdlTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, nSrcWidth, nSrcHeight);
+		if( sdlTexture == NULL )
+			break;
+		sdlRect.w = nSrcWidth;
+		sdlRect.h = nSrcHeight;
+		nResult = SDL_UpdateTexture( sdlTexture, &sdlRect, pDestFrame->data[0], pDestFrame->linesize[0] );
+        nResult = SDL_RenderClear( sdlRenderer );
+        nResult = SDL_RenderCopy( sdlRenderer, sdlTexture,  NULL, &sdlRect);
+        SDL_RenderPresent( sdlRenderer );
+		SDL_Delay(40);
+	} while( false );
+	SDL_Quit();
+	// 释放临时分配的数据空间...
+	av_frame_free(&pDestFrame);
+	av_free(pDestOutBuf);
+	return bReturn;
+}*/
 //
 // 将yuv数据存盘成jpg文件...
 BOOL CXmlConfig::FFmpegSaveJpeg(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame, LPCTSTR lpszJpgName)

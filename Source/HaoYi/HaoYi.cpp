@@ -14,6 +14,8 @@
 #include "PushThread.h"
 #include "MD5.h"
 
+#include "SDL2/SDL.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -127,6 +129,9 @@ BOOL CHaoYiApp::InitInstance()
 	SocketUtils::Initialize();
 	CPushThread::Initialize();
 
+	// 初始化SDL2.0...
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
+
 	//EnableTaskbarInteraction(FALSE);
 
 	// 使用 RichEdit 控件需要  AfxInitRichEdit2()	
@@ -207,6 +212,9 @@ int CHaoYiApp::ExitInstance()
 	SocketUtils::UnInitialize();
 	OSThread::UnInitialize();
 	//::WSACleanup();
+
+	// 释放SDL2.0资源...
+	SDL_Quit();
 
 	return CWinApp::ExitInstance();
 }

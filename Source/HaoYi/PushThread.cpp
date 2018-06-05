@@ -1,5 +1,6 @@
 
 #include "stdafx.h"
+#include "VideoWnd.h"
 #include "PushThread.h"
 #include "XmlConfig.h"
 #include "srs_librtmp.h"
@@ -14,6 +15,476 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+CVideoThread::CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight)
+{
+	m_sdlScreen = NULL;
+	m_sdlTexture = NULL;
+	m_sdlRenderer = NULL;
+	m_lpPushThread = NULL;
+	m_lpRenderWnd = NULL;
+	m_strSPS = inSPS;
+	m_strPPS = inPPS;
+	m_nWidth = nWidth;
+	m_nHeight = nHeight;
+
+	m_lpSrcCodecParserCtx = NULL;
+	m_lpSrcCodecCtx = NULL;
+	m_lpSrcCodec = NULL;
+	m_lpSrcFrame = NULL;
+}
+
+CVideoThread::~CVideoThread()
+{
+	// 等待线程退出...
+	this->StopAndWaitForThread();
+	// 释放预先已经分配的空间...
+	if( m_lpSrcCodecParserCtx != NULL ) {
+		av_parser_close(m_lpSrcCodecParserCtx);
+		m_lpSrcCodecParserCtx = NULL;
+	}
+	if( m_lpSrcFrame != NULL ) {
+		av_frame_free(&m_lpSrcFrame);
+		m_lpSrcFrame = NULL;
+	}
+	if( m_lpSrcCodecCtx != NULL ) {
+		avcodec_close(m_lpSrcCodecCtx);
+		av_free(m_lpSrcCodecCtx);
+	}
+	if( m_sdlScreen != NULL ) {
+		SDL_DestroyWindow(m_sdlScreen);
+		m_sdlScreen = NULL;
+	}
+	if( m_sdlRenderer != NULL ) {
+		SDL_DestroyRenderer(m_sdlRenderer);
+		m_sdlRenderer = NULL;
+	}
+	if( m_sdlTexture != NULL ) {
+		SDL_DestroyTexture(m_sdlTexture);
+		m_sdlTexture = NULL;
+	}
+	// 销毁SDL窗口时会隐藏关联窗口...
+	m_lpRenderWnd->ShowWindow(SW_SHOW);
+	m_lpRenderWnd->SetRenderState(CRenderWnd::ST_RENDER);
+}
+
+BOOL CVideoThread::InitThread(CPushThread * inPushThread, CRenderWnd * lpRenderWnd)
+{
+	OSMutexLocker theLock(&m_Mutex);
+
+	// 保存窗口和父对象...
+	m_lpRenderWnd = lpRenderWnd;
+	m_lpPushThread = inPushThread;
+	m_lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
+
+	m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
+	m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
+	m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nWidth, m_nHeight);
+
+	// 初始化ffmpeg解码器...
+	av_register_all();
+	// 准备一些特定的参数...
+	AVCodecID src_codec_id = AV_CODEC_ID_H264;
+	// 查找需要的解码器和相关容器、解析器...
+	m_lpSrcCodec = avcodec_find_decoder(src_codec_id);
+	m_lpSrcCodecCtx = avcodec_alloc_context3(m_lpSrcCodec);
+	m_lpSrcCodecParserCtx = av_parser_init(src_codec_id);
+	// 这几个参数网上说能降低延时，好像并不太有用 => 对编码有用...
+	//m_lpSrcCodecCtx->time_base.den = 1;
+	//m_lpSrcCodecCtx->time_base.num = 75;
+	//av_opt_set(m_lpSrcCodecCtx->priv_data, "preset", "superfast", 0);
+	//av_opt_set(m_lpSrcCodecCtx->priv_data, "tune", "zerolatency", 0);
+	// 打开获取到的解码器...
+	int nResult = avcodec_open2(m_lpSrcCodecCtx, m_lpSrcCodec, NULL);
+	// 开启界面绘制线程...
+	this->Start();
+	return true;
+}
+
+void CVideoThread::PushFrame(string & inFrame, bool bIsKeyFrame)
+{
+	OSMutexLocker theLock(&m_Mutex);
+	// 如果是关键帧，必须先写入sps，再写如pps...
+	// 每个关键帧都放入sps和pps，播放会加快...
+	if( bIsKeyFrame ) {
+		DWORD dwTag = 0x01000000;
+		m_strFrame.append((char*)&dwTag, sizeof(DWORD));
+		m_strFrame.append(m_strSPS);
+		m_strFrame.append((char*)&dwTag, sizeof(DWORD));
+		m_strFrame.append(m_strPPS);
+	}
+	// 修改视频帧的起始码 => 0x00000001
+	char * lpszSrc = (char*)inFrame.c_str();
+	memset((void*)lpszSrc, 0, sizeof(DWORD));
+	lpszSrc[3] = 0x01;
+	// 最后追加新数据...
+	m_strFrame.append(inFrame);
+}
+
+int CVideoThread::DecodeFrame()
+{
+	OSMutexLocker theLock(&m_Mutex);
+	// 如果没有数据，直接返回...
+	if( m_strFrame.size() <= 0 )
+		return 0;
+	// 先释放上次分配的缓冲区...
+	if( m_lpSrcFrame != NULL ) {
+		av_frame_free(&m_lpSrcFrame);
+		m_lpSrcFrame = NULL;
+	}
+	// 初始化ffmpeg数据帧...
+	BOOL      bReturn = false;
+	AVPacket  theSrcPacket = {0};
+	m_lpSrcFrame = av_frame_alloc();
+	av_init_packet(&theSrcPacket);
+	// 解析传递过来的h264数据帧...
+	uint8_t * lpCurPtr = (uint8_t*)m_strFrame.c_str();
+	int nCurSize = m_strFrame.size();
+	int got_picture = 0;
+	int nParseSize = 0;
+	int	nResult = 0;
+	while( nCurSize > 0 ) {
+		// 这里需要多次解析，直到解析完所有的缓存为止...
+		nResult = av_parser_parse2( m_lpSrcCodecParserCtx, m_lpSrcCodecCtx,
+						  &theSrcPacket.data, &theSrcPacket.size,
+						  lpCurPtr, nCurSize, AV_NOPTS_VALUE,
+						  AV_NOPTS_VALUE, AV_NOPTS_VALUE);
+		// 没有解析出packet，移动缓冲指针...
+		if( nResult > 0 ) {
+			lpCurPtr += nResult;
+			nCurSize -= nResult;
+		}
+		//TRACE("PackSize: %lu, Result: %lu\n", theSrcPacket.size, nResult);
+		// 没有解析出packet，继续...
+		if( theSrcPacket.size == 0 )
+			continue;
+		// 这里必须用解析出的长度...
+		nParseSize += theSrcPacket.size;
+		//TRACE("Packet: %lu, Parsed: %lu\n", theSrcPacket.size, nParseSize);
+		// 对解析正确的packet进行解码操作...
+		nResult = avcodec_decode_video2(m_lpSrcCodecCtx, m_lpSrcFrame, &got_picture, &theSrcPacket);
+		// 解码失败或没有得到完整图像，继续解析...
+		if( nResult < 0 || !got_picture )
+			continue;
+		// 解码成功，并且获取了一副图像，进行存盘操作...
+		this->DisplaySDL();
+		// 设置成功标志，中断循环...
+		bReturn = true;
+		// 删除已经解码的缓冲区...
+		m_strFrame.erase(0, nParseSize);
+		//TRACE("Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
+		break;
+	}
+	// 对用到的数据进行清理工作...
+	av_free_packet(&theSrcPacket);
+	return (bReturn ? 1 : 0);
+}
+//
+// YUV数据通过SDL2.0显示出来 => OpenGL
+void CVideoThread::DisplaySDL()
+{
+	if( m_lpSrcCodecCtx == NULL || m_lpSrcFrame == NULL )
+		return;
+	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
+	enum AVPixelFormat nSrcFormat = m_lpSrcCodecCtx->pix_fmt;
+	int nSrcWidth = m_lpSrcCodecCtx->width;
+	int nSrcHeight = m_lpSrcCodecCtx->height;
+	// 不管什么格式，都需要进行像素格式的转换...
+	AVFrame * pDestFrame = av_frame_alloc();
+	int nDestBufSize = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	uint8_t * pDestOutBuf = (uint8_t *)av_malloc(nDestBufSize);
+	avpicture_fill((AVPicture *)pDestFrame, pDestOutBuf, nDestFormat, nSrcWidth, nSrcHeight);
+	// 调用ffmpeg的格式转换接口函数...
+	struct SwsContext * img_convert_ctx = sws_getContext(nSrcWidth, nSrcHeight, nSrcFormat, nSrcWidth, nSrcHeight, nDestFormat, SWS_BICUBIC, NULL, NULL, NULL);
+	int nReturn = sws_scale(img_convert_ctx, (const uint8_t* const*)m_lpSrcFrame->data, m_lpSrcFrame->linesize, 0, nSrcHeight, pDestFrame->data, pDestFrame->linesize);
+	sws_freeContext(img_convert_ctx);
+	// 设置转换后的数据帧内容...
+	pDestFrame->width = nSrcWidth;
+	pDestFrame->height = nSrcHeight;
+	pDestFrame->format = nDestFormat;
+	//////////////////////////////////////////////
+	// 使用SDL 进行画面绘制工作...
+	//////////////////////////////////////////////
+	int nResult = 0;
+	CRect rcRect;
+	SDL_Rect srcSdlRect = { 0 };
+	SDL_Rect dstSdlRect = { 0 };
+	m_lpRenderWnd->GetClientRect(rcRect);
+	srcSdlRect.w = nSrcWidth;
+	srcSdlRect.h = nSrcHeight;
+	dstSdlRect.w = rcRect.Width();
+	dstSdlRect.h = rcRect.Height();
+	nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame->data[0], pDestFrame->linesize[0] );
+    nResult = SDL_RenderClear( m_sdlRenderer );
+    nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );
+    SDL_RenderPresent( m_sdlRenderer );
+	//SDL_Delay(40);
+	// 释放临时分配的数据空间...
+	av_frame_free(&pDestFrame);
+	av_free(pDestOutBuf);
+}
+
+void CVideoThread::Entry()
+{
+	while( !this->IsStopRequested() ) {
+		if( this->DecodeFrame() <= 0 ) {
+			::Sleep(50); continue;
+		}
+		this->DisplaySDL();
+	}
+}
+
+#define ADTS_HEADER_SIZE		7
+#define MAX_AUDIO_FRAME_SIZE	192000 // 1 second of 48khz 32bit audio
+
+CAudioThread::CAudioThread(int nRateIndex, int nChannelNum)
+{
+	// 根据索引获取采样率...
+	switch( nRateIndex )
+	{
+	case 0x03: m_audio_sample_rate = 48000; break;
+	case 0x04: m_audio_sample_rate = 44100; break;
+	case 0x05: m_audio_sample_rate = 32000; break;
+	case 0x06: m_audio_sample_rate = 24000; break;
+	case 0x07: m_audio_sample_rate = 22050; break;
+	case 0x08: m_audio_sample_rate = 16000; break;
+	case 0x09: m_audio_sample_rate = 12000; break;
+	case 0x0a: m_audio_sample_rate = 11025; break;
+	case 0x0b: m_audio_sample_rate =  8000; break;
+	default:   m_audio_sample_rate = 48000; break;
+	}
+	m_audio_rate_index = nRateIndex;
+	m_audio_channel_num = nChannelNum;
+
+	m_lpPushThread = NULL;
+
+	m_lpSrcCodecParserCtx = NULL;
+	m_lpSrcCodecCtx = NULL;
+	m_lpSrcCodec = NULL;
+	m_lpSrcFrame = NULL;
+
+	m_out_buffer = NULL;
+	m_au_convert_ctx = NULL;
+	m_out_buffer_size = 0;
+
+	m_audio_chunk = NULL;
+	m_audio_pos = NULL;
+	m_audio_len = 0;
+
+	m_AudioDevID = 0;
+}
+
+CAudioThread::~CAudioThread()
+{
+	// 等待线程退出...
+	this->StopAndWaitForThread();
+	// 释放预先已经分配的空间...
+	if( m_lpSrcCodecParserCtx != NULL ) {
+		av_parser_close(m_lpSrcCodecParserCtx);
+		m_lpSrcCodecParserCtx = NULL;
+	}
+	if( m_lpSrcFrame != NULL ) {
+		av_frame_free(&m_lpSrcFrame);
+		m_lpSrcFrame = NULL;
+	}
+	if( m_lpSrcCodecCtx != NULL ) {
+		avcodec_close(m_lpSrcCodecCtx);
+		av_free(m_lpSrcCodecCtx);
+	}
+	if( m_out_buffer != NULL ) {
+		av_free(m_out_buffer);
+		m_out_buffer = NULL;
+	}
+	if( m_au_convert_ctx != NULL ) {
+		swr_free(&m_au_convert_ctx);
+		m_au_convert_ctx = NULL;
+	}
+	// 关闭音频...
+	SDL_CloseAudio();
+	//SDL_CloseAudioDevice(m_AudioDevID);
+}
+
+void do_fill_audio(void * udata, Uint8 *stream, int inLen)
+{
+	CAudioThread * lpThread = (CAudioThread*)udata;
+	lpThread->DisplaySDL(stream, inLen);
+}
+
+BOOL CAudioThread::InitThread(CPushThread * inPushThread)
+{
+	OSMutexLocker theLock(&m_Mutex);
+	m_lpPushThread = inPushThread;
+
+	// 初始化ffmpeg解码器...
+	av_register_all();
+	// 准备一些特定的参数...
+	AVCodecID src_codec_id = AV_CODEC_ID_AAC;
+	// 查找需要的解码器和相关容器、解析器...
+	m_lpSrcCodec = avcodec_find_decoder(src_codec_id);
+	m_lpSrcCodecCtx = avcodec_alloc_context3(m_lpSrcCodec);
+	m_lpSrcCodecParserCtx = av_parser_init(src_codec_id);
+	// 打开获取到的解码器...
+	int nResult = avcodec_open2(m_lpSrcCodecCtx, m_lpSrcCodec, NULL);
+
+	//out_nb_samples: AAC-1024 MP3-1152
+	int64_t in_channel_layout = av_get_default_channel_layout(m_audio_channel_num);
+	uint64_t out_channel_layout = AV_CH_LAYOUT_STEREO;
+	AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_S16;
+	int out_nb_samples = 1024;
+
+	//SDL_AudioSpec
+	SDL_AudioSpec wanted_spec = {0};
+	wanted_spec.freq = m_audio_sample_rate; 
+	wanted_spec.format = AUDIO_S16SYS; 
+	wanted_spec.channels = m_audio_channel_num; 
+	wanted_spec.samples = out_nb_samples;
+	wanted_spec.callback = do_fill_audio; 
+	wanted_spec.userdata = this;
+	wanted_spec.silence = 0;
+
+	nResult = SDL_OpenAudio(&wanted_spec, NULL);
+	//m_AudioDevID = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	
+	m_out_buffer_size = av_samples_get_buffer_size(NULL, m_audio_channel_num, out_nb_samples, out_sample_fmt, 1);
+	m_out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE * 2);
+	
+	m_au_convert_ctx = swr_alloc();
+	m_au_convert_ctx = swr_alloc_set_opts(m_au_convert_ctx, out_channel_layout, out_sample_fmt, m_audio_sample_rate,
+										  in_channel_layout, m_lpSrcCodecCtx->sample_fmt, m_audio_sample_rate, 0, NULL);
+	swr_init(m_au_convert_ctx);
+
+	//Play
+	SDL_PauseAudio(0);
+	//SDL_PauseAudioDevice(m_AudioDevID, 0);
+
+	// 开启界面绘制线程...
+	this->Start();
+
+	return true;
+}
+
+void CAudioThread::PushFrame(string & inFrame)
+{
+	OSMutexLocker theLock(&m_Mutex);
+	// 构造ADTS帧头...
+	PutBitContext pb;
+	char pbuf[ADTS_HEADER_SIZE * 2] = {0};
+	init_put_bits(&pb, pbuf, ADTS_HEADER_SIZE);
+    /* adts_fixed_header */    
+    put_bits(&pb, 12, 0xfff);   /* syncword */    
+    put_bits(&pb, 1, 0);        /* ID */    
+    put_bits(&pb, 2, 0);        /* layer */    
+    put_bits(&pb, 1, 1);        /* protection_absent */    
+    put_bits(&pb, 2, 2);		/* profile_objecttype */    
+    put_bits(&pb, 4, m_audio_rate_index);    
+    put_bits(&pb, 1, 0);        /* private_bit */    
+    put_bits(&pb, 3, m_audio_channel_num); /* channel_configuration */    
+    put_bits(&pb, 1, 0);        /* original_copy */    
+    put_bits(&pb, 1, 0);        /* home */    
+    /* adts_variable_header */    
+    put_bits(&pb, 1, 0);        /* copyright_identification_bit */    
+    put_bits(&pb, 1, 0);        /* copyright_identification_start */    
+	put_bits(&pb, 13, ADTS_HEADER_SIZE + inFrame.size()); /* aac_frame_length */    
+    put_bits(&pb, 11, 0x7ff);   /* adts_buffer_fullness */    
+    put_bits(&pb, 2, 0);        /* number_of_raw_data_blocks_in_frame */    
+    
+    flush_put_bits(&pb);    
+
+	// 先加入ADTS头，再加入数据帧内容...
+	m_strFrame.append(pbuf, ADTS_HEADER_SIZE);
+	m_strFrame.append(inFrame);
+}
+
+int CAudioThread::DecodeFrame()
+{
+	OSMutexLocker theLock(&m_Mutex);
+	// 如果没有数据，直接返回...
+	if( m_strFrame.size() <= 0 )
+		return 0;
+	// 先释放上次分配的缓冲区...
+	if( m_lpSrcFrame != NULL ) {
+		av_frame_free(&m_lpSrcFrame);
+		m_lpSrcFrame = NULL;
+	}
+	// 初始化ffmpeg数据帧...
+	BOOL      bReturn = false;
+	AVPacket  theSrcPacket = {0};
+	m_lpSrcFrame = av_frame_alloc();
+	av_init_packet(&theSrcPacket);
+
+	// 解析传递过来的aac数据帧...
+	uint8_t * lpCurPtr = (uint8_t*)m_strFrame.c_str();
+	int nCurSize = m_strFrame.size();
+	int got_picture = 0;
+	int nParseSize = 0;
+	int	nResult = 0;
+	while( nCurSize > 0 ) {
+		// 这里需要多次解析，直到解析完所有的缓存为止...
+		nResult = av_parser_parse2( m_lpSrcCodecParserCtx, m_lpSrcCodecCtx,
+						  &theSrcPacket.data, &theSrcPacket.size,
+						  lpCurPtr, nCurSize, AV_NOPTS_VALUE,
+						  AV_NOPTS_VALUE, AV_NOPTS_VALUE);
+		// 没有解析出packet，移动缓冲指针...
+		if( nResult > 0 ) {
+			lpCurPtr += nResult;
+			nCurSize -= nResult;
+		}
+		//TRACE("PackSize: %lu, Result: %lu\n", theSrcPacket.size, nResult);
+		// 没有解析出packet，继续...
+		if( theSrcPacket.size == 0 )
+			continue;
+		// 这里必须用解析出的长度...
+		nParseSize += theSrcPacket.size;
+		//TRACE("Packet: %lu, Parsed: %lu\n", theSrcPacket.size, nParseSize);
+		// 对解析正确的packet进行解码操作...
+		nResult = avcodec_decode_audio4(m_lpSrcCodecCtx, m_lpSrcFrame, &got_picture, &theSrcPacket);
+		// 解码失败或没有得到完整图像，继续解析...
+		if( nResult < 0 || !got_picture )
+			continue;
+		nResult = swr_convert(m_au_convert_ctx, &m_out_buffer, MAX_AUDIO_FRAME_SIZE, (const uint8_t **)m_lpSrcFrame->data , m_lpSrcFrame->nb_samples);
+		int nOutSize = nResult * 2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+		TRACE("pts:%lld\t packet size:%d\n", theSrcPacket.pts, theSrcPacket.size);
+		// 设置成功标志，中断循环...
+		bReturn = true;
+		// 删除已经解码的缓冲区...
+		m_strFrame.erase(0, nParseSize);
+		//TRACE("Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
+		break;
+	}
+	// 对用到的数据进行清理工作...
+	av_free_packet(&theSrcPacket);
+	return (bReturn ? 1 : 0);
+}
+
+void CAudioThread::DisplaySDL(Uint8 * inStream, int inLen)
+{
+	SDL_memset(inStream, 0, inLen);
+	if( m_audio_len <= 0 )
+		return; 
+	inLen = ((inLen > m_audio_len) ? m_audio_len : inLen);	/*  Mix  as  much  data  as  possible  */ 
+
+	SDL_MixAudio(inStream, m_audio_pos, inLen, SDL_MIX_MAXVOLUME);
+	m_audio_pos += inLen;
+	m_audio_len -= inLen;
+}
+
+void CAudioThread::Entry()
+{
+	while( !this->IsStopRequested() ) {
+		if( this->DecodeFrame() <= 0 ) {
+			::Sleep(50); continue;
+		}
+		// Wait until finish...
+		while( m_audio_len > 0 ) {
+			SDL_Delay(1);
+		}
+		//Set audio buffer (PCM data)
+		m_audio_chunk = (Uint8 *)m_out_buffer; 
+		//Audio buffer length
+		m_audio_len = m_out_buffer_size;
+		m_audio_pos = m_audio_chunk;
+	}
+}
 
 CMP4Thread::CMP4Thread()
 {
@@ -411,6 +882,9 @@ void CMP4Thread::WriteAACSequenceHeader()
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
+	
+	// 开启音频播放线程...
+	m_lpPushThread->StartAudioThread(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CMP4Thread::WriteAVCSequenceHeader()
@@ -466,6 +940,9 @@ void CMP4Thread::WriteAVCSequenceHeader()
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
+
+	// 开启视频播放线程...
+	m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight);
 }
 
 CRtspThread::CRtspThread()
@@ -641,6 +1118,9 @@ void CRtspThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
+	
+	// 开启音频播放线程...
+	m_lpPushThread->StartAudioThread(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
@@ -700,6 +1180,9 @@ void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
+	
+	// 开启视频播放线程...
+	m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight);
 }
 
 CRtmpThread::CRtmpThread()
@@ -859,6 +1342,8 @@ void CRtmpThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
+
+	// 开启音频播放线程...
 }
 
 void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
@@ -918,6 +1403,8 @@ void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
+	
+	// 开启视频播放线程...
 }
 
 CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
@@ -925,6 +1412,9 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
   , m_lpCamera(lpCamera)
   , m_nSliceInx(0)
 {
+	m_lpVideoThread = NULL;
+	m_lpAudioThread = NULL;
+
 	ASSERT( m_lpCamera != NULL );
 	ASSERT( m_hWndVideo != NULL );
 	m_bIsPublishing = false;
@@ -965,6 +1455,16 @@ CPushThread::~CPushThread()
 	// 停止线程...
 	this->StopAndWaitForThread();
 
+	// 删除视频播放线程...
+	if( m_lpVideoThread != NULL ) {
+		delete m_lpVideoThread;
+		m_lpVideoThread = NULL;
+	}
+	if( m_lpAudioThread != NULL ) {
+		delete m_lpAudioThread;
+		m_lpAudioThread = NULL;
+	}
+
 	// 删除rtmp对象，这里必须加互斥，避免Connect返回时rtmp已经被删除，造成内存错误...
 	{
 		OSMutexLocker theLock(&m_Mutex);
@@ -990,6 +1490,11 @@ CPushThread::~CPushThread()
 	}
 	// 中断录像...
 	this->StreamEndRecord();
+
+	/*if( m_lpAudioThread != NULL ) {
+		delete m_lpAudioThread;
+		m_lpAudioThread = NULL;
+	}*/
 
 	// 复位相关标志...
 	m_nKeyFrame = 0;
@@ -1606,6 +2111,13 @@ BOOL CPushThread::OpenRtmpUrl()
 int CPushThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
+	// 将视频数据放入视频线程...
+	if( m_lpVideoThread != NULL && inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
+		m_lpVideoThread->PushFrame(inFrame.strData, inFrame.is_keyframe);
+	}
+	if( m_lpAudioThread != NULL && inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ) {
+		m_lpAudioThread->PushFrame(inFrame.strData);
+	}
 	// 将超时计时点复位，重新计时...
 	m_dwTimeOutMS = ::GetTickCount();
 	// 进行录像处理...
@@ -1669,6 +2181,17 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 		fwrite(&dwTag, sizeof(DWORD), 1, m_lpH264File);
 		fwrite(inFrame.strData.c_str()+sizeof(DWORD), inFrame.strData.size()-sizeof(DWORD), 1, m_lpH264File);
 	}
+	/*if( inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO && m_lpH264File != NULL ) {
+		if( m_bSave_sps ) {
+			string strAES;
+			if( m_lpMP4Thread != NULL ) {
+				strAES = m_lpMP4Thread->GetAACHeader();
+			}
+			m_bSave_sps = false;
+			fwrite(strAES.c_str(), strAES.size(), 1, m_lpH264File);
+		}
+		fwrite(inFrame.strData.c_str(), inFrame.strData.size(), 1, m_lpH264File);
+	}*/
 #endif
 
 	/*// 如果是摄像头，不进行关键帧计数和丢帧处理...
@@ -2105,4 +2628,24 @@ void CPushThread::Initialize()
 void CPushThread::UnInitialize()
 {
 	srs_uninitialize();
+}
+
+void CPushThread::StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight)
+{
+	if( m_lpVideoThread != NULL ) {
+		delete m_lpVideoThread;
+		m_lpVideoThread = NULL;
+	}
+	m_lpVideoThread = new CVideoThread(inSPS, inPPS, nWidth, nHeight);
+	m_lpVideoThread->InitThread(this, m_lpCamera->GetVideoWnd()->GetRenderWnd());
+}
+
+void CPushThread::StartAudioThread(int nRateIndex, int nChannelNum)
+{
+	if( m_lpAudioThread != NULL ) {
+		delete m_lpAudioThread;
+		m_lpAudioThread = NULL;
+	}
+	m_lpAudioThread = new CAudioThread(nRateIndex, nChannelNum);
+	m_lpAudioThread->InitThread(this);
 }

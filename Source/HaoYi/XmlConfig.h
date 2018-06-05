@@ -118,6 +118,7 @@ public:
 	BOOL	FFmpegSnapJpeg(const string & inSrcFrame, const CString & inDestJpgName);
 	BOOL	StreamSnapJpeg(const CString & inSrcMP4File, const CString & inDestJpgName, int nRecSec);
 private:
+	BOOL	FFmpegDispSDL(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame);
 	BOOL	FFmpegSaveJpeg(AVCodecContext * pOrigCodecCtx, AVFrame * pOrigFrame, LPCTSTR lpszJpgName);
 	BOOL	GenerateJpegFromMediaFile(const CString & inMP4File, int nPosSec, int nFrames);
 	void	SendMPlayerCmd(const CString &cmdLine);

@@ -153,6 +153,9 @@ void CRenderWnd::DrawFlowKbps()
 	if( !m_lpParent->IsStreamLogin() )
 		return;
 	ASSERT( m_lpParent->IsStreamLogin() );
+	// 如果是等待状态，也要返回...
+	if( this->m_nRendState != ST_RENDER )
+		return;
 	// 分别获取接收和发送的码流信息 => 触发超时...
 	int nRecvKbps = m_lpParent->GetRecvPullKbps();
 	int nSendKbps = m_lpParent->GetSendPushKbps();
