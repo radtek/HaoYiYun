@@ -172,7 +172,7 @@ int CVideoThread::DecodeFrame()
 		bReturn = true;
 		// 删除已经解码的缓冲区...
 		m_strFrame.erase(0, nParseSize);
-		//TRACE("Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
+		TRACE("Video => Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
 		break;
 	}
 	// 对用到的数据进行清理工作...
@@ -235,7 +235,6 @@ void CVideoThread::Entry()
 }
 
 #define ADTS_HEADER_SIZE		7
-#define MAX_AUDIO_FRAME_SIZE	192000 // 1 second of 48khz 32bit audio
 
 CAudioThread::CAudioThread(int nRateIndex, int nChannelNum)
 {
@@ -266,12 +265,6 @@ CAudioThread::CAudioThread(int nRateIndex, int nChannelNum)
 	m_out_buffer = NULL;
 	m_au_convert_ctx = NULL;
 	m_out_buffer_size = 0;
-
-	m_audio_chunk = NULL;
-	m_audio_pos = NULL;
-	m_audio_len = 0;
-
-	m_AudioDevID = 0;
 }
 
 CAudioThread::~CAudioThread()
@@ -301,7 +294,6 @@ CAudioThread::~CAudioThread()
 	}
 	// 关闭音频...
 	SDL_CloseAudio();
-	//SDL_CloseAudioDevice(m_AudioDevID);
 }
 
 void do_fill_audio(void * udata, Uint8 *stream, int inLen)
@@ -326,36 +318,44 @@ BOOL CAudioThread::InitThread(CPushThread * inPushThread)
 	// 打开获取到的解码器...
 	int nResult = avcodec_open2(m_lpSrcCodecCtx, m_lpSrcCodec, NULL);
 
-	//out_nb_samples: AAC-1024 MP3-1152
-	int64_t in_channel_layout = av_get_default_channel_layout(m_audio_channel_num);
-	uint64_t out_channel_layout = AV_CH_LAYOUT_STEREO;
+	// 输入声道和输出声道是一样的...
+	int in_audio_channel_num = m_audio_channel_num;
+	int out_audio_channel_num = m_audio_channel_num;
+	int64_t in_channel_layout = av_get_default_channel_layout(in_audio_channel_num);
+	int64_t out_channel_layout = (out_audio_channel_num <= 1) ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+	// 输出音频采样格式...
 	AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_S16;
+	// out_nb_samples: AAC-1024 MP3-1152
 	int out_nb_samples = 1024;
+	// 设置输入输出采样率 => 不变...
+	int in_sample_rate = m_audio_sample_rate;
+	int out_sample_rate = m_audio_sample_rate;
 
 	//SDL_AudioSpec
-	SDL_AudioSpec wanted_spec = {0};
-	wanted_spec.freq = m_audio_sample_rate; 
-	wanted_spec.format = AUDIO_S16SYS; 
-	wanted_spec.channels = m_audio_channel_num; 
-	wanted_spec.samples = out_nb_samples;
-	wanted_spec.callback = do_fill_audio; 
-	wanted_spec.userdata = this;
-	wanted_spec.silence = 0;
+	SDL_AudioSpec audioSpec = {0};
+	audioSpec.freq = out_sample_rate; 
+	audioSpec.format = AUDIO_S16SYS; 
+	audioSpec.channels = out_audio_channel_num; 
+	audioSpec.samples = out_nb_samples;
+	audioSpec.callback = do_fill_audio; 
+	audioSpec.userdata = this;
+	audioSpec.silence = 0;
 
-	nResult = SDL_OpenAudio(&wanted_spec, NULL);
-	//m_AudioDevID = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	// 打开SDL音频设备 => 只能打开一个设备...
+	nResult = SDL_OpenAudio(&audioSpec, NULL);
 	
-	m_out_buffer_size = av_samples_get_buffer_size(NULL, m_audio_channel_num, out_nb_samples, out_sample_fmt, 1);
-	m_out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE * 2);
+	// 获取音频解码后输出的缓冲区大小...
+	m_out_buffer_size = av_samples_get_buffer_size(NULL, out_audio_channel_num, out_nb_samples, out_sample_fmt, 1);
+	m_out_buffer = (uint8_t *)av_malloc(m_out_buffer_size * 2);
 	
+	// 分配并初始化转换器...
 	m_au_convert_ctx = swr_alloc();
-	m_au_convert_ctx = swr_alloc_set_opts(m_au_convert_ctx, out_channel_layout, out_sample_fmt, m_audio_sample_rate,
-										  in_channel_layout, m_lpSrcCodecCtx->sample_fmt, m_audio_sample_rate, 0, NULL);
+	m_au_convert_ctx = swr_alloc_set_opts(m_au_convert_ctx, out_channel_layout, out_sample_fmt, out_sample_rate,
+										  in_channel_layout, m_lpSrcCodecCtx->sample_fmt, in_sample_rate, 0, NULL);
 	swr_init(m_au_convert_ctx);
 
-	//Play
+	// 开始播放...
 	SDL_PauseAudio(0);
-	//SDL_PauseAudioDevice(m_AudioDevID, 0);
 
 	// 开启界面绘制线程...
 	this->Start();
@@ -441,14 +441,16 @@ int CAudioThread::DecodeFrame()
 		// 解码失败或没有得到完整图像，继续解析...
 		if( nResult < 0 || !got_picture )
 			continue;
-		nResult = swr_convert(m_au_convert_ctx, &m_out_buffer, MAX_AUDIO_FRAME_SIZE, (const uint8_t **)m_lpSrcFrame->data , m_lpSrcFrame->nb_samples);
-		int nOutSize = nResult * 2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-		TRACE("pts:%lld\t packet size:%d\n", theSrcPacket.pts, theSrcPacket.size);
+		nResult = swr_convert(m_au_convert_ctx, &m_out_buffer, m_out_buffer_size * 2, (const uint8_t **)m_lpSrcFrame->data , m_lpSrcFrame->nb_samples);
+		int nOutSize = nResult * m_audio_channel_num * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+		//av_samples_get_buffer_size(NULL, out_audio_channel_num, out_nb_samples, out_sample_fmt, 1);
+		m_strPCM.append((char*)m_out_buffer, m_out_buffer_size);
+		//TRACE("pts:%lld\t packet size:%d\n", theSrcPacket.pts, theSrcPacket.size);
 		// 设置成功标志，中断循环...
 		bReturn = true;
 		// 删除已经解码的缓冲区...
 		m_strFrame.erase(0, nParseSize);
-		//TRACE("Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
+		TRACE("Audio => Parsed: %lu, RemainFrame: %lu, RemainPCM: %lu\n", nParseSize, m_strFrame.size(), m_strPCM.size()-m_out_buffer_size);
 		break;
 	}
 	// 对用到的数据进行清理工作...
@@ -458,14 +460,15 @@ int CAudioThread::DecodeFrame()
 
 void CAudioThread::DisplaySDL(Uint8 * inStream, int inLen)
 {
+	OSMutexLocker theLock(&m_Mutex);
 	SDL_memset(inStream, 0, inLen);
-	if( m_audio_len <= 0 )
-		return; 
-	inLen = ((inLen > m_audio_len) ? m_audio_len : inLen);	/*  Mix  as  much  data  as  possible  */ 
-
-	SDL_MixAudio(inStream, m_audio_pos, inLen, SDL_MIX_MAXVOLUME);
-	m_audio_pos += inLen;
-	m_audio_len -= inLen;
+	if( m_strPCM.size() <= 0 )
+		return;
+	int nAudioSize = m_strPCM.size();
+	Uint8 * lpAudioPos = (Uint8*)m_strPCM.c_str();
+	inLen = (inLen > nAudioSize) ? nAudioSize : inLen;
+	SDL_MixAudio(inStream, lpAudioPos, inLen, SDL_MIX_MAXVOLUME);
+	m_strPCM.erase(0, inLen);
 }
 
 void CAudioThread::Entry()
@@ -475,14 +478,14 @@ void CAudioThread::Entry()
 			::Sleep(50); continue;
 		}
 		// Wait until finish...
-		while( m_audio_len > 0 ) {
+		/*while( m_audio_len > 0 ) {
 			SDL_Delay(1);
 		}
 		//Set audio buffer (PCM data)
 		m_audio_chunk = (Uint8 *)m_out_buffer; 
 		//Audio buffer length
 		m_audio_len = m_out_buffer_size;
-		m_audio_pos = m_audio_chunk;
+		m_audio_pos = m_audio_chunk;*/
 	}
 }
 

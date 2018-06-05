@@ -70,21 +70,16 @@ private:
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
 	int             m_audio_sample_rate;
-	int             m_out_buffer_size;
 
+	string			m_strPCM;
 	uint8_t		 *  m_out_buffer;
 	SwrContext   *  m_au_convert_ctx;
-	SDL_AudioDeviceID m_AudioDevID;
+	int             m_out_buffer_size;
 
 	AVCodecParserContext * m_lpSrcCodecParserCtx;
     AVCodecContext * m_lpSrcCodecCtx;
 	AVCodec * m_lpSrcCodec;
 	AVFrame	* m_lpSrcFrame;
-
-	Uint8  * m_audio_chunk; 
-	Uint32   m_audio_len; 
-	Uint8  * m_audio_pos; 
-
 };
 
 class LibRtmp;
