@@ -2,6 +2,8 @@
 #ifndef _Read_SPS_h__
 #define _Read_SPS_h__
 
+bool h264_decode_sps(BYTE * buf, unsigned int nLen, int &width, int &height, int &fps);
+
 //typedef char int8_t;
 typedef unsigned char uint8_t;
 typedef short int16_t;
@@ -29,10 +31,8 @@ class CSPSReader
 public:
 	CSPSReader();
 	~CSPSReader();
-
 public:
 	int			Do_Read_SPS( bs_t *s, int *width, int *height);
-
 private:
 	int			_bs_eof( bs_t *s );
 	uint32_t	_bs_read( bs_t *s, int i_count );

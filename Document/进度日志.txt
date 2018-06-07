@@ -158,6 +158,11 @@
     E：（未完成）我们没有可卖商品，我们是技术服务商，一次需要申请微信支付服务商，需要首先申请开通一个服务号“浩一云”，认证，申请微信支付服务商；
 32.（未完成）在transmit当中，播放器在线状态通知当中，增加当前通道在线用户数的功能，这样可以实时显示在线观看用户数；
 
+33.（未完成）深圳一个客户需求：必须内网访问，不能对外连接，采集端和节点服务器都需要做一个改造，通过license文件或授权码进行授权；
+    A：（未完成）做为首先更新的功能，采集端和节点服务器都支持本地授权，一旦进入本地授权模式，登录需要用户名和密码登录，不链接中心服务器；
+    B：（未完成）采集端通过菜单进行授权文件输入，网站端通过后台输入文件，需要在网上找找这种授权方式的方法；
+    C：（未完成）两种授权方式可以自由切换，自动匹配；
+
 2018.06.01 - 2018.06.30
 =========================================================================
 1.（未完成）需要解决Teacher端交互时的高延时问题，需要解决的问题如下：
@@ -169,9 +174,11 @@
    F：（未完成）有关RTMP延时的分析文章收集：
                 http://blog.chinaunix.net/uid-26000296-id-4932817.html
                 https://blog.csdn.net/qq_38810947/article/details/74199967
-                https://blog.csdn.net/king457757706/article/details/51004253
-                https://blog.csdn.net/mandagod/article/details/52559053 => 比较详细
                 https://blog.csdn.net/zhiboshequ/article/details/79955433
+                https://blog.csdn.net/king457757706/article/details/51004253
+                https://www.cnblogs.com/lidabo/p/6857616.html => 更全的低延时文章
+                https://blog.csdn.net/mandagod/article/details/52559053 => 比较详细
+                https://mp.weixin.qq.com/s?__biz=MzAwMDU1MTE1OQ==&mid=2653547697&idx=1&sn=acc748b7fcf0058b58e244970e51eabc => 微信原始地址
    G：（未完成）简单UDP服务器（Linux）：
                 https://blog.csdn.net/u011922698/article/details/55218313
                 https://blog.csdn.net/yueguanghaidao/article/details/7055985
@@ -194,9 +201,41 @@
    H：（未完成）这样可以将所有的精力都投入到obs的研究当中，利用obs的输出库，来完成绝大部分工作，除了服务器之外；
    I：（未完成）目前，单向的学生端推老师端的延时在3.5秒~4.0秒，根本没发进行实际应用；
    J：（未完成）还是要使用SDL2.0播放音频，这种方式最快速也最容易，用obs的库非常麻烦，它是专门服务obs使用的，属于整个obs体系当中；
-   K：（未完成）解决了音频单声道的问题，现在需要对音频进行优化处理，不要产生硬编码或哒哒声；
+   K：（已完成）解决了音频单声道的问题，现在需要对音频进行优化处理，不要产生硬编码或哒哒声；（采用解码后的缓冲，而不是固定缓冲）
        https://blog.csdn.net/beiliufangdegezhe/article/details/41623579
        https://blog.csdn.net/u012853439/article/details/53218662
+   L：（未完成）进行音视频同步处理过程：
+       https://www.cnblogs.com/wangguchangqing/p/5900426.html => 比较好的基础文章 => 通常来说只有在流中含有B帧的时候，PTS和DTS才会不同。
+       https://www.jianshu.com/p/3a4d24a71091?open_source=weibo_search
+       https://www.cnblogs.com/jiayayao/p/6890882.html
+       https://blog.csdn.net/i_scream_/article/details/52760033 => SDL2.0的音视频同步文章
+       https://blog.csdn.net/leixiaohua1020/article/details/42181571 => 裸流解码，
+       https://blog.csdn.net/nine_locks/article/details/48007055
+       https://blog.csdn.net/u010289908/article/details/46507643 => 非常重要的PTS计算方法；
+       https://blog.csdn.net/leixiaohua1020/article/details/11800877
+       https://blog.csdn.net/leixiaohua1020/article/details/14215821 => AVStream
+       https://blog.csdn.net/chenchong_219/article/details/13161509 => 时间戳详解
+       https://blog.csdn.net/leixiaohua1020/article/details/12678577 => av_read_frame 详解
+   M：（未完成）mp_media_next_video 很关键，计算解码后的时间戳，投递到obs显示系统；
+   N：（未完成）我们处理的数据已经是数据帧了，可以直接构造AVPacket来进行解码，而不需要调用av_parser_parse2，AVPacket的结构如下：
+       https://www.cnblogs.com/xiacaojun/p/6638800.html => AVPacket详解
+       https://blog.csdn.net/qq_27727131/article/details/51799663 => sps计算帧率
+       https://blog.csdn.net/caoshangpa/article/details/53083410 => sps计算帧率 => 替换原有的计算方式，这种更精确。
+       https://blog.csdn.net/leixiaohua1020/article/details/44084321 => 读取数据给音视频流对象赋值 => AVStream
+       pts => 显示时间，就是帧时间戳
+       dts => 解码时间，与显示时间相同
+       pos => 在缓冲区的位置，可忽略
+       data  => 数据区指针
+       size  => 数据区大小
+       flags => 0（普通帧）1（关键帧）2（坏帧）
+       duration => 视频 => 1000/帧率 => 毫秒 => 根据time_base(1,1000)和帧率的计算值，不能用（下一帧pts减去当前帧pts）
+       duration => 音频 => 采样点/采样率*1000 => AAC => 1024/采样率*1000 => 毫秒
+       stream_index => 流编号，区分音视频标记
+   O：（未完成）AVStream->start_time是怎么计算出来的？没有找到相关代码，就默认为0；
+   P：（未完成）AVPacket的字段研究完毕，开始研究音视频解码后的时间戳的计算问题；
+       AVPacket的时间戳是可以通过数据帧直接赋值，单位是毫秒，这是解码前的时间戳；
+       AVStream的时间戳是解码后的时间戳，是跟系统本身是相互关联的；
+       mp_media_next_video => decode_packet => 解码数据帧
 
 3.（未完成）本地拉取RTSP数据流，进行最快速度的解码显示，也有900毫秒左右的延时，因此，学生端不能用IPC模式，需要对方案进行调整：
    A：（已完成）海康IPC的SDK回显模式，延时在200毫秒左右，比RTSP拉流的延时要低很多；
@@ -249,6 +288,8 @@
     G：（已完成）先用“设备网络搜索”修改IP地址，再用浏览器修改无线、音视频参数；后期直接通过SDK配置想要的音视频参数；工具只是配网络；
     H：（已完成）无线模式，本地回放延时在150毫秒左右，比之前的设备要好一些；开启降噪模式声音效果好。
     J：（已完成）300k低码流模式下效果差，可以考虑开启smart264试试。经测试320k低码流开启smart264效果好很多。
+    K：（已完成）无路那是smart264还是普通264，都只有I帧和P帧，没有B帧，目的是降低延时。
+    L：（已完成）smart264模式下，延时在300毫秒，如果是普通264，延时在900毫秒；
 
 5.（已完成）采集端 IPC 时间戳不能使用PC端时间，必须使用RTSP传递时间，否则，会造成图像卡顿，Chrome的控制台提示音视频的时间戳有问题；上次Tim提到的卡顿也是这个原因；
     A：（未完成）如果这样修改之后，需要考虑RTSP时间戳发生跳变的问题，现有的摄像头就能测试；

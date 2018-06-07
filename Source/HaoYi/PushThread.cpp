@@ -16,8 +16,13 @@
 #define new DEBUG_NEW
 #endif
 
-CVideoThread::CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight)
+CVideoThread::CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
+	/*AVRational r_frame_rate = {25, 1};
+	AVRational time_base = {1, 1000};
+	int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(r_frame_rate);
+	int64_t theDuration = (double)calc_duration/(double)(av_q2d(time_base)*AV_TIME_BASE);*/
+
 	m_sdlScreen = NULL;
 	m_sdlTexture = NULL;
 	m_sdlRenderer = NULL;
@@ -27,6 +32,7 @@ CVideoThread::CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeig
 	m_strPPS = inPPS;
 	m_nWidth = nWidth;
 	m_nHeight = nHeight;
+	m_nFPS = ((nFPS <= 0) ? 25 : nFPS);
 
 	m_lpSrcCodecParserCtx = NULL;
 	m_lpSrcCodecCtx = NULL;
@@ -172,7 +178,7 @@ int CVideoThread::DecodeFrame()
 		bReturn = true;
 		// 删除已经解码的缓冲区...
 		m_strFrame.erase(0, nParseSize);
-		TRACE("Video => Parsed: %lu, RemainFrame: %lu\n", nParseSize, m_strFrame.size());
+		TRACE("Video => Parsed: %lu, RemainFrame: %lu, Type: %lu\n", nParseSize, m_strFrame.size(), m_lpSrcFrame->pict_type);
 		break;
 	}
 	// 对用到的数据进行清理工作...
@@ -450,7 +456,7 @@ int CAudioThread::DecodeFrame()
 		bReturn = true;
 		// 删除已经解码的缓冲区...
 		m_strFrame.erase(0, nParseSize);
-		TRACE("Audio => Parsed: %lu, RemainFrame: %lu, RemainPCM: %lu\n", nParseSize, m_strFrame.size(), m_strPCM.size()-m_out_buffer_size);
+		//TRACE("Audio => Parsed: %lu, RemainFrame: %lu, RemainPCM: %lu\n", nParseSize, m_strFrame.size(), m_strPCM.size()-m_out_buffer_size);
 		break;
 	}
 	// 对用到的数据进行清理工作...
@@ -493,6 +499,7 @@ CMP4Thread::CMP4Thread()
 {
 	m_nVideoHeight = 0;
 	m_nVideoWidth = 0;
+	m_nVideoFPS = 25;
 
 	m_bFileLoop = false;
 	m_strMP4File.clear();
@@ -893,18 +900,23 @@ void CMP4Thread::WriteAACSequenceHeader()
 void CMP4Thread::WriteAVCSequenceHeader()
 {
 	// 获取 width 和 height...
+	int nPicFPS = 0;
 	int	nPicWidth = 0;
 	int	nPicHeight = 0;
 	if( m_strSPS.size() >  0 ) {
-		CSPSReader _spsreader;
+		/*CSPSReader _spsreader;
 		bs_t    s = {0};
 		s.p		  = (uint8_t *)m_strSPS.c_str();
 		s.p_start = (uint8_t *)m_strSPS.c_str();
 		s.p_end	  = (uint8_t *)m_strSPS.c_str() + m_strSPS.size();
 		s.i_left  = 8; // 这个是固定的,对齐长度...
-		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);
+		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);*/
+
+		h264_decode_sps((BYTE*)m_strSPS.c_str(), m_strSPS.size(), nPicWidth, nPicHeight, nPicFPS);
+
 		m_nVideoHeight = nPicHeight;
 		m_nVideoWidth = nPicWidth;
+		m_nVideoFPS = nPicFPS;
 	}
 
 	// Write AVC Sequence Header use SPS and PPS...
@@ -945,13 +957,14 @@ void CMP4Thread::WriteAVCSequenceHeader()
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
 
 	// 开启视频播放线程...
-	m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight);
+	m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
 }
 
 CRtspThread::CRtspThread()
 {
 	m_nVideoHeight = 0;
 	m_nVideoWidth = 0;
+	m_nVideoFPS = 25;
 
 	m_bFinished = false;
 	m_strRtspUrl.clear();
@@ -1123,24 +1136,29 @@ void CRtspThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
 	
 	// 开启音频播放线程...
-	m_lpPushThread->StartAudioThread(m_audio_rate_index, m_audio_channel_num);
+	//m_lpPushThread->StartAudioThread(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 {
 	// 获取 width 和 height...
+	int nPicFPS = 0;
 	int	nPicWidth = 0;
 	int	nPicHeight = 0;
 	if( inSPS.size() >  0 ) {
-		CSPSReader _spsreader;
+		/*CSPSReader _spsreader;
 		bs_t    s = {0};
 		s.p		  = (uint8_t *)inSPS.c_str();
 		s.p_start = (uint8_t *)inSPS.c_str();
 		s.p_end	  = (uint8_t *)inSPS.c_str() + inSPS.size();
 		s.i_left  = 8; // 这个是固定的,对齐长度...
-		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);
+		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);*/
+
+		h264_decode_sps((BYTE*)inSPS.c_str(), inSPS.size(), nPicWidth, nPicHeight, nPicFPS);
+
 		m_nVideoHeight = nPicHeight;
 		m_nVideoWidth = nPicWidth;
+		m_nVideoFPS = nPicFPS;
 	}
 
 	// 先保存 SPS 和 PPS 格式头信息..
@@ -1185,13 +1203,14 @@ void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
 	
 	// 开启视频播放线程...
-	m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight);
+	//m_lpPushThread->StartVideoThread(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight);
 }
 
 CRtmpThread::CRtmpThread()
 {
 	m_nVideoHeight = 0;
 	m_nVideoWidth = 0;
+	m_nVideoFPS = 25;
 
 	m_bFinished = false;
 	m_strRtmpUrl.clear();
@@ -1352,18 +1371,23 @@ void CRtmpThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 {
 	// 获取 width 和 height...
+	int nPicFPS = 0;
 	int	nPicWidth = 0;
 	int	nPicHeight = 0;
 	if( inSPS.size() >  0 ) {
-		CSPSReader _spsreader;
+		/*CSPSReader _spsreader;
 		bs_t    s = {0};
 		s.p		  = (uint8_t *)inSPS.c_str();
 		s.p_start = (uint8_t *)inSPS.c_str();
 		s.p_end	  = (uint8_t *)inSPS.c_str() + inSPS.size();
 		s.i_left  = 8; // 这个是固定的,对齐长度...
-		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);
+		_spsreader.Do_Read_SPS(&s, &nPicWidth, &nPicHeight);*/
+
+		h264_decode_sps((BYTE*)inSPS.c_str(), inSPS.size(), nPicWidth, nPicHeight, nPicFPS);
+
 		m_nVideoHeight = nPicHeight;
 		m_nVideoWidth = nPicWidth;
+		m_nVideoFPS = nPicFPS;
 	}
 
 	// 先保存 SPS 和 PPS 格式头信息..
@@ -2453,7 +2477,7 @@ BOOL CPushThread::SendVideoDataPacket(FMS_FRAME & inFrame)
 
 	delete [] video_mem_buf_;
 
-	//TRACE("[Video] SendTime = %lu, StartTime = %lu\n", inFrame.dwSendTime, inFrame.dwStartTime);
+	TRACE("[Video] SendTime = %lu, Size = %lu\n", inFrame.dwSendTime, need_buf_size);
 
 	return is_ok;
 }
@@ -2482,7 +2506,7 @@ BOOL CPushThread::SendAudioDataPacket(FMS_FRAME & inFrame)
 
 	delete [] audio_mem_buf_;
 	
-	//TRACE("[Audio] SendTime = %lu, StartTime = %lu\n", inFrame.dwSendTime, inFrame.dwStartTime);
+	TRACE("[Audio] SendTime = %lu, Size = %lu\n", inFrame.dwSendTime, need_buf_size);
 
 	return is_ok;
 }
@@ -2633,13 +2657,13 @@ void CPushThread::UnInitialize()
 	srs_uninitialize();
 }
 
-void CPushThread::StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight)
+void CPushThread::StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
 	if( m_lpVideoThread != NULL ) {
 		delete m_lpVideoThread;
 		m_lpVideoThread = NULL;
 	}
-	m_lpVideoThread = new CVideoThread(inSPS, inPPS, nWidth, nHeight);
+	m_lpVideoThread = new CVideoThread(inSPS, inPPS, nWidth, nHeight, nFPS);
 	m_lpVideoThread->InitThread(this, m_lpCamera->GetVideoWnd()->GetRenderWnd());
 }
 

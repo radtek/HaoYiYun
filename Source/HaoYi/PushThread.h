@@ -23,7 +23,7 @@ class CPushThread;
 class CVideoThread : public OSThread
 {
 public:
-	CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight);
+	CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	~CVideoThread();
 public:
 	BOOL	InitThread(CPushThread * inPushThread, CRenderWnd * lpRenderWnd);
@@ -33,6 +33,7 @@ private:
 	int     DecodeFrame();
 	void    DisplaySDL();
 private:
+	int				m_nFPS;
 	int				m_nWidth;
 	int				m_nHeight;
 	OSMutex			m_Mutex;
@@ -132,6 +133,7 @@ private:
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
 
+	int             m_nVideoFPS;
 	int				m_nVideoWidth;
 	int				m_nVideoHeight;
 
@@ -178,6 +180,7 @@ private:
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
 
+	int             m_nVideoFPS;
 	int				m_nVideoWidth;
 	int				m_nVideoHeight;
 
@@ -225,6 +228,7 @@ private:
 	int				m_audio_rate_index;
 	int				m_audio_channel_num;
 
+	int             m_nVideoFPS;
 	int				m_nVideoWidth;
 	int				m_nVideoHeight;
 
@@ -267,7 +271,7 @@ public:
 
 	int				PushFrame(FMS_FRAME & inFrame);
 	void			StartAudioThread(int nRateIndex, int nChannelNum);
-	void			StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight);
+	void			StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 private:
 	virtual	void	Entry();
 
