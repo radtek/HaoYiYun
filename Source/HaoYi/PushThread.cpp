@@ -330,6 +330,9 @@ void CVideoDecoder::doDisplaySDL()
 	// 没有缓存，直接返回...
 	if( m_MapFrame.size() <= 0 )
 		return;
+	/////////////////////////////////////////////////////////////
+	// 注意：延时模拟目前测试出来，后续配合网络实测后再模拟...
+	/////////////////////////////////////////////////////////////
 	// 获取当前的系统时间 => 纳秒...
 	int64_t inSysCurNS = os_gettime_ns();
 	// 获取第一个，时间最小的数据块...
@@ -345,15 +348,15 @@ void CVideoDecoder::doDisplaySDL()
 	}
 	// 当前帧的显示时间已经过了 => 直接丢弃 => 容忍500毫秒的延时...
 	if( inSysCurNS - nFramePTS > nDeltaDelay ) {
-		TRACE("[Video] Delay: %I64d ms, Discard, Size: %d\n", (inSysCurNS - nFramePTS)/1000000, nSize);
+		TRACE("[Video] RG: %I64d ms, Delay: %I64d ms, Discard, Size: %d\n", nFramePTS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
 		// 只丢掉当前帧 => 这里是引用，必须先free再erase...
 		av_frame_free(&lpSrcFrame);
 		m_MapFrame.erase(itorItem);
 		return;
 	}
 	// 将数据转换成jpg...
-	DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, nFramePTS, "F:/MP4/Dst");
-	//TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize, lpSrcFrame->pict_type);
+	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, nFramePTS, "F:/MP4/Dst");
+	TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize, lpSrcFrame->pict_type);
 	// 准备需要转换的格式信息...
 	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
 	enum AVPixelFormat nSrcFormat = m_lpDecoder->pix_fmt;
@@ -424,8 +427,7 @@ void CVideoDecoder::doDecodeFrame(int64_t inSysZeroNS)
 	frame_pts += inSysZeroNS;
 	// 将解码后的数据帧放入播放队列当中...
 	m_MapFrame[frame_pts] = lpFrame;
-	TRACE("[Video] frame_pts: %I64d\n", frame_pts);
-	DoProcSaveJpeg(lpFrame, m_lpDecoder->pix_fmt, frame_pts, "F:/MP4/Src");
+	//DoProcSaveJpeg(lpFrame, m_lpDecoder->pix_fmt, frame_pts, "F:/MP4/Src");
 	// 这里是引用，必须先free再erase...
 	av_free_packet(&thePacket);
 	m_MapPacket.erase(itorItem);
@@ -643,27 +645,31 @@ void CAudioDecoder::doFillAudio(Uint8 * inStream, int inLen)
 	SDL_memset(inStream, 0, inLen);
 	if( m_MapAudio.size() <= 0 )
 		return;
+	/////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：网络流畅的情况下，DeltaDelay是为了防止机器抖动造成的音频播放速度慢的问题
+	// 这里必须周期性的对音频缓存清空处理，当延时达到一定程度时就需要清理...
+	/////////////////////////////////////////////////////////////////////////////////////////////
 	// 获取当前的系统时间 => 纳秒...
 	int64_t inSysCurNS = os_gettime_ns();
 	// 获取第一个，时间最小的数据块...
 	GM_MapAudio::iterator itorItem = m_MapAudio.begin();
 	string  & strPCM = itorItem->second;
 	int64_t   nFramePTS = itorItem->first;
-	int64_t   nDeltaDelay = 1000000000; //100毫秒...
+	int64_t   nDeltaDelay = 200000000; //200毫秒...
 	int       nSize = m_MapAudio.size();
-	// 超前数据包，不扔掉，继续投递...
-	if( nFramePTS > inSysCurNS ) {
-		//TRACE("[Audio] Advance: %I64d ms, Continue, Size: %d\n", (nFramePTS - inSysCurNS)/1000000, nSize);
+	// 超前数据包，超前100毫秒以下，继续播放，超前100毫秒以上，不灌数据，直接返回...
+	if( (nFramePTS > inSysCurNS) && ((nFramePTS - inSysCurNS) >= nDeltaDelay/2) ) {
+		TRACE("[Audio] Advance: %I64d ms, Continue, Size: %d\n", (nFramePTS - inSysCurNS)/1000000, nSize);
 		return;
 	}
-	// 当前帧的显示时间有超过100毫秒延时 => 清空音频解码前和解码后缓冲区...
-	if( inSysCurNS - nFramePTS > nDeltaDelay ) {
-		//TRACE("[Audio] Clear Audio Buffer: %I64d ms, Size: %d\n", (inSysCurNS - nFramePTS)/1000000, nSize);
+	// 当前帧的显示时间有超过200毫秒延时 => 清空音频解码前和解码后缓冲区...
+	if( (inSysCurNS - nFramePTS) > nDeltaDelay ) {
+		TRACE("[Audio] Clear Audio Buffer: %I64d ms, Size: %d\n", (inSysCurNS - nFramePTS)/1000000, nSize);
 		m_MapPacket.clear();
 		m_MapAudio.clear();
 		return;
 	}
-	//TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
+	TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
 	// 填充数据给SDL播放缓冲...
 	int nAudioSize = strPCM.size();
 	Uint8 * lpAudioPos = (Uint8*)strPCM.c_str();
@@ -861,11 +867,19 @@ void CPlayThread::PushFrame(FMS_FRAME & inFrame)
 		return;
 	// 根据音视频类型进行相关操作...
 	int nCalcPTS = inFrame.dwSendTime - (uint32_t)m_start_pts;
+
+	/////////////////////////////////////////////////////////////
+	// 注意：延时模拟目前测试出来，后续配合网络实测后再模拟...
+	/////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////
 	// 随机丢掉数据帧 => 每隔10秒，丢1秒的音视频数据帧...
+	//////////////////////////////////////////////////////////////////
 	//if( (inFrame.dwSendTime/1000>0) && ((inFrame.dwSendTime/1000)%5==0) ) {
 	//	TRACE("[%s] Discard Packet, PTS: %d\n", inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ? "Audio" : "Video", nCalcPTS);
 	//	return;
 	//}
+
 	if( inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ) {
 		m_AudioDecoder->doFillPacket(inFrame.strData, nCalcPTS, inFrame.is_keyframe, inFrame.dwRenderOffset);
 	} else if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
@@ -3001,9 +3015,9 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	if( m_lpAudioThread != NULL && inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ) {
 		m_lpAudioThread->PushFrame(inFrame.strData);
 	}*/
-	//if( m_lpPlayThread != NULL ) {
-	//	m_lpPlayThread->PushFrame(inFrame);
-	//}
+	if( m_lpPlayThread != NULL ) {
+		m_lpPlayThread->PushFrame(inFrame);
+	}
 	// 将超时计时点复位，重新计时...
 	m_dwTimeOutMS = ::GetTickCount();
 	// 进行录像处理...
@@ -3020,7 +3034,7 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
 
-	// 将音视频数据帧投递给播放线程 => 延时20个数据帧...
+	/*// 将音视频数据帧投递给播放线程 => 延时20个数据帧...
 	static bool g_b_delay = false;
 	if( g_b_delay && m_lpPlayThread != NULL ) {
 		m_lpPlayThread->PushFrame(inFrame);
@@ -3039,7 +3053,7 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 			}
 		}
 		g_b_delay = true;
-	}
+	}*/
 
 	// 如果是新的视频数据帧是关键帧，丢弃已缓存的，存放新的关键帧，以便截图使用...
 	if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
