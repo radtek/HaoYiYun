@@ -206,7 +206,6 @@
        https://blog.csdn.net/u012853439/article/details/53218662
    L：（未完成）进行音视频同步处理过程：
        https://www.cnblogs.com/wangguchangqing/p/5900426.html => 比较好的基础文章 => 通常来说只有在流中含有B帧的时候，PTS和DTS才会不同。
-       https://www.jianshu.com/p/3a4d24a71091?open_source=weibo_search
        https://www.cnblogs.com/jiayayao/p/6890882.html
        https://blog.csdn.net/i_scream_/article/details/52760033 => SDL2.0的音视频同步文章
        https://blog.csdn.net/leixiaohua1020/article/details/42181571 => 裸流解码，
@@ -235,15 +234,31 @@
    P：（未完成）AVPacket的字段研究完毕，开始研究音视频解码后的时间戳的计算问题；
        AVPacket的时间戳是可以通过数据帧直接赋值，单位是毫秒，这是解码前的时间戳；
        AVStream的时间戳是解码后的时间戳，是跟系统本身是相互关联的；
-       mp_media_next_video => decode_packet => 解码数据帧
+       mp_media_next_video => decode_packet => 解码数据帧 => AVStream的时间戳是以纳秒为单位的 => time_base(1,1000000000)
+       将解码后的pts和duration都需要转换成纳秒形式保存起来 => os_gettime_ns => 取得当前时间的纳秒值
+       interrupt_callback => 是为了防止avformat_open_input在解析网络数据卡死时做的检测机制；
+       mp_media_reset => 在这里进行时间戳的重置 => obs里面的ffmpeg网络播放机制，延时非常大，需要改进；
+       base_sys_ts => 全局，只要source不删除，只初始化一次；
+       m->play_sys_ts => 播放系统开始时间戳 => 在mp_media_reset中被重置 => os_gettime_ns()
+       m->start_ts => 第一帧开始时间戳（纳秒），取音视频第一帧最小的时间戳 => mp_media_reset 中初始化一次
+       m->next_pts_ns => 下一帧的PTS（纳秒），先初始化为音视频第一帧最小时间戳 => 每次检查音视频队里中最小时间戳赋值给next_pts_ns => mp_media_calc_next_ns
+       m->next_ns => 下一帧播放时的时刻点（纳秒），mp_media_calc_next_ns 和 mp_media_sleepto 用到，每次最多sleep 20毫秒，等待下一帧播放的时间不要超过3秒；
+   Q：（未完成）当视频中有B帧时，需要处理 composition time => RenderOffset
+       http://www.cocoachina.com/bbs/read.php?tid=71131
+       http://www.likecode.com/2014/11/21/111
+       将obs设置成文件模式，对比AVPacket时间戳，发现一些规律，但无法应用在libmp4v2当中，后来即使强制将时间戳调整一致，还是无法在498样本大小位置解码出第一个关键帧
+       后续，需要编译ffmpeg，与obs对比跟踪调试avcodec_decode_video2，看看到底哪里不一样，目前这种直接调用解码器的方式可能存在一定的问题，需要编译ffmpeg才能调试清楚；
 
-3.（未完成）本地拉取RTSP数据流，进行最快速度的解码显示，也有900毫秒左右的延时，因此，学生端不能用IPC模式，需要对方案进行调整：
+3.（未完成）重新设计采集端的音视频播放流程：
+   A：（未完成）音视频的解码、播放，都放在一个线程当中；
+
+4.（未完成）本地拉取RTSP数据流，进行最快速度的解码显示，也有900毫秒左右的延时，因此，学生端不能用IPC模式，需要对方案进行调整：
    A：（已完成）海康IPC的SDK回显模式，延时在200毫秒左右，比RTSP拉流的延时要低很多；
    B：（已完成）ffmpeg解码器配置参数之后，RTSP延时又变成了300毫秒左右，很奇怪，屏蔽参数之后延时也没有变大；
    B：（未完成）学生端，使用vs2015，利用libobs的函数库，读取USB-Camera的数据，用x264进行压缩编码，去掉B帧模式；最大限度的降低延时；
    C：（未完成）学生端，使用vs2015，利用UDP获取讲师端推流数据，组合成音视频帧，调用ffmpeg解码，SDL2.0回显；
 
-4.（未完成）obs里面直接拉取本地rtsp流的延时在2.5秒左右，音视频同步，将obs里面播放网络音视频的部分抽取出来，进行直接的音视频数据帧的播放；
+5.（未完成）obs里面直接拉取本地rtsp流的延时在2.5秒左右，音视频同步，将obs里面播放网络音视频的部分抽取出来，进行直接的音视频数据帧的播放；
    A：（未完成）由于用SDL2.0直接播放音视频数据帧，存在音频问题，存在音视频不同步问题，这是第一个目标，使用采集端的NO_DELAY分支进行测试；
    B：（未完成）直接拉流延时控制在300毫秒以下，才能在网络上达到1000毫秒以下的目标；重点研究obs-ffmpeg如何播放和音视频同步的方法；
    C：（未完成）ffmpeg相关的代码其实没有感觉中的那么费劲，需要静下心来慢慢体会，某种程度上比c++还要简单一些，思维方式不同。

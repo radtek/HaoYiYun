@@ -18,9 +18,106 @@ extern "C"
 
 //#define _SAVE_H264_
 
-class CRenderWnd;
+typedef	map<int64_t, AVPacket>	GM_MapPacket;	// DTS => AVPacket => 解码前的数据帧 => 毫秒 => 1/1000
+typedef map<int64_t, AVFrame*>  GM_MapFrame;	// PTS => AVFrame  => 解码后的视频帧 => 纳秒 => 1/1000000000
+typedef map<int64_t, string>    GM_MapAudio;	// PTS => string   => 解码后的音频帧 => 纳秒 => 1/1000000000
+
 class CPushThread;
-class CVideoThread : public OSThread
+class CPlayThread;
+class CRenderWnd;
+class CDecoder
+{
+public:
+	CDecoder();
+	~CDecoder();
+public:
+	void		doPushPacket(AVPacket & inPacket);
+	int			GetMapPacketSize() { return m_MapPacket.size(); }
+protected:
+	AVCodec         *	m_lpCodec;
+	AVCodecContext  *	m_lpDecoder;
+	GM_MapPacket		m_MapPacket;
+	GM_MapFrame			m_MapFrame;
+};
+
+class CVideoDecoder : public CDecoder
+{
+public:
+	CVideoDecoder();
+	~CVideoDecoder();
+public:
+	BOOL	InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+	void	doDecodeFrame(int64_t inSysZeroNS);
+	void	doDisplaySDL();
+	int64_t	doGetMinNextNS();
+private:
+	int				m_nFPS;
+	int				m_nWidth;
+	int				m_nHeight;
+	string			m_strSPS;
+	string			m_strPPS;
+	CRenderWnd	 *	m_lpRenderWnd;
+	SDL_Window   *  m_sdlScreen;
+	SDL_Renderer *  m_sdlRenderer;
+    SDL_Texture  *  m_sdlTexture;
+};
+
+class CAudioDecoder : public CDecoder
+{
+public:
+	CAudioDecoder(CPlayThread * lpPlayThread);
+	~CAudioDecoder();
+public:
+	BOOL	InitAudio(int nRateIndex, int nChannelNum);
+	void	doFillAudio(Uint8 * inStream, int inLen);
+	void	doDecodeFrame(int64_t inSysZeroNS);
+	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+	int64_t	doGetMinNextNS();
+private:
+	int				m_audio_rate_index;
+	int				m_audio_channel_num;
+	int             m_audio_sample_rate;
+
+	uint8_t		 *  m_out_buffer;
+	int             m_out_buffer_size;
+	SwrContext   *  m_au_convert_ctx;
+
+	GM_MapAudio		m_MapAudio;
+	CPlayThread  *  m_lpPlayThread;
+};
+
+class CPlayThread : public OSThread
+{
+public:
+	CPlayThread(CPushThread * inPushThread);
+	~CPlayThread();
+public:
+	BOOL	InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	BOOL	InitAudio(int nRateIndex, int nChannelNum);
+	void	PushFrame(FMS_FRAME & inFrame);
+public:
+	static  void    do_fill_audio(void * udata, Uint8 *stream, int inLen);
+private:
+	virtual void	Entry();
+	void			doFillAudio(Uint8 * inStream, int inLen);
+	void			doDecodeVideo();
+	void			doDecodeAudio();
+	void			doDisplaySDL();
+	void			doCalcNextNS();
+	void			doSleepTo();
+private:
+	OSMutex				m_Mutex;
+	CPushThread		*	m_lpPushThread;
+	CAudioDecoder	*	m_AudioDecoder;
+	CVideoDecoder	*	m_VideoDecoder;
+
+	int64_t				m_play_next_ns;		// 下一个要播放帧的系统纳秒值...
+	int64_t				m_play_sys_ts;		// 系统计时零点 => 启动时间戳...
+	int64_t				m_start_pts;		// 第一帧的PTS时间戳计时起点...
+};
+
+/*class CVideoThread : public OSThread
 {
 public:
 	CVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
@@ -81,7 +178,7 @@ private:
     AVCodecContext * m_lpSrcCodecCtx;
 	AVCodec * m_lpSrcCodec;
 	AVFrame	* m_lpSrcFrame;
-};
+};*/
 
 class LibRtmp;
 class CCamera;
@@ -270,8 +367,8 @@ public:
 	BOOL			IsRecording();
 
 	int				PushFrame(FMS_FRAME & inFrame);
-	void			StartAudioThread(int nRateIndex, int nChannelNum);
-	void			StartVideoThread(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	void			StartPlayByAudio(int nRateIndex, int nChannelNum);
+	void			StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 private:
 	virtual	void	Entry();
 
@@ -344,8 +441,9 @@ private:
 	KH_MapFrame		m_MapMonitor;		// 云监控切片交错缓存区...
 	int				m_nKeyMonitor;		// 云监控已缓存交错关键帧个数...
 
-	CVideoThread  * m_lpVideoThread;	// 视频播放线程...
-	CAudioThread  * m_lpAudioThread;    // 音频播放线程...
+	//CVideoThread  * m_lpVideoThread;	// 视频播放线程...
+	//CAudioThread  * m_lpAudioThread;  // 音频播放线程...
+	CPlayThread   *  m_lpPlayThread;	// 播放线程...
 
 #ifdef _SAVE_H264_
 	bool			m_bSave_sps;
