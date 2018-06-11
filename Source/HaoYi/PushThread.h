@@ -22,24 +22,104 @@ typedef	map<int64_t, AVPacket>	GM_MapPacket;	// DTS => AVPacket => ½âÂëÇ°µÄÊı¾İÖ
 typedef map<int64_t, AVFrame*>  GM_MapFrame;	// PTS => AVFrame  => ½âÂëºóµÄÊÓÆµÖ¡ => ÄÉÃë => 1/1000000000
 typedef map<int64_t, string>    GM_MapAudio;	// PTS => string   => ½âÂëºóµÄÒôÆµÖ¡ => ÄÉÃë => 1/1000000000
 
+// µÚÈı°æ£ºÒôÊÓÆµÏß³Ì·Ö¿ª²¥·Å...
 class CPushThread;
-class CPlayThread;
 class CRenderWnd;
+class CPlaySDL;
 class CDecoder
 {
 public:
 	CDecoder();
 	~CDecoder();
 public:
+	void		doSleepTo();
 	void		doPushPacket(AVPacket & inPacket);
 	int			GetMapPacketSize() { return m_MapPacket.size(); }
 protected:
-	AVCodec         *	m_lpCodec;
-	AVCodecContext  *	m_lpDecoder;
-	GM_MapPacket		m_MapPacket;
-	GM_MapFrame			m_MapFrame;
+	AVCodec         *	m_lpCodec;			// ½âÂëÆ÷...
+	AVCodecContext  *	m_lpDecoder;		// ½âÂëÆ÷ÃèÊö...
+	GM_MapPacket		m_MapPacket;		// ½âÂëÇ°µÄÊı¾İÖ¡...
+	GM_MapFrame			m_MapFrame;			// ½âÂëºóµÄÊı¾İÖ¡....
+	int64_t				m_play_next_ns;		// ÏÂÒ»¸öÒª²¥·ÅÖ¡µÄÏµÍ³ÄÉÃëÖµ...
 };
 
+class CVideoThread : public CDecoder, public OSThread
+{
+public:
+	CVideoThread(CPlaySDL * lpPlaySDL);
+	virtual ~CVideoThread();
+	virtual void Entry();
+public:
+	BOOL	InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+	void	doDecodeFrame();
+	void	doDisplaySDL();
+	void	doCalcNextNS();
+private:
+	int				m_nFPS;
+	int				m_nWidth;
+	int				m_nHeight;
+	string			m_strSPS;
+	string			m_strPPS;
+	CRenderWnd	 *	m_lpRenderWnd;
+	SDL_Window   *  m_sdlScreen;
+	SDL_Renderer *  m_sdlRenderer;
+    SDL_Texture  *  m_sdlTexture;
+
+	OSMutex			m_Mutex;
+	CPlaySDL	 *  m_lpPlaySDL;
+};
+
+class CAudioThread : public CDecoder, public OSThread
+{
+public:
+	CAudioThread(CPlaySDL * lpPlaySDL);
+	virtual ~CAudioThread();
+	virtual void Entry();
+public:
+	BOOL	InitAudio(int nRateIndex, int nChannelNum);
+	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+	void	doDecodeFrame();
+	void	doDisplaySDL();
+	void	doCalcNextNS();
+private:
+	int					m_audio_rate_index;
+	int					m_audio_channel_num;
+	int				    m_audio_sample_rate;
+	int					m_nSampleDuration;
+
+	uint8_t		 *		m_out_buffer;
+	int					m_out_buffer_size;
+	SwrContext   *		m_au_convert_ctx;
+
+	GM_MapAudio			m_MapAudio;
+	SDL_AudioDeviceID	m_nDeviceID;
+
+	OSMutex				m_Mutex;
+	CPlaySDL	 *		m_lpPlaySDL;
+};
+
+class CPlaySDL
+{
+public:
+	CPlaySDL(CPushThread * inPushThread);
+	~CPlaySDL();
+public:
+	BOOL		InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	BOOL		InitAudio(int nRateIndex, int nChannelNum);
+	void		PushFrame(FMS_FRAME & inFrame);
+	int64_t		GetSysZeroNS() { return m_play_sys_ts; }
+private:
+	int64_t				m_play_sys_ts;		// ÏµÍ³¼ÆÊ±Áãµã => Æô¶¯Ê±¼ä´Á...
+	int64_t				m_start_pts;		// µÚÒ»Ö¡µÄPTSÊ±¼ä´Á¼ÆÊ±Æğµã...
+
+	CVideoThread    *   m_lpVideoThread;	// ÊÓÆµÏß³Ì...
+	CAudioThread    *   m_lpAudioThread;	// ÒôÆµÏß³Ì...
+	CPushThread		*	m_lpPushThread;		// ÍÆÁ÷Ïß³Ì...
+};
+
+// µÚ¶ş°æ£ºÒôÊÓÆµÏß³ÌºÏ²¢²¥·Å...
+/*class CPlayThread;
 class CVideoDecoder : public CDecoder
 {
 public:
@@ -115,8 +195,9 @@ private:
 	int64_t				m_play_next_ns;		// ÏÂÒ»¸öÒª²¥·ÅÖ¡µÄÏµÍ³ÄÉÃëÖµ...
 	int64_t				m_play_sys_ts;		// ÏµÍ³¼ÆÊ±Áãµã => Æô¶¯Ê±¼ä´Á...
 	int64_t				m_start_pts;		// µÚÒ»Ö¡µÄPTSÊ±¼ä´Á¼ÆÊ±Æğµã...
-};
+};*/
 
+// µÚÒ»°æ£ºÒôÊÓÆµÏß³Ì·Ö¿ª²¥·Å...
 /*class CVideoThread : public OSThread
 {
 public:
@@ -443,7 +524,8 @@ private:
 
 	//CVideoThread  * m_lpVideoThread;	// ÊÓÆµ²¥·ÅÏß³Ì...
 	//CAudioThread  * m_lpAudioThread;  // ÒôÆµ²¥·ÅÏß³Ì...
-	CPlayThread   *  m_lpPlayThread;	// ²¥·ÅÏß³Ì...
+	//CPlayThread   * m_lpPlayThread;	// ²¥·ÅÏß³Ì...
+	CPlaySDL		* m_lpPlaySDL;		// ²¥·Å¹ÜÀí...
 
 #ifdef _SAVE_H264_
 	bool			m_bSave_sps;
