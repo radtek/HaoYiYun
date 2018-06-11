@@ -567,10 +567,10 @@ BOOL CAudioDecoder::InitAudio(int nRateIndex, int nChannelNum)
 	int in_sample_rate = m_audio_sample_rate;
 	int out_sample_rate = m_audio_sample_rate;
 
-	//SDL_AudioSpec
+	//SDL_AudioSpec => 不能使用系统推荐参数...
 	SDL_AudioSpec audioSpec = {0};
 	audioSpec.freq = out_sample_rate; 
-	audioSpec.format = AUDIO_S16SYS; 
+	audioSpec.format = AUDIO_S16SYS; //m_lpDecoder->sample_fmt => AV_SAMPLE_FMT_FLTP
 	audioSpec.channels = out_audio_channel_num; 
 	audioSpec.samples = out_nb_samples;
 	audioSpec.callback = CPlayThread::do_fill_audio; 
@@ -578,9 +578,11 @@ BOOL CAudioDecoder::InitAudio(int nRateIndex, int nChannelNum)
 	audioSpec.silence = 0;
 
 	// 打开SDL音频设备 => 只能打开一个设备...
-	if( SDL_OpenAudio(&audioSpec, NULL) != 0 )
+	if( SDL_OpenAudio(&audioSpec, NULL) != 0 ) {
+		SDL_Log("Failed to open audio: %s", SDL_GetError());
 		return false;
-	
+	}
+
 	// 获取音频解码后输出的缓冲区大小...
 	m_out_buffer_size = av_samples_get_buffer_size(NULL, out_audio_channel_num, out_nb_samples, out_sample_fmt, 1);
 	m_out_buffer = (uint8_t *)av_malloc(m_out_buffer_size * 2);

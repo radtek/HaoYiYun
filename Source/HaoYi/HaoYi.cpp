@@ -130,6 +130,7 @@ BOOL CHaoYiApp::InitInstance()
 	CPushThread::Initialize();
 
 	// ≥ı ºªØSDL2.0...
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
 
 	//EnableTaskbarInteraction(FALSE);
