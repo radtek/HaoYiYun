@@ -339,24 +339,27 @@ void CVideoDecoder::doDisplaySDL()
 	GM_MapFrame::iterator itorItem = m_MapFrame.begin();
 	AVFrame * lpSrcFrame  = itorItem->second;
 	int64_t   nFramePTS   = itorItem->first;
-	int64_t   nDeltaDelay = 500000000; //500毫秒...
 	int       nSize = m_MapFrame.size();
 	// 当前帧的显示时间还没有到 => 直接返回 => 继续等待...
 	if( nFramePTS > inSysCurNS ) {
 		//TRACE("[Video] Advance: %I64d ms, Wait, Size: %lu\n", (nFramePTS - inSysCurNS)/1000000, nSize);
 		return;
 	}
+	///////////////////////////////////////////////////////////////////////////////////
+	// 注意：视频延时帧（落后帧），不能丢弃，必须继续显示，视频消耗速度相对较快。
+	///////////////////////////////////////////////////////////////////////////////////
 	// 当前帧的显示时间已经过了 => 直接丢弃 => 容忍500毫秒的延时...
+	/*int64_t   nDeltaDelay = 500000000; //500毫秒...
 	if( inSysCurNS - nFramePTS > nDeltaDelay ) {
 		TRACE("[Video] RG: %I64d ms, Delay: %I64d ms, Discard, Size: %d\n", nFramePTS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
 		// 只丢掉当前帧 => 这里是引用，必须先free再erase...
 		av_frame_free(&lpSrcFrame);
 		m_MapFrame.erase(itorItem);
 		return;
-	}
+	}*/
 	// 将数据转换成jpg...
 	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, nFramePTS, "F:/MP4/Dst");
-	TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize, lpSrcFrame->pict_type);
+	//TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize, lpSrcFrame->pict_type);
 	// 准备需要转换的格式信息...
 	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
 	enum AVPixelFormat nSrcFormat = m_lpDecoder->pix_fmt;
@@ -669,7 +672,7 @@ void CAudioDecoder::doFillAudio(Uint8 * inStream, int inLen)
 		m_MapAudio.clear();
 		return;
 	}
-	TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
+	//TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize);
 	// 填充数据给SDL播放缓冲...
 	int nAudioSize = strPCM.size();
 	Uint8 * lpAudioPos = (Uint8*)strPCM.c_str();
@@ -1827,7 +1830,7 @@ void CMP4Thread::WriteAVCSequenceHeader()
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
 
 	// 开启视频播放线程...
-	m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
+	//m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
 }
 
 CRtspThread::CRtspThread()
