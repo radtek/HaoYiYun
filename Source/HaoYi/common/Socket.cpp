@@ -105,7 +105,7 @@ void Socket::SetSocketSendBufSize(UInt32 inNewSize)
 	ASSERT(err == 0);
 }
 
-void Socket::SetSocketRcvBufSize(UInt32 inNewSize)
+void Socket::SetSocketRecvBufSize(UInt32 inNewSize)
 {
 	int bufSize = inNewSize;
 	int err = ::setsockopt(m_hSocket, SOL_SOCKET, SO_RCVBUF, (char*)&bufSize, sizeof(int));

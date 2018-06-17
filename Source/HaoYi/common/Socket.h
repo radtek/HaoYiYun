@@ -27,7 +27,7 @@ public:
 	void			KeepAlive();
 	void			Linger(int nTime);
 	void			SetSocketSendBufSize(UInt32 inNewSize);
-	void			SetSocketRcvBufSize(UInt32 inNewSize);
+	void			SetSocketRecvBufSize(UInt32 inNewSize);
 	
 	GM_Error 		Bind(UInt32 addr, UInt16 port);
 	GM_Error		AsyncSelect(HWND hWnd, UINT uMsg, long lEvent=FD_READ|FD_CONNECT|FD_CLOSE);

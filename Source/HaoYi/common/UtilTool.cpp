@@ -6,11 +6,61 @@
 #include <ShellAPI.h>
 #include <ATLComTime.h>
 #include "UtilTool.h"
+
 //#include "StrPtrLen.h"
 //#include "StringParser.h"
 //#include "StringFormatter.h"
 //#include "tinyxml.h"
 //#include "OS.h"
+
+static LARGE_INTEGER	g_clock_freq;
+static BOOL				g_have_clockfreq = false;
+
+static uint64_t get_clockfreq(void)
+{
+	if (!g_have_clockfreq) {
+		QueryPerformanceFrequency(&g_clock_freq);
+		g_have_clockfreq = true;
+	}
+	return g_clock_freq.QuadPart;
+}
+
+uint64_t CUtilTool::os_gettime_ns(void)
+{
+	LARGE_INTEGER current_time;
+	double time_val;
+
+	QueryPerformanceCounter(&current_time);
+	time_val = (double)current_time.QuadPart;
+	time_val *= 1000000000.0;
+	time_val /= (double)get_clockfreq();
+
+	return (uint64_t)time_val;
+}
+
+bool CUtilTool::os_sleepto_ns(uint64_t time_target)
+{
+	uint64_t t = CUtilTool::os_gettime_ns();
+	uint32_t milliseconds;
+
+	if (t >= time_target)
+		return false;
+
+	milliseconds = (uint32_t)((time_target - t)/1000000);
+	if (milliseconds > 1) {
+		Sleep(milliseconds-1);
+	}
+	for (;;) {
+		t = CUtilTool::os_gettime_ns();
+		if (t >= time_target)
+			return true;
+#if 0
+		Sleep(1);
+#else
+		Sleep(0);
+#endif
+	}
+}
 
 //
 // 获取json对象的字符串格式...

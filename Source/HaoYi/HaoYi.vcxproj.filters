@@ -43,6 +43,9 @@
     <Filter Include="fastdfs">
       <UniqueIdentifier>{40f0361a-d61c-4410-9c00-ffe56ec2c2a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="rtp">
+      <UniqueIdentifier>{a66ae70e-c73b-4dfa-a879-cfb9c3331d91}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\HaoYi.ico">
@@ -316,6 +319,21 @@
     </ClInclude>
     <ClInclude Include="DlgRoom.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp\bmem.h">
+      <Filter>rtp</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp\circlebuf.h">
+      <Filter>rtp</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp\rtp.h">
+      <Filter>rtp</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp\UDPRecvThread.h">
+      <Filter>rtp</Filter>
+    </ClInclude>
+    <ClInclude Include="rtp\UDPSendThread.h">
+      <Filter>rtp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1029,6 +1047,15 @@
     </ClCompile>
     <ClCompile Include="DlgRoom.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="rtp\bmem.c">
+      <Filter>rtp</Filter>
+    </ClCompile>
+    <ClCompile Include="rtp\UDPRecvThread.cpp">
+      <Filter>rtp</Filter>
+    </ClCompile>
+    <ClCompile Include="rtp\UDPSendThread.cpp">
+      <Filter>rtp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

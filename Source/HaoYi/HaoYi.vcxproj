@@ -91,8 +91,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;RTMPLIB_EXPORTS;MP4V2_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>common;json;curl;UI;HKNet;DHNet;fastdfs;librtmp;libmp4v2;librtsp\liveMedia\include;librtsp\groupsock\include;librtsp\UsageEnvironment\include;librtsp\BasicUsageEnvironment\include;ffmpeg</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WIN32;_WINDOWS;_DEBUG;RTMPLIB_EXPORTS;MP4V2_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>rtp;common;json;curl;UI;HKNet;DHNet;fastdfs;librtmp;libmp4v2;librtsp\liveMedia\include;librtsp\groupsock\include;librtsp\UsageEnvironment\include;librtsp\BasicUsageEnvironment\include;ffmpeg</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -272,6 +272,11 @@
     <ClInclude Include="PushThread.h" />
     <ClInclude Include="ReadSPS.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="rtp\bmem.h" />
+    <ClInclude Include="rtp\circlebuf.h" />
+    <ClInclude Include="rtp\rtp.h" />
+    <ClInclude Include="rtp\UDPRecvThread.h" />
+    <ClInclude Include="rtp\UDPSendThread.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UI\BCMenu.h" />
@@ -1417,6 +1422,11 @@
     <ClCompile Include="Ntray.cpp" />
     <ClCompile Include="PushThread.cpp" />
     <ClCompile Include="ReadSPS.cpp" />
+    <ClCompile Include="rtp\bmem.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="rtp\UDPRecvThread.cpp" />
+    <ClCompile Include="rtp\UDPSendThread.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

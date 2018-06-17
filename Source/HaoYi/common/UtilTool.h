@@ -10,6 +10,9 @@ public:
 	static string		GetGMTDate();				// Get GMT Current Date. 
 	static string		GetCHSDate();				// Get CHS Current Date.
 
+	static uint64_t		os_gettime_ns(void);
+	static bool			os_sleepto_ns(uint64_t time_target);
+
 	static string		GetSystemVer();
 	static HCURSOR		GetSysHandCursor();
 	static HMODULE		GetSelfModuleHandle();

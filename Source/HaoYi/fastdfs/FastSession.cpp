@@ -94,8 +94,8 @@ GM_Error CFastSession::InitSession(LPCTSTR lpszAddr, int nPort)
 	// 设置保持连接状态 => 每隔5秒发送心跳包...
 	m_TCPSocket.KeepAlive();
 	// 设置接收缓冲并创建事件对象...
-	m_TCPSocket.SetSocketRcvBufSize(128*1024);
-	m_TCPSocket.SetSocketRcvBufSize(128*1024);
+	m_TCPSocket.SetSocketSendBufSize(128*1024);
+	m_TCPSocket.SetSocketRecvBufSize(128*1024);
 	theErr = m_TCPSocket.CreateEvent();
 	if( theErr != GM_NoErr ) {
 		MsgLogGM(theErr);

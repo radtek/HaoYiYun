@@ -12,60 +12,14 @@
 #include "ReadSPS.h"
 #include "md5.h"
 
+#include "UDPSendThread.h"
+#include "UDPRecvThread.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 #define ADTS_HEADER_SIZE	7
-
-static LARGE_INTEGER		g_clock_freq;
-static bool					g_have_clockfreq = false;
-
-static uint64_t get_clockfreq(void)
-{
-	if (!g_have_clockfreq) {
-		QueryPerformanceFrequency(&g_clock_freq);
-		g_have_clockfreq = true;
-	}
-	return g_clock_freq.QuadPart;
-}
-
-uint64_t os_gettime_ns(void)
-{
-	LARGE_INTEGER current_time;
-	double time_val;
-
-	QueryPerformanceCounter(&current_time);
-	time_val = (double)current_time.QuadPart;
-	time_val *= 1000000000.0;
-	time_val /= (double)get_clockfreq();
-
-	return (uint64_t)time_val;
-}
-
-bool os_sleepto_ns(uint64_t time_target)
-{
-	uint64_t t = os_gettime_ns();
-	uint32_t milliseconds;
-
-	if (t >= time_target)
-		return false;
-
-	milliseconds = (uint32_t)((time_target - t)/1000000);
-	if (milliseconds > 1) {
-		Sleep(milliseconds-1);
-	}
-	for (;;) {
-		t = os_gettime_ns();
-		if (t >= time_target)
-			return true;
-#if 0
-		Sleep(1);
-#else
-		Sleep(0);
-#endif
-	}
-}
 
 CDecoder::CDecoder()
   : m_lpCodec(NULL)
@@ -113,7 +67,7 @@ void CDecoder::doSleepTo()
 	if( m_play_next_ns < 0 )
 		return;
 	// 最多休息50毫秒...
-	uint64_t cur_time_ns = os_gettime_ns();
+	uint64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	const uint64_t timeout_ns = 50000000;
 	// 如果比当前时间小(已过期)，直接返回...
 	if( m_play_next_ns <= cur_time_ns )
@@ -122,7 +76,7 @@ void CDecoder::doSleepTo()
 	uint64_t delta_ns = m_play_next_ns - cur_time_ns;
 	delta_ns = ((delta_ns < timeout_ns) ? delta_ns : timeout_ns);
 	//TRACE("[Video] Sleep: %I64d ms\n", delta_ns/1000000);
-	os_sleepto_ns(cur_time_ns + delta_ns);
+	CUtilTool::os_sleepto_ns(cur_time_ns + delta_ns);
 }
 
 CVideoThread::CVideoThread(CPlaySDL * lpPlaySDL)
@@ -219,7 +173,7 @@ void CVideoThread::doCalcNextNS()
 	}
 	// 如果没有需要显示的解码后数据，休息20毫秒...
 	if( m_MapFrame.size() <= 0 ) {
-		m_play_next_ns = os_gettime_ns() + 20000000;
+		m_play_next_ns = CUtilTool::os_gettime_ns() + 20000000;
 		return;
 	}
 	// 直接返回马上要播放的第一帧数据的PTS...
@@ -275,7 +229,7 @@ void CVideoThread::doDisplaySDL()
 	// 注意：延时模拟目前测试出来，后续配合网络实测后再模拟...
 	/////////////////////////////////////////////////////////////
 	// 获取当前的系统时间 => 纳秒...
-	int64_t inSysCurNS = os_gettime_ns();
+	int64_t inSysCurNS = CUtilTool::os_gettime_ns();
 	// 获取第一个，时间最小的数据块...
 	GM_MapFrame::iterator itorItem = m_MapFrame.begin();
 	AVFrame * lpSrcFrame  = itorItem->second;
@@ -532,7 +486,7 @@ void CAudioThread::doDisplaySDL()
 	if( m_MapAudio.size() <= 0 || m_nDeviceID <= 0 )
 		return;
 	// 获取当前的系统时间 => 纳秒...
-	int64_t inSysCurNS = os_gettime_ns();
+	int64_t inSysCurNS = CUtilTool::os_gettime_ns();
 	// 获取第一个，时间最小的数据块...
 	GM_MapAudio::iterator itorItem = m_MapAudio.begin();
 	string  & stringPCM  = itorItem->second;
@@ -573,7 +527,7 @@ void CAudioThread::doCalcNextNS()
 	}
 	// 如果没有需要显示的解码后数据，休息20毫秒...
 	if( m_MapAudio.size() <= 0 ) {
-		m_play_next_ns = os_gettime_ns() + 20000000;
+		m_play_next_ns = CUtilTool::os_gettime_ns() + 20000000;
 		return;
 	}
 	// 直接返回马上要播放的第一帧数据的PTS...
@@ -708,7 +662,7 @@ void CPlaySDL::PushFrame(FMS_FRAME & inFrame)
 	// 注意：有数据到达时，才进行零点计算...
 	// 设置系统零点时间 => 播放启动时间戳...
 	if( m_play_sys_ts < 0 ) {
-		m_play_sys_ts = os_gettime_ns();
+		m_play_sys_ts = CUtilTool::os_gettime_ns();
 	}
 	// 如果当前帧的时间戳比第一帧的时间戳还要小，直接扔掉...
 	if( inFrame.dwSendTime < m_start_pts )
@@ -2610,7 +2564,8 @@ void CRtspThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
 	
 	// 开启音频播放线程...
-	m_lpPushThread->StartPlayByAudio(m_audio_rate_index, m_audio_channel_num);
+	//m_lpPushThread->StartPlayByAudio(m_audio_rate_index, m_audio_channel_num);
+	m_lpPushThread->StartSendByAudio(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
@@ -2677,7 +2632,8 @@ void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
 	
 	// 开启视频播放线程...
-	m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
+	//m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
+	m_lpPushThread->StartSendByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
 }
 
 CRtmpThread::CRtmpThread()
@@ -2913,10 +2869,9 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
   , m_lpCamera(lpCamera)
   , m_nSliceInx(0)
 {
-	//m_lpVideoThread = NULL;
-	//m_lpAudioThread = NULL;
-	//m_lpPlayThread = NULL;
 	m_lpPlaySDL = NULL;
+	m_lpUDPSendThread = NULL;
+	m_lpUDPRecvThread = NULL;
 
 	ASSERT( m_lpCamera != NULL );
 	ASSERT( m_hWndVideo != NULL );
@@ -2958,19 +2913,17 @@ CPushThread::~CPushThread()
 	// 停止线程...
 	this->StopAndWaitForThread();
 
-	// 删除视频播放线程...
-	/*if( m_lpVideoThread != NULL ) {
-		delete m_lpVideoThread;
-		m_lpVideoThread = NULL;
+	// 删除UDP数据接收线程...
+	if( m_lpUDPRecvThread != NULL ) {
+		delete m_lpUDPRecvThread;
+		m_lpUDPRecvThread = NULL;
 	}
-	if( m_lpAudioThread != NULL ) {
-		delete m_lpAudioThread;
-		m_lpAudioThread = NULL;
+	// 删除UDP数据发送线程...
+	if( m_lpUDPSendThread != NULL ) {
+		delete m_lpUDPSendThread;
+		m_lpUDPSendThread = NULL;
 	}
-	if( m_lpPlayThread != NULL ) {
-		delete m_lpPlayThread;
-		m_lpPlayThread = NULL;
-	}*/
+	// 删除音视频播放线程...
 	if( m_lpPlaySDL != NULL ) {
 		delete m_lpPlaySDL;
 		m_lpPlaySDL = NULL;
@@ -3617,16 +3570,11 @@ BOOL CPushThread::OpenRtmpUrl()
 int CPushThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
-	// 将视频数据放入视频线程...
-	/*if( m_lpVideoThread != NULL && inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
-		m_lpVideoThread->PushFrame(inFrame.strData, inFrame.is_keyframe);
+	// 将音视频数据推入发送线程...
+	if( m_lpUDPSendThread != NULL ) {
+		m_lpUDPSendThread->PushFrame(inFrame);
 	}
-	if( m_lpAudioThread != NULL && inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ) {
-		m_lpAudioThread->PushFrame(inFrame.strData);
-	}
-	if( m_lpPlayThread != NULL ) {
-		m_lpPlayThread->PushFrame(inFrame);
-	}*/
+	// 将音视频数据推入播放线程...
 	if( m_lpPlaySDL != NULL ) {
 		m_lpPlaySDL->PushFrame(inFrame);
 	}
@@ -4206,4 +4154,40 @@ void CPushThread::StartPlayByAudio(int nRateIndex, int nChannelNum)
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	m_lpPlaySDL->InitAudio(nRateIndex, nChannelNum);
+}
+
+void CPushThread::StartSendByAudio(int nRateIndex, int nChannelNum)
+{
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nDBRoomID = theConfig.GetCurSelRoomID();
+	int nDBCameraID = m_lpCamera->GetDBCameraID();
+	if( m_lpUDPSendThread == NULL ) {
+		m_lpUDPSendThread = new CUDPSendThread(nDBRoomID, nDBCameraID);
+	}
+	ASSERT( m_lpUDPSendThread != NULL );
+	m_lpUDPSendThread->InitAudio(nRateIndex, nChannelNum);
+
+	// 创建接收线程...
+	if( m_lpUDPRecvThread != NULL )
+		return;
+	m_lpUDPRecvThread = new CUDPRecvThread(nDBRoomID, nDBCameraID);
+	m_lpUDPRecvThread->InitThread();
+}
+
+void CPushThread::StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
+{
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nDBRoomID = theConfig.GetCurSelRoomID();
+	int nDBCameraID = m_lpCamera->GetDBCameraID();
+	if( m_lpUDPSendThread == NULL ) {
+		m_lpUDPSendThread = new CUDPSendThread(nDBRoomID, nDBCameraID);
+	}
+	ASSERT( m_lpUDPSendThread != NULL );
+	m_lpUDPSendThread->InitVideo(inSPS, inPPS, nWidth, nHeight, nFPS);
+
+	// 创建接收线程...
+	if( m_lpUDPRecvThread != NULL )
+		return;
+	m_lpUDPRecvThread = new CUDPRecvThread(nDBRoomID, nDBCameraID);
+	m_lpUDPRecvThread->InitThread();
 }

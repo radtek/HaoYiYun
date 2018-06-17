@@ -419,6 +419,8 @@ private:
 };
 
 class LibMP4;
+class CUDPSendThread;
+class CUDPRecvThread;
 class CPushThread : public OSThread
 {
 public:
@@ -448,8 +450,12 @@ public:
 	BOOL			IsRecording();
 
 	int				PushFrame(FMS_FRAME & inFrame);
+
 	void			StartPlayByAudio(int nRateIndex, int nChannelNum);
 	void			StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+
+	void			StartSendByAudio(int nRateIndex, int nChannelNum);
+	void			StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 private:
 	virtual	void	Entry();
 
@@ -522,10 +528,9 @@ private:
 	KH_MapFrame		m_MapMonitor;		// 云监控切片交错缓存区...
 	int				m_nKeyMonitor;		// 云监控已缓存交错关键帧个数...
 
-	//CVideoThread  * m_lpVideoThread;	// 视频播放线程...
-	//CAudioThread  * m_lpAudioThread;  // 音频播放线程...
-	//CPlayThread   * m_lpPlayThread;	// 播放线程...
 	CPlaySDL		* m_lpPlaySDL;		// 播放管理...
+	CUDPSendThread  * m_lpUDPSendThread;// UDP发送线程...
+	CUDPRecvThread  * m_lpUDPRecvThread;// UDP接收线程...
 
 #ifdef _SAVE_H264_
 	bool			m_bSave_sps;
