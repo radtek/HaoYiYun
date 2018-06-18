@@ -228,7 +228,7 @@ void CUDPSendThread::Entry()
 		// 等待发送或接收下一个数据包...
 		this->doSleepTo();
 	}
-	// 发送一次删除命令包...
+	// 只发送一次删除命令包...
 	this->doSendDeleteCmd();
 }
 
@@ -241,6 +241,8 @@ void CUDPSendThread::doSendDeleteCmd()
 	// 套接字有效，直接发送删除命令...
 	ASSERT( m_lpUDPSocket != NULL );
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
+	// 打印已发送删除命令包...
+	TRACE("[Student-Pusher] Send Delete RoomID: %lu, LiveID: %d\n", m_rtp_delete.roomID, m_rtp_delete.liveID);
 	return;
 }
 
@@ -263,6 +265,8 @@ void CUDPSendThread::doSendCreateCmd()
 		MsgLogGM(theErr);
 		return;
 	}
+	// 打印已发送创建命令包...
+	TRACE("[Student-Pusher] Send Create RoomID: %lu, LiveID: %d\n", m_rtp_create.roomID, m_rtp_create.liveID);
 	// 然后，发送序列头命令包...
 	string strSeqHeader;
 	strSeqHeader.append((char*)&m_rtp_header, sizeof(m_rtp_header));
@@ -280,6 +284,8 @@ void CUDPSendThread::doSendCreateCmd()
 		MsgLogGM(theErr);
 		return;
 	}
+	// 打印已发送序列头命令包...
+	TRACE("[Student-Pusher] Send Header SPS: %lu, PPS: %d\n", m_strSPS.size(), m_strPPS.size());
 	// 计算下次发送创建命令的时间戳...
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -350,7 +356,7 @@ void CUDPSendThread::doSendPacket()
 
 	// 打印调试信息 => 刚刚发送的数据包...
 	int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
-	TRACE("[Send ] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
+	//TRACE("[Student-Pusher ] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
 
 	// 实验：移除最前面的数据包...
 	string strPacket;
@@ -452,7 +458,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
 		int  new_rtt = cur_time_ms - rtpDetect.tsSrc;
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		TRACE("[Student-Pusher] Detect dtNum: %d, rtt: %d ms\n", rtpDetect.dtNum, new_rtt);
+		TRACE("[Student-Pusher] Recv Detect dtNum: %d, rtt: %d ms\n", rtpDetect.dtNum, new_rtt);
 	}
 }
 
@@ -471,6 +477,8 @@ void CUDPSendThread::doTagReadyProcess(char * lpBuffer, int inRecvLen)
 		return;
 	// 保存老师观看端发送的准备就绪数据包内容...
 	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
+	// 打印收到准备就绪命令包...
+	TRACE("[Student-Pusher] Recv Ready from %lu:%d\n", m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
 }
 ///////////////////////////////////////////////////////
 // 注意：没有发包，也没有收包，需要进行休息...

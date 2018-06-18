@@ -111,7 +111,7 @@ void CUDPRecvThread::Entry()
 		// 等待发送或接收下一个数据包...
 		this->doSleepTo();
 	}
-	// 发送一次删除命令包...
+	// 只发送一次删除命令包...
 	this->doSendDeleteCmd();
 }
 
@@ -124,6 +124,8 @@ void CUDPRecvThread::doSendDeleteCmd()
 	// 套接字有效，直接发送删除命令...
 	ASSERT( m_lpUDPSocket != NULL );
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
+	// 打印已发送删除命令包...
+	TRACE("[Teacher-Looker] Send Delete RoomID: %lu, LiveID: %d\n", m_rtp_delete.roomID, m_rtp_delete.liveID);
 	return;
 }
 
@@ -146,6 +148,8 @@ void CUDPRecvThread::doSendCreateCmd()
 		MsgLogGM(theErr);
 		return;
 	}
+	// 打印已发送创建命令包...
+	TRACE("[Teacher-Looker] Send Create RoomID: %lu, LiveID: %d\n", m_rtp_create.roomID, m_rtp_create.liveID);
 	// 计算下次发送创建命令的时间戳...
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -200,6 +204,8 @@ void CUDPRecvThread::doSendReadyCmd()
 		MsgLogGM(theErr);
 		return;
 	}
+	// 打印已发送准备就绪命令包...
+	TRACE("[Teacher-Looker] Send Ready command\n");
 	// 计算下次发送创建命令的时间戳...
 	m_next_ready_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -262,7 +268,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
 		int  new_rtt = cur_time_ms - rtpDetect.tsSrc;
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		TRACE("[Teacher-Looker] Detect dtNum: %d, rtt: %d ms\n", rtpDetect.dtNum, new_rtt);
+		TRACE("[Teacher-Looker] Recv Detect dtNum: %d, rtt: %d ms\n", rtpDetect.dtNum, new_rtt);
 	}
 }
 
@@ -286,7 +292,7 @@ void CUDPRecvThread::doTagHeaderProcess(char * lpBuffer, int inRecvLen)
 	memcpy(&m_rtp_header, lpBuffer, sizeof(m_rtp_header));
 	int nNeedSize = m_rtp_header.spsSize + m_rtp_header.ppsSize + sizeof(m_rtp_header);
 	if( nNeedSize != inRecvLen ) {
-		TRACE("[RecvThread] Seq Header error, RecvLen: %d\n", inRecvLen);
+		TRACE("[Teacher-Looker] Recv Header error, RecvLen: %d\n", inRecvLen);
 		memset(&m_rtp_header, 0, sizeof(m_rtp_header));
 		return;
 	}
@@ -302,13 +308,17 @@ void CUDPRecvThread::doTagHeaderProcess(char * lpBuffer, int inRecvLen)
 		lpData += m_rtp_header.ppsSize;
 	}
 	// 打印收到序列头结构体信息...
-	TRACE("[Teacher-Looker] SPS: %d, PPS: %d\n", m_strSPS.size(), m_strPPS.size());
+	TRACE("[Teacher-Looker] Recv Header SPS: %d, PPS: %d\n", m_strSPS.size(), m_strPPS.size());
 }
 
 void CUDPRecvThread::doTagAudioProcess(char * lpBuffer, int inRecvLen)
 {
 	if( lpBuffer == NULL || inRecvLen < 0 || inRecvLen < sizeof(rtp_hdr_t) )
 		return;
+	// 打印收到的音频数据包信息...
+	rtp_hdr_t rtpHeader;
+	memcpy(&rtpHeader, lpBuffer, sizeof(rtpHeader));
+	//TRACE("[Teacher-Looker ] Audio Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d\n", rtpHeader.seq, rtpHeader.ts, rtpHeader.pt, rtpHeader.pst, rtpHeader.ped, rtpHeader.psize);
 	// 设置不要再发送准备就绪命令包了...
 	m_bSendReady = false;
 }
@@ -317,6 +327,10 @@ void CUDPRecvThread::doTagVideoProcess(char * lpBuffer, int inRecvLen)
 {
 	if( lpBuffer == NULL || inRecvLen < 0 || inRecvLen < sizeof(rtp_hdr_t) )
 		return;
+	// 打印收到的视频数据包信息...
+	rtp_hdr_t rtpHeader;
+	memcpy(&rtpHeader, lpBuffer, sizeof(rtpHeader));
+	//TRACE("[Teacher-Looker ] Video Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d\n", rtpHeader.seq, rtpHeader.ts, rtpHeader.pt, rtpHeader.pst, rtpHeader.ped, rtpHeader.psize);
 	// 设置不要再发送准备就绪命令包了...
 	m_bSendReady = false;
 }
