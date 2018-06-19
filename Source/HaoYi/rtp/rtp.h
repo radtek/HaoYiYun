@@ -5,6 +5,7 @@
 #define DEF_UDP_PORT        5252            // 默认UDP服务器端口
 #define DEF_MTU_SIZE        800             // 默认MTU分片大小
 #define MAX_BUFF_LEN        1024            // 最大报文长度...
+#define RELOAD_TIME_OUT       20            // 重建间隔周期(秒) => 等待服务器超时被删除之后，才能被重建...
 
 //
 // 定义交互终端类型...
@@ -12,6 +13,7 @@ enum
 {
   TM_TAG_STUDENT  = 0x01, // 学生端标记...
   TM_TAG_TEACHER  = 0x02, // 讲师端标记...
+  TM_TAG_SERVER   = 0x03, // 服务器标记...
 };
 //
 // 定义交互终端身份...
@@ -19,6 +21,7 @@ enum
 {
   ID_TAG_PUSHER  = 0x01,  // 推流者身份 => 发送者...
   ID_TAG_LOOKER  = 0x02,  // 拉流者身份 => 观看者...
+  ID_TAG_SERVER  = 0x03,  // 服务器身份
 };
 //
 // 定义RTP载荷命令类型...
@@ -30,8 +33,10 @@ enum
   PT_TAG_SUPPLY  = 0x04,  // 补包命令标记...
   PT_TAG_HEADER  = 0x05,  // 音视频序列头...
   PT_TAG_READY   = 0x06,  // 准备继续命令...
+  PT_TAG_RELOAD  = 0x07,  // 重建命令标记 => 专属服务器的命令...
   PT_TAG_AUDIO   = 0x08,  // 音频包 => FLV_TAG_TYPE_AUDIO...
   PT_TAG_VIDEO   = 0x09,  // 视频包 => FLV_TAG_TYPE_VIDEO...
+  PT_TAG_LOSE    = 0x0A,  // 已丢失数据包...
 };
 //
 // 定义探测命令结构体 => PT_TAG_DETECT
@@ -104,6 +109,16 @@ typedef struct {
   unsigned int    recvAddr;     // 接收者穿透地址 => 备用 => host
 }rtp_ready_t;
 //
+// 定义重建命令结构体 => PT_TAG_RELOAD
+typedef struct {
+  unsigned char   tm:2;         // terminate type => TM_TAG_SERVER
+  unsigned char   id:2;         // identify type => ID_TAG_SERVER
+  unsigned char   pt:4;         // payload type => PT_TAG_RELOAD
+  unsigned char   noset;        // 保留 => 字节对齐
+  unsigned short  reload_count; // 重建次数 => 由接收端处理...
+  unsigned int    reload_time;  // 重建时间 => 有接收端处理...
+}rtp_reload_t;
+//
 // 定义RTP数据包头结构体 => PT_TAG_AUDIO | PT_TAG_VIDEO
 typedef struct {
   unsigned char   tm:2;         // terminate type => TM_TAG_STUDENT | TM_TAG_TEACHER
@@ -113,6 +128,16 @@ typedef struct {
   unsigned char   pst:2;        // payload start flag => 0 or 1
   unsigned char   ped:2;        // payload end flag => 0 or 1
   unsigned short  psize;        // payload size => 不含包头，纯数据
-  unsigned int    seq;          // rtp序列号 => 从1开始，第一个必须是 PT_TAG_HEADER
+  unsigned int    seq;          // rtp序列号 => 从1开始
   unsigned int    ts;           // 帧时间戳  => 毫秒
 }rtp_hdr_t;
+//
+// 定义丢包结构体...
+typedef struct {
+  unsigned int   lose_seq;      // 检测到的丢包序列号
+  unsigned int   resend_time;   // 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
+  unsigned int   resend_count;  // 重发次数值 => 当前丢失包的已重发次数
+}rtp_lose_t;
+
+// 定义检测到的丢包队列 => 序列号 : 丢包结构体...
+typedef map<uint32_t, rtp_lose_t>  GM_MapLose;

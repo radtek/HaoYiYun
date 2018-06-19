@@ -11,8 +11,11 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
   , m_bNeedSleep(false)
   , m_nCurPackSeq(0)
   , m_nCurSendSeq(0)
+  , m_rtt_var(-1)
+  , m_rtt_ms(-1)
 {
 	// 初始化rtp序列头结构体...
+	memset(&m_rtp_reload, 0, sizeof(m_rtp_reload));
 	memset(&m_rtp_detect, 0, sizeof(m_rtp_detect));
 	memset(&m_rtp_create, 0, sizeof(m_rtp_create));
 	memset(&m_rtp_delete, 0, sizeof(m_rtp_delete));
@@ -217,6 +220,8 @@ void CUDPSendThread::Entry()
 	while( !this->IsStopRequested() ) {
 		// 设置休息标志 => 只要有发包或收包就不能休息...
 		m_bNeedSleep = true;
+		// 发送观看端需要的丢失数据包...
+		this->doSendLosePacket();
 		// 发送创建房间和直播通道命令包...
 		this->doSendCreateCmd();
 		// 发送探测命令包...
@@ -317,12 +322,68 @@ void CUDPSendThread::doSendDetectCmd()
 	m_bNeedSleep = false;
 }
 
+void CUDPSendThread::doSendLosePacket()
+{
+	OSMutexLocker theLock(&m_Mutex);
+	if( m_lpUDPSocket == NULL )
+		return;
+	// 丢包集合队列为空，直接返回...
+	if( m_MapLose.size() <= 0 )
+		return;
+	// 拿出一个丢包记录，无论是否发送成功，都要删除这个丢包记录...
+	// 如果观看端，没有收到这个数据包，会再次发起补包命令...
+	GM_MapLose::iterator itorItem = m_MapLose.begin();
+	rtp_lose_t rtpLose = itorItem->second;
+	m_MapLose.erase(itorItem);
+	// 如果环形队列为空，直接返回...
+	if( m_circle.size <= 0 )
+		return;
+	// 先找到环形队列中最前面数据包的头指针 => 最小序号...
+	GM_Error    theErr = GM_NoErr;
+	rtp_hdr_t * lpFrontHeader = NULL;
+	rtp_hdr_t * lpSendHeader = NULL;
+	int nSendPos = 0, nSendSize = 0;
+	int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+	// 如果要补充的数据包序号比最小序号还要小 => 没有找到，直接返回...
+	if( rtpLose.lose_seq < lpFrontHeader->seq )
+		return;
+	ASSERT( rtpLose.lose_seq >= lpFrontHeader->seq );
+	// 注意：环形队列当中的序列号一定是连续的...
+	// 两者之差就是要发送数据包的头指针位置...
+	nSendPos = (rtpLose.lose_seq - lpFrontHeader->seq) * nPackSize;
+	// 获取将要发送数据包的包头位置和有效数据长度...
+	lpSendHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nSendPos);
+	// 如果要发送的数据位置越界或无效，直接返回...
+	if( lpSendHeader == NULL ) {
+		TRACE("[Student-Pusher] Supply Error => Position Excessed\n");
+		return;
+	}
+	// 如果找到的序号位置不对，直接返回...
+	if( lpSendHeader->seq != rtpLose.lose_seq ) {
+		TRACE("[Student-Pusher] Supply Error => Seq: %lu, Find: %lu\n", rtpLose.lose_seq, lpSendHeader->seq);
+		return;
+	}
+	// 获取有效的数据区长度 => 包头 + 数据...
+	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
+	// 调用套接字接口，直接发送RTP数据包...
+	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 打印已经发送补包信息...
+	TRACE("[Student-Pusher] Supply Send => Seq: %lu, TS: %lu, Type: %d, Slice: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->psize);
+}
+
 void CUDPSendThread::doSendPacket()
 {
 	OSMutexLocker theLock(&m_Mutex);
+	// 如果环形队列没有可发送数据，直接返回...
 	if( m_circle.size <= 0 || m_lpUDPSocket == NULL )
 		return;
+	// 如果要发送序列号比打包序列号还要大 => 没有数据包可以发送...
+	if( m_nCurSendSeq > m_nCurPackSeq )
+		return;
 	// 取出最前面的RTP数据包，但不从环形队列中移除 => 目的是给接收端补包用...
+	GM_Error    theErr = GM_NoErr;
 	rtp_hdr_t * lpFrontHeader = NULL;
 	rtp_hdr_t * lpSendHeader = NULL;
 	int nSendPos = 0, nSendSize = 0;
@@ -333,22 +394,32 @@ void CUDPSendThread::doSendPacket()
 	if((m_nCurSendSeq <= 0) || (m_nCurSendSeq < lpFrontHeader->seq)) {
 		m_nCurSendSeq = lpFrontHeader->seq;
 	}
+	/////////////////////////////////////////////////////////////////////////////////
+	// 环形队列最小序号 => min_id => lpFrontHeader->seq
+	// 环形队列最大序号 => max_id => m_nCurPackSeq
+	/////////////////////////////////////////////////////////////////////////////////
 	// 将要发送的数据包序号不能小于最前面包的序列号...
 	ASSERT( m_nCurSendSeq >= lpFrontHeader->seq );
+	ASSERT( m_nCurSendSeq <= m_nCurPackSeq );
 	// 两者之差就是要发送数据包的头指针位置...
 	nSendPos = (m_nCurSendSeq - lpFrontHeader->seq) * nPackSize;
-	// 如果要发包位置超过了队列有效长度，说明数据包已经发送完毕...
-	if( nSendPos < 0 || nSendPos >= m_circle.size )
-		return;
 	// 获取发送数据包的包头位置和有效数据长度...
 	lpSendHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nSendPos);
-	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
-	// 调用套接字接口，直接发送RTP数据包...
-	GM_Error theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
+	// 如果要发送的数据位置越界或无效，直接返回...
+	if( lpSendHeader == NULL )
 		return;
+	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
+
+	/////////////////////////////////////////////////////////////////////////////////
+	// 实验：随机丢包...
+	/////////////////////////////////////////////////////////////////////////////////
+	if( m_nCurSendSeq % 3 != 2 ) {
+		// 调用套接字接口，直接发送RTP数据包...
+		theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
+		(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	}
+	/////////////////////////////////////////////////////////////////////////////////
+
 	// 成功发送数据包 => 累加发送序列号...
 	++m_nCurSendSeq;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -356,12 +427,18 @@ void CUDPSendThread::doSendPacket()
 
 	// 打印调试信息 => 刚刚发送的数据包...
 	int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
-	//TRACE("[Student-Pusher ] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
+	//TRACE("[Student-Pusher] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
 
+	/////////////////////////////////////////////////////////////////////////////////////////
 	// 实验：移除最前面的数据包...
-	string strPacket;
+	/////////////////////////////////////////////////////////////////////////////////////////
+	/*string strPacket;
 	strPacket.resize(nPackSize);
 	circlebuf_pop_front(&m_circle, (void*)strPacket.c_str(), nPackSize);
+	if( m_circle.start_pos > m_circle.end_pos ) {
+		TRACE("[Circle] start: %lu, end: %lu\n", m_circle.start_pos, m_circle.end_pos);
+	}*/
+	/////////////////////////////////////////////////////////////////////////////////////////
 
 	/*string	strRtpData;
 	int         nZeroSize = 0;
@@ -428,9 +505,108 @@ void CUDPSendThread::doRecvPacket()
 	// 对收到命令包进行类型分发...
 	switch( ptTag )
 	{
+	case PT_TAG_RELOAD:  this->doTagReloadProcess(ioBuffer, outRecvLen); break;
 	case PT_TAG_DETECT:	 this->doTagDetectProcess(ioBuffer, outRecvLen); break;
-	case PT_TAG_READY:	 this->doTagReadyProcess(ioBuffer, outRecvLen);   break;
+	case PT_TAG_READY:   this->doTagReadyProcess(ioBuffer, outRecvLen);  break;
+	case PT_TAG_SUPPLY:  this->doTagSupplyProcess(ioBuffer, outRecvLen); break;
 	}
+}
+//
+// 处理服务器发送过来的重建命令...
+void CUDPSendThread::doTagReloadProcess(char * lpBuffer, int inRecvLen)
+{
+	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_reload_t) )
+		return;
+    // 通过第一个字节的低2位，判断终端类型...
+    uint8_t tmTag = lpBuffer[0] & 0x03;
+    // 获取第一个字节的中2位，得到终端身份...
+    uint8_t idTag = (lpBuffer[0] >> 2) & 0x03;
+    // 获取第一个字节的高4位，得到数据包类型...
+    uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
+	// 如果不是服务器端发送的重建命令，直接返回...
+	if( tmTag != TM_TAG_SERVER || idTag != ID_TAG_SERVER )
+		return;
+	// 如果不是第一次重建，重建命令必须间隔20秒以上...
+	if( m_rtp_reload.reload_time > 0 ) {
+		uint32_t cur_time_sec = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000000);
+		uint32_t load_time_sec = m_rtp_reload.reload_time / 1000;
+		// 如果重建命令间隔不到20秒，直接返回...
+		if( (cur_time_sec - load_time_sec) < RELOAD_TIME_OUT )
+			return;
+	}
+	// 保存服务器传递的重建命令...
+	m_rtp_reload.tm = tmTag;
+	m_rtp_reload.id = idTag;
+	m_rtp_reload.pt = ptTag;
+	// 记录本地重建信息...
+	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
+	++m_rtp_reload.reload_count;
+	// 打印收到服务器重建命令...
+	TRACE("[Student-Pusher] Server Reload Count: %d\n", m_rtp_reload.reload_count);
+	// 重置相关命令包...
+	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
+	// 清空补包集合队列...
+	m_MapLose.clear();
+	// 释放环形队列空间...
+	circlebuf_free(&m_circle);
+	// 初始化环形队列，预分配空间...
+	circlebuf_init(&m_circle);
+	circlebuf_reserve(&m_circle, 512*1024);
+	// 重置相关变量...
+	m_next_create_ns = -1;
+	m_next_detect_ns = -1;
+	m_nCurPackSeq = 0;
+	m_nCurSendSeq = 0;
+	// 重新开始探测网络...
+	m_rtp_detect.tsSrc = 0;
+	m_rtp_detect.dtNum = 0;
+	m_rtt_var = -1;
+	m_rtt_ms = -1;
+}
+
+void CUDPSendThread::doTagSupplyProcess(char * lpBuffer, int inRecvLen)
+{
+	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_supply_t) )
+		return;
+    // 通过第一个字节的低2位，判断终端类型...
+    uint8_t tmTag = lpBuffer[0] & 0x03;
+    // 获取第一个字节的中2位，得到终端身份...
+    uint8_t idTag = (lpBuffer[0] >> 2) & 0x03;
+    // 获取第一个字节的高4位，得到数据包类型...
+    uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
+	// 如果不是 老师观看端 发出的准备就绪包，直接返回...
+	if( tmTag != TM_TAG_TEACHER || idTag != ID_TAG_LOOKER )
+		return;
+	// 获取补包命令包内容...
+	rtp_supply_t rtpSupply = {0};
+	int nHeadSize = sizeof(rtp_supply_t);
+	memcpy(&rtpSupply, lpBuffer, nHeadSize);
+	if( (rtpSupply.suSize <= 0) || ((nHeadSize + rtpSupply.suSize) != inRecvLen) )
+		return;
+	// 获取需要补包的序列号，加入到补包队列当中...
+	char * lpDataPtr = lpBuffer + nHeadSize;
+	int    nDataSize = rtpSupply.suSize;
+	while( nDataSize > 0 ) {
+		uint32_t   nLoseSeq = 0;
+		rtp_lose_t rtpLose = {0};
+		// 获取补包序列号...
+		memcpy(&nLoseSeq, lpDataPtr, sizeof(int));
+		// 如果序列号已经存在，增加补包次数，不存在，增加新记录...
+		if( m_MapLose.find(nLoseSeq) != m_MapLose.end() ) {
+			rtp_lose_t & theFind = m_MapLose[nLoseSeq];
+			theFind.lose_seq = nLoseSeq;
+			++theFind.resend_count;
+		} else {
+			rtpLose.lose_seq = nLoseSeq;
+			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
+			m_MapLose[rtpLose.lose_seq] = rtpLose;
+		}
+		// 移动数据区指针位置...
+		lpDataPtr += sizeof(int);
+		nDataSize -= sizeof(int);
+	}
+	// 打印已收到补包命令...
+	TRACE("[Student-Pusher] Supply Recv => Count: %d\n", rtpSupply.suSize / sizeof(int));
 }
 
 void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
@@ -456,9 +632,15 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		memcpy(&rtpDetect, lpBuffer, sizeof(rtpDetect));
 		// 当前时间转换成毫秒，计算网络延时 => 当前时间 - 探测时间...
 		uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
-		int  new_rtt = cur_time_ms - rtpDetect.tsSrc;
+		int keep_rtt = cur_time_ms - rtpDetect.tsSrc;
+		// 防止网络突发延迟增大, 借鉴 TCP 的 RTT 遗忘衰减的算法...
+		if( m_rtt_ms < 0 ) { m_rtt_ms = keep_rtt; }
+		else { m_rtt_ms = (7 * m_rtt_ms + keep_rtt) / 8; }
+		// 计算网络抖动的时间差值 => RTT的修正值...
+		if( m_rtt_var < 0 ) { m_rtt_var = m_rtt_ms; }
+		else { m_rtt_var = (m_rtt_var * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		TRACE("[Student-Pusher] Recv Detect dtNum: %d, rtt: %d ms\n", rtpDetect.dtNum, new_rtt);
+		TRACE("[Student-Pusher] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", rtpDetect.dtNum, m_rtt_ms, m_rtt_var);
 	}
 }
 
