@@ -7,13 +7,16 @@
 CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
   : m_lpUDPSocket(NULL)
   , m_next_create_ns(-1)
+  , m_next_header_ns(-1)
   , m_next_detect_ns(-1)
   , m_bNeedSleep(false)
   , m_nCurPackSeq(0)
   , m_nCurSendSeq(0)
-  , m_rtt_var(-1)
+  , m_rtt_var_ms(-1)
   , m_rtt_ms(-1)
 {
+	// 初始化命令状态...
+	m_nCmdState = kCmdSendCreate;
 	// 初始化rtp序列头结构体...
 	memset(&m_rtp_reload, 0, sizeof(m_rtp_reload));
 	memset(&m_rtp_detect, 0, sizeof(m_rtp_detect));
@@ -170,8 +173,8 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	/////////////////////////////////////////////////////////////////////
 	// 注意：只有当接收端准备好之后，才能开始推流操作...
 	/////////////////////////////////////////////////////////////////////
-	// 如果接收端没有准备好，直接返回...
-	if( m_rtp_ready.tm != TM_TAG_TEACHER || m_rtp_ready.recvPort <= 0 )
+	// 如果接收端没有准备好，直接返回 => 收到准备继续包，状态为打包状态...
+	if( m_nCmdState != kCmdSendAVPack || m_rtp_ready.tm != TM_TAG_TEACHER || m_rtp_ready.recvPort <= 0 )
 		return;
 	// 如果有视频，第一帧必须是视频关键帧...
 	if( m_rtp_header.hasVideo && m_nCurPackSeq <= 0 ) {
@@ -224,6 +227,8 @@ void CUDPSendThread::Entry()
 		this->doSendLosePacket();
 		// 发送创建房间和直播通道命令包...
 		this->doSendCreateCmd();
+		// 发送序列头命令包...
+		this->doSendHeaderCmd();
 		// 发送探测命令包...
 		this->doSendDetectCmd();
 		// 发送一个封装好的RTP数据包...
@@ -247,15 +252,15 @@ void CUDPSendThread::doSendDeleteCmd()
 	ASSERT( m_lpUDPSocket != NULL );
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
 	// 打印已发送删除命令包...
-	TRACE("[Student-Pusher] Send Delete RoomID: %lu, LiveID: %d\n", m_rtp_delete.roomID, m_rtp_delete.liveID);
-	return;
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Send Delete RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_delete.roomID, m_rtp_delete.liveID);
 }
 
 void CUDPSendThread::doSendCreateCmd()
 {
 	OSMutexLocker theLock(&m_Mutex);
-	// 如果已经收到正确的准备就绪包，直接返回...
-	if( m_rtp_ready.tm == TM_TAG_TEACHER && m_rtp_ready.recvPort > 0 )
+	// 如果命令状态不是创建命令，不发送命令，直接返回...
+	if( m_nCmdState != kCmdSendCreate )
 		return;
 	// 每隔100毫秒发送创建命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
@@ -266,12 +271,29 @@ void CUDPSendThread::doSendCreateCmd()
 	ASSERT( cur_time_ns >= m_next_create_ns );
 	// 首先，发送一个创建房间命令...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_create, sizeof(m_rtp_create));
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 打印已发送创建命令包 => 第一个包有可能没有发送出去，也返回正常...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Send Create RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_create.roomID, m_rtp_create.liveID);
+	// 计算下次发送创建命令的时间戳...
+	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
+	// 修改休息状态 => 已经有发包，不能休息...
+	m_bNeedSleep = false;
+}
+
+void CUDPSendThread::doSendHeaderCmd()
+{
+	OSMutexLocker theLock(&m_Mutex);
+	// 如果命令状态不是序列头命令，不发送命令，直接返回...
+	if( m_nCmdState != kCmdSendHeader )
 		return;
-	}
-	// 打印已发送创建命令包...
-	TRACE("[Student-Pusher] Send Create RoomID: %lu, LiveID: %d\n", m_rtp_create.roomID, m_rtp_create.liveID);
+	// 每隔100毫秒发送序列头命令包 => 必须转换成有符号...
+	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
+	int64_t period_ns = 100000000;
+	// 如果发包时间还没到，直接返回...
+	if( m_next_header_ns > cur_time_ns )
+		return;
+	ASSERT( cur_time_ns >= m_next_header_ns );
 	// 然后，发送序列头命令包...
 	string strSeqHeader;
 	strSeqHeader.append((char*)&m_rtp_header, sizeof(m_rtp_header));
@@ -284,15 +306,13 @@ void CUDPSendThread::doSendCreateCmd()
 		strSeqHeader.append(m_strPPS);
 	}
 	// 调用套接字接口，直接发送RTP数据包...
-	theErr = m_lpUDPSocket->SendTo((void*)strSeqHeader.c_str(), strSeqHeader.size());
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
-		return;
-	}
+	GM_Error theErr = m_lpUDPSocket->SendTo((void*)strSeqHeader.c_str(), strSeqHeader.size());
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送序列头命令包...
-	TRACE("[Student-Pusher] Send Header SPS: %lu, PPS: %d\n", m_strSPS.size(), m_strPPS.size());
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Send Header SPS: %lu, PPS: %d\n", now_ms, m_strSPS.size(), m_strPPS.size());
 	// 计算下次发送创建命令的时间戳...
-	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
+	m_next_header_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
 	m_bNeedSleep = false;
 }
@@ -312,10 +332,10 @@ void CUDPSendThread::doSendDetectCmd()
 	m_rtp_detect.dtNum += 1;
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
-	if( theErr != GM_NoErr ) {
-		MsgLogGM(theErr);
-		return;
-	}
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 打印已发送探测命令包...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Send Detect dtNum: %d\n", now_ms, m_rtp_detect.dtNum);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -370,7 +390,8 @@ void CUDPSendThread::doSendLosePacket()
 	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已经发送补包信息...
-	TRACE("[Student-Pusher] Supply Send => Seq: %lu, TS: %lu, Type: %d, Slice: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->psize);
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Supply Send => Seq: %lu, TS: %lu, Type: %d, Slice: %d\n", now_ms, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->psize);
 }
 
 void CUDPSendThread::doSendPacket()
@@ -410,14 +431,18 @@ void CUDPSendThread::doSendPacket()
 		return;
 	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
 
+	// 不丢包 => 调用套接字接口，直接发送RTP数据包...
+	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+
 	/////////////////////////////////////////////////////////////////////////////////
 	// 实验：随机丢包...
 	/////////////////////////////////////////////////////////////////////////////////
-	if( m_nCurSendSeq % 3 != 2 ) {
+	/*if( m_nCurSendSeq % 3 != 2 ) {
 		// 调用套接字接口，直接发送RTP数据包...
 		theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 		(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
-	}
+	}*/
 	/////////////////////////////////////////////////////////////////////////////////
 
 	// 成功发送数据包 => 累加发送序列号...
@@ -494,7 +519,8 @@ void CUDPSendThread::doRecvPacket()
 	char     ioBuffer[MAX_BUFF_LEN] = {0};
 	// 调用接口从网络层获取数据包 => 这里是异步套接字，会立即返回 => 不管错误...
 	theErr = m_lpUDPSocket->RecvFrom(&outRemoteAddr, &outRemotePort, ioBuffer, inBufLen, &outRecvLen);
-	if( theErr != GM_NoErr )
+	// 注意：这里不用打印错误信息，没有收到数据就立即返回...
+	if( theErr != GM_NoErr || outRecvLen <= 0 )
 		return;
 	// 修改休息状态 => 已经成功收包，不能休息...
 	m_bNeedSleep = false;
@@ -505,15 +531,84 @@ void CUDPSendThread::doRecvPacket()
 	// 对收到命令包进行类型分发...
 	switch( ptTag )
 	{
-	case PT_TAG_RELOAD:  this->doTagReloadProcess(ioBuffer, outRecvLen); break;
+	case PT_TAG_CREATE:  this->doProcServerCreate(ioBuffer, outRecvLen); break;
+	case PT_TAG_HEADER:  this->doProcServerHeader(ioBuffer, outRecvLen); break;
+	case PT_TAG_READY:   this->doProcServerReady(ioBuffer, outRecvLen);  break;
+	case PT_TAG_RELOAD:  this->doProcServerReload(ioBuffer, outRecvLen); break;
+
 	case PT_TAG_DETECT:	 this->doTagDetectProcess(ioBuffer, outRecvLen); break;
-	case PT_TAG_READY:   this->doTagReadyProcess(ioBuffer, outRecvLen);  break;
 	case PT_TAG_SUPPLY:  this->doTagSupplyProcess(ioBuffer, outRecvLen); break;
 	}
 }
+
+void CUDPSendThread::doProcServerCreate(char * lpBuffer, int inRecvLen)
+{
+	// 通过 rtp_hdr_t 做为载体发送过来的...
+	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_hdr_t) )
+		return;
+	// 获取数据包结构体...
+	rtp_hdr_t rtpHdr = {0};
+	memcpy(&rtpHdr, lpBuffer, sizeof(rtpHdr));
+	// 判断数据包的有效性 => 必须是服务器反馈的 Create 命令...
+	if( rtpHdr.tm != TM_TAG_SERVER || rtpHdr.id != ID_TAG_SERVER || rtpHdr.pt != PT_TAG_CREATE )
+		return;
+	// 修改命令状态 => 开始发送序列头...
+	m_nCmdState = kCmdSendHeader;
+	// 打印收到服务器反馈的创建命令包...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Recv Create from Server\n", now_ms);
+}
+
+void CUDPSendThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
+{
+	// 通过 rtp_hdr_t 做为载体发送过来的...
+	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_hdr_t) )
+		return;
+	// 获取数据包结构体...
+	rtp_hdr_t rtpHdr = {0};
+	memcpy(&rtpHdr, lpBuffer, sizeof(rtpHdr));
+	// 判断数据包的有效性 => 必须是服务器反馈的序列头命令...
+	if( rtpHdr.tm != TM_TAG_SERVER || rtpHdr.id != ID_TAG_SERVER || rtpHdr.pt != PT_TAG_HEADER )
+		return;
+	// 修改命令状态 => 开始接收观看端准备就绪命令...
+	m_nCmdState = kCmdWaitReady;
+	// 打印收到服务器反馈的序列头命令包...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Recv Header from Server\n", now_ms);
+}
+
+void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
+{
+	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_ready_t) )
+		return;
+    // 通过第一个字节的低2位，判断终端类型...
+    uint8_t tmTag = lpBuffer[0] & 0x03;
+    // 获取第一个字节的中2位，得到终端身份...
+    uint8_t idTag = (lpBuffer[0] >> 2) & 0x03;
+    // 获取第一个字节的高4位，得到数据包类型...
+    uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
+	// 如果不是 老师观看端 发出的准备就绪包，直接返回...
+	if( tmTag != TM_TAG_TEACHER || idTag != ID_TAG_LOOKER )
+		return;
+	// 修改命令状态 => 可以进行音视频打包发送数据了...
+	m_nCmdState = kCmdSendAVPack;
+	// 保存老师观看端发送的准备就绪数据包内容...
+	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
+	// 打印收到准备就绪命令包...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Recv Ready from %lu:%d\n", now_ms, m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
+	// 立即反馈给老师观看者 => 准备就绪包已经收到，不要再发了...
+	rtp_ready_t rtpReady = {0};
+	rtpReady.tm = TM_TAG_STUDENT;
+	rtpReady.id = ID_TAG_PUSHER;
+	rtpReady.pt = PT_TAG_READY;
+	// 调用套接字接口，直接发送RTP数据包...
+	GM_Error theErr = m_lpUDPSocket->SendTo(&rtpReady, sizeof(rtpReady));
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+}
 //
 // 处理服务器发送过来的重建命令...
-void CUDPSendThread::doTagReloadProcess(char * lpBuffer, int inRecvLen)
+void CUDPSendThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 {
 	if( m_lpUDPSocket == NULL || lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(rtp_reload_t) )
 		return;
@@ -528,7 +623,7 @@ void CUDPSendThread::doTagReloadProcess(char * lpBuffer, int inRecvLen)
 		return;
 	// 如果不是第一次重建，重建命令必须间隔20秒以上...
 	if( m_rtp_reload.reload_time > 0 ) {
-		uint32_t cur_time_sec = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000000);
+		uint32_t cur_time_sec = (uint32_t)(CUtilTool::os_gettime_ns()/1000000000);
 		uint32_t load_time_sec = m_rtp_reload.reload_time / 1000;
 		// 如果重建命令间隔不到20秒，直接返回...
 		if( (cur_time_sec - load_time_sec) < RELOAD_TIME_OUT )
@@ -539,10 +634,11 @@ void CUDPSendThread::doTagReloadProcess(char * lpBuffer, int inRecvLen)
 	m_rtp_reload.id = idTag;
 	m_rtp_reload.pt = ptTag;
 	// 记录本地重建信息...
-	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
+	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	++m_rtp_reload.reload_count;
 	// 打印收到服务器重建命令...
-	TRACE("[Student-Pusher] Server Reload Count: %d\n", m_rtp_reload.reload_count);
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Server Reload Count: %d\n", now_ms, m_rtp_reload.reload_count);
 	// 重置相关命令包...
 	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
 	// 清空补包集合队列...
@@ -553,14 +649,16 @@ void CUDPSendThread::doTagReloadProcess(char * lpBuffer, int inRecvLen)
 	circlebuf_init(&m_circle);
 	circlebuf_reserve(&m_circle, 512*1024);
 	// 重置相关变量...
+	m_nCmdState = kCmdSendCreate;
 	m_next_create_ns = -1;
+	m_next_header_ns = -1;
 	m_next_detect_ns = -1;
 	m_nCurPackSeq = 0;
 	m_nCurSendSeq = 0;
 	// 重新开始探测网络...
 	m_rtp_detect.tsSrc = 0;
 	m_rtp_detect.dtNum = 0;
-	m_rtt_var = -1;
+	m_rtt_var_ms = -1;
 	m_rtt_ms = -1;
 }
 
@@ -606,7 +704,8 @@ void CUDPSendThread::doTagSupplyProcess(char * lpBuffer, int inRecvLen)
 		nDataSize -= sizeof(int);
 	}
 	// 打印已收到补包命令...
-	TRACE("[Student-Pusher] Supply Recv => Count: %d\n", rtpSupply.suSize / sizeof(int));
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE("[Student-Pusher] Time: %lu ms, Supply Recv => Count: %d\n", now_ms, rtpSupply.suSize / sizeof(int));
 }
 
 void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
@@ -637,30 +736,12 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		if( m_rtt_ms < 0 ) { m_rtt_ms = keep_rtt; }
 		else { m_rtt_ms = (7 * m_rtt_ms + keep_rtt) / 8; }
 		// 计算网络抖动的时间差值 => RTT的修正值...
-		if( m_rtt_var < 0 ) { m_rtt_var = m_rtt_ms; }
-		else { m_rtt_var = (m_rtt_var * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
+		if( m_rtt_var_ms < 0 ) { m_rtt_var_ms = abs(m_rtt_ms - keep_rtt); }
+		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		TRACE("[Student-Pusher] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", rtpDetect.dtNum, m_rtt_ms, m_rtt_var);
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Student-Pusher] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
-}
-
-void CUDPSendThread::doTagReadyProcess(char * lpBuffer, int inRecvLen)
-{
-	if( lpBuffer == NULL || inRecvLen <= 0 || inRecvLen < sizeof(m_rtp_ready) )
-		return;
-    // 通过第一个字节的低2位，判断终端类型...
-    uint8_t tmTag = lpBuffer[0] & 0x03;
-    // 获取第一个字节的中2位，得到终端身份...
-    uint8_t idTag = (lpBuffer[0] >> 2) & 0x03;
-    // 获取第一个字节的高4位，得到数据包类型...
-    uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
-	// 如果不是 老师观看端 发出的准备就绪包，直接返回...
-	if( tmTag != TM_TAG_TEACHER || idTag != ID_TAG_LOOKER )
-		return;
-	// 保存老师观看端发送的准备就绪数据包内容...
-	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
-	// 打印收到准备就绪命令包...
-	TRACE("[Student-Pusher] Recv Ready from %lu:%d\n", m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
 }
 ///////////////////////////////////////////////////////
 // 注意：没有发包，也没有收包，需要进行休息...
