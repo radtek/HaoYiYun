@@ -117,7 +117,8 @@ GM_Error CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	LPCTSTR lpszAddr = "192.168.1.70"; //DEF_UDP_HOME;
+	LPCTSTR lpszAddr = "192.168.1.70";
+	//LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -181,6 +182,12 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		if( inFrame.typeFlvTag != PT_TAG_VIDEO || !inFrame.is_keyframe )
 			return;
 		ASSERT( inFrame.typeFlvTag == PT_TAG_VIDEO && inFrame.is_keyframe );
+	}
+	// 打印第一帧信息 => 开始有音视频数据包了...
+	if( m_nCurPackSeq <= 0 ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE( "[Student-Pusher] Time: %lu ms, First Frame => Type: %d, KeyFrame: %d, TS: %lu, Size: %d\n", 
+				now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	}
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
@@ -323,6 +330,10 @@ void CUDPSendThread::doSendDetectCmd()
 	// 每隔1秒发送一个探测命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	int64_t period_ns = 1000000000;
+	// 第一个探测包延时1/3秒发送 => 避免第一个探测包先到达，引发服务器发送重建命令...
+	if( m_next_detect_ns < 0 ) { 
+		m_next_detect_ns = cur_time_ns + period_ns / 3;
+	}
 	// 如果发包时间还没到，直接返回...
 	if( m_next_detect_ns > cur_time_ns )
 		return;
@@ -432,17 +443,17 @@ void CUDPSendThread::doSendPacket()
 	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
 
 	// 不丢包 => 调用套接字接口，直接发送RTP数据包...
-	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
-	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	//theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
+	//(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 
 	/////////////////////////////////////////////////////////////////////////////////
 	// 实验：随机丢包...
 	/////////////////////////////////////////////////////////////////////////////////
-	/*if( m_nCurSendSeq % 3 != 2 ) {
+	if( m_nCurSendSeq % 3 != 2 ) {
 		// 调用套接字接口，直接发送RTP数据包...
 		theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 		(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
-	}*/
+	}
 	/////////////////////////////////////////////////////////////////////////////////
 
 	// 成功发送数据包 => 累加发送序列号...
@@ -721,7 +732,34 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
     uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
 	// 如果是 老师观看者 发出的探测包，将收到的探测数据包原样返回给服务器端...
 	if( tmTag == TM_TAG_TEACHER && idTag == ID_TAG_LOOKER ) {
+		// 先将收到探测数据包原样返回给服务器端...
 		theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
+		// 再处理观看端已经收到的最大连续包号...
+		rtp_detect_t * lpDetect = (rtp_detect_t*)lpBuffer;
+		if( lpDetect->maxConSeq <= 0 || m_circle.size <= 0 )
+			return;
+		// 先找到环形队列中最前面数据包的头指针 => 最小序号...
+		rtp_hdr_t * lpFrontHeader = NULL;
+		int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+		lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+		// 如果要删除的数据包序号比最小序号还要小 => 数据已经删除了，直接返回...
+		if( lpDetect->maxConSeq < lpFrontHeader->seq )
+			return;
+		// 注意：当前已发送包号是一个超前包号，是指下一个要发送的包号...
+		// 观看端收到的最大连续包号相等或大于当前已发送包号 => 直接返回...
+		if( lpDetect->maxConSeq >= m_nCurSendSeq )
+			return;
+		// 注意：环形队列当中的序列号一定是连续的...
+		// 注意：观看端收到的最大连续包号一定比当前已发送包号小...
+		// 两者之差加1就是要删除的数据长度 => 要包含最大连续包本身的删除...
+		uint32_t nPopSize = (lpDetect->maxConSeq - lpFrontHeader->seq + 1) * nPackSize;
+		circlebuf_pop_front(&m_circle, NULL, nPopSize);
+		// 注意：环形队列当中的数据块大小是连续的，是一样大的...
+		// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
+		uint32_t nRemainCount = m_circle.size / nPackSize;
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE( "[Student-Pusher] Time: %lu ms, Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu\n", 
+				now_ms, lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
 		return;
 	}
 	// 如果是 学生推流端 自己发出的探测包，计算网络延时...

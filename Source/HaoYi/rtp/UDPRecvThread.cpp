@@ -86,7 +86,8 @@ GM_Error CUDPRecvThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	LPCTSTR lpszAddr = "192.168.1.70"; //DEF_UDP_HOME;
+	LPCTSTR lpszAddr = "192.168.1.70";
+	//LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -167,6 +168,10 @@ void CUDPRecvThread::doSendDetectCmd()
 	// 每隔1秒发送一个探测命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	int64_t period_ns = 1000000000;
+	// 第一个探测包延时1/3秒发送 => 避免第一个探测包先到达，引发服务器发送重建命令...
+	if( m_next_detect_ns < 0 ) { 
+		m_next_detect_ns = cur_time_ns + period_ns / 3;
+	}
 	// 如果发包时间还没到，直接返回...
 	if( m_next_detect_ns > cur_time_ns )
 		return;
@@ -174,16 +179,35 @@ void CUDPRecvThread::doSendDetectCmd()
 	// 将探测起点时间转换成毫秒，累加探测计数器...
 	m_rtp_detect.tsSrc  = (uint32_t)(cur_time_ns / 1000000);
 	m_rtp_detect.dtNum += 1;
+	// 计算已收到最大连续包号...
+	m_rtp_detect.maxConSeq = this->doCalcMaxConSeq();
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送探测命令包...
 	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Send Detect dtNum: %d\n", now_ms, m_rtp_detect.dtNum);
+	TRACE("[Teacher-Looker] Time: %lu ms, Send Detect dtNum: %d, MaxConSeq: %lu\n", now_ms, m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
 	m_bNeedSleep = false;
+}
+
+uint32_t CUDPRecvThread::doCalcMaxConSeq()
+{
+	// 发生丢包的计算 => 等于最小丢包号 - 1
+	if( m_MapLose.size() > 0 ) {
+		return (m_MapLose.begin()->first - 1);
+	}
+	// 没有丢包 => 环形队列为空 => 直接返回0...
+	if( m_circle.size <= 0 )
+		return 0;
+	// 没有丢包 => 已收到的最大包号 => 环形队列中最大序列号...
+	const int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacket[nPackSize] = {0};
+	circlebuf_peek_back(&m_circle, szPacket, nPackSize);
+	rtp_hdr_t * lpMaxHeader = (rtp_hdr_t*)szPacket;
+	return lpMaxHeader->seq;
 }
 
 void CUDPRecvThread::doSendReadyCmd()
@@ -248,8 +272,10 @@ void CUDPRecvThread::doSendSupplyCmd()
 			lpData += sizeof(int);
 			// 累加重发次数...
 			++rtpLose.resend_count;
-			// 修正下次重传时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
-			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + m_rtt_var_ms;
+			// 注意：如果一个网络往返延时都没有收到补充包，需要再次发起这个包的补包命令...
+			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况...
+			// 修正下次重传时间点 => cur_time + rtt => 丢包时的当前时间 + 网络往返延迟值...
+			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_ms,0);
 		}
 		// 累加丢包算子对象...
 		++itorItem;
@@ -555,8 +581,9 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 			rtp_lose_t rtpLose = {0};
 			rtpLose.resend_count = 0;
 			rtpLose.lose_seq = sup_id;
+			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况...
 			// 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
-			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + m_rtt_var_ms;
+			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_var_ms,0);
 			m_MapLose[sup_id] = rtpLose;
 			// 打印已丢包信息，丢包队列长度...
 			now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);

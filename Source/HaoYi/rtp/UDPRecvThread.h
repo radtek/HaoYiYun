@@ -33,6 +33,8 @@ private:
 	void			doTagHeaderProcess(char * lpBuffer, int inRecvLen);
 	void			doTagAVPackProcess(char * lpBuffer, int inRecvLen);
 	void			doEraseLoseSeq(uint32_t inSeqID);
+
+	uint32_t		doCalcMaxConSeq();
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态
