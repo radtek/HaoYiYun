@@ -182,6 +182,17 @@
        针对老师端推流时 => 很多处理过程都要调整，需要单独处理；
        进入最复杂的阶段 => 丢包检测，丢包补充，缓冲区控制；
        已收到最大连续包号 = 最小丢包号 - 1
+       解决了UDPSendThread当中数据帧打包问题：帧总长度刚好是800整数倍（分片大小），打包错误会导致psize为0；
+       现在重点解决视频帧解码无法得到got_picture的问题，参考文档如下 => 这些文档的方法都不能解决最终问题 => 最终发现是由于丢了数据帧造成的
+       https://bbs.csdn.net/topics/392059669 => 只有I帧和P帧 => 没有解决
+       https://blog.csdn.net/u013898698/article/details/61433612 => 编码延时 => superfast => zerolatency
+       https://blog.csdn.net/leixiaohua1020/article/details/14215833 => CODEC_CAP_DELAY
+       https://blog.csdn.net/h514434485/article/details/52164087
+       https://blog.csdn.net/leixiaohua1020/article/details/19016109
+       https://blog.csdn.net/huyinguo/article/details/4725326 => CODEC_FLAG_LOW_DELAY
+       http://blog.jianchihu.net/avcodec_decode_video2-no-pic.html
+       https://bbs.csdn.net/topics/390692774
+       解码成功，got_picture为0，说明需要后续的数据帧；
    C：（未完成）      学生端使用单独线程用UDP从Linux服务器，用最快的速度，拉取音视频数据，组成数据帧，使用SDL2.0播放出来；
    D：（未完成）      将学生端数据拉取、组包、解码过程封装起来，移植到讲师端；整个过程控制在1秒以内；
    E：（未完成）      改造讲师端推流机制，使用UDP推流到Linux服务器；不使用rtmp推流；

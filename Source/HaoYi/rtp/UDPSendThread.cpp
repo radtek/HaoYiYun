@@ -198,11 +198,15 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		ASSERT( inFrame.typeFlvTag == PT_TAG_VIDEO && inFrame.is_keyframe );
 	}
 	// 打印第一帧信息 => 开始有音视频数据包了...
-	if( m_nCurPackSeq <= 0 ) {
+	/*if( m_nCurPackSeq <= 0 ) {
 		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 		TRACE( "[Student-Pusher] Time: %lu ms, First Frame => Type: %d, KeyFrame: %d, TS: %lu, Size: %d\n", 
 				now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
-	}
+	}*/
+	// 打印所有的音视频数据帧...
+	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
+			now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
 	rtpHeader.tm  = TM_TAG_STUDENT;
@@ -211,18 +215,19 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	rtpHeader.pk  = inFrame.is_keyframe;
 	rtpHeader.ts  = inFrame.dwSendTime;
 	// 计算需要分片的个数 => 需要注意累加最后一个分片...
-	int nSliceTotalSize = 0;
 	int nSliceSize = DEF_MTU_SIZE;
 	int nFrameSize = inFrame.strData.size();
 	int nSliceNum = nFrameSize / DEF_MTU_SIZE;
 	char * lpszFramePtr = (char*)inFrame.strData.c_str();
 	nSliceNum += ((nFrameSize % DEF_MTU_SIZE) ? 1 : 0);
+	int nEndSize = nFrameSize - (nSliceNum - 1) * DEF_MTU_SIZE;
 	// 进行循环压入环形队列当中...
 	for(int i = 0; i < nSliceNum; ++i) {
 		rtpHeader.seq = ++m_nCurPackSeq; // 累加打包序列号...
 		rtpHeader.pst = ((i == 0) ? true : false); // 是否是第一个分片...
 		rtpHeader.ped = ((i+1 == nSliceNum) ? true: false); // 是否是最后一个分片...
-		rtpHeader.psize = (rtpHeader.ped ? (nFrameSize % DEF_MTU_SIZE) : DEF_MTU_SIZE); // 如果是最后一个分片，取余数，否则，取MTU值...
+		rtpHeader.psize = rtpHeader.ped ? nEndSize : DEF_MTU_SIZE; // 如果是最后一个分片，取计算值(不能取余数，如果是MTU整数倍会出错)，否则，取MTU值...
+		ASSERT( rtpHeader.psize > 0 && rtpHeader.psize <= DEF_MTU_SIZE );
 		// 计算填充数据长度...
 		int nZeroSize = DEF_MTU_SIZE - rtpHeader.psize;
 		// 计算分片包的数据头指针...
@@ -360,7 +365,7 @@ void CUDPSendThread::doSendDetectCmd()
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送探测命令包...
 	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Send Detect dtNum: %d\n", now_ms, m_rtp_detect.dtNum);
+	//TRACE("[Student-Pusher] Time: %lu ms, Send Detect dtNum: %d\n", now_ms, m_rtp_detect.dtNum);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -777,10 +782,10 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		circlebuf_pop_front(&m_circle, NULL, nPopSize);
 		// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 		// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
-		uint32_t nRemainCount = m_circle.size / nPackSize;
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE( "[Student-Pusher] Time: %lu ms, Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu\n", 
-				now_ms, lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
+		//uint32_t nRemainCount = m_circle.size / nPackSize;
+		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		//TRACE( "[Student-Pusher] Time: %lu ms, Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu\n", 
+		//		now_ms, lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
 		return;
 	}
 	// 如果是 学生推流端 自己发出的探测包，计算网络延时...
@@ -799,7 +804,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
 		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Student-Pusher] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		//TRACE("[Student-Pusher] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
 }
 ///////////////////////////////////////////////////////

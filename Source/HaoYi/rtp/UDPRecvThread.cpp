@@ -204,7 +204,7 @@ void CUDPRecvThread::doSendDetectCmd()
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送探测命令包...
 	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Send Detect dtNum: %d, MaxConSeq: %lu\n", now_ms, m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
+	//TRACE("[Teacher-Looker] Time: %lu ms, Send Detect dtNum: %d, MaxConSeq: %lu\n", now_ms, m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -533,7 +533,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
 		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		//TRACE("[Teacher-Looker] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
 }
 
@@ -632,7 +632,8 @@ void CUDPRecvThread::doParseFrame()
 	m_lpPlaySDL->PushFrame(strFrame, pt_type, is_key, ts_ms);
 	// 打印已投递的完整数据帧信息...
 	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Frame => PlaySeq: %lu, CircleSize: %d\n", now_ms, m_nMaxPlaySeq, m_circle.size/nPerPackSize);
+	TRACE( "[Teacher-Looker] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d\n", 
+			now_ms, pt_type, is_key, ts_ms, strFrame.size(), m_nMaxPlaySeq, m_circle.size/nPerPackSize );
 	// 修改休息状态 => 已经抽取完整音视频数据帧，不能休息...
 	m_bNeedSleep = false;
 }
@@ -678,6 +679,13 @@ void CUDPRecvThread::doAVSaveCircle(char * lpBuffer, int inRecvLen)
 	if( inRecvLen != nDataSize || nZeroSize < 0 ) {
 		now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 		TRACE("[Teacher-Looker] Time: %lu ms, Discard => Seq: %lu, TS: %lu, Type: %d, Slice: %d, ZeroSize: %d\n", now_ms, lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->psize, nZeroSize);
+		return;
+	}
+	// 如果收到的补充包比当前最大播放包还要小 => 说明是多次补包的冗余包，直接扔掉...
+	// 注意：即使相等也要扔掉，因为最大播放序号包本身已经投递到了播放层...
+	if( new_id <= m_nMaxPlaySeq ) {
+		now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Teacher-Looker] Time: %lu ms, Supply Discard => Seq: %lu, MaxPlaySeq: %lu\n", now_ms, new_id, m_nMaxPlaySeq);
 		return;
 	}
 	// 打印收到的音频数据包信息 => 包括缓冲区填充量 => 每个数据包都是统一大小 => rtp_hdr_t + slice + Zero => 812

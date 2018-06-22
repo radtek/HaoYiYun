@@ -10,6 +10,7 @@ extern "C"
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
+#include "libavutil/error.h"
 #include "libavutil/opt.h"
 #include "SDL2/SDL.h"
 };
@@ -105,6 +106,7 @@ public:
 	BOOL		InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL		InitAudio(int nRateIndex, int nChannelNum);
 	int64_t		GetSysZeroNS() { return m_play_sys_ts; }
+	int64_t		GetStartPtsNS() { return m_start_pts; }
 private:
 	int64_t				m_play_sys_ts;		// 系统计时零点 => 启动时间戳...
 	int64_t				m_start_pts;		// 第一帧的PTS时间戳计时起点...

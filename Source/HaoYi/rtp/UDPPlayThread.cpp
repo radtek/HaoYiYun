@@ -46,6 +46,8 @@ void CDecoder::doPushPacket(AVPacket & inPacket)
 	// 注意：这里必须以DTS排序，决定了解码的先后顺序...
 	// 如果有相同DTS的数据帧已经存在，直接释放AVPacket，返回...
 	if( m_MapPacket.find(inPacket.dts) != m_MapPacket.end() ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Teacher-Looker] Time: %lu ms, Error => SameDTS: %I64d, StreamID: %d\n", now_ms, inPacket.dts, inPacket.stream_index);
 		av_free_packet(&inPacket);
 		return;
 	}
@@ -131,6 +133,7 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	// 查找需要的解码器 => 不用创建解析器...
 	m_lpCodec = avcodec_find_decoder(src_codec_id);
 	m_lpDecoder = avcodec_alloc_context3(m_lpCodec);
+	m_lpDecoder->flags |= CODEC_FLAG_LOW_DELAY;
 	// 打开获取到的解码器...
 	if( avcodec_open2(m_lpDecoder, m_lpCodec, NULL) < 0 ) {
 		TRACE("[Video] avcodec_open2 failed.\n");
@@ -226,7 +229,8 @@ void CVideoThread::doDisplaySDL()
 	GM_MapFrame::iterator itorItem = m_MapFrame.begin();
 	AVFrame * lpSrcFrame  = itorItem->second;
 	int64_t   nFramePTS   = itorItem->first;
-	int       nSize = m_MapFrame.size();
+	int       nFrameSize = m_MapFrame.size();
+	int       nAVPackSize = m_MapPacket.size();
 	// 当前帧的显示时间还没有到 => 直接返回 => 继续等待...
 	if( nFramePTS > inSysCurNS ) {
 		//TRACE("[Video] Advance: %I64d ms, Wait, Size: %lu\n", (nFramePTS - inSysCurNS)/1000000, nSize);
@@ -237,7 +241,7 @@ void CVideoThread::doDisplaySDL()
 	///////////////////////////////////////////////////////////////////////////////////
 	// 将数据转换成jpg...
 	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, nFramePTS, "F:/MP4/Dst");
-	TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, Size: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nSize, lpSrcFrame->pict_type);
+	TRACE("[Video] OS: %I64d ms, Delay: %I64d ms, Success, AVPackSize: %d, FrameSize: %d, Type: %d\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, nAVPackSize, nFrameSize, lpSrcFrame->pict_type);
 	// 准备需要转换的格式信息...
 	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
 	enum AVPixelFormat nSrcFormat = m_lpDecoder->pix_fmt;
@@ -286,6 +290,7 @@ void CVideoThread::doDecodeFrame()
 	// 没有缓存，直接返回...
 	if( m_MapPacket.size() <= 0 )
 		return;
+	int64_t inStartPtsNS = m_lpPlaySDL->GetStartPtsNS();
 	int64_t inSysZeroNS = m_lpPlaySDL->GetSysZeroNS();
 	// 抽取一个AVPacket进行解码操作，一个AVPacket一定能解码出一个Picture...
 	int got_picture = 0, nResult = 0;
@@ -293,16 +298,20 @@ void CVideoThread::doDecodeFrame()
 	GM_MapPacket::iterator itorItem = m_MapPacket.begin();
 	AVPacket & thePacket = itorItem->second;
 	nResult = avcodec_decode_video2(m_lpDecoder, lpFrame, &got_picture, &thePacket);
-	// 解码失败或没有得到完整图像，直接扔掉数据...
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：目前只有 I帧 和 P帧，一旦AVPacket解码不出图像，一定是有数据包丢失...
+	// 解码失败或没有得到完整图像 => 一定是有丢包发生...
+	////////////////////////////////////////////////////////////////////////////////////////////////
 	if( nResult < 0 || !got_picture ) {
-		TRACE("[Video] PTS: %I64d, decode_frame failed.\n", thePacket.pts);
+		TRACE("[Video] Error => decode_frame failed, PTS: %I64d, DecodeSize: %d, PacketSize: %d\n", thePacket.pts + inStartPtsNS, nResult, thePacket.size);
 		av_frame_free(&lpFrame);
 		av_free_packet(&thePacket);
 		m_MapPacket.erase(itorItem);
 		return;
 	}
-	//TRACE("[Video] best: %I64d, pkt_dts: %I64d, pkt_pts: %I64d\n", lpFrame->best_effort_timestamp, lpFrame->pkt_dts, lpFrame->pkt_pts);
-	//TRACE("[Video] DTS: %I64d, PTS: %I64d, Size: %lu\n", thePacket.dts, thePacket.pts, thePacket.size);
+	// 打印解码之后的数据帧信息...
+	TRACE( "[Video] Type: %d, DecodeSize: %d, PacketSize: %d, best: %I64d, pkt_dts: %I64d, pkt_pts: %I64d\n", lpFrame->pict_type, nResult, thePacket.size,
+			lpFrame->best_effort_timestamp + inStartPtsNS, lpFrame->pkt_dts + inStartPtsNS, lpFrame->pkt_pts + inStartPtsNS);
 	// 计算解码后的数据帧的时间戳 => 将毫秒转换成纳秒...
 	AVRational base_pack  = {1, 1000};
 	AVRational base_frame = {1, 1000000000};
@@ -504,7 +513,7 @@ void CAudioThread::doDisplaySDL()
 	}
 	// 打印已经投递的音频数据信息...
 	nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
-	TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, AudioSize: %d, QueueBytes: %lu\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, m_MapAudio.size(), nQueueBytes);
+	TRACE("[Audio] OS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu\n", inSysCurNS/1000000, (inSysCurNS - nFramePTS)/1000000, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
 	// 删除已经使用的音频数据...
 	m_MapAudio.erase(itorItem);
 }
@@ -657,9 +666,12 @@ void CPlaySDL::PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint3
 		m_play_sys_ts = CUtilTool::os_gettime_ns();
 	}
 	// 如果当前帧的时间戳比第一帧的时间戳还要小，直接扔掉...
-	if( inSendTime < m_start_pts )
+	if( inSendTime < m_start_pts ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Teacher-Looker] Time: %lu ms, Error => SendTime: %lu, StartPTS: %I64d\n", now_ms, inSendTime, m_start_pts);
 		return;
-	// 计算当前帧的时间戳....
+	}
+	// 计算当前帧的时间戳 => 时间戳必须做修正，否则会混乱...
 	int nCalcPTS = inSendTime - (uint32_t)m_start_pts;
 
 	/////////////////////////////////////////////////////////////
