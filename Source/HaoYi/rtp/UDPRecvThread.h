@@ -6,16 +6,19 @@
 #include "circlebuf.h"
 #include "rtp.h"
 
+class CPlaySDL;
 class UDPSocket;
+class CPushThread;
 class CUDPRecvThread : public OSThread
 {
 public:
-	CUDPRecvThread(int nDBRoomID, int nDBCameraID);
+	CUDPRecvThread(CPushThread * lpPushThread, int nDBRoomID, int nDBCameraID);
 	virtual ~CUDPRecvThread();
 	virtual void Entry();
 public:
 	GM_Error		InitThread();
 private:
+	void			ClosePlayer();
 	void			CloseSocket();
 	void			doSendCreateCmd();
 	void			doSendDeleteCmd();
@@ -32,7 +35,10 @@ private:
 	void			doTagDetectProcess(char * lpBuffer, int inRecvLen);
 	void			doTagHeaderProcess(char * lpBuffer, int inRecvLen);
 	void			doTagAVPackProcess(char * lpBuffer, int inRecvLen);
+
+	void			doAVSaveCircle(char * lpBuffer, int inRecvLen);
 	void			doEraseLoseSeq(uint32_t inSeqID);
+	void			doParseFrame();
 
 	uint32_t		doCalcMaxConSeq();
 private:
@@ -66,5 +72,10 @@ private:
 	int64_t			m_next_detect_ns;		// 下次发送探测包的时间戳 => 纳秒 => 每隔1秒发送一次...
 	int64_t			m_next_ready_ns;		// 下次发送就绪命令时间戳 => 纳秒 => 每隔100毫秒发送一次...
 
+	uint32_t		m_nMaxPlaySeq;			// RTP当前最大播放序列号 => 最大连续有效序列号...
+
 	GM_MapLose		m_MapLose;				// 检测到的丢包集合队列...
+	
+	CPlaySDL    *  m_lpPlaySDL;             // SDL播放管理器...
+	CPushThread *  m_lpPushThread;          // 上传推流管理器...
 };

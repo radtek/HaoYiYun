@@ -269,12 +269,14 @@
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="myRTSPClient.h" />
     <ClInclude Include="Ntray.h" />
+    <ClInclude Include="PullThread.h" />
     <ClInclude Include="PushThread.h" />
     <ClInclude Include="ReadSPS.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="rtp\bmem.h" />
     <ClInclude Include="rtp\circlebuf.h" />
     <ClInclude Include="rtp\rtp.h" />
+    <ClInclude Include="rtp\UDPPlayThread.h" />
     <ClInclude Include="rtp\UDPRecvThread.h" />
     <ClInclude Include="rtp\UDPSendThread.h" />
     <ClInclude Include="stdafx.h" />
@@ -1420,11 +1422,13 @@
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="myRTSPClient.cpp" />
     <ClCompile Include="Ntray.cpp" />
+    <ClCompile Include="PullThread.cpp" />
     <ClCompile Include="PushThread.cpp" />
     <ClCompile Include="ReadSPS.cpp" />
     <ClCompile Include="rtp\bmem.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="rtp\UDPPlayThread.cpp" />
     <ClCompile Include="rtp\UDPRecvThread.cpp" />
     <ClCompile Include="rtp\UDPSendThread.cpp" />
     <ClCompile Include="stdafx.cpp">

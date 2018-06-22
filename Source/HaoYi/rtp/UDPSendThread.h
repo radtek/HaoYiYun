@@ -42,6 +42,7 @@ private:
 		kCmdSendHeader	= 1,				// 开始发送 => 序列头命令状态
 		kCmdWaitReady	= 2,				// 等待接收 => 来自观看端的准备就绪命令状态
 		kCmdSendAVPack	= 3,				// 开始发送 => 音视频数据包状态
+		kCmdUnkownState = 4,				// 未知状态 => 线程已经退出		
 	} m_nCmdState;							// 命令状态变量...
 
 	string			m_strSPS;				// 视频sps

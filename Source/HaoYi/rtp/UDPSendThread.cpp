@@ -43,6 +43,8 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
 
 CUDPSendThread::~CUDPSendThread()
 {
+	// 未知状态，阻止继续塞包...
+	m_nCmdState = kCmdUnkownState;
 	// 停止线程，等待退出...
 	this->StopAndWaitForThread();
 	// 关闭UDPSocket对象...
@@ -171,6 +173,18 @@ GM_Error CUDPSendThread::InitThread()
 void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
+	// 判断线程是否已经退出 或 环形队列缓冲无效...
+	if( this->IsStopRequested() || m_circle.capacity <= 0 ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Student-Pusher] Time: %lu ms, Error => Send Thread has been stoped\n", now_ms);
+		return;
+	}
+	// 如果数据帧的长度为0，打印错误，直接返回...
+	if( inFrame.strData.size() <= 0 ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Student-Pusher] Time: %lu ms, Error => Input Frame Size is Zero\n", now_ms);
+		return;
+	}
 	/////////////////////////////////////////////////////////////////////
 	// 注意：只有当接收端准备好之后，才能开始推流操作...
 	/////////////////////////////////////////////////////////////////////
@@ -374,15 +388,22 @@ void CUDPSendThread::doSendLosePacket()
 	rtp_hdr_t * lpFrontHeader = NULL;
 	rtp_hdr_t * lpSendHeader = NULL;
 	int nSendPos = 0, nSendSize = 0;
-	int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
 	lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
 	// 如果要补充的数据包序号比最小序号还要小 => 没有找到，直接返回...
-	if( rtpLose.lose_seq < lpFrontHeader->seq )
+	if( rtpLose.lose_seq < lpFrontHeader->seq ) {
+		TRACE("[Student-Pusher] Supply Error => lose: %lu, min: %lu\n", rtpLose.lose_seq, lpFrontHeader->seq);
 		return;
+	}
 	ASSERT( rtpLose.lose_seq >= lpFrontHeader->seq );
 	// 注意：环形队列当中的序列号一定是连续的...
 	// 两者之差就是要发送数据包的头指针位置...
-	nSendPos = (rtpLose.lose_seq - lpFrontHeader->seq) * nPackSize;
+	nSendPos = (rtpLose.lose_seq - lpFrontHeader->seq) * nPerPackSize;
+	// 如果补包位置大于或等于环形队列长度 => 补包越界...
+	if( nSendPos >= m_circle.size ) {
+		TRACE("[Student-Pusher] Supply Error => Position Excessed\n");
+		return;
+	}
 	// 获取将要发送数据包的包头位置和有效数据长度...
 	lpSendHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nSendPos);
 	// 如果要发送的数据位置越界或无效，直接返回...
@@ -443,17 +464,17 @@ void CUDPSendThread::doSendPacket()
 	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
 
 	// 不丢包 => 调用套接字接口，直接发送RTP数据包...
-	//theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
-	//(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
+	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 
 	/////////////////////////////////////////////////////////////////////////////////
 	// 实验：随机丢包...
 	/////////////////////////////////////////////////////////////////////////////////
-	if( m_nCurSendSeq % 3 != 2 ) {
+	/*if( m_nCurSendSeq % 3 != 2 ) {
 		// 调用套接字接口，直接发送RTP数据包...
 		theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 		(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
-	}
+	}*/
 	/////////////////////////////////////////////////////////////////////////////////
 
 	// 成功发送数据包 => 累加发送序列号...

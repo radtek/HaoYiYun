@@ -5,7 +5,7 @@
 #include "srs_librtmp.h"
 #include "AmfByteStream.h"
 #include "..\ReadSPS.h"
-#include "..\PushThread.h"
+#include "..\PullThread.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

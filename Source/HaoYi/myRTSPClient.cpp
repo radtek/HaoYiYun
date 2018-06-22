@@ -1,7 +1,7 @@
 
 #include "StdAfx.h"
 #include "myRTSPClient.h"
-#include "PushThread.h"
+#include "PullThread.h"
 #include "UtilTool.h"
 
 #include "libmp4v2\RecThread.h"

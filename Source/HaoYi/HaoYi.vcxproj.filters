@@ -335,6 +335,12 @@
     <ClInclude Include="rtp\UDPSendThread.h">
       <Filter>rtp</Filter>
     </ClInclude>
+    <ClInclude Include="rtp\UDPPlayThread.h">
+      <Filter>rtp</Filter>
+    </ClInclude>
+    <ClInclude Include="PullThread.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HaoYi.cpp">
@@ -1056,6 +1062,12 @@
     </ClCompile>
     <ClCompile Include="rtp\UDPSendThread.cpp">
       <Filter>rtp</Filter>
+    </ClCompile>
+    <ClCompile Include="rtp\UDPPlayThread.cpp">
+      <Filter>rtp</Filter>
+    </ClCompile>
+    <ClCompile Include="PullThread.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
