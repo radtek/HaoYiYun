@@ -204,9 +204,9 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 				now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	}*/
 	// 打印所有的音视频数据帧...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
-			now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
+	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+	//TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
+	//		now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
 	rtpHeader.tm  = TM_TAG_STUDENT;
@@ -240,7 +240,9 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
 		// 打印调试信息...
-		//TRACE("[PUSH] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", rtpHeader.seq, rtpHeader.ts, rtpHeader.pt, rtpHeader.pst, rtpHeader.ped, rtpHeader.psize, nZeroSize);
+		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		//TRACE( "[Student-Pusher] Time: %lu ms, Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu\n", now_ms, 
+		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
 	}
 }
 

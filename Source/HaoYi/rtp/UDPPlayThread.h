@@ -15,12 +15,11 @@ extern "C"
 #include "SDL2/SDL.h"
 };
 
-typedef	map<int64_t, AVPacket>	GM_MapPacket;	// DTS => AVPacket => 解码前的数据帧 => 毫秒 => 1/1000
-typedef map<int64_t, AVFrame*>  GM_MapFrame;	// PTS => AVFrame  => 解码后的视频帧 => 纳秒 => 1/1000000000
-typedef map<int64_t, string>    GM_MapAudio;	// PTS => string   => 解码后的音频帧 => 纳秒 => 1/1000000000
+typedef	map<int64_t, AVPacket>		GM_MapPacket;	// DTS => AVPacket  => 解码前的数据帧 => 毫秒 => 1/1000
+typedef map<int64_t, AVFrame*>		GM_MapFrame;	// PTS => AVFrame   => 解码后的视频帧 => 毫秒 => 1/1000
+typedef map<int64_t, string>		GM_MapAudio;	// PTS => string    => 解码后的音频帧 => 毫秒 => 1/1000
 
 // 第三版：音视频线程分开播放...
-class CUDPRecvThread;
 class CRenderWnd;
 class CPlaySDL;
 class CDecoder
@@ -33,11 +32,13 @@ public:
 	void		doPushPacket(AVPacket & inPacket);
 	int			GetMapPacketSize() { return m_MapPacket.size(); }
 protected:
-	AVCodec         *	m_lpCodec;			// 解码器...
-	AVCodecContext  *	m_lpDecoder;		// 解码器描述...
+	AVCodec         *   m_lpCodec;			// 解码器...
+	AVFrame         *   m_lpDFrame;			// 解码结构体...
+	AVCodecContext  *   m_lpDecoder;		// 解码器描述...
 	GM_MapPacket		m_MapPacket;		// 解码前的数据帧...
 	GM_MapFrame			m_MapFrame;			// 解码后的数据帧....
 	int64_t				m_play_next_ns;		// 下一个要播放帧的系统纳秒值...
+	bool				m_bNeedSleep;		// 休息标志 => 只要有解码或播放就不能休息...
 };
 
 class CVideoThread : public CDecoder, public OSThread
@@ -49,9 +50,9 @@ public:
 public:
 	BOOL	InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+private:
 	void	doDecodeFrame();
 	void	doDisplaySDL();
-	void	doCalcNextNS();
 private:
 	int				m_nFPS;
 	int				m_nWidth;
@@ -76,9 +77,9 @@ public:
 public:
 	BOOL	InitAudio(int nRateIndex, int nChannelNum);
 	void	doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, int inOffset);
+private:
 	void	doDecodeFrame();
 	void	doDisplaySDL();
-	void	doCalcNextNS();
 private:
 	int					m_audio_rate_index;
 	int					m_audio_channel_num;
@@ -99,21 +100,20 @@ private:
 class CPlaySDL
 {
 public:
-	CPlaySDL(CUDPRecvThread * inRecvThread);
+	CPlaySDL();
 	~CPlaySDL();
 public:
 	void		PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime);
 	BOOL		InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL		InitAudio(int nRateIndex, int nChannelNum);
-	int64_t		GetSysZeroNS() { return m_play_sys_ts; }
-	int64_t		GetStartPtsNS() { return m_start_pts; }
+	int64_t		GetSysZeroNS() { return m_sys_zero_ns; }
+	int64_t		GetStartPtsMS() { return m_start_pts_ms; }
 private:
-	int64_t				m_play_sys_ts;		// 系统计时零点 => 启动时间戳...
-	int64_t				m_start_pts;		// 第一帧的PTS时间戳计时起点...
+	int64_t				m_sys_zero_ns;		// 系统计时零点 => 启动时间戳 => 纳秒...
+	int64_t				m_start_pts_ms;		// 第一帧的PTS时间戳计时起点 => 毫秒...
 
 	CVideoThread    *   m_lpVideoThread;	// 视频线程...
 	CAudioThread    *   m_lpAudioThread;	// 音频线程...
-	CUDPRecvThread	*	m_lpRecvThread;		// 接收线程...
 };
 
 // 第二版：音视频线程合并播放...

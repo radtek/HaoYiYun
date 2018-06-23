@@ -15,6 +15,7 @@
 
 #include "UDPSendThread.h"
 #include "UDPRecvThread.h"
+#include "UDPPlayThread.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -25,6 +26,7 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
   , m_lpCamera(lpCamera)
   , m_nSliceInx(0)
 {
+	m_lpPlaySDL = NULL;
 	m_lpUDPSendThread = NULL;
 	m_lpUDPRecvThread = NULL;
 
@@ -77,6 +79,10 @@ CPushThread::~CPushThread()
 	if( m_lpUDPSendThread != NULL ) {
 		delete m_lpUDPSendThread;
 		m_lpUDPSendThread = NULL;
+	}
+	if( m_lpPlaySDL != NULL ) {
+		delete m_lpPlaySDL;
+		m_lpPlaySDL = NULL;
 	}
 
 	// 删除rtmp对象，这里必须加互斥，避免Connect返回时rtmp已经被删除，造成内存错误...
@@ -725,9 +731,9 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 		m_lpUDPSendThread->PushFrame(inFrame);
 	}
 	// 将音视频数据推入播放线程...
-	//if( m_lpPlaySDL != NULL ) {
-	//	m_lpPlaySDL->PushFrame(inFrame);
-	//}
+	if( m_lpPlaySDL != NULL ) {
+		m_lpPlaySDL->PushFrame(inFrame.strData, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime);
+	}
 	// 将超时计时点复位，重新计时...
 	m_dwTimeOutMS = ::GetTickCount();
 	// 进行录像处理...
@@ -743,27 +749,6 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	// 累加接收数据包的字节数，加入缓存队列...
 	m_nCurRecvByte += inFrame.strData.size();
 	m_MapFrame.insert(pair<uint32_t, FMS_FRAME>(inFrame.dwSendTime, inFrame));
-
-	/*// 将音视频数据帧投递给播放线程 => 延时20个数据帧...
-	static bool g_b_delay = false;
-	if( g_b_delay && m_lpPlayThread != NULL ) {
-		m_lpPlayThread->PushFrame(inFrame);
-	}
-	if( !g_b_delay && m_lpPlayThread != NULL && m_MapFrame.size() > 100 ) {
-		// 开始发包之前启动音视频解码器...
-		//this->StartPlayByVideo(m_lpRtspThread->GetVideoSPS(), m_lpRtspThread->GetVideoPPS(), m_lpRtspThread->GetVideoWidth(), m_lpRtspThread->GetVideoHeight(), 15);
-		//this->StartPlayByAudio(m_lpRtspThread->GetAudioRateIndex(), m_lpRtspThread->GetAudioChannelNum());
-		KH_MapFrame::iterator itorItem = m_MapFrame.begin();
-		while( itorItem != m_MapFrame.end() ) {
-			int nSize = m_MapFrame.count(itorItem->first);
-			for(int i = 0; i < nSize; ++i) {
-				FMS_FRAME & theFrame = itorItem->second;
-				m_lpPlayThread->PushFrame(theFrame);
-				++itorItem;
-			}
-		}
-		g_b_delay = true;
-	}*/
 
 	// 如果是新的视频数据帧是关键帧，丢弃已缓存的，存放新的关键帧，以便截图使用...
 	if( inFrame.typeFlvTag == FLV_TAG_TYPE_VIDEO ) {
@@ -1270,10 +1255,10 @@ CRenderWnd * CPushThread::GetRenderWnd()
 	return m_lpCamera->GetVideoWnd()->GetRenderWnd();
 }
 
-/*void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
+void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
 	if( m_lpPlaySDL == NULL ) {
-		m_lpPlaySDL = new CPlaySDL(this);
+		m_lpPlaySDL = new CPlaySDL();
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	CRenderWnd * lpRenderWnd = m_lpCamera->GetVideoWnd()->GetRenderWnd();
@@ -1283,11 +1268,11 @@ CRenderWnd * CPushThread::GetRenderWnd()
 void CPushThread::StartPlayByAudio(int nRateIndex, int nChannelNum)
 {
 	if( m_lpPlaySDL == NULL ) {
-		m_lpPlaySDL = new CPlaySDL(this);
+		m_lpPlaySDL = new CPlaySDL();
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	m_lpPlaySDL->InitAudio(nRateIndex, nChannelNum);
-}*/
+}
 
 void CPushThread::StartSendByAudio(int nRateIndex, int nChannelNum)
 {

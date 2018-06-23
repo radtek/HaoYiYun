@@ -6,6 +6,7 @@
 
 //#define _SAVE_H264_
 
+class CPlaySDL;
 class LibMP4;
 class LibRtmp;
 class CCamera;
@@ -50,8 +51,8 @@ public:
 	void			StartSendByAudio(int nRateIndex, int nChannelNum);
 	void			StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 
-	//void			StartPlayByAudio(int nRateIndex, int nChannelNum);
-	//void			StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
+	void			StartPlayByAudio(int nRateIndex, int nChannelNum);
+	void			StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 private:
 	virtual	void	Entry();
 
@@ -126,6 +127,8 @@ private:
 
 	CUDPSendThread  * m_lpUDPSendThread;// UDP发送线程...
 	CUDPRecvThread  * m_lpUDPRecvThread;// UDP接收线程...
+
+	CPlaySDL        * m_lpPlaySDL;      // SDL播放管理器...
 
 #ifdef _SAVE_H264_
 	bool			m_bSave_sps;

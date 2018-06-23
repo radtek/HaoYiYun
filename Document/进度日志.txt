@@ -183,16 +183,25 @@
        进入最复杂的阶段 => 丢包检测，丢包补充，缓冲区控制；
        已收到最大连续包号 = 最小丢包号 - 1
        解决了UDPSendThread当中数据帧打包问题：帧总长度刚好是800整数倍（分片大小），打包错误会导致psize为0；
-       现在重点解决视频帧解码无法得到got_picture的问题，参考文档如下 => 这些文档的方法都不能解决最终问题 => 最终发现是由于丢了数据帧造成的
+       现在重点解决视频帧解码无法得到got_picture的问题，参考文档如下 => 这些文档的方法都不能解决最终问题 => 最终发现是由于AVFrame的缓冲区受后面解码帧的影响；
+       实验发现：只要不释放AVFrame空间，即使缓存上百帧，后面解码的数据帧也会影响前面的上百帧数据，因此，解码完毕，需要立刻将解码后的数据拷走，原来AVFrame不要释放，为后续待解码AVPacket提供解码参考源，这也能解释为什么不丢包也会解码失败的问题；
+       终于解决了延时播放，自由控制时间戳，解码后的数据混乱问题，解码后无法得到picture等等一系列头疼问题，主要是对ffmpeg的解码机制不了解；
+       RTSP的时间戳计算目前看没有问题，网络解析出来的压缩数据帧也没有问题，就是目前的方法：构造AVPacket，投递给直接解码就可以了；
        https://bbs.csdn.net/topics/392059669 => 只有I帧和P帧 => 没有解决
        https://blog.csdn.net/u013898698/article/details/61433612 => 编码延时 => superfast => zerolatency
        https://blog.csdn.net/leixiaohua1020/article/details/14215833 => CODEC_CAP_DELAY
        https://blog.csdn.net/h514434485/article/details/52164087
-       https://blog.csdn.net/leixiaohua1020/article/details/19016109
        https://blog.csdn.net/huyinguo/article/details/4725326 => CODEC_FLAG_LOW_DELAY
-       http://blog.jianchihu.net/avcodec_decode_video2-no-pic.html
        https://bbs.csdn.net/topics/390692774
        解码成功，got_picture为0，说明需要后续的数据帧；
+       https://blog.csdn.net/u013506600/article/details/22329403 => 有关AVFrame当中picture解码问题；
+       需要解决解码失败之后，造成解码器内部会缓存数据帧，后续再解码时，永远有延时，需要将解码器内部缓存的数据帧快速取出来，避免延时；
+       需要配合best_effort_timestamp时间戳，而不能用AVPacket里面的时间戳，只有解码器知道已缓存的数据帧的真正时间戳是什么；
+       然而，以上的实验并不成功，还会造成反复卡顿现象，需要另外寻找新的方法；
+       同时，增大了AVFrame解码缓冲的块数，仍然无法解决解码失败后的延时问题；
+       https://blog.csdn.net/leixiaohua1020/article/details/19016109
+       http://blog.jianchihu.net/avcodec_decode_video2-no-pic.html
+
    C：（未完成）      学生端使用单独线程用UDP从Linux服务器，用最快的速度，拉取音视频数据，组成数据帧，使用SDL2.0播放出来；
    D：（未完成）      将学生端数据拉取、组包、解码过程封装起来，移植到讲师端；整个过程控制在1秒以内；
    E：（未完成）      改造讲师端推流机制，使用UDP推流到Linux服务器；不使用rtmp推流；
