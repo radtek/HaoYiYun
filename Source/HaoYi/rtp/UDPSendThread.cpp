@@ -119,8 +119,8 @@ GM_Error CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	LPCTSTR lpszAddr = "192.168.1.70";
-	//LPCTSTR lpszAddr = DEF_UDP_HOME;
+	//LPCTSTR lpszAddr = "192.168.1.70";
+	LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -170,6 +170,16 @@ GM_Error CUDPSendThread::InitThread()
 	TRACE("[Pack] Seq: %lu, TS: 0, Type: %d, SPS: %lu, PPS: %lu, Zero: %d\n", m_nCurPackSeq, PT_TAG_HEADER, m_strSPS.size(), m_strPPS.size(), nZeroSize);
 }*/
 
+static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
+{
+	static char szBuf[MAX_PATH] = {0};
+	char * lpszPath = "F:/MP4/Dst/send.txt";
+	FILE * pFile = fopen(lpszPath, "a+");
+	sprintf(szBuf, "PTS: %lu, Type: %d, Key: %d, Size: %d\n", inPTS, inType, bIsKeyFrame, inSize);
+	fwrite(szBuf, 1, strlen(szBuf), pFile);
+	fclose(pFile);
+}
+
 void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
@@ -207,6 +217,8 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	//TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
 	//		now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
+	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData.size());
+
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
 	rtpHeader.tm  = TM_TAG_STUDENT;

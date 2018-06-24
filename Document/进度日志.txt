@@ -207,8 +207,8 @@
        在没有B帧的情况下，误码可能会导致视频帧在这里堆积，所以要在这个判断之前将s->avctx->has_b_frames强制设为0。
        https://blog.csdn.net/quanben/article/details/4400336
 
-       CUDPSendThread => CPU占用过高 => 需要优化
-       CUDPRecvThread => CPU占用过高 => 需要优化
+       （未完成）CUDPSendThread => CPU占用过高 => 需要优化 => 可以考虑使用QT的套接字模型来解决
+       （未完成）CUDPRecvThread => CPU占用过高 => 需要优化 => 可以考虑使用QT的套接字模型来解决
 
    C：（未完成）      学生端使用单独线程用UDP从Linux服务器，用最快的速度，拉取音视频数据，组成数据帧，使用SDL2.0播放出来；
    D：（未完成）      将学生端数据拉取、组包、解码过程封装起来，移植到讲师端；整个过程控制在1秒以内；

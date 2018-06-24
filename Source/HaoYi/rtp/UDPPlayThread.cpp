@@ -404,6 +404,11 @@ void CAudioThread::doDecodeFrame()
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	if( nResult < 0 || !got_picture ) {
 		TRACE("[Audio] Error => decode_audio failed, PTS: %I64d, DecodeSize: %d, PacketSize: %d\n", thePacket.pts + inStartPtsMS, nResult, thePacket.size);
+		if( nResult < 0 ) {
+			static char szErrBuf[64] = {0};
+			av_strerror(nResult, szErrBuf, 64);
+			TRACE("[Audio] Error => %s \n", szErrBuf);
+		}
 		av_free_packet(&thePacket);
 		m_MapPacket.erase(itorItem);
 		return;
@@ -462,7 +467,7 @@ void CAudioThread::doDisplaySDL()
 	int nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
 	int nQueueSample = nQueueBytes / m_out_buffer_size;
 	if( nQueueSample > nAllowSample ) {
-		TRACE("[Audio] Clear Audio Buffer, QueueBytes: %lu\n", nQueueBytes);
+		TRACE("[Audio] Clear Audio Buffer, QueueBytes: %lu, AVPacket: %d, AVFrame: %d\n", nQueueBytes, m_MapPacket.size(), m_MapAudio.size());
 		SDL_ClearQueuedAudio(m_nDeviceID);
 	}
 	// 将音频解码后的数据帧投递给音频设备...
