@@ -6,13 +6,11 @@
 #include "..\ReadSPS.h"
 
 #include "UDPPlayThread.h"
+#include "rtp.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
-#define ADTS_HEADER_SIZE	7
-#define MAX_SLEEP_MS		10
 
 CDecoder::CDecoder()
   : m_lpCodec(NULL)
@@ -68,9 +66,9 @@ void CDecoder::doSleepTo()
 	// < 0 不能休息，有不能休息标志 => 都直接返回...
 	if( !m_bNeedSleep || m_play_next_ns < 0 )
 		return;
-	// 计算要休息的时间 => 最多休息10毫秒...
+	// 计算要休息的时间 => 最大休息毫秒数...
 	uint64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	const uint64_t timeout_ns = 10 * 1000000;
+	const uint64_t timeout_ns = MAX_SLEEP_MS * 1000000;
 	// 如果比当前时间小(已过期)，直接返回...
 	if( m_play_next_ns <= cur_time_ns )
 		return;

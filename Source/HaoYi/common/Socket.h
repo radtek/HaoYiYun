@@ -21,6 +21,7 @@ public:
 	LPCTSTR			GetRemoteAddrStrV4();
 
 	void			Broadcast();
+	void			SetBlocking();
 	void 			NonBlocking();
 	void			ReuseAddr();
 	void			NoDelay();

@@ -5,7 +5,9 @@
 #define DEF_UDP_PORT        5252            // 默认UDP服务器端口
 #define DEF_MTU_SIZE        800             // 默认MTU分片大小
 #define MAX_BUFF_LEN        1024            // 最大报文长度...
+#define MAX_SLEEP_MS		  15			// 最大休息时间(毫秒)
 #define RELOAD_TIME_OUT       20            // 重建间隔周期(秒) => 等待服务器超时被删除之后，才能被重建...
+#define ADTS_HEADER_SIZE	   7			// AAC音频数据包头长度
 
 //
 // 定义交互终端类型...

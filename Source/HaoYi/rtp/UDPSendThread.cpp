@@ -292,7 +292,7 @@ void CUDPSendThread::doSendCreateCmd()
 		return;
 	// 每隔100毫秒发送创建命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 100000000;
+	int64_t period_ns = 100 * 1000000;
 	// 如果发包时间还没到，直接返回...
 	if( m_next_create_ns > cur_time_ns )
 		return;
@@ -317,7 +317,7 @@ void CUDPSendThread::doSendHeaderCmd()
 		return;
 	// 每隔100毫秒发送序列头命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 100000000;
+	int64_t period_ns = 100 * 1000000;
 	// 如果发包时间还没到，直接返回...
 	if( m_next_header_ns > cur_time_ns )
 		return;
@@ -350,7 +350,7 @@ void CUDPSendThread::doSendDetectCmd()
 	OSMutexLocker theLock(&m_Mutex);
 	// 每隔1秒发送一个探测命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 1000000000;
+	int64_t period_ns = 1000 * 1000000;
 	// 第一个探测包延时1/3秒发送 => 避免第一个探测包先到达，引发服务器发送重建命令...
 	if( m_next_detect_ns < 0 ) { 
 		m_next_detect_ns = cur_time_ns + period_ns / 3;
@@ -817,8 +817,8 @@ void CUDPSendThread::doSleepTo()
 	// 如果不能休息，直接返回...
 	if( !m_bNeedSleep )
 		return;
-	// 计算要休息的时间 => 休息5毫秒...
-	uint64_t delta_ns = 5 * 1000000;
+	// 计算要休息的时间 => 最大休息毫秒数...
+	uint64_t delta_ns = MAX_SLEEP_MS * 1000000;
 	uint64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	// 调用系统工具函数，进行sleep休息...
 	CUtilTool::os_sleepto_ns(cur_time_ns + delta_ns);

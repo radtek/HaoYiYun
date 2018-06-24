@@ -112,6 +112,13 @@ void Socket::SetSocketRecvBufSize(UInt32 inNewSize)
 	ASSERT(err == 0);
 }
 
+void Socket::SetBlocking()
+{
+	u_long	one	= 0;
+	int		err = ::ioctlsocket(m_hSocket, FIONBIO, &one);
+	ASSERT(err == 0);
+}
+
 void Socket::NonBlocking()
 {
 	u_long	one	= 1;

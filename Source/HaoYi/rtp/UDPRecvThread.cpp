@@ -163,7 +163,7 @@ void CUDPRecvThread::doSendCreateCmd()
 		return;
 	// 每隔100毫秒发送创建命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 100000000;
+	int64_t period_ns = 100 * 1000000;
 	// 如果发包时间还没到，直接返回...
 	if( m_next_create_ns > cur_time_ns )
 		return;
@@ -185,7 +185,7 @@ void CUDPRecvThread::doSendDetectCmd()
 	OSMutexLocker theLock(&m_Mutex);
 	// 每隔1秒发送一个探测命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 1000000000;
+	int64_t period_ns = 1000 * 1000000;
 	// 第一个探测包延时1/3秒发送 => 避免第一个探测包先到达，引发服务器发送重建命令...
 	if( m_next_detect_ns < 0 ) { 
 		m_next_detect_ns = cur_time_ns + period_ns / 3;
@@ -237,7 +237,7 @@ void CUDPRecvThread::doSendReadyCmd()
 	// 注意：这时音视频序列头已经接收完毕...
 	// 每隔100毫秒发送就绪命令包 => 必须转换成有符号...
 	int64_t cur_time_ns = CUtilTool::os_gettime_ns();
-	int64_t period_ns = 100000000;
+	int64_t period_ns = 100 * 1000000;
 	// 如果发包时间还没到，直接返回...
 	if( m_next_ready_ns > cur_time_ns )
 		return;
@@ -294,6 +294,10 @@ void CUDPRecvThread::doSendSupplyCmd()
 			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况...
 			// 修正下次重传时间点 => cur_time + rtt => 丢包时的当前时间 + 网络往返延迟值...
 			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_ms,0);
+			// 如果补包次数大于1，下次补包不要太快，追加一个休息周期..
+			if( rtpLose.resend_count > 1 ) {
+				rtpLose.resend_time += MAX_SLEEP_MS;
+			}
 		}
 		// 累加丢包算子对象...
 		++itorItem;
@@ -533,7 +537,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
 		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		//TRACE("[Teacher-Looker] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		TRACE("[Teacher-Looker] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
 }
 
@@ -803,8 +807,8 @@ void CUDPRecvThread::doSleepTo()
 	// 如果不能休息，直接返回...
 	if( !m_bNeedSleep )
 		return;
-	// 计算要休息的时间 => 休息5毫秒...
-	uint64_t delta_ns = 5 * 1000000;
+	// 计算要休息的时间 => 最大休息毫秒数...
+	uint64_t delta_ns = MAX_SLEEP_MS * 1000000;
 	uint64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	// 调用系统工具函数，进行sleep休息...
 	CUtilTool::os_sleepto_ns(cur_time_ns + delta_ns);
