@@ -398,7 +398,6 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	/////////////////////////////////////////////////////////////////
 	// 开始重建本地播放器对象...
 	/////////////////////////////////////////////////////////////////
-	return;
 	// 如果播放器已经创建，直接返回...
 	if( m_lpPlaySDL != NULL || m_lpPushThread == NULL )
 		return;
@@ -542,7 +541,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 	}
 }
 
-static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
+/*static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/recv.txt";
@@ -551,6 +550,16 @@ static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inS
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
 }
+
+static void DoSaveRecvSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, uint32_t inPTS)
+{
+	static char szBuf[MAX_PATH] = {0};
+	char * lpszPath = "F:/MP4/Dst/recv_seq.txt";
+	FILE * pFile = fopen(lpszPath, "a+");
+	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
+	fwrite(szBuf, 1, strlen(szBuf), pFile);
+	fclose(pFile);
+}*/
 
 void CUDPRecvThread::doParseFrame()
 {
@@ -575,6 +584,17 @@ void CUDPRecvThread::doParseFrame()
 	m_nMaxPlaySeq = lpFirstHeader->seq;
 	circlebuf_pop_front(&m_circle, NULL, nPerPackSize);*/
 
+	// 验证是否丢包的实验...
+	/*int nPerTestSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	if( m_circle.size <= nPerTestSize )
+		return;
+	rtp_hdr_t * lpTestHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+	if( lpTestHeader->pt == PT_TAG_LOSE )
+		return;
+	DoSaveRecvSeq(lpTestHeader->seq, lpTestHeader->psize, lpTestHeader->pst, lpTestHeader->ped, lpTestHeader->ts);
+	circlebuf_pop_front(&m_circle, NULL, nPerTestSize);
+	return;*/
+
 	/////////////////////////////////////////////////////////////////////////////////////
 	// 注意：环形队列至少要有一个数据包存在，否则，在发生丢包时，无法发现...
 	// 如果环形队列为空或播放器对象无效，直接返回...
@@ -593,6 +613,7 @@ void CUDPRecvThread::doParseFrame()
 		// 更新当前最大播放序列号并保存起来...
 		m_nMaxPlaySeq = lpFrontHeader->seq;
 		// 删除这个数据包，返回不休息，继续找...
+		//DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
 		circlebuf_pop_front(&m_circle, NULL, nPerPackSize);
 		// 修改休息状态 => 已经抽取数据包，不能休息...
 		m_bNeedSleep = false;
@@ -654,8 +675,23 @@ void CUDPRecvThread::doParseFrame()
 		TRACE("[Teacher-Looker] Time: %lu ms, Error => Frame size is Zero, PlaySeq: %lu, Type: %d, Key: %d\n", now_ms, m_nMaxPlaySeq, pt_type, is_key);
 		return;
 	}
+	// 如果环形队列被全部抽干，直接返回...
+	if( nConsumeSize >= m_circle.size )
+		return;
 	// 当前已解析的序列号保存为当前最大播放序列号...
 	m_nMaxPlaySeq = cur_seq;
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 测试代码 => 将要删除的数据包信息保存到文件当中...
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*uint32_t nTestSeq = min_seq;
+	while( nTestSeq <= cur_seq ) {
+		DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
+		uint32_t nPosition = (++nTestSeq - min_seq) * nPerPackSize;
+		if( nPosition >= m_circle.size ) break;
+		lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nPosition);
+	}*/
+
 	// 删除已解析完毕的环形队列数据包 => 回收缓冲区...
 	circlebuf_pop_front(&m_circle, NULL, nConsumeSize);
 	// 将解析到的有效数据帧推入播放对象当中...
@@ -666,7 +702,7 @@ void CUDPRecvThread::doParseFrame()
 	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	//TRACE( "[Teacher-Looker] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d\n", 
 	//		now_ms, pt_type, is_key, ts_ms, strFrame.size(), m_nMaxPlaySeq, m_circle.size/nPerPackSize );
-	DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame.size());
+	//DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame.size());
 	// 修改休息状态 => 已经抽取完整音视频数据帧，不能休息...
 	m_bNeedSleep = false;
 }
