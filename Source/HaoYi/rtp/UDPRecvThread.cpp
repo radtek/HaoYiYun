@@ -541,7 +541,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 	}
 }
 
-/*static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
+static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/recv.txt";
@@ -559,7 +559,7 @@ static void DoSaveRecvSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
-}*/
+}
 
 void CUDPRecvThread::doParseFrame()
 {
@@ -613,7 +613,7 @@ void CUDPRecvThread::doParseFrame()
 		// 更新当前最大播放序列号并保存起来...
 		m_nMaxPlaySeq = lpFrontHeader->seq;
 		// 删除这个数据包，返回不休息，继续找...
-		//DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
+		DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
 		circlebuf_pop_front(&m_circle, NULL, nPerPackSize);
 		// 修改休息状态 => 已经抽取数据包，不能休息...
 		m_bNeedSleep = false;
@@ -684,13 +684,13 @@ void CUDPRecvThread::doParseFrame()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 测试代码 => 将要删除的数据包信息保存到文件当中...
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*uint32_t nTestSeq = min_seq;
+	uint32_t nTestSeq = min_seq;
 	while( nTestSeq <= cur_seq ) {
 		DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
 		uint32_t nPosition = (++nTestSeq - min_seq) * nPerPackSize;
 		if( nPosition >= m_circle.size ) break;
 		lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nPosition);
-	}*/
+	}
 
 	// 删除已解析完毕的环形队列数据包 => 回收缓冲区...
 	circlebuf_pop_front(&m_circle, NULL, nConsumeSize);
@@ -702,7 +702,7 @@ void CUDPRecvThread::doParseFrame()
 	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	//TRACE( "[Teacher-Looker] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d\n", 
 	//		now_ms, pt_type, is_key, ts_ms, strFrame.size(), m_nMaxPlaySeq, m_circle.size/nPerPackSize );
-	//DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame.size());
+	DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame.size());
 	// 修改休息状态 => 已经抽取完整音视频数据帧，不能休息...
 	m_bNeedSleep = false;
 }

@@ -170,7 +170,7 @@ GM_Error CUDPSendThread::InitThread()
 	TRACE("[Pack] Seq: %lu, TS: 0, Type: %d, SPS: %lu, PPS: %lu, Zero: %d\n", m_nCurPackSeq, PT_TAG_HEADER, m_strSPS.size(), m_strPPS.size(), nZeroSize);
 }*/
 
-/*static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
+static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/send.txt";
@@ -188,7 +188,7 @@ static void DoSaveSendSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
-}*/
+}
 
 void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
@@ -227,7 +227,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	//TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
 	//		now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
-	//DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData.size());
+	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData.size());
 
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
@@ -265,7 +265,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 		//TRACE( "[Student-Pusher] Time: %lu ms, Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu\n", now_ms, 
 		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
-		//DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
+		DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
 	}
 }
 
