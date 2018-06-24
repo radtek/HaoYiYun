@@ -145,12 +145,15 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	// 查找需要的解码器 => 不用创建解析器...
 	m_lpCodec = avcodec_find_decoder(src_codec_id);
 	m_lpDecoder = avcodec_alloc_context3(m_lpCodec);
-	// 设置支持低延时模式 => 没啥作用...
+	// 设置支持低延时模式 => 没啥作用，必须配合具体过程...
 	m_lpDecoder->flags |= CODEC_FLAG_LOW_DELAY;
 	// 设置支持不完整片段解码 => 没啥作用...
 	if( m_lpCodec->capabilities & CODEC_CAP_TRUNCATED ) {
 		m_lpDecoder->flags |= CODEC_FLAG_TRUNCATED;
 	}
+	// 设置解码器关联参数配置 => 这里设置不起作用...
+	//m_lpDecoder->refcounted_frames = 1;
+	//m_lpDecoder->has_b_frames = 0;
 	// 打开获取到的解码器...
 	if( avcodec_open2(m_lpDecoder, m_lpCodec, NULL) < 0 ) {
 		TRACE("[Video] avcodec_open2 failed.\n");
@@ -240,7 +243,7 @@ void CVideoThread::doDisplaySDL()
 	// 将数据转换成jpg...
 	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, frame_pts, "F:/MP4/Dst");
 	// 打印正在播放的解码后视频数据...
-	TRACE("[Video] Player => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d\n", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
+	//TRACE("[Video] Player => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d\n", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：视频延时帧（落后帧），不能丢弃，必须继续显示，视频消耗速度相对较快，除非时间戳给错了，会造成播放问题。
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,30 +301,41 @@ void CVideoThread::doDecodeFrame()
 	}
 	// 这是为了测试原始PTS而获取的初始PTS值 => 只在打印调试信息时使用...
 	int64_t inStartPtsMS = m_lpPlaySDL->GetStartPtsMS();
-	// 抽取一个AVPacket进行解码操作，一个AVPacket不一定能解码出一个Picture...
+	// 抽取一个AVPacket进行解码操作，理论上一个AVPacket一定能解码出一个Picture...
+	// 由于数据丢失或B帧，投递一个AVPacket不一定能返回Picture，这时解码器就会将数据缓存起来，造成解码延时...
 	int got_picture = 0, nResult = 0;
 	GM_MapPacket::iterator itorItem = m_MapPacket.begin();
 	AVPacket & thePacket = itorItem->second;
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：由于只有 I帧 和 P帧，没有B帧，要让解码器快速丢掉解码错误数据，通过设置has_b_frames来完成
+	// 技术文档 => https://bbs.csdn.net/topics/390692774
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	m_lpDecoder->has_b_frames = 0;
+	// 将完整压缩数据帧放入解码器进行解码操作...
 	nResult = avcodec_decode_video2(m_lpDecoder, m_lpDFrame, &got_picture, &thePacket);
-	////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：目前只有 I帧 和 P帧  => 这里使用全局AVFrame，非常重要，能提供后续AVPacket的解码支持...
 	// 解码失败或没有得到完整图像 => 是需要后续AVPacket的数据才能解码出图像...
 	// 非常关键的操作 => m_lpDFrame 千万不能释放，继续灌AVPacket就能解码出图像...
-	////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	if( nResult < 0 || !got_picture ) {
-		TRACE("[Video] Error => decode_frame failed, PTS: %I64d, DecodeSize: %d, PacketSize: %d\n", thePacket.pts + inStartPtsMS, nResult, thePacket.size);
+		// 打印解码失败信息，显示坏帧的个数...
+		TRACE("[Video] Error => decode_frame failed, BFrame: %d, PTS: %I64d, DecodeSize: %d, PacketSize: %d\n", m_lpDecoder->has_b_frames, thePacket.pts + inStartPtsMS, nResult, thePacket.size);
+		// 这里非常关键，告诉解码器不要缓存坏帧(B帧)，一旦有解码错误，直接扔掉，这就是低延时解码模式...
+		m_lpDecoder->has_b_frames = 0;
+		// 丢掉解码失败的数据帧...
 		av_free_packet(&thePacket);
 		m_MapPacket.erase(itorItem);
 		return;
 	}
 	// 打印解码之后的数据帧信息...
-	//TRACE( "[Video] Decode => PTS: %I64d, pkt_dts: %I64d, pkt_pts: %I64d, Type: %d, DecodeSize: %d, PacketSize: %d\n",
+	//TRACE( "[Video] Decode => BFrame: %d, PTS: %I64d, pkt_dts: %I64d, pkt_pts: %I64d, Type: %d, DecodeSize: %d, PacketSize: %d\n", m_lpDecoder->has_b_frames,
 	//		m_lpDFrame->best_effort_timestamp + inStartPtsMS, m_lpDFrame->pkt_dts + inStartPtsMS, m_lpDFrame->pkt_pts + inStartPtsMS,
 	//		m_lpDFrame->pict_type, nResult, thePacket.size );
-	////////////////////////////////////////////////////////////////////////////////////////////
-	// 注意：这里仍然使用AVPacket的解码时间轴做为播放时间...
-	// 这样，一旦由于解码失败造成的数据中断，也不会造成视频显示的延迟问题...
-	////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：这里使用AVFrame计算的最佳有效时间戳，使用AVPacket的时间戳也是一样的...
+	// 因为，采用了低延时的模式，坏帧都扔掉了，解码器内部没有缓存数据，不会出现时间戳错位问题...
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	int64_t frame_pts_ms = m_lpDFrame->best_effort_timestamp;
 	// 重新克隆AVFrame，自动分配空间，按时间排序...
 	m_MapFrame[frame_pts_ms] = av_frame_clone(m_lpDFrame);
@@ -337,38 +351,6 @@ void CVideoThread::doDecodeFrame()
 	AVRational base_frame = {1, 1000000000};
 	int64_t frame_pts = av_rescale_q(lpFrame->best_effort_timestamp, base_pack, base_frame);*/
 }
-	
-/*void CVideoThread::doBringSkip()
-{
-	// 如果不能进行找回，直接返回...
-	if( !m_bCanBringSkip ) return;
-	// 找回缓存在解码器当中的数据帧...
-	while( m_skipped_frame > 3 ) {
-		AVFrame * lpDFrame = NULL;
-		if( m_listFrame.size() < m_lpDecoder->gop_size ) {
-			lpDFrame = av_frame_alloc();
-		} else {
-			lpDFrame = m_listFrame.front();
-			m_listFrame.pop_front();
-		}
-		m_skipped_frame--;
-		AVPacket thePacket = {0};
-		int got_picture = 0, nResult = 0;
-		nResult = avcodec_decode_video2(m_lpDecoder, lpDFrame, &got_picture, &thePacket);
-		// 如果小于0，打印错误信息...
-		if( nResult < 0 ) {
-			char szErrBuf[64] = {0};
-			av_strerror(nResult, szErrBuf, 64);
-			TRACE("[Video] Error => %s\n", szErrBuf);
-			continue;
-		}
-		// 如果没有获取到数据帧，继续执行...
-		if( !got_picture ) continue;
-		// 获取解码器适配的时间戳，重新克隆AVFrame，自动分配空间，按时间排序...
-		int64_t frame_pts_ms = lpDFrame->best_effort_timestamp;
-		m_MapFrame[frame_pts_ms] = av_frame_clone(lpDFrame);
-	}
-}*/
 
 CAudioThread::CAudioThread(CPlaySDL * lpPlaySDL)
 {
@@ -492,7 +474,7 @@ void CAudioThread::doDisplaySDL()
 	}
 	// 打印已经投递的音频数据信息...
 	nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
-	TRACE("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu\n", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
+	//TRACE("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu\n", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
 	// 删除已经使用的音频数据...
 	m_MapAudio.erase(itorItem);
 	// 修改休息状态 => 已经有播放，不能休息...

@@ -193,7 +193,8 @@
        https://blog.csdn.net/h514434485/article/details/52164087
        https://blog.csdn.net/huyinguo/article/details/4725326 => CODEC_FLAG_LOW_DELAY
        https://bbs.csdn.net/topics/390692774
-       解码成功，got_picture为0，说明需要后续的数据帧；
+
+       解码成功，got_picture为0，说明需要后续的数据帧，会造成解码器内部的数据帧堆积，需要让解码器把堆积数据吐出来 has_b_frames
        https://blog.csdn.net/u013506600/article/details/22329403 => 有关AVFrame当中picture解码问题；
        需要解决解码失败之后，造成解码器内部会缓存数据帧，后续再解码时，永远有延时，需要将解码器内部缓存的数据帧快速取出来，避免延时；
        需要配合best_effort_timestamp时间戳，而不能用AVPacket里面的时间戳，只有解码器知道已缓存的数据帧的真正时间戳是什么；
@@ -201,6 +202,10 @@
        同时，增大了AVFrame解码缓冲的块数，仍然无法解决解码失败后的延时问题；
        https://blog.csdn.net/leixiaohua1020/article/details/19016109
        http://blog.jianchihu.net/avcodec_decode_video2-no-pic.html
+
+       H.264在只有I帧和P帧的时候，解码失败造成视频数据帧堆积的问题，这个文档有说明 => 吐出所有的坏帧...
+       在没有B帧的情况下，误码可能会导致视频帧在这里堆积，所以要在这个判断之前将s->avctx->has_b_frames强制设为0。
+       https://blog.csdn.net/quanben/article/details/4400336
 
    C：（未完成）      学生端使用单独线程用UDP从Linux服务器，用最快的速度，拉取音视频数据，组成数据帧，使用SDL2.0播放出来；
    D：（未完成）      将学生端数据拉取、组包、解码过程封装起来，移植到讲师端；整个过程控制在1秒以内；
