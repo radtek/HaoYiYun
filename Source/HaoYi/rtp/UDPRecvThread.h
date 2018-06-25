@@ -36,6 +36,7 @@ private:
 	void			doTagHeaderProcess(char * lpBuffer, int inRecvLen);
 	void			doTagAVPackProcess(char * lpBuffer, int inRecvLen);
 
+	void			doFillLosePack(uint32_t nStartLoseID, uint32_t nEndLoseID);
 	void			doEraseLoseSeq(uint32_t inSeqID);
 	void			doParseFrame();
 

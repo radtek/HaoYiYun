@@ -595,10 +595,11 @@ void CUDPRecvThread::doParseFrame()
 	circlebuf_pop_front(&m_circle, NULL, nPerTestSize);
 	return;*/
 
-	/////////////////////////////////////////////////////////////////////////////////////
-	// 注意：环形队列至少要有一个数据包存在，否则，在发生丢包时，无法发现...
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：环形队列至少要有一个数据包存在，否则，在发生丢包时，无法发现，即大号包先到，小号包后到，就会被扔掉...
+	// 注意：环形队列在抽取完整音视频数据帧之后，也可能被抽干，所以，必须在 doFillLosePack 中对环形队列为空时做特殊处理...
 	// 如果环形队列为空或播放器对象无效，直接返回...
-	/////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
 	rtp_hdr_t * lpFrontHeader = NULL;
 	if( m_circle.size <= nPerPackSize )
@@ -675,9 +676,12 @@ void CUDPRecvThread::doParseFrame()
 		TRACE("[Teacher-Looker] Time: %lu ms, Error => Frame size is Zero, PlaySeq: %lu, Type: %d, Key: %d\n", now_ms, m_nMaxPlaySeq, pt_type, is_key);
 		return;
 	}
-	// 如果环形队列被全部抽干，直接返回...
-	if( nConsumeSize >= m_circle.size )
-		return;
+	// 注意：环形队列被抽干后，必须在 doFillLosePack 中对环形队列为空时做特殊处理...
+	// 如果环形队列被全部抽干 => 也没关系，在收到新包当中对环形队列为空时做了特殊处理...
+	/*if( nConsumeSize >= m_circle.size ) {
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Teacher-Looker] Time: %lu ms, Error => Circle Empty, PlaySeq: %lu, CurSeq: %lu\n", now_ms, m_nMaxPlaySeq, cur_seq);
+	}*/
 	// 当前已解析的序列号保存为当前最大播放序列号...
 	m_nMaxPlaySeq = cur_seq;
 	
@@ -720,6 +724,35 @@ void CUDPRecvThread::doEraseLoseSeq(uint32_t inSeqID)
 	// 打印已收到的补包信息，还剩下的未补包个数...
 	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	TRACE("[Teacher-Looker] Time: %lu ms, Supply Erase => LoseSeq: %lu, ResendCount: %lu, LoseSize: %lu\n", now_ms, inSeqID, nResendCount, m_MapLose.size());
+}
+//
+// 给丢失数据包预留环形队列缓存空间...
+void CUDPRecvThread::doFillLosePack(uint32_t nStartLoseID, uint32_t nEndLoseID)
+{
+	// 准备数据包结构体并进行初始化...
+	uint32_t sup_id = nStartLoseID;
+	rtp_hdr_t rtpDis = {0};
+	rtpDis.pt = PT_TAG_LOSE;
+	// 注意：是闭区间 => [nStartLoseID, nEndLoseID]
+	while( sup_id <= nEndLoseID ) {
+		// 给当前丢包预留缓冲区...
+		rtpDis.seq = sup_id;
+		circlebuf_push_back(&m_circle, &rtpDis, sizeof(rtpDis));
+		circlebuf_push_back_zero(&m_circle, DEF_MTU_SIZE);
+		// 将丢包序号加入丢包队列当中 => 毫秒时刻点...
+		rtp_lose_t rtpLose = {0};
+		rtpLose.resend_count = 0;
+		rtpLose.lose_seq = sup_id;
+		// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况...
+		// 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
+		rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_var_ms,0);
+		m_MapLose[sup_id] = rtpLose;
+		// 打印已丢包信息，丢包队列长度...
+		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
+		TRACE("[Teacher-Looker] Time: %lu ms, Lose Seq: %lu, LoseSize: %lu\n", now_ms, sup_id, m_MapLose.size());
+		// 累加当前丢包序列号...
+		++sup_id;
+	}
 }
 //
 // 将获取的音视频数据包存入环形队列当中...
@@ -767,14 +800,22 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
 	static char szPacket[nPerPackSize] = {0};
-	// 如果环形队列为空 => 直接将数据加入到环形队列当中...
+	// 如果环形队列为空 => 需要对丢包做提前预判并进行处理...
 	if( m_circle.size < nPerPackSize ) {
-		// 先加入包头和数据内容 => 
+		// 新到序号包与最大播放包之间有空隙，说明有丢包...
+		// 丢包闭区间 => [m_nMaxPlaySeq + 1, new_id - 1]
+		if( new_id > (m_nMaxPlaySeq + 1) ) {
+			this->doFillLosePack(m_nMaxPlaySeq + 1, new_id - 1);
+		}
+		// 把最新序号包直接追加到环形队列的最后面，如果与最大播放包之间有空隙，已经在前面的步骤中补充好了...
+		// 先加入包头和数据内容...
 		circlebuf_push_back(&m_circle, lpBuffer, inRecvLen);
 		// 再加入填充数据内容，保证数据总是保持一个MTU单元大小...
 		if( nZeroSize > 0 ) {
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
+		// 打印新追加的序号包 => 不管有没有丢包，都要追加这个新序号包...
+		//TRACE("[Teacher-Looker] Max Seq: %lu, Cricle: Zero\n", new_id);
 		return;
 	}
 	// 环形队列中至少要有一个数据包...
@@ -788,30 +829,9 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	rtp_hdr_t * lpMaxHeader = (rtp_hdr_t*)szPacket;
 	max_id = lpMaxHeader->seq;
 	// 发生丢包条件 => max_id + 1 < new_id
+	// 丢包闭区间 => [max_id + 1, new_id - 1];
 	if( max_id + 1 < new_id ) {
-		// 丢包区间 => [max_id + 1, new_id - 1];
-		uint32_t sup_id = max_id + 1;
-		rtp_hdr_t rtpDis = {0};
-		rtpDis.pt = PT_TAG_LOSE;
-		while( sup_id < new_id ) {
-			// 给当前丢包预留缓冲区...
-			rtpDis.seq = sup_id;
-			circlebuf_push_back(&m_circle, &rtpDis, sizeof(rtpDis));
-			circlebuf_push_back_zero(&m_circle, DEF_MTU_SIZE);
-			// 将丢包序号加入丢包队列当中 => 毫秒时刻点...
-			rtp_lose_t rtpLose = {0};
-			rtpLose.resend_count = 0;
-			rtpLose.lose_seq = sup_id;
-			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况...
-			// 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
-			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_var_ms,0);
-			m_MapLose[sup_id] = rtpLose;
-			// 打印已丢包信息，丢包队列长度...
-			now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-			TRACE("[Teacher-Looker] Time: %lu ms, Lose Seq: %lu, LoseSize: %lu\n", now_ms, sup_id, m_MapLose.size());
-			// 累加当前丢包序列号...
-			++sup_id;
-		}
+		this->doFillLosePack(max_id + 1, new_id - 1);
 	}
 	// 如果是丢包或正常序号包，放入环形队列，返回...
 	if( max_id + 1 <= new_id ) {
@@ -822,7 +842,7 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
 		// 打印新加入的最大序号包...
-		//TRACE("[Teacher-Looker] Max Seq: %lu\n", new_id);
+		//TRACE("[Teacher-Looker] Max Seq: %lu, Circle: %d\n", new_id, m_circle.size/nPerPackSize-1);
 		return;
 	}
 	// 如果是丢包后的补充包 => max_id > new_id
