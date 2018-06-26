@@ -26,7 +26,7 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
 	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
 	// 初始化环形队列，预分配空间...
 	circlebuf_init(&m_circle);
-	circlebuf_reserve(&m_circle, 512*1024);
+	circlebuf_reserve(&m_circle, DEF_CIRCLE_SIZE);
 	// 设置终端类型和结构体类型 => m_rtp_ready => 等待网络填充...
 	m_rtp_detect.tm = m_rtp_create.tm = m_rtp_delete.tm = m_rtp_header.tm = TM_TAG_STUDENT;
 	m_rtp_detect.id = m_rtp_create.id = m_rtp_delete.id = m_rtp_header.id = ID_TAG_PUSHER;
@@ -133,50 +133,14 @@ GM_Error CUDPSendThread::InitThread()
 	return theErr;
 }
 
-/*void CUDPSendThread::doFirstPayload()
-{
-	// 如果是第一帧，填充音视频序列头...
-	if( m_nCurPackSeq > 0 )
-		return;
-	// 累加RTP打包序列号...
-	++m_nCurPackSeq;
-	// 填充RTP包头结构体...
-	rtp_hdr_t rtpHeader = {0};
-	rtpHeader.seq = m_nCurPackSeq;
-	rtpHeader.ts  = 0;
-	rtpHeader.pt  = PT_TAG_HEADER;
-	rtpHeader.pk  = true;
-	rtpHeader.pst = true;
-	rtpHeader.ped = true;
-	rtpHeader.psize = sizeof(rtp_seq_t) + m_strSPS.size() + m_strPPS.size();
-	// 计算填充数据总长度...
-	int nZeroSize = DEF_MTU_SIZE - rtpHeader.psize;
-	// 加入环形队列当中 => rtp_hdr_t + rtp_seq_t + sps + pps + Zero => 12 + 800 => 812
-	circlebuf_push_back(&m_circle, &rtpHeader, sizeof(rtpHeader));
-	circlebuf_push_back(&m_circle, &m_rtp_seq_header, sizeof(m_rtp_seq_header));
-	// 加入SPS数据区内容...
-	if( m_strSPS.size() > 0 ) {
-		circlebuf_push_back(&m_circle, m_strSPS.c_str(), m_strSPS.size());
-	}
-	// 加入PPS数据区内容...
-	if( m_strPPS.size() > 0 ) {
-		circlebuf_push_back(&m_circle, m_strPPS.c_str(), m_strPPS.size());
-	}
-	// 加入填充数据内容，保证数据总是保持一个MTU单元大小...
-	if( nZeroSize > 0 ) {
-		circlebuf_push_back_zero(&m_circle, nZeroSize);
-	}
-	// 打印调试信息...
-	TRACE("[Pack] Seq: %lu, TS: 0, Type: %d, SPS: %lu, PPS: %lu, Zero: %d\n", m_nCurPackSeq, PT_TAG_HEADER, m_strSPS.size(), m_strPPS.size(), nZeroSize);
-}*/
-
-static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, int inSize)
+/*static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, string & strFrame)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/send.txt";
 	FILE * pFile = fopen(lpszPath, "a+");
-	sprintf(szBuf, "PTS: %lu, Type: %d, Key: %d, Size: %d\n", inPTS, inType, bIsKeyFrame, inSize);
+	sprintf(szBuf, "PTS: %lu, Type: %d, Key: %d, Size: %d\n", inPTS, inType, bIsKeyFrame, strFrame.size());
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
+	fwrite(strFrame.c_str(), 1, strFrame.size(), pFile);
 	fclose(pFile);
 }
 
@@ -188,7 +152,7 @@ static void DoSaveSendSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
-}
+}*/
 
 void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
@@ -227,7 +191,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	//TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
 	//		now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
-	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData.size());
+	//DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
 
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
@@ -265,7 +229,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 		//TRACE( "[Student-Pusher] Time: %lu ms, Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu\n", now_ms, 
 		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
-		DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
+		//DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
 	}
 }
 
@@ -418,8 +382,14 @@ void CUDPSendThread::doSendLosePacket()
 	rtp_hdr_t * lpFrontHeader = NULL;
 	rtp_hdr_t * lpSendHeader = NULL;
 	int nSendPos = 0, nSendSize = 0;
-	int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
-	lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：千万不能在环形队列当中进行指针操作，当start_pos > end_pos时，可能会有越界情况...
+	// 所以，一定要用接口读取完整的数据包之后，再进行操作；如果用指针，一旦发生回还，就会错误...
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf_peek_front(&m_circle, szPacketBuffer, nPerPackSize);
+	lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果要补充的数据包序号比最小序号还要小 => 没有找到，直接返回...
 	if( rtpLose.lose_seq < lpFrontHeader->seq ) {
 		TRACE("[Student-Pusher] Supply Error => lose: %lu, min: %lu\n", rtpLose.lose_seq, lpFrontHeader->seq);
@@ -434,13 +404,13 @@ void CUDPSendThread::doSendLosePacket()
 		TRACE("[Student-Pusher] Supply Error => Position Excessed\n");
 		return;
 	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：不能用简单的指针操作，环形队列可能会回还，必须用接口 => 从指定相对位置拷贝指定长度数据...
 	// 获取将要发送数据包的包头位置和有效数据长度...
-	lpSendHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nSendPos);
-	// 如果要发送的数据位置越界或无效，直接返回...
-	if( lpSendHeader == NULL ) {
-		TRACE("[Student-Pusher] Supply Error => Position Excessed\n");
-		return;
-	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	memset(szPacketBuffer, 0, nPerPackSize);
+	circlebuf_read(&m_circle, nSendPos, szPacketBuffer, nPerPackSize);
+	lpSendHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果找到的序号位置不对，直接返回...
 	if( lpSendHeader->seq != rtpLose.lose_seq ) {
 		TRACE("[Student-Pusher] Supply Error => Seq: %lu, Find: %lu\n", rtpLose.lose_seq, lpSendHeader->seq);
@@ -470,9 +440,15 @@ void CUDPSendThread::doSendPacket()
 	rtp_hdr_t * lpFrontHeader = NULL;
 	rtp_hdr_t * lpSendHeader = NULL;
 	int nSendPos = 0, nSendSize = 0;
-	int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：千万不能在环形队列当中进行指针操作，当start_pos > end_pos时，可能会有越界情况...
+	// 所以，一定要用接口读取完整的数据包之后，再进行操作；如果用指针，一旦发生回还，就会错误...
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf_peek_front(&m_circle, szPacketBuffer, nPerPackSize);
 	// 计算环形队列中最前面数据包的头指针 => 最小序号...
-	lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+	lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 第一次发包 或 发包序号太小 => 使用最前面包的序列号...
 	if((m_nCurSendSeq <= 0) || (m_nCurSendSeq < lpFrontHeader->seq)) {
 		m_nCurSendSeq = lpFrontHeader->seq;
@@ -485,11 +461,16 @@ void CUDPSendThread::doSendPacket()
 	ASSERT( m_nCurSendSeq >= lpFrontHeader->seq );
 	ASSERT( m_nCurSendSeq <= m_nCurPackSeq );
 	// 两者之差就是要发送数据包的头指针位置...
-	nSendPos = (m_nCurSendSeq - lpFrontHeader->seq) * nPackSize;
-	// 获取发送数据包的包头位置和有效数据长度...
-	lpSendHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, nSendPos);
+	nSendPos = (m_nCurSendSeq - lpFrontHeader->seq) * nPerPackSize;
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：不能用简单的指针操作，环形队列可能会回还，必须用接口 => 从指定相对位置拷贝指定长度数据...
+	// 获取将要发送数据包的包头位置和有效数据长度...
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	memset(szPacketBuffer, 0, nPerPackSize);
+	circlebuf_read(&m_circle, nSendPos, szPacketBuffer, nPerPackSize);
+	lpSendHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果要发送的数据位置越界或无效，直接返回...
-	if( lpSendHeader == NULL )
+	if( lpSendHeader == NULL || lpSendHeader->seq <= 0 )
 		return;
 	nSendSize = sizeof(rtp_hdr_t) + lpSendHeader->psize;
 
@@ -513,59 +494,8 @@ void CUDPSendThread::doSendPacket()
 	m_bNeedSleep = false;
 
 	// 打印调试信息 => 刚刚发送的数据包...
-	int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
+	//int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
 	//TRACE("[Student-Pusher] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
-
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// 实验：移除最前面的数据包...
-	/////////////////////////////////////////////////////////////////////////////////////////
-	/*string strPacket;
-	strPacket.resize(nPackSize);
-	circlebuf_pop_front(&m_circle, (void*)strPacket.c_str(), nPackSize);
-	if( m_circle.start_pos > m_circle.end_pos ) {
-		TRACE("[Circle] start: %lu, end: %lu\n", m_circle.start_pos, m_circle.end_pos);
-	}*/
-	/////////////////////////////////////////////////////////////////////////////////////////
-
-	/*string	strRtpData;
-	int         nZeroSize = 0;
-	rtp_hdr_t	rtpHeader = {0};
-	// 获取RTP包头结构体...
-	circlebuf_pop_front(&m_circle, &rtpHeader, sizeof(rtpHeader));
-	// 分配RTP数据包大小，计算填充区大小...
-	strRtpData.resize(rtpHeader.psize);
-	nZeroSize = DEF_MTU_SIZE - rtpHeader.psize;
-	// 弹出有效的RTP数据包...
-	circlebuf_pop_front(&m_circle, (void*)strRtpData.c_str(), rtpHeader.psize);
-	// 弹出RTP填充数据内容...
-	if( nZeroSize > 0 ) {
-		circlebuf_pop_front(&m_circle, NULL, nZeroSize);
-	}
-	// 获取RTP数据包头结构体指针...
-	LPCTSTR lpszData = strRtpData.c_str();
-	// 如果是第一个RTP数据包，获取序列头结构体，SPS和PPS数据...
-	if( rtpHeader.pt == PT_TAG_HEADER ) {
-		string strSPS, strPPS;
-		// 读取序列头结构体...
-		rtp_seq_t * lpRtpSeq = (rtp_seq_t*)lpszData;
-		// 读取SPS内容信息...
-		lpszData += sizeof(rtp_seq_t);
-		if( lpRtpSeq->spsSize > 0 ) {
-			strSPS.assign(lpszData, lpRtpSeq->spsSize);
-		}
-		// 读取PPS内容信息...
-		lpszData += lpRtpSeq->spsSize;
-		if( lpRtpSeq->ppsSize > 0 ) {
-			strPPS.assign(lpszData, lpRtpSeq->ppsSize);
-		}
-		// 打印调试信息...
-		TRACE("[POP ] Seq: %lu, TS: 0, Type: %d, SPS: %lu, PPS: %lu, Zero: %d\n", rtpHeader.seq, rtpHeader.pt, strSPS.size(), strPPS.size(), nZeroSize);
-	} else {
-		// 处理音视频RTP数据包...
-
-		// 打印调试信息...
-		TRACE("[POP ] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", rtpHeader.seq, rtpHeader.ts, rtpHeader.pt, rtpHeader.pst, rtpHeader.ped, rtpHeader.psize, nZeroSize);
-	}*/
 }
 
 void CUDPSendThread::doRecvPacket()
@@ -709,7 +639,7 @@ void CUDPSendThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	circlebuf_free(&m_circle);
 	// 初始化环形队列，预分配空间...
 	circlebuf_init(&m_circle);
-	circlebuf_reserve(&m_circle, 512*1024);
+	circlebuf_reserve(&m_circle, DEF_CIRCLE_SIZE);
 	// 重置相关变量...
 	m_nCmdState = kCmdSendCreate;
 	m_next_create_ns = -1;
@@ -791,8 +721,14 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			return;
 		// 先找到环形队列中最前面数据包的头指针 => 最小序号...
 		rtp_hdr_t * lpFrontHeader = NULL;
-		int nPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
-		lpFrontHeader = (rtp_hdr_t*)circlebuf_data(&m_circle, 0);
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+		// 注意：千万不能在环形队列当中进行指针操作，当start_pos > end_pos时，可能会有越界情况...
+		// 所以，一定要用接口读取完整的数据包之后，再进行操作；如果用指针，一旦发生回还，就会错误...
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+		const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+		static char szPacketBuffer[nPerPackSize] = {0};
+		circlebuf_peek_front(&m_circle, szPacketBuffer, nPerPackSize);
+		lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
 		// 如果要删除的数据包序号比最小序号还要小 => 数据已经删除了，直接返回...
 		if( lpDetect->maxConSeq < lpFrontHeader->seq )
 			return;
@@ -803,7 +739,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		// 注意：环形队列当中的序列号一定是连续的...
 		// 注意：观看端收到的最大连续包号一定比当前已发送包号小...
 		// 两者之差加1就是要删除的数据长度 => 要包含最大连续包本身的删除...
-		uint32_t nPopSize = (lpDetect->maxConSeq - lpFrontHeader->seq + 1) * nPackSize;
+		uint32_t nPopSize = (lpDetect->maxConSeq - lpFrontHeader->seq + 1) * nPerPackSize;
 		circlebuf_pop_front(&m_circle, NULL, nPopSize);
 		// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 		// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
