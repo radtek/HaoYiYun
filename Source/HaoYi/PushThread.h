@@ -48,9 +48,10 @@ public:
 
 	int				PushFrame(FMS_FRAME & inFrame);
 
+	void			StartUDPThread();
+private:
 	void			StartSendByAudio(int nRateIndex, int nChannelNum);
 	void			StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
-
 	void			StartPlayByAudio(int nRateIndex, int nChannelNum);
 	void			StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 private:

@@ -413,9 +413,6 @@ void CMP4Thread::WriteAACSequenceHeader()
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
-	
-	// 开启音频播放线程...
-	//m_lpPushThread->StartPlayByAudio(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CMP4Thread::WriteAVCSequenceHeader()
@@ -476,9 +473,6 @@ void CMP4Thread::WriteAVCSequenceHeader()
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
-
-	// 开启视频播放线程...
-	//m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
 }
 
 CRtspThread::CRtspThread()
@@ -579,6 +573,9 @@ void CRtspThread::StartPushThread()
 	if( m_lpPushThread == NULL )
 		return;
 	ASSERT( m_lpPushThread != NULL );
+	// 启动UDP发送线程...
+	m_lpPushThread->StartUDPThread();
+	// 设置流的播放状态...
 	m_lpPushThread->SetStreamPlaying(true);
 
 	/*// 如果是流转发模式，只设置流播放状态...
@@ -655,10 +652,6 @@ void CRtspThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
-	
-	// 开启音频播放线程...
-	//m_lpPushThread->StartPlayByAudio(m_audio_rate_index, m_audio_channel_num);
-	m_lpPushThread->StartSendByAudio(m_audio_rate_index, m_audio_channel_num);
 }
 
 void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
@@ -723,10 +716,6 @@ void CRtspThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
-	
-	// 开启视频播放线程...
-	//m_lpPushThread->StartPlayByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
-	m_lpPushThread->StartSendByVideo(m_strSPS, m_strPPS, m_nVideoWidth, m_nVideoHeight, m_nVideoFPS);
 }
 
 CRtmpThread::CRtmpThread()
@@ -887,8 +876,6 @@ void CRtmpThread::WriteAACSequenceHeader(int inAudioRate, int inAudioChannel)
 	// 保存AAC数据头信息...
 	int aac_len = (int)(pbuf - aac_seq_buf);
 	m_strAACHeader.assign(aac_seq_buf, aac_len);
-
-	// 开启音频播放线程...
 }
 
 void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
@@ -953,6 +940,4 @@ void CRtmpThread::WriteAVCSequenceHeader(string & inSPS, string & inPPS)
 	// 保存AVC数据头信息...
 	int avc_len = (int)(pbuf - avc_seq_buf);
 	m_strAVCHeader.assign(avc_seq_buf, avc_len);
-	
-	// 开启视频播放线程...
 }

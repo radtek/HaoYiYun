@@ -14,11 +14,11 @@ public:
 	virtual ~CUDPSendThread();
 	virtual void Entry();
 public:
+	BOOL			InitThread();
 	BOOL			InitVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL			InitAudio(int nRateIndex, int nChannelNum);
 	void			PushFrame(FMS_FRAME & inFrame);
 private:
-	GM_Error		InitThread();
 	void			CloseSocket();
 	void			doSendCreateCmd();
 	void			doSendHeaderCmd();

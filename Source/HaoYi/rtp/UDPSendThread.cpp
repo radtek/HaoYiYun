@@ -76,10 +76,9 @@ BOOL CUDPSendThread::InitVideo(string & inSPS, string & inPPS, int nWidth, int n
 	m_strSPS = inSPS; m_strPPS = inPPS;
 	// 打印已初始化视频信息...
 	log_trace("[Student-Pusher] InitVideo OK");
-	// 线程没有启动，直接启动...
-	if( this->GetThreadHandle() != NULL )
-		return true;
-	return ((this->InitThread() != GM_NoErr) ? false : true);
+	// 线程一定要确认音视频都准备好之后才能启动...
+	ASSERT( this->GetThreadHandle() == NULL );
+	return true;
 }
 
 BOOL CUDPSendThread::InitAudio(int nRateIndex, int nChannelNum)
@@ -92,13 +91,12 @@ BOOL CUDPSendThread::InitAudio(int nRateIndex, int nChannelNum)
 	m_rtp_header.channelNum = nChannelNum;
 	// 打印已初始化音频信息...
 	log_trace("[Student-Pusher] InitAudio OK");
-	// 线程没有启动，直接启动...
-	if( this->GetThreadHandle() != NULL )
-		return true;
-	return ((this->InitThread() != GM_NoErr) ? false : true);
+	// 线程一定要确认音视频都准备好之后才能启动...
+	ASSERT( this->GetThreadHandle() == NULL );
+	return true;
 }
 
-GM_Error CUDPSendThread::InitThread()
+BOOL CUDPSendThread::InitThread()
 {
 	// 首先，关闭socket...
 	this->CloseSocket();
@@ -113,7 +111,7 @@ GM_Error CUDPSendThread::InitThread()
 	theErr = m_lpUDPSocket->Open();
 	if( theErr != GM_NoErr ) {
 		MsgLogGM(theErr);
-		return theErr;
+		return false;
 	}
 	// 设置重复使用端口...
 	m_lpUDPSocket->ReuseAddr();
@@ -123,8 +121,8 @@ GM_Error CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	//LPCTSTR lpszAddr = "192.168.1.70";
-	LPCTSTR lpszAddr = DEF_UDP_HOME;
+	LPCTSTR lpszAddr = "192.168.1.70";
+	//LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -134,7 +132,7 @@ GM_Error CUDPSendThread::InitThread()
 	// 启动组播接收线程...
 	this->Start();
 	// 返回执行结果...
-	return theErr;
+	return true;
 }
 
 #ifdef DEBUG_FRAME

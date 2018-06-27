@@ -16,6 +16,7 @@ public:
 	~CMP4Thread();
 public:
 	BOOL			InitMP4(CPushThread * inPushThread, string & strMP4File);
+	int				GetVideoFPS() { return m_nVideoFPS; }
 	int				GetVideoWidth(){ return m_nVideoWidth; }
 	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }
@@ -78,6 +79,7 @@ public:
 	void			StartPushThread();
 	void			PushFrame(FMS_FRAME & inFrame);
 	BOOL			InitRtsp(BOOL bUsingTCP, CPushThread * inPushTread, string & strRtspUrl);
+	int				GetVideoFPS() { return m_nVideoFPS; }
 	int				GetVideoWidth(){ return m_nVideoWidth; }
 	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }
@@ -127,6 +129,7 @@ public:
 	void			StartPushThread();
 	int				PushFrame(FMS_FRAME & inFrame);
 	BOOL			InitRtmp(CPushThread * inPushTread, string & strRtmpUrl);
+	int				GetVideoFPS() { return m_nVideoFPS; }
 	int				GetVideoWidth(){ return m_nVideoWidth; }
 	int				GetVideoHeight() { return m_nVideoHeight; }
 	string	 &		GetAVCHeader() { return m_strAVCHeader; }

@@ -1264,6 +1264,35 @@ CRenderWnd * CPushThread::GetRenderWnd()
 	return m_lpCamera->GetVideoWnd()->GetRenderWnd();
 }
 
+void CPushThread::StartUDPThread()
+{
+	if( m_lpRtspThread == NULL )
+		return;
+	int nRateIndex = m_lpRtspThread->GetAudioRateIndex();
+	int nChannelNum = m_lpRtspThread->GetAudioChannelNum();
+	int nVideoFPS = m_lpRtspThread->GetVideoFPS();
+	int nVideoWidth = m_lpRtspThread->GetVideoWidth();
+	int nVideoHeight = m_lpRtspThread->GetVideoHeight();
+	string & strSPS = m_lpRtspThread->GetVideoSPS();
+	string & strPPS = m_lpRtspThread->GetVideoPPS();
+	string & strAVCHeader = m_lpRtspThread->GetAVCHeader();
+	string & strAACHeader = m_lpRtspThread->GetAACHeader();
+	// 如果有视频的情况...
+	if( strAVCHeader.size() > 0 ) {
+		//this->StartPlayByVideo(strSPS, strPPS, nVideoWidth, nVideoHeight, nVideoFPS);
+		this->StartSendByVideo(strSPS, strPPS, nVideoWidth, nVideoHeight, nVideoFPS);
+	}
+	// 如果有音频的情况...
+	if( strAACHeader.size() > 0 ) {
+		//this->StartPlayByAudio(nRateIndex, nChannelNum);
+		this->StartSendByAudio(nRateIndex, nChannelNum);
+	}
+	// 音视频都准备好之后才启动线程...
+	if( m_lpUDPSendThread != NULL ) {
+		m_lpUDPSendThread->InitThread();
+	}
+}
+
 void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
 	if( m_lpPlaySDL == NULL ) {
