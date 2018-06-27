@@ -1,6 +1,8 @@
 
 #pragma once
 
+//#define DEBUG_FRAME						// 是否调试数据帧...
+
 #define DEF_RTP_LOG			"rtp.log"		// 默认rtp日志文件
 #define DEF_UDP_HOME        "edu.ihaoyi.cn" // 默认UDP服务器地址
 #define DEF_UDP_PORT        5252            // 默认UDP服务器端口

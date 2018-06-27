@@ -240,7 +240,7 @@ void CVideoThread::doDisplaySDL()
 	// 将数据转换成jpg...
 	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, frame_pts, "F:/MP4/Dst");
 	// 打印正在播放的解码后视频数据...
-	//log_trace("[Video] Player => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
+	//log_debug("[Video] Player => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：视频延时帧（落后帧），不能丢弃，必须继续显示，视频消耗速度相对较快，除非时间戳给错了，会造成播放问题。
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -477,7 +477,7 @@ void CAudioThread::doDisplaySDL()
 	}
 	// 打印已经投递的音频数据信息...
 	//nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
-	//log_trace("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
+	//log_debug("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
 	// 删除已经使用的音频数据...
 	m_MapAudio.erase(itorItem);
 	// 修改休息状态 => 已经有播放，不能休息...

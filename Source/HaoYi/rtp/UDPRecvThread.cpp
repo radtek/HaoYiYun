@@ -228,7 +228,11 @@ uint32_t CUDPRecvThread::doCalcMaxConSeq()
 void CUDPRecvThread::doSendReadyCmd()
 {
 	OSMutexLocker theLock(&m_Mutex);
+	////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：观看端必须收到服务器转发的准备就绪命令之后，才能停止发送准备就绪命令...
+	// 因为，要获取到推流者的映射地址和映射端口...
 	// 如果命令状态不是准备就绪命令，不发送命令，直接返回...
+	////////////////////////////////////////////////////////////////////////////////////////////
 	if( m_nCmdState != kCmdSendReady )
 		return;
 	// 注意：这时音视频序列头已经接收完毕...
@@ -412,7 +416,8 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 		m_lpPlaySDL->InitAudio(nRateIndex, nChannelNum);
 	}
 }
-
+//
+// 注意：观看端必须收到服务器转发的准备就绪命令之后，才能停止发送准备就绪命令，因为要获取到推流者的映射地址和映射端口...
 void CUDPRecvThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 {
 	// 接收到来自学生推流端要求停止发送准备就绪命令包...
@@ -532,7 +537,8 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 	}
 }
 
-/*static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, string & strFrame)
+#ifdef DEBUG_FRAME
+static void DoSaveRecvFile(uint32_t inPTS, int inType, bool bIsKeyFrame, string & strFrame)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/recv.txt";
@@ -551,7 +557,8 @@ static void DoSaveRecvSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
-}*/
+}
+#endif // DEBUG_FRAME
 
 void CUDPRecvThread::doParseFrame()
 {
@@ -625,7 +632,9 @@ void CUDPRecvThread::doParseFrame()
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// 注意：在删除数据包之前，可以进行存盘测试操作...
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
+#ifdef DEBUG_RAME
+		DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
+#endif // DEBUG_FRAME
 		// 删除这个数据包，返回不休息，继续找...
 		circlebuf_pop_front(&m_circle, NULL, nPerPackSize);
 		// 修改休息状态 => 已经抽取数据包，不能休息...
@@ -701,7 +710,8 @@ void CUDPRecvThread::doParseFrame()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 测试代码 => 将要删除的数据包信息保存到文件当中...
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*uint32_t nTestSeq = min_seq;
+#ifdef DEBUG_FRAME
+	uint32_t nTestSeq = min_seq;
 	while( nTestSeq <= cur_seq ) {
 		DoSaveRecvSeq(lpFrontHeader->seq, lpFrontHeader->psize, lpFrontHeader->pst, lpFrontHeader->ped, lpFrontHeader->ts);
 		uint32_t nPosition = (++nTestSeq - min_seq) * nPerPackSize;
@@ -711,7 +721,8 @@ void CUDPRecvThread::doParseFrame()
 		lpFrontHeader = (rtp_hdr_t*)szPacketCurrent;
 	}
 	// 进行数据的存盘验证测试...
-	DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame);*/
+	DoSaveRecvFile(ts_ms, pt_type, is_key, strFrame);
+#endif // DEBUG_FRAME
 
 	// 删除已解析完毕的环形队列数据包 => 回收缓冲区...
 	circlebuf_pop_front(&m_circle, NULL, nConsumeSize);

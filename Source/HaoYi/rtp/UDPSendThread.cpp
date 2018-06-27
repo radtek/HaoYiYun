@@ -137,7 +137,8 @@ GM_Error CUDPSendThread::InitThread()
 	return theErr;
 }
 
-/*static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, string & strFrame)
+#ifdef DEBUG_FRAME
+static void DoSaveSendFile(uint32_t inPTS, int inType, bool bIsKeyFrame, string & strFrame)
 {
 	static char szBuf[MAX_PATH] = {0};
 	char * lpszPath = "F:/MP4/Dst/send.txt";
@@ -156,7 +157,8 @@ static void DoSaveSendSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 	sprintf(szBuf, "PSeq: %lu, PSize: %d, PST: %d, PED: %d, PTS: %lu\n", inPSeq, inPSize, inPST, inPED, inPTS);
 	fwrite(szBuf, 1, strlen(szBuf), pFile);
 	fclose(pFile);
-}*/
+}
+#endif // DEBUG_FRAME
 
 void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
@@ -191,7 +193,10 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	// 打印所有的音视频数据帧...
 	//log_trace( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d", 
 	//			 inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
-	//DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
+
+#ifdef DEBUG_FRAME
+	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
+#endif // DEBUG_FRAME
 
 	// 构造RTP包头结构体...
 	rtp_hdr_t rtpHeader = {0};
@@ -228,7 +233,9 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		// 打印调试信息...
 		//log_trace( "[Student-Pusher] Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu",
 		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
-		//DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
+#ifdef DEBUG_FRAME
+		DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
+#endif // DEBUG_FRAME
 	}
 }
 
@@ -588,6 +595,8 @@ void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	// 调用套接字接口，直接发送RTP数据包...
 	GM_Error theErr = m_lpUDPSocket->SendTo(&rtpReady, sizeof(rtpReady));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 打印发送准备就绪回复命令包...
+	log_trace("[Student-Pusher] Send Ready command for reply");
 }
 //
 // 处理服务器发送过来的重建命令...

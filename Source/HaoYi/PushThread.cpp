@@ -76,10 +76,14 @@ CPushThread::~CPushThread()
 		m_lpUDPRecvThread = NULL;
 	}
 	// 删除UDP数据发送线程...
-	if( m_lpUDPSendThread != NULL ) {
-		delete m_lpUDPSendThread;
-		m_lpUDPSendThread = NULL;
+	{
+		OSMutexLocker theLock(&m_Mutex);
+		if( m_lpUDPSendThread != NULL ) {
+			delete m_lpUDPSendThread;
+			m_lpUDPSendThread = NULL;
+		}
 	}
+
 	if( m_lpPlaySDL != NULL ) {
 		delete m_lpPlaySDL;
 		m_lpPlaySDL = NULL;
@@ -726,6 +730,11 @@ BOOL CPushThread::OpenRtmpUrl()
 int CPushThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
+	// 判断线程是否已经退出...
+	if( this->IsStopRequested() ) {
+		log_trace("[Student-Pusher] Error => Push Thread has been stoped");
+		return 0;
+	}
 	// 将音视频数据推入发送线程...
 	if( m_lpUDPSendThread != NULL ) {
 		m_lpUDPSendThread->PushFrame(inFrame);
