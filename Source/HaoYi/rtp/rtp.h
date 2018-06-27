@@ -1,9 +1,11 @@
 
 #pragma once
 
+#define DEF_RTP_LOG			"rtp.log"		// 默认rtp日志文件
 #define DEF_UDP_HOME        "edu.ihaoyi.cn" // 默认UDP服务器地址
 #define DEF_UDP_PORT        5252            // 默认UDP服务器端口
 #define DEF_MTU_SIZE        800             // 默认MTU分片大小(字节)...
+#define LOG_MAX_SIZE        2048            // 单条日志最大长度(字节)...
 #define MAX_BUFF_LEN        1024            // 最大报文长度(字节)...
 #define MAX_SLEEP_MS		15				// 最大休息时间(毫秒)
 #define RELOAD_TIME_OUT     20				// 重建间隔周期(秒) => 等待服务器超时被删除之后，才能被重建...
@@ -145,3 +147,8 @@ typedef struct {
 
 // 定义检测到的丢包队列 => 序列号 : 丢包结构体...
 typedef map<uint32_t, rtp_lose_t>  GM_MapLose;
+
+// 定义日志处理函数和宏 => debug 模式只打印不写日志文件...
+bool do_trace(const char * inFile, int inLine, bool bIsDebug, const char *msg, ...);
+#define log_trace(msg, ...) do_trace(__FILE__, __LINE__, false, msg, ##__VA_ARGS__)
+#define log_debug(msg, ...) do_trace(__FILE__, __LINE__, true, msg, ##__VA_ARGS__)

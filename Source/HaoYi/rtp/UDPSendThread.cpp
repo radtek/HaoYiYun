@@ -74,6 +74,8 @@ BOOL CUDPSendThread::InitVideo(string & inSPS, string & inPPS, int nWidth, int n
 	m_rtp_header.spsSize = inSPS.size();
 	m_rtp_header.ppsSize = inPPS.size();
 	m_strSPS = inSPS; m_strPPS = inPPS;
+	// 打印已初始化视频信息...
+	log_trace("[Student-Pusher] InitVideo OK");
 	// 线程没有启动，直接启动...
 	if( this->GetThreadHandle() != NULL )
 		return true;
@@ -88,6 +90,8 @@ BOOL CUDPSendThread::InitAudio(int nRateIndex, int nChannelNum)
 	// 保存采样率索引和声道...
 	m_rtp_header.rateIndex = nRateIndex;
 	m_rtp_header.channelNum = nChannelNum;
+	// 打印已初始化音频信息...
+	log_trace("[Student-Pusher] InitAudio OK");
 	// 线程没有启动，直接启动...
 	if( this->GetThreadHandle() != NULL )
 		return true;
@@ -159,14 +163,12 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	OSMutexLocker theLock(&m_Mutex);
 	// 判断线程是否已经退出 或 环形队列缓冲无效...
 	if( this->IsStopRequested() || m_circle.capacity <= 0 ) {
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Student-Pusher] Time: %lu ms, Error => Send Thread has been stoped\n", now_ms);
+		log_trace("[Student-Pusher] Error => Send Thread has been stoped");
 		return;
 	}
 	// 如果数据帧的长度为0，打印错误，直接返回...
 	if( inFrame.strData.size() <= 0 ) {
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Student-Pusher] Time: %lu ms, Error => Input Frame Size is Zero\n", now_ms);
+		log_trace("[Student-Pusher] Error => Input Frame Size is Zero");
 		return;
 	}
 	/////////////////////////////////////////////////////////////////////
@@ -183,14 +185,12 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	}
 	// 打印第一帧信息 => 开始有音视频数据包了...
 	/*if( m_nCurPackSeq <= 0 ) {
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE( "[Student-Pusher] Time: %lu ms, First Frame => Type: %d, KeyFrame: %d, TS: %lu, Size: %d\n", 
-				now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
+		log_trace( "[Student-Pusher] First Frame => Type: %d, KeyFrame: %d, TS: %lu, Size: %d", 
+					inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	}*/
 	// 打印所有的音视频数据帧...
-	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	//TRACE( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d\n", 
-	//		now_ms, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
+	//log_trace( "[Student-Pusher] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d", 
+	//			 inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime, inFrame.strData.size() );
 	//DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
 
 	// 构造RTP包头结构体...
@@ -226,8 +226,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
 		// 打印调试信息...
-		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		//TRACE( "[Student-Pusher] Time: %lu ms, Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu\n", now_ms, 
+		//log_trace( "[Student-Pusher] Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu",
 		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
 		//DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
 	}
@@ -267,8 +266,7 @@ void CUDPSendThread::doSendDeleteCmd()
 	ASSERT( m_lpUDPSocket != NULL );
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
 	// 打印已发送删除命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Send Delete RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_delete.roomID, m_rtp_delete.liveID);
+	log_trace("[Student-Pusher] Send Delete RoomID: %lu, LiveID: %d", m_rtp_delete.roomID, m_rtp_delete.liveID);
 }
 
 void CUDPSendThread::doSendCreateCmd()
@@ -288,8 +286,7 @@ void CUDPSendThread::doSendCreateCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_create, sizeof(m_rtp_create));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送创建命令包 => 第一个包有可能没有发送出去，也返回正常...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Send Create RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_create.roomID, m_rtp_create.liveID);
+	log_trace("[Student-Pusher] Send Create RoomID: %lu, LiveID: %d", m_rtp_create.roomID, m_rtp_create.liveID);
 	// 计算下次发送创建命令的时间戳...
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -324,8 +321,7 @@ void CUDPSendThread::doSendHeaderCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)strSeqHeader.c_str(), strSeqHeader.size());
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送序列头命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Send Header SPS: %lu, PPS: %d\n", now_ms, m_strSPS.size(), m_strPPS.size());
+	log_trace("[Student-Pusher] Send Header SPS: %lu, PPS: %d", m_strSPS.size(), m_strPPS.size());
 	// 计算下次发送创建命令的时间戳...
 	m_next_header_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -353,8 +349,7 @@ void CUDPSendThread::doSendDetectCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送探测命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	//TRACE("[Student-Pusher] Time: %lu ms, Send Detect dtNum: %d\n", now_ms, m_rtp_detect.dtNum);
+	//log_trace("[Student-Pusher] Send Detect dtNum: %d", m_rtp_detect.dtNum);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -392,7 +387,7 @@ void CUDPSendThread::doSendLosePacket()
 	lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果要补充的数据包序号比最小序号还要小 => 没有找到，直接返回...
 	if( rtpLose.lose_seq < lpFrontHeader->seq ) {
-		TRACE("[Student-Pusher] Supply Error => lose: %lu, min: %lu\n", rtpLose.lose_seq, lpFrontHeader->seq);
+		log_trace("[Student-Pusher] Supply Error => lose: %lu, min: %lu", rtpLose.lose_seq, lpFrontHeader->seq);
 		return;
 	}
 	ASSERT( rtpLose.lose_seq >= lpFrontHeader->seq );
@@ -401,7 +396,7 @@ void CUDPSendThread::doSendLosePacket()
 	nSendPos = (rtpLose.lose_seq - lpFrontHeader->seq) * nPerPackSize;
 	// 如果补包位置大于或等于环形队列长度 => 补包越界...
 	if( nSendPos >= m_circle.size ) {
-		TRACE("[Student-Pusher] Supply Error => Position Excessed\n");
+		log_trace("[Student-Pusher] Supply Error => Position Excessed");
 		return;
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +408,7 @@ void CUDPSendThread::doSendLosePacket()
 	lpSendHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果找到的序号位置不对，直接返回...
 	if( lpSendHeader->seq != rtpLose.lose_seq ) {
-		TRACE("[Student-Pusher] Supply Error => Seq: %lu, Find: %lu\n", rtpLose.lose_seq, lpSendHeader->seq);
+		log_trace("[Student-Pusher] Supply Error => Seq: %lu, Find: %lu", rtpLose.lose_seq, lpSendHeader->seq);
 		return;
 	}
 	// 获取有效的数据区长度 => 包头 + 数据...
@@ -422,8 +417,7 @@ void CUDPSendThread::doSendLosePacket()
 	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已经发送补包信息...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Supply Send => Seq: %lu, TS: %lu, Type: %d, Slice: %d\n", now_ms, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->psize);
+	log_trace("[Student-Pusher] Supply Send => Seq: %lu, TS: %lu, Type: %d, Slice: %d", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->psize);
 }
 
 void CUDPSendThread::doSendPacket()
@@ -495,7 +489,7 @@ void CUDPSendThread::doSendPacket()
 
 	// 打印调试信息 => 刚刚发送的数据包...
 	//int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
-	//TRACE("[Student-Pusher] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d\n", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
+	//log_trace("[Student-Pusher] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, Zero: %d", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pt, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
 }
 
 void CUDPSendThread::doRecvPacket()
@@ -547,8 +541,7 @@ void CUDPSendThread::doProcServerCreate(char * lpBuffer, int inRecvLen)
 	// 修改命令状态 => 开始发送序列头...
 	m_nCmdState = kCmdSendHeader;
 	// 打印收到服务器反馈的创建命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Recv Create from Server\n", now_ms);
+	log_trace("[Student-Pusher] Recv Create from Server");
 }
 
 void CUDPSendThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
@@ -565,8 +558,7 @@ void CUDPSendThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	// 修改命令状态 => 开始接收观看端准备就绪命令...
 	m_nCmdState = kCmdWaitReady;
 	// 打印收到服务器反馈的序列头命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Recv Header from Server\n", now_ms);
+	log_trace("[Student-Pusher] Recv Header from Server");
 }
 
 void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
@@ -587,8 +579,7 @@ void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	// 保存老师观看端发送的准备就绪数据包内容...
 	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
 	// 打印收到准备就绪命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Recv Ready from %lu:%d\n", now_ms, m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
+	log_trace("[Student-Pusher] Recv Ready from %lu:%d", m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
 	// 立即反馈给老师观看者 => 准备就绪包已经收到，不要再发了...
 	rtp_ready_t rtpReady = {0};
 	rtpReady.tm = TM_TAG_STUDENT;
@@ -629,8 +620,7 @@ void CUDPSendThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	++m_rtp_reload.reload_count;
 	// 打印收到服务器重建命令...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Server Reload Count: %d\n", now_ms, m_rtp_reload.reload_count);
+	log_trace("[Student-Pusher] Server Reload Count: %d", m_rtp_reload.reload_count);
 	// 重置相关命令包...
 	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
 	// 清空补包集合队列...
@@ -696,8 +686,7 @@ void CUDPSendThread::doTagSupplyProcess(char * lpBuffer, int inRecvLen)
 		nDataSize -= sizeof(int);
 	}
 	// 打印已收到补包命令...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Student-Pusher] Time: %lu ms, Supply Recv => Count: %d\n", now_ms, rtpSupply.suSize / sizeof(int));
+	log_trace("[Student-Pusher] Supply Recv => Count: %d", rtpSupply.suSize / sizeof(int));
 }
 
 void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
@@ -744,9 +733,8 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 		// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
 		//uint32_t nRemainCount = m_circle.size / nPackSize;
-		//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		//TRACE( "[Student-Pusher] Time: %lu ms, Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu\n", 
-		//		now_ms, lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
+		//log_trace( "[Student-Pusher] Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
+		//			 lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
 		return;
 	}
 	// 如果是 学生推流端 自己发出的探测包，计算网络延时...
@@ -764,8 +752,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		if( m_rtt_var_ms < 0 ) { m_rtt_var_ms = abs(m_rtt_ms - keep_rtt); }
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		//TRACE("[Student-Pusher] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		//log_trace("[Student-Pusher] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms", rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
 }
 ///////////////////////////////////////////////////////

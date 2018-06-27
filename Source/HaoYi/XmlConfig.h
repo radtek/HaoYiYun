@@ -24,6 +24,7 @@ public:
 
 	void	doDelDVR(int nDBCameraID);
 
+	string & GetUserAppPath() { return m_strUserAppPath; }
 	string & GetCopyRight() { return m_strCopyRight; }
 	string & GetVersion() { return m_strVersion; }
 	string & GetPhone() { return m_strPhone; }
@@ -133,6 +134,7 @@ private:
 	string				m_strWebSite;					// 网站
 //	string				m_strAddress;					// 地址
 
+	string				m_strUserAppPath;				// 用户配置存盘目录...
 	string				m_strMPlayer;					// 截图工具的全路径...
 	string				m_strXMLFile;					// XML配置文件
 	string				m_strMainName;					// 主窗口标题名称...

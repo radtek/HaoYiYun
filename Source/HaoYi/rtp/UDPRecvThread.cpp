@@ -151,8 +151,7 @@ void CUDPRecvThread::doSendDeleteCmd()
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送删除命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Send Delete RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_delete.roomID, m_rtp_delete.liveID);
+	log_trace("[Teacher-Looker] Send Delete RoomID: %lu, LiveID: %d", m_rtp_delete.roomID, m_rtp_delete.liveID);
 }
 
 void CUDPRecvThread::doSendCreateCmd()
@@ -172,8 +171,7 @@ void CUDPRecvThread::doSendCreateCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_create, sizeof(m_rtp_create));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送创建命令包 => 第一个包有可能没有发送出去，也返回正常...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Send Create RoomID: %lu, LiveID: %d\n", now_ms, m_rtp_create.roomID, m_rtp_create.liveID);
+	log_trace("[Teacher-Looker] Send Create RoomID: %lu, LiveID: %d", m_rtp_create.roomID, m_rtp_create.liveID);
 	// 计算下次发送创建命令的时间戳...
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -203,8 +201,7 @@ void CUDPRecvThread::doSendDetectCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送探测命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	//TRACE("[Teacher-Looker] Time: %lu ms, Send Detect dtNum: %d, MaxConSeq: %lu\n", now_ms, m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
+	//log_trace("[Teacher-Looker] Send Detect dtNum: %d, MaxConSeq: %lu", m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -251,8 +248,7 @@ void CUDPRecvThread::doSendReadyCmd()
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&rtpReady, sizeof(rtpReady));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
 	// 打印已发送准备就绪命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Send Ready command\n", now_ms);
+	log_trace("[Teacher-Looker] Send Ready command");
 	// 计算下次发送创建命令的时间戳...
 	m_next_ready_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -306,8 +302,7 @@ void CUDPRecvThread::doSendSupplyCmd()
 	if( m_rtp_supply.suSize <= 0 )
 		return;
 	// 打印已发送补包命令...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Supply Send => Count: %d\n", now_ms, m_rtp_supply.suSize / sizeof(int));
+	log_trace("[Teacher-Looker] Supply Send => Count: %d", m_rtp_supply.suSize / sizeof(int));
 	// 更新补包命令头内容块...
 	memcpy(szPacket, &m_rtp_supply, nHeadSize);
 	// 如果补包缓冲不为空，才进行补包命令发送...
@@ -375,7 +370,7 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	memcpy(&m_rtp_header, lpBuffer, sizeof(m_rtp_header));
 	int nNeedSize = m_rtp_header.spsSize + m_rtp_header.ppsSize + sizeof(m_rtp_header);
 	if( nNeedSize != inRecvLen ) {
-		TRACE("[Teacher-Looker] Recv Header error, RecvLen: %d\n", inRecvLen);
+		log_trace("[Teacher-Looker] Recv Header error, RecvLen: %d", inRecvLen);
 		memset(&m_rtp_header, 0, sizeof(m_rtp_header));
 		return;
 	}
@@ -393,8 +388,7 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	// 修改命令状态 => 开始向服务器准备就绪命令包...
 	m_nCmdState = kCmdSendReady;
 	// 打印收到序列头结构体信息...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Recv Header SPS: %d, PPS: %d\n", now_ms, m_strSPS.size(), m_strPPS.size());
+	log_trace("[Teacher-Looker] Recv Header SPS: %d, PPS: %d", m_strSPS.size(), m_strPPS.size());
 	/////////////////////////////////////////////////////////////////
 	// 开始重建本地播放器对象...
 	/////////////////////////////////////////////////////////////////
@@ -441,8 +435,7 @@ void CUDPRecvThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	// 保存学生推流端发送的准备就绪数据包内容...
 	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
 	// 打印收到准备就绪命令包...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Recv Ready from %lu:%d\n", now_ms, m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
+	log_trace("[Teacher-Looker] Recv Ready from %lu:%d", m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
 }
 //
 // 处理服务器发送过来的重建命令...
@@ -477,8 +470,7 @@ void CUDPRecvThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	++m_rtp_reload.reload_count;
 	// 打印收到服务器重建命令...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Server Reload Count: %d\n", now_ms, m_rtp_reload.reload_count);
+	log_trace("[Teacher-Looker] Server Reload Count: %d", m_rtp_reload.reload_count);
 	// 重置相关命令包...
 	memset(&m_rtp_header, 0, sizeof(m_rtp_header));
 	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
@@ -536,8 +528,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		if( m_rtt_var_ms < 0 ) { m_rtt_var_ms = abs(m_rtt_ms - keep_rtt); }
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms\n", now_ms, rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		log_trace("[Teacher-Looker] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms", rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
 	}
 }
 
@@ -580,12 +571,11 @@ void CUDPRecvThread::doParseFrame()
 	rtp_hdr_t * lpFirstHeader = (rtp_hdr_t*)szPacketCheck;
 	if( lpFirstHeader->pt == PT_TAG_LOSE )
 		return;
-	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	//TRACE( "[Teacher-Looker] Time: %lu ms, Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu\n", now_ms, 
+	//log_trace( "[Teacher-Looker] Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu",
 	//		lpFirstHeader->seq, lpFirstHeader->pt, lpFirstHeader->pk, lpFirstHeader->psize, lpFirstHeader->ts);
 	// 如果收到的有效序号不是连续的，打印错误...
 	if( (m_nMaxPlaySeq + 1) != lpFirstHeader->seq ) {
-		TRACE("[Teacher-Looker] Error => PlaySeq: %lu, CurSeq: %lu\n", m_nMaxPlaySeq, lpFirstHeader->seq);
+		log_trace("[Teacher-Looker] Error => PlaySeq: %lu, CurSeq: %lu", m_nMaxPlaySeq, lpFirstHeader->seq);
 	}
 	// 保留当前播放序号，移除环形队列...
 	m_nMaxPlaySeq = lpFirstHeader->seq;
@@ -641,9 +631,8 @@ void CUDPRecvThread::doParseFrame()
 		// 修改休息状态 => 已经抽取数据包，不能休息...
 		m_bNeedSleep = false;
 		// 打印抽帧失败信息 => 没有找到数据帧的开始标记...
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE( "[Teacher-Looker] Time: %lu ms, Error => Frame start code not find, Seq: %lu, Type: %d, Key: %d, PTS: %lu\n", 
-				now_ms, lpFrontHeader->seq, lpFrontHeader->pt, lpFrontHeader->pk, lpFrontHeader->ts );
+		log_trace( "[Teacher-Looker] Error => Frame start code not find, Seq: %lu, Type: %d, Key: %d, PTS: %lu", 
+					lpFrontHeader->seq, lpFrontHeader->pt, lpFrontHeader->pk, lpFrontHeader->ts );
 		return;
 	}
 	ASSERT( lpFrontHeader->pst );
@@ -698,15 +687,13 @@ void CUDPRecvThread::doParseFrame()
 	}
 	// 如果没有解析到数据帧 => 打印错误信息...
 	if( strFrame.size() <= 0 ) {
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Error => Frame size is Zero, PlaySeq: %lu, Type: %d, Key: %d\n", now_ms, m_nMaxPlaySeq, pt_type, is_key);
+		log_trace("[Teacher-Looker] Error => Frame size is Zero, PlaySeq: %lu, Type: %d, Key: %d", m_nMaxPlaySeq, pt_type, is_key);
 		return;
 	}
 	// 注意：环形队列被抽干后，必须在 doFillLosePack 中对环形队列为空时做特殊处理...
 	// 如果环形队列被全部抽干 => 也没关系，在收到新包当中对环形队列为空时做了特殊处理...
 	/*if( nConsumeSize >= m_circle.size ) {
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Error => Circle Empty, PlaySeq: %lu, CurSeq: %lu\n", now_ms, m_nMaxPlaySeq, cur_seq);
+		log_trace("[Teacher-Looker] Error => Circle Empty, PlaySeq: %lu, CurSeq: %lu", m_nMaxPlaySeq, cur_seq);
 	}*/
 	// 当前已解析的序列号保存为当前最大播放序列号...
 	m_nMaxPlaySeq = cur_seq;
@@ -733,9 +720,8 @@ void CUDPRecvThread::doParseFrame()
 		m_lpPlaySDL->PushFrame(strFrame, pt_type, is_key, ts_ms);
 	}
 	// 打印已投递的完整数据帧信息...
-	//uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	//TRACE( "[Teacher-Looker] Time: %lu ms, Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d\n", 
-	//		now_ms, pt_type, is_key, ts_ms, strFrame.size(), m_nMaxPlaySeq, m_circle.size/nPerPackSize );
+	//log_trace( "[Teacher-Looker] Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d", 
+	//			 pt_type, is_key, ts_ms, strFrame.size(), m_nMaxPlaySeq, m_circle.size/nPerPackSize );
 	// 修改休息状态 => 已经抽取完整音视频数据帧，不能休息...
 	m_bNeedSleep = false;
 }
@@ -751,8 +737,7 @@ void CUDPRecvThread::doEraseLoseSeq(uint32_t inSeqID)
 	uint32_t nResendCount = rtpLose.resend_count;
 	m_MapLose.erase(itorItem);
 	// 打印已收到的补包信息，还剩下的未补包个数...
-	uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Supply Erase => LoseSeq: %lu, ResendCount: %lu, LoseSize: %lu\n", now_ms, inSeqID, nResendCount, m_MapLose.size());
+	log_trace("[Teacher-Looker] Supply Erase => LoseSeq: %lu, ResendCount: %lu, LoseSize: %lu", inSeqID, nResendCount, m_MapLose.size());
 }
 //
 // 给丢失数据包预留环形队列缓存空间...
@@ -777,8 +762,7 @@ void CUDPRecvThread::doFillLosePack(uint32_t nStartLoseID, uint32_t nEndLoseID)
 		rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_var_ms,0);
 		m_MapLose[sup_id] = rtpLose;
 		// 打印已丢包信息，丢包队列长度...
-		uint32_t now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Lose Seq: %lu, LoseSize: %lu\n", now_ms, sup_id, m_MapLose.size());
+		log_trace("[Teacher-Looker] Lose Seq: %lu, LoseSize: %lu", sup_id, m_MapLose.size());
 		// 累加当前丢包序列号...
 		++sup_id;
 	}
@@ -807,21 +791,18 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	uint32_t new_id = lpNewHeader->seq;
 	uint32_t max_id = new_id;
 	uint32_t min_id = new_id;
-	uint32_t now_ms = 0;
 	if( inRecvLen != nDataSize || nZeroSize < 0 ) {
-		now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Discard => Seq: %lu, TS: %lu, Type: %d, Slice: %d, ZeroSize: %d\n", now_ms, lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->psize, nZeroSize);
+		log_trace("[Teacher-Looker] Discard => Seq: %lu, TS: %lu, Type: %d, Slice: %d, ZeroSize: %d", lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->psize, nZeroSize);
 		return;
 	}
 	// 如果收到的补充包比当前最大播放包还要小 => 说明是多次补包的冗余包，直接扔掉...
 	// 注意：即使相等也要扔掉，因为最大播放序号包本身已经投递到了播放层，已经被删除了...
 	if( new_id <= m_nMaxPlaySeq ) {
-		now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Supply Discard => Seq: %lu, MaxPlaySeq: %lu\n", now_ms, new_id, m_nMaxPlaySeq);
+		log_trace("[Teacher-Looker] Supply Discard => Seq: %lu, MaxPlaySeq: %lu", new_id, m_nMaxPlaySeq);
 		return;
 	}
 	// 打印收到的音频数据包信息 => 包括缓冲区填充量 => 每个数据包都是统一大小 => rtp_hdr_t + slice + Zero => 812
-	//TRACE("[Teacher-Looker] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, ZeroSize: %d\n", lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->pst, lpNewHeader->ped, lpNewHeader->psize, nZeroSize);
+	//log_trace("[Teacher-Looker] Seq: %lu, TS: %lu, Type: %d, pst: %d, ped: %d, Slice: %d, ZeroSize: %d", lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->pst, lpNewHeader->ped, lpNewHeader->psize, nZeroSize);
 	// 首先，将当前包序列号从丢包队列当中删除...
 	this->doEraseLoseSeq(new_id);
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -844,7 +825,7 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
 		// 打印新追加的序号包 => 不管有没有丢包，都要追加这个新序号包...
-		//TRACE("[Teacher-Looker] Max Seq: %lu, Cricle: Zero\n", new_id);
+		//log_trace("[Teacher-Looker] Max Seq: %lu, Cricle: Zero", new_id);
 		return;
 	}
 	// 环形队列中至少要有一个数据包...
@@ -871,15 +852,14 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 			circlebuf_push_back_zero(&m_circle, nZeroSize);
 		}
 		// 打印新加入的最大序号包...
-		//TRACE("[Teacher-Looker] Max Seq: %lu, Circle: %d\n", new_id, m_circle.size/nPerPackSize-1);
+		//log_trace("[Teacher-Looker] Max Seq: %lu, Circle: %d", new_id, m_circle.size/nPerPackSize-1);
 		return;
 	}
 	// 如果是丢包后的补充包 => max_id > new_id
 	if( max_id > new_id ) {
 		// 如果最小序号大于丢包序号 => 打印错误，直接丢掉这个补充包...
 		if( min_id > new_id ) {
-			now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-			TRACE("[Teacher-Looker] Time: %lu ms, Supply Discard => Seq: %lu, Min-Max: [%lu, %lu]\n", now_ms, new_id, min_id, max_id);
+			log_trace("[Teacher-Looker] Supply Discard => Seq: %lu, Min-Max: [%lu, %lu]", new_id, min_id, max_id);
 			return;
 		}
 		// 最小序号不能比丢包序号小...
@@ -889,13 +869,11 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 		// 将获取的数据内容更新到指定位置...
 		circlebuf_place(&m_circle, nPosition, lpBuffer, inRecvLen);
 		// 打印补充包信息...
-		now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-		TRACE("[Teacher-Looker] Time: %lu ms, Supply Success => Seq: %lu, Min-Max: [%lu, %lu]\n", now_ms, new_id, min_id, max_id);
+		log_trace("[Teacher-Looker] Supply Success => Seq: %lu, Min-Max: [%lu, %lu]", new_id, min_id, max_id);
 		return;
 	}
 	// 如果是其它未知包，打印信息...
-	now_ms = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
-	TRACE("[Teacher-Looker] Time: %lu ms, Supply Unknown => Seq: %lu, Slice: %d, Min-Max: [%lu, %lu]\n", now_ms, new_id, lpNewHeader->psize, min_id, max_id);
+	log_trace("[Teacher-Looker] Supply Unknown => Seq: %lu, Slice: %d, Min-Max: [%lu, %lu]", new_id, lpNewHeader->psize, min_id, max_id);
 }
 ///////////////////////////////////////////////////////
 // 注意：没有发包，也没有收包，需要进行休息...

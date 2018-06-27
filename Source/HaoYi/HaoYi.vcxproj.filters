@@ -1069,6 +1069,9 @@
     <ClCompile Include="PullThread.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="rtp\rtp.cpp">
+      <Filter>rtp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HaoYi.rc">

@@ -1428,6 +1428,7 @@
     <ClCompile Include="rtp\bmem.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="rtp\rtp.cpp" />
     <ClCompile Include="rtp\UDPPlayThread.cpp" />
     <ClCompile Include="rtp\UDPRecvThread.cpp" />
     <ClCompile Include="rtp\UDPSendThread.cpp" />

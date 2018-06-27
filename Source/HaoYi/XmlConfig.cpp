@@ -83,7 +83,10 @@ BOOL CXmlConfig::GMLoadConfig()
 		if( !CUtilTool::CreateDir(szPath) )
 			return false;
 	}
-	// 设置配置文件全路劲...
+	// 将用户配置目录保存起来...
+	m_strUserAppPath = szPath;
+
+	// 设置配置文件全路径...
 	strcat(szPath, "\\");
 	strcat(szPath, XML_CONFIG);
 	m_strXMLFile = szPath;
