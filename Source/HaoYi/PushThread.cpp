@@ -740,8 +740,11 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 	if( m_lpUDPSendThread != NULL ) {
 		bResult = m_lpUDPSendThread->PushFrame(inFrame);
 	}
+#ifndef DEBUG_DECODE
+	bResult = true;
+#endif //DEBUG_DECODE
 	// 将音视频数据推入播放线程...
-	if( m_lpPlaySDL != NULL ) {
+	if( m_lpPlaySDL != NULL && bResult ) {
 		m_lpPlaySDL->PushFrame(inFrame.strData, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime);
 	}
 	// 将超时计时点复位，重新计时...
@@ -1301,6 +1304,9 @@ void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, i
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	CRenderWnd * lpRenderWnd = m_lpCamera->GetVideoWnd()->GetRenderWnd();
+#ifdef DEBUG_DECODE
+	lpRenderWnd = NULL;
+#endif
 	m_lpPlaySDL->InitVideo(lpRenderWnd, inSPS, inPPS, nWidth, nHeight, nFPS);
 }
 
