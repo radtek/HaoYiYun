@@ -17,7 +17,7 @@ public:
 	BOOL			InitThread();
 	BOOL			InitVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL			InitAudio(int nRateIndex, int nChannelNum);
-	void			PushFrame(FMS_FRAME & inFrame);
+	BOOL			PushFrame(FMS_FRAME & inFrame);
 private:
 	void			CloseSocket();
 	void			doSendCreateCmd();

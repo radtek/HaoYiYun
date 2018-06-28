@@ -130,11 +130,13 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	m_strSPS = inSPS;
 	m_strPPS = inPPS;
 	// 设置播放窗口状态...
-	m_lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
-	// 创建SDL需要的对象...
-	m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
-	m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
-	m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nWidth, m_nHeight);
+	if( m_lpRenderWnd != NULL ) {
+		m_lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
+		// 创建SDL需要的对象...
+		m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
+		m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
+		m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nWidth, m_nHeight);
+	}
 	// 初始化ffmpeg解码器...
 	av_register_all();
 	// 准备一些特定的参数...
@@ -265,19 +267,21 @@ void CVideoThread::doDisplaySDL()
 	//////////////////////////////////////////////
 	// 使用SDL 进行画面绘制工作...
 	//////////////////////////////////////////////
-	int nResult = 0;
-	CRect rcRect;
-	SDL_Rect srcSdlRect = { 0 };
-	SDL_Rect dstSdlRect = { 0 };
-	m_lpRenderWnd->GetClientRect(rcRect);
-	srcSdlRect.w = nSrcWidth;
-	srcSdlRect.h = nSrcHeight;
-	dstSdlRect.w = rcRect.Width();
-	dstSdlRect.h = rcRect.Height();
-	nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame->data[0], pDestFrame->linesize[0] );
-    nResult = SDL_RenderClear( m_sdlRenderer );
-    nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );
-    SDL_RenderPresent( m_sdlRenderer );
+	if( m_lpRenderWnd != NULL ) {
+		int nResult = 0;
+		CRect rcRect;
+		SDL_Rect srcSdlRect = { 0 };
+		SDL_Rect dstSdlRect = { 0 };
+		m_lpRenderWnd->GetClientRect(rcRect);
+		srcSdlRect.w = nSrcWidth;
+		srcSdlRect.h = nSrcHeight;
+		dstSdlRect.w = rcRect.Width();
+		dstSdlRect.h = rcRect.Height();
+		nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame->data[0], pDestFrame->linesize[0] );
+		nResult = SDL_RenderClear( m_sdlRenderer );
+		nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );
+		SDL_RenderPresent( m_sdlRenderer );
+	}
 	// 释放临时分配的数据空间...
 	av_frame_free(&pDestFrame);
 	av_free(pDestOutBuf);
@@ -287,6 +291,45 @@ void CVideoThread::doDisplaySDL()
 	// 修改休息状态 => 已经有播放，不能休息...
 	m_bNeedSleep = false;
 }
+
+#ifdef DEBUG_DECODE
+static void DoSaveLocFile(AVFrame * lpAVFrame, bool bError, AVPacket & inPacket)
+{
+	static char szBuf[MAX_PATH] = {0};
+	char * lpszPath = "F:/MP4/Src/loc.obj";
+	FILE * pFile = fopen(lpszPath, "a+");
+	if( bError ) {
+		fwrite(&inPacket.pts, 1, sizeof(int64_t), pFile);
+		fwrite(inPacket.data, 1, inPacket.size, pFile);
+	} else {
+		fwrite(&lpAVFrame->best_effort_timestamp, 1, sizeof(int64_t), pFile);
+		for(int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
+			if( lpAVFrame->data[i] != NULL && lpAVFrame->linesize[i] > 0 ) {
+				fwrite(lpAVFrame->data[i], 1, lpAVFrame->linesize[i], pFile);
+			}
+		}
+	}
+	fclose(pFile);
+}
+static void DoSaveNetFile(AVFrame * lpAVFrame, bool bError, AVPacket & inPacket)
+{
+	static char szBuf[MAX_PATH] = {0};
+	char * lpszPath = "F:/MP4/Src/net.obj";
+	FILE * pFile = fopen(lpszPath, "a+");
+	if( bError ) {
+		fwrite(&inPacket.pts, 1, sizeof(int64_t), pFile);
+		fwrite(inPacket.data, 1, inPacket.size, pFile);
+	} else {
+		fwrite(&lpAVFrame->best_effort_timestamp, 1, sizeof(int64_t), pFile);
+		for(int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
+			if( lpAVFrame->data[i] != NULL && lpAVFrame->linesize[i] > 0 ) {
+				fwrite(lpAVFrame->data[i], 1, lpAVFrame->linesize[i], pFile);
+			}
+		}
+	}
+	fclose(pFile);
+}
+#endif // DEBUG_DECODE
 
 void CVideoThread::doDecodeFrame()
 {
@@ -316,6 +359,10 @@ void CVideoThread::doDecodeFrame()
 	// 非常关键的操作 => m_lpDFrame 千万不能释放，继续灌AVPacket就能解码出图像...
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	if( nResult < 0 || !got_picture ) {
+		// 保存解码失败的情况...
+#ifdef DEBUG_DECODE
+		(m_lpRenderWnd != NULL) ? DoSaveNetFile(m_lpDFrame, true, thePacket) : DoSaveLocFile(m_lpDFrame, true, thePacket);
+#endif // DEBUG_DECODE
 		// 打印解码失败信息，显示坏帧的个数...
 		log_trace("[Video] Error => decode_frame failed, BFrame: %d, PTS: %I64d, DecodeSize: %d, PacketSize: %d", m_lpDecoder->has_b_frames, thePacket.pts + inStartPtsMS, nResult, thePacket.size);
 		// 这里非常关键，告诉解码器不要缓存坏帧(B帧)，一旦有解码错误，直接扔掉，这就是低延时解码模式...
@@ -325,6 +372,10 @@ void CVideoThread::doDecodeFrame()
 		m_MapPacket.erase(itorItem);
 		return;
 	}
+	// 如果调试解码器，进行数据存盘...
+#ifdef DEBUG_DECODE
+	(m_lpRenderWnd != NULL) ? DoSaveNetFile(m_lpDFrame, false, thePacket) : DoSaveLocFile(m_lpDFrame, false, thePacket);
+#endif // DEBUG_DECODE
 	// 打印解码之后的数据帧信息...
 	//log_trace( "[Video] Decode => BFrame: %d, PTS: %I64d, pkt_dts: %I64d, pkt_pts: %I64d, Type: %d, DecodeSize: %d, PacketSize: %d", m_lpDecoder->has_b_frames,
 	//		m_lpDFrame->best_effort_timestamp + inStartPtsMS, m_lpDFrame->pkt_dts + inStartPtsMS, m_lpDFrame->pkt_pts + inStartPtsMS,

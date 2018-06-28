@@ -736,8 +736,9 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 		return 0;
 	}
 	// 将音视频数据推入发送线程...
+	BOOL bResult = false;
 	if( m_lpUDPSendThread != NULL ) {
-		m_lpUDPSendThread->PushFrame(inFrame);
+		bResult = m_lpUDPSendThread->PushFrame(inFrame);
 	}
 	// 将音视频数据推入播放线程...
 	if( m_lpPlaySDL != NULL ) {

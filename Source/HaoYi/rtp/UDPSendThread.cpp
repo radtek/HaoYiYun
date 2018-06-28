@@ -121,8 +121,8 @@ BOOL CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	LPCTSTR lpszAddr = "192.168.1.70";
-	//LPCTSTR lpszAddr = DEF_UDP_HOME;
+	//LPCTSTR lpszAddr = "192.168.1.70";
+	LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -158,29 +158,29 @@ static void DoSaveSendSeq(uint32_t inPSeq, int inPSize, bool inPST, bool inPED, 
 }
 #endif // DEBUG_FRAME
 
-void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
+BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 {
 	OSMutexLocker theLock(&m_Mutex);
 	// 判断线程是否已经退出 或 环形队列缓冲无效...
 	if( this->IsStopRequested() || m_circle.capacity <= 0 ) {
 		log_trace("[Student-Pusher] Error => Send Thread has been stoped");
-		return;
+		return false;
 	}
 	// 如果数据帧的长度为0，打印错误，直接返回...
 	if( inFrame.strData.size() <= 0 ) {
 		log_trace("[Student-Pusher] Error => Input Frame Size is Zero");
-		return;
+		return false;
 	}
 	/////////////////////////////////////////////////////////////////////
 	// 注意：只有当接收端准备好之后，才能开始推流操作...
 	/////////////////////////////////////////////////////////////////////
 	// 如果接收端没有准备好，直接返回 => 收到准备继续包，状态为打包状态...
 	if( m_nCmdState != kCmdSendAVPack || m_rtp_ready.tm != TM_TAG_TEACHER || m_rtp_ready.recvPort <= 0 )
-		return;
+		return false;
 	// 如果有视频，第一帧必须是视频关键帧...
 	if( m_rtp_header.hasVideo && m_nCurPackSeq <= 0 ) {
 		if( inFrame.typeFlvTag != PT_TAG_VIDEO || !inFrame.is_keyframe )
-			return;
+			return false;
 		ASSERT( inFrame.typeFlvTag == PT_TAG_VIDEO && inFrame.is_keyframe );
 	}
 	// 打印第一帧信息 => 开始有音视频数据包了...
@@ -235,6 +235,7 @@ void CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
 #endif // DEBUG_FRAME
 	}
+	return true;
 }
 
 void CUDPSendThread::Entry()
