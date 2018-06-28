@@ -1306,7 +1306,7 @@ void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, i
 	CRenderWnd * lpRenderWnd = m_lpCamera->GetVideoWnd()->GetRenderWnd();
 #ifdef DEBUG_DECODE
 	lpRenderWnd = NULL;
-#endif
+#endif // DEBUG_DECODE
 	m_lpPlaySDL->InitVideo(lpRenderWnd, inSPS, inPPS, nWidth, nHeight, nFPS);
 }
 
