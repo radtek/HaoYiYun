@@ -533,7 +533,7 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		if( m_rtt_var_ms < 0 ) { m_rtt_var_ms = abs(m_rtt_ms - keep_rtt); }
 		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// ¥Ú”°ÃΩ≤‚Ω·π˚ => ÃΩ≤‚–Ú∫≈ | Õ¯¬Á—” ±(∫¡√Î)...
-		log_trace("[Teacher-Looker] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms", rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms);
+		log_trace("[Teacher-Looker] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms, MaxConSeq: %lu", rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms, rtpDetect.maxConSeq);
 	}
 }
 

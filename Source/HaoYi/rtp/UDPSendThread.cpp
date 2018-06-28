@@ -740,9 +740,9 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		circlebuf_pop_front(&m_circle, NULL, nPopSize);
 		// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 		// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
-		//uint32_t nRemainCount = m_circle.size / nPackSize;
-		//log_trace( "[Student-Pusher] Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
-		//			 lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
+		uint32_t nRemainCount = m_circle.size / nPerPackSize;
+		log_trace( "[Student-Pusher] Recv Detect MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
+					 lpDetect->maxConSeq, lpFrontHeader->seq, m_nCurSendSeq, m_nCurPackSeq, nRemainCount );
 		return;
 	}
 	// 如果是 学生推流端 自己发出的探测包，计算网络延时...
