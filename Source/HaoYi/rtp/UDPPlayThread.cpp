@@ -227,8 +227,12 @@ void CVideoThread::doDisplaySDL()
 		m_play_next_ns = CUtilTool::os_gettime_ns() + MAX_SLEEP_MS * 1000000;
 		return;
 	}
-	// 计算当前时间与0点位置的时间差 => 转换成毫秒...
+	// 这是为了测试原始PTS而获取的初始PTS值 => 只在打印调试信息时使用...
+	int64_t inStartPtsMS = m_lpPlaySDL->GetStartPtsMS();
+	// 计算当前时刻点与系统0点位置的时间差 => 转换成毫秒...
 	int64_t sys_cur_ms = (CUtilTool::os_gettime_ns() - m_lpPlaySDL->GetSysZeroNS())/1000000;
+	// 累加人为设定的延时毫秒数 => 相减...
+	sys_cur_ms -= m_lpPlaySDL->GetZeroDelayMS();
 	// 取出第一个已解码数据帧 => 时间最小的数据帧...
 	GM_MapFrame::iterator itorItem = m_MapFrame.begin();
 	AVFrame * lpSrcFrame = itorItem->second;
@@ -236,13 +240,13 @@ void CVideoThread::doDisplaySDL()
 	// 当前帧的显示时间还没有到 => 直接休息差值...
 	if( frame_pts_ms > sys_cur_ms ) {
 		m_play_next_ns = CUtilTool::os_gettime_ns() + (frame_pts_ms - sys_cur_ms)*1000000;
-		//log_trace("[Video] Waiter => PTS: %I64d, SYS: %I64d, AVPackSize: %d, AVFrameSize: %d", frame_pts, sys_cur_ms, m_MapPacket.size(), m_MapFrame.size());
+		//log_trace("[Video] Advance => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d", frame_pts_ms + inStartPtsMS, frame_pts_ms - sys_cur_ms, m_MapPacket.size(), m_MapFrame.size());
 		return;
 	}
 	// 将数据转换成jpg...
 	//DoProcSaveJpeg(lpSrcFrame, m_lpDecoder->pix_fmt, frame_pts, "F:/MP4/Dst");
 	// 打印正在播放的解码后视频数据...
-	//log_debug("[Video] Player => PTS: %I64d, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
+	//log_debug("[Video] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AVFrameSize: %d", frame_pts_ms + inStartPtsMS, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapFrame.size());
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：视频延时帧（落后帧），不能丢弃，必须继续显示，视频消耗速度相对较快，除非时间戳给错了，会造成播放问题。
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -496,8 +500,12 @@ void CAudioThread::doDisplaySDL()
 		m_play_next_ns = CUtilTool::os_gettime_ns() + MAX_SLEEP_MS * 1000000;
 		return;
 	}
+	// 这是为了测试原始PTS而获取的初始PTS值 => 只在打印调试信息时使用...
+	int64_t inStartPtsMS = m_lpPlaySDL->GetStartPtsMS();
 	// 计算当前时间与0点位置的时间差 => 转换成毫秒...
 	int64_t sys_cur_ms = (CUtilTool::os_gettime_ns() - m_lpPlaySDL->GetSysZeroNS())/1000000;
+	// 累加人为设定的延时毫秒数 => 相减...
+	sys_cur_ms -= m_lpPlaySDL->GetZeroDelayMS();
 	// 获取第一个已解码数据帧 => 时间最小的数据帧...
 	GM_MapAudio::iterator itorItem = m_MapAudio.begin();
 	string  & stringPCM = itorItem->second;
@@ -505,14 +513,14 @@ void CAudioThread::doDisplaySDL()
 	// 不能超前投递数据，会造成硬件层数据堆积，造成缓存积压，引发缓存清理...
 	if( frame_pts_ms > sys_cur_ms ) {
 		m_play_next_ns = CUtilTool::os_gettime_ns() + (frame_pts_ms - sys_cur_ms)*1000000;
-		//log_trace("[Audio] Advance: %I64d ms, AudioSize: %d, QueueBytes: %lu", frame_pts_ms - sys_cur_ms, m_MapAudio.size(), nQueueBytes);
+		//log_trace("[Audio] Advance => PTS: %I64d ms, Delay: %I64d ms, AudioSize: %d", frame_pts_ms + inStartPtsMS, frame_pts_ms - sys_cur_ms, m_MapAudio.size());
 		return;
 	}
 	///////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：必须对音频播放内部的缓存做定期伐值清理 => CPU过高时，DirectSound会堆积缓存...
-	// 投递数据前，先查看正在排队的音频数据 => 缓存超过300毫秒就清理...
+	// 投递数据前，先查看正在排队的音频数据 => 缓存超过500毫秒就清理...
 	///////////////////////////////////////////////////////////////////////////////////////////
-	int nAllowDelay = 300;
+	int nAllowDelay = 500;
 	int nAllowSample = nAllowDelay / m_nSampleDuration;
 	int nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
 	int nQueueSample = nQueueBytes / m_out_buffer_size;
@@ -528,7 +536,7 @@ void CAudioThread::doDisplaySDL()
 	}
 	// 打印已经投递的音频数据信息...
 	//nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
-	//log_debug("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu", frame_pts_ms, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
+	//log_debug("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu", frame_pts_ms + inStartPtsMS, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_MapAudio.size(), nQueueBytes);
 	// 删除已经使用的音频数据...
 	m_MapAudio.erase(itorItem);
 	// 修改休息状态 => 已经有播放，不能休息...
@@ -695,12 +703,15 @@ void CAudioThread::doFillPacket(string & inData, int inPTS, bool bIsKeyFrame, in
 	this->doPushPacket(theNewPacket);
 }
 
-CPlaySDL::CPlaySDL()
-  : m_lpVideoThread(NULL)
+CPlaySDL::CPlaySDL(int64_t inSysZeroNS)
+  : m_sys_zero_ns(inSysZeroNS)
+  , m_bFindFirstVKey(false)
+  , m_lpVideoThread(NULL)
   , m_lpAudioThread(NULL)
-  , m_sys_zero_ns(-1)
   , m_start_pts_ms(-1)
+  , m_zero_delay_ms(0)
 {
+	ASSERT( m_sys_zero_ns > 0 );
 }
 
 CPlaySDL::~CPlaySDL()
@@ -740,36 +751,64 @@ BOOL CPlaySDL::InitAudio(int nRateIndex, int nChannelNum)
 
 void CPlaySDL::PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime)
 {
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：不能在这里设置系统0点时刻，必须在之前设定0点时刻...
+	// 系统0点时刻与帧时间戳没有任何关系，是指系统认为的第一帧应该准备好的系统时刻点...
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：越快设置第一帧时间戳，播放延时越小，至于能否播放，不用管，这里只管设定启动时间戳...
+	// 获取第一帧的PTS时间戳 => 做为启动时间戳，注意不是系统0点时刻...
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	if( m_start_pts_ms < 0 ) {
+		m_start_pts_ms = inSendTime;
+		log_trace("[Teacher-Looker] StartPTS: %lu, Type: %d", inSendTime, inTypeTag);
+	}
+	// 注意：寻找第一个视频关键帧的时候，音频帧不要丢弃...
+	// 如果有视频，视频第一帧必须是视频关键帧，不丢弃的话解码会失败...
+	if((inTypeTag == PT_TAG_VIDEO) && (m_lpVideoThread != NULL) && (!m_bFindFirstVKey)) {
+		// 如果当前视频帧，不是关键帧，直接丢弃...
+		if( !bIsKeyFrame ) {
+			log_trace("[Teacher-Looker] Discard for First Video KeyFrame => PTS: %lu, Type: %d", inSendTime, inTypeTag);
+			return;
+		}
+		// 设置已经找到第一个视频关键帧标志...
+		m_bFindFirstVKey = true;
+		log_trace("[Teacher-Looker] Find First Video KeyFrame OK => PTS: %lu, Type: %d", inSendTime, inTypeTag);
+	}
 	// 判断处理帧的对象是否存在，不存在，直接丢弃...
 	if( inTypeTag == FLV_TAG_TYPE_AUDIO && m_lpAudioThread == NULL )
 		return;
 	if( inTypeTag == FLV_TAG_TYPE_VIDEO && m_lpVideoThread == NULL )
 		return;
-	// 获取第一帧的PTS时间戳...
-	if( m_start_pts_ms < 0 ) {
-		m_start_pts_ms = inSendTime;
-		log_trace("[Teacher-Looker] StartPTS: %lu, Type: %d", inSendTime, inTypeTag);
-	}
-	// 注意：有数据到达时，才进行零点计算...
-	// 设置系统零点时间 => 播放启动时间戳...
-	if( m_sys_zero_ns < 0 ) {
-		m_sys_zero_ns = CUtilTool::os_gettime_ns();
-	}
-	// 如果当前帧的时间戳比第一帧的时间戳还要小，直接扔掉...
+	// 如果当前帧的时间戳比第一帧的时间戳还要小，不要扔掉，设置成启动时间戳就可以了...
 	if( inSendTime < m_start_pts_ms ) {
 		log_trace("[Teacher-Looker] Error => SendTime: %lu, StartPTS: %I64d", inSendTime, m_start_pts_ms);
-		return;
+		inSendTime = m_start_pts_ms;
 	}
 	// 计算当前帧的时间戳 => 时间戳必须做修正，否则会混乱...
 	int nCalcPTS = inSendTime - (uint32_t)m_start_pts_ms;
 
-	/////////////////////////////////////////////////////////////
-	// 注意：延时模拟目前测试出来，后续配合网络实测后再模拟...
-	/////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////
+	// 延时实验：在0~2000毫秒之间来回跳动，跳动间隔为1毫秒...
+	///////////////////////////////////////////////////////////////////////////
+	/*static bool bForwardFlag = true;
+	if( bForwardFlag ) {
+		m_zero_delay_ms -= 2;
+		bForwardFlag = ((m_zero_delay_ms == 0) ? false : true);
+	} else {
+		m_zero_delay_ms += 2;
+		bForwardFlag = ((m_zero_delay_ms == 2000) ? true : false);
+	}*/
+	//log_trace("[Teacher-Looker] Zero Delay => %I64d ms", m_zero_delay_ms);
 
-	//////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////
+	// 注意：延时模拟目前已经解决了，后续配合网络实测后再模拟...
+	///////////////////////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////////////////////
 	// 随机丢掉数据帧 => 每隔10秒，丢1秒的音视频数据帧...
-	//////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////
 	//if( (inFrame.dwSendTime/1000>0) && ((inFrame.dwSendTime/1000)%5==0) ) {
 	//	log_trace("[%s] Discard Packet, PTS: %d", inFrame.typeFlvTag == FLV_TAG_TYPE_AUDIO ? "Audio" : "Video", nCalcPTS);
 	//	return;

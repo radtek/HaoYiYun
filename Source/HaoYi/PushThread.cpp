@@ -186,6 +186,13 @@ BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strS
 	m_dwTimeOutMS = dwInitTimeMS;
 	// 记录通道截图间隔时间，单位（毫秒）...
 	m_dwSnapTimeMS = dwInitTimeMS;
+
+	//////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：老师观看端一定是先于学生推流端被创建，因为，是由老师观看端引发的学生推流操作
+	//////////////////////////////////////////////////////////////////////////////////////////////
+	this->StartUDPRecvThread();
+
+	// 返回正确结果...
 	return true;
 }
 //
@@ -1268,7 +1275,20 @@ CRenderWnd * CPushThread::GetRenderWnd()
 	return m_lpCamera->GetVideoWnd()->GetRenderWnd();
 }
 
-void CPushThread::StartUDPThread()
+void CPushThread::StartUDPRecvThread()
+{
+	if( m_lpUDPRecvThread != NULL )
+		return;
+	// 准备创建接收线程需要的配置信息...
+	CXmlConfig & theConfig = CXmlConfig::GMInstance();
+	int nDBRoomID = theConfig.GetCurSelRoomID();
+	int nDBCameraID = m_lpCamera->GetDBCameraID();
+	// 创建并初始化接收线程对象....
+	m_lpUDPRecvThread = new CUDPRecvThread(this, nDBRoomID, nDBCameraID);
+	m_lpUDPRecvThread->InitThread();
+}
+
+void CPushThread::StartUDPSendThread()
 {
 	if( m_lpRtspThread == NULL )
 		return;
@@ -1300,7 +1320,7 @@ void CPushThread::StartUDPThread()
 void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
 	if( m_lpPlaySDL == NULL ) {
-		m_lpPlaySDL = new CPlaySDL();
+		m_lpPlaySDL = new CPlaySDL(CUtilTool::os_gettime_ns());
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	CRenderWnd * lpRenderWnd = m_lpCamera->GetVideoWnd()->GetRenderWnd();
@@ -1313,7 +1333,7 @@ void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, i
 void CPushThread::StartPlayByAudio(int nRateIndex, int nChannelNum)
 {
 	if( m_lpPlaySDL == NULL ) {
-		m_lpPlaySDL = new CPlaySDL();
+		m_lpPlaySDL = new CPlaySDL(CUtilTool::os_gettime_ns());
 	}
 	ASSERT( m_lpPlaySDL != NULL );
 	m_lpPlaySDL->InitAudio(nRateIndex, nChannelNum);
@@ -1329,12 +1349,6 @@ void CPushThread::StartSendByAudio(int nRateIndex, int nChannelNum)
 	}
 	ASSERT( m_lpUDPSendThread != NULL );
 	m_lpUDPSendThread->InitAudio(nRateIndex, nChannelNum);
-
-	// 创建接收线程...
-	if( m_lpUDPRecvThread != NULL )
-		return;
-	m_lpUDPRecvThread = new CUDPRecvThread(this, nDBRoomID, nDBCameraID);
-	m_lpUDPRecvThread->InitThread();
 }
 
 void CPushThread::StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
@@ -1347,10 +1361,4 @@ void CPushThread::StartSendByVideo(string & inSPS, string & inPPS, int nWidth, i
 	}
 	ASSERT( m_lpUDPSendThread != NULL );
 	m_lpUDPSendThread->InitVideo(inSPS, inPPS, nWidth, nHeight, nFPS);
-
-	// 创建接收线程...
-	if( m_lpUDPRecvThread != NULL )
-		return;
-	m_lpUDPRecvThread = new CUDPRecvThread(this, nDBRoomID, nDBCameraID);
-	m_lpUDPRecvThread->InitThread();
 }

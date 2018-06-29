@@ -23,8 +23,9 @@ bool do_trace(const char * inFile, int inLine, bool bIsDebug, const char *msg, .
 	// 准备完整的日志头信息...
 	int  log_size = -1;
 	char log_data[LOG_MAX_SIZE] = {0};
+	int64_t now_ms = CUtilTool::os_gettime_ns() / 1000000;
 	log_size = _snprintf(log_data, LOG_MAX_SIZE, 
-		"[%d-%02d-%02d %02d:%02d:%02d.%03d][%d][%s:%d][%s] ", wtm.wYear, wtm.wMonth, wtm.wDay,
+		"[%I64d ms][%d-%02d-%02d %02d:%02d:%02d.%03d][%d][%s:%d][%s] ", now_ms, wtm.wYear, wtm.wMonth, wtm.wDay,
 		wtm.wHour, wtm.wMinute, wtm.wSecond, (int)(wtm.wMilliseconds), getpid(), inFile, inLine,
 		bIsDebug ? "debug" : "trace");
 	// 确认日志头长度...

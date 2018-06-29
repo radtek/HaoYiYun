@@ -55,7 +55,8 @@ typedef struct {
   unsigned char   noset;        // 保留 => 字节对齐
   unsigned short  dtNum;        // 探测序号
   unsigned int    tsSrc;        // 探测发起时的时间戳 => 毫秒
-  unsigned int    maxConSeq;    // 接收端已收到最大连续序列号 => 告诉发送端：这个号码之前的数据包都可以删除了
+  unsigned int    maxAConSeq;   // 接收端已收到音频最大连续序列号 => 告诉发送端：这个号码之前的音频数据包都可以删除了
+  unsigned int    maxVConSeq;   // 接收端已收到视频最大连续序列号 => 告诉发送端：这个号码之前的视频数据包都可以删除了
 }rtp_detect_t;
 //
 // 定义创建命令结构体 => PT_TAG_CREATE
@@ -83,7 +84,7 @@ typedef struct {
   unsigned char   tm:2;         // terminate type => TM_TAG_STUDENT | TM_TAG_TEACHER
   unsigned char   id:2;         // identify type => ID_TAG_PUSHER | ID_TAG_LOOKER
   unsigned char   pt:4;         // payload type => PT_TAG_SUPPLY
-  unsigned char   noset;        // 保留 => 字节对齐
+  unsigned char   suType;       // 补包类型 => 8(音频)9(视频)
   unsigned short  suSize;       // 补报长度 / 4 = 补包个数
   // unsigned int => 补包序号1
   // unsigned int => 补包序号2
@@ -143,9 +144,11 @@ typedef struct {
 //
 // 定义丢包结构体...
 typedef struct {
-  unsigned int   lose_seq;      // 检测到的丢包序列号
-  unsigned int   resend_time;   // 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
-  unsigned int   resend_count;  // 重发次数值 => 当前丢失包的已重发次数
+  unsigned int    lose_seq;      // 检测到的丢包序列号
+  unsigned int    resend_time;   // 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差
+  unsigned short  resend_count;  // 重发次数值 => 当前丢失包的已重发次数
+  unsigned char   lose_type;     // 丢包类型 => 8(音频)9(视频)
+  unsigned char   noset;         // 保留 => 字节对齐
 }rtp_lose_t;
 
 // 定义检测到的丢包队列 => 序列号 : 丢包结构体...

@@ -100,17 +100,20 @@ private:
 class CPlaySDL
 {
 public:
-	CPlaySDL();
+	CPlaySDL(int64_t inSysZeroNS);
 	~CPlaySDL();
 public:
 	void		PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime);
 	BOOL		InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL		InitAudio(int nRateIndex, int nChannelNum);
+	int64_t		GetZeroDelayMS() { return m_zero_delay_ms; }
 	int64_t		GetSysZeroNS() { return m_sys_zero_ns; }
 	int64_t		GetStartPtsMS() { return m_start_pts_ms; }
 private:
+	bool				m_bFindFirstVKey;	// 是否找到第一个视频关键帧标志...
 	int64_t				m_sys_zero_ns;		// 系统计时零点 => 启动时间戳 => 纳秒...
 	int64_t				m_start_pts_ms;		// 第一帧的PTS时间戳计时起点 => 毫秒...
+	int64_t				m_zero_delay_ms;	// 延时设定毫秒数 => 可以根据情况自动调节...
 
 	CVideoThread    *   m_lpVideoThread;	// 视频线程...
 	CAudioThread    *   m_lpAudioThread;	// 音频线程...
