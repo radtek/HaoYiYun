@@ -60,6 +60,9 @@ private:
 	string			m_strSPS;
 	string			m_strPPS;
 
+	uint8_t      *  m_img_buffer_ptr;	// 单帧图像输出空间
+	int             m_img_buffer_size;	// 单帧图像输出大小
+
 	CRenderWnd	 *	m_lpRenderWnd;		// 播放窗口
 	SDL_Window   *  m_sdlScreen;		// SDL窗口
 	SDL_Renderer *  m_sdlRenderer;		// SDL渲染

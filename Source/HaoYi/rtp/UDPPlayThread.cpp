@@ -80,6 +80,8 @@ void CDecoder::doSleepTo()
 
 CVideoThread::CVideoThread(CPlaySDL * lpPlaySDL)
   : m_lpPlaySDL(lpPlaySDL)
+  , m_img_buffer_ptr(NULL)
+  , m_img_buffer_size(0)
   , m_lpRenderWnd(NULL)
   , m_sdlRenderer(NULL)
   , m_sdlTexture(NULL)
@@ -112,6 +114,11 @@ CVideoThread::~CVideoThread()
 	if( m_lpRenderWnd != NULL ) {
 		m_lpRenderWnd->ShowWindow(SW_SHOW);
 		m_lpRenderWnd->SetRenderState(CRenderWnd::ST_RENDER);
+	}
+	// 释放单帧图像转换空间...
+	if( m_img_buffer_ptr != NULL ) {
+		av_free(m_img_buffer_ptr);
+		m_img_buffer_ptr = NULL;
 	}
 }
 
@@ -161,6 +168,14 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	// 准备一个全局的解码结构体 => 解码数据帧是相互关联的...
 	m_lpDFrame = av_frame_alloc();
 	ASSERT( m_lpDFrame != NULL );
+
+	// 分配单帧图像转换空间...
+	int nSrcWidth = m_nWidth;
+	int nSrcHeight = m_nHeight;
+	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
+	m_img_buffer_size = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	m_img_buffer_ptr = (uint8_t *)av_malloc(m_img_buffer_size);
+
 	// 启动线程开始运转...
 	this->Start();
 	return true;
@@ -255,19 +270,19 @@ void CVideoThread::doDisplaySDL()
 	enum AVPixelFormat nSrcFormat = m_lpDecoder->pix_fmt;
 	int nSrcWidth = m_lpDecoder->width;
 	int nSrcHeight = m_lpDecoder->height;
+	ASSERT( nSrcWidth == m_nWidth );
+	ASSERT( nSrcHeight == m_nHeight);
 	// 不管什么格式，都需要进行像素格式的转换...
-	AVFrame * pDestFrame = av_frame_alloc();
-	int nDestBufSize = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
-	uint8_t * pDestOutBuf = (uint8_t *)av_malloc(nDestBufSize);
-	avpicture_fill((AVPicture *)pDestFrame, pDestOutBuf, nDestFormat, nSrcWidth, nSrcHeight);
+	AVPicture pDestFrame = {0};
+	avpicture_fill(&pDestFrame, m_img_buffer_ptr, nDestFormat, nSrcWidth, nSrcHeight);
+	// 另一种方法：临时分配图像格式转换空间的方法...
+	//int nDestBufSize = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	//uint8_t * pDestOutBuf = (uint8_t *)av_malloc(nDestBufSize);
+	//avpicture_fill(&pDestFrame, pDestOutBuf, nDestFormat, nSrcWidth, nSrcHeight);
 	// 调用ffmpeg的格式转换接口函数...
 	struct SwsContext * img_convert_ctx = sws_getContext(nSrcWidth, nSrcHeight, nSrcFormat, nSrcWidth, nSrcHeight, nDestFormat, SWS_BICUBIC, NULL, NULL, NULL);
-	int nReturn = sws_scale(img_convert_ctx, (const uint8_t* const*)lpSrcFrame->data, lpSrcFrame->linesize, 0, nSrcHeight, pDestFrame->data, pDestFrame->linesize);
+	int nReturn = sws_scale(img_convert_ctx, (const uint8_t* const*)lpSrcFrame->data, lpSrcFrame->linesize, 0, nSrcHeight, pDestFrame.data, pDestFrame.linesize);
 	sws_freeContext(img_convert_ctx);
-	// 设置转换后的数据帧内容...
-	pDestFrame->width = nSrcWidth;
-	pDestFrame->height = nSrcHeight;
-	pDestFrame->format = nDestFormat;
 	//////////////////////////////////////////////
 	// 使用SDL 进行画面绘制工作...
 	//////////////////////////////////////////////
@@ -281,14 +296,13 @@ void CVideoThread::doDisplaySDL()
 		srcSdlRect.h = nSrcHeight;
 		dstSdlRect.w = rcRect.Width();
 		dstSdlRect.h = rcRect.Height();
-		nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame->data[0], pDestFrame->linesize[0] );
+		nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame.data[0], pDestFrame.linesize[0] );
 		nResult = SDL_RenderClear( m_sdlRenderer );
 		nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );
 		SDL_RenderPresent( m_sdlRenderer );
 	}
 	// 释放临时分配的数据空间...
-	av_frame_free(&pDestFrame);
-	av_free(pDestOutBuf);
+	//av_free(pDestOutBuf);
 	// 释放并删除已经使用完毕原始数据块...
 	av_frame_free(&lpSrcFrame);
 	m_MapFrame.erase(itorItem);
