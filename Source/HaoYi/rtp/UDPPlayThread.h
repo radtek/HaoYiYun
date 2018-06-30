@@ -3,6 +3,7 @@
 
 #include "OSMutex.h"
 #include "OSThread.h"
+#include "circlebuf.h"
 
 extern "C"
 {
@@ -17,7 +18,6 @@ extern "C"
 
 typedef	map<int64_t, AVPacket>		GM_MapPacket;	// DTS => AVPacket  => 解码前的数据帧 => 毫秒 => 1/1000
 typedef map<int64_t, AVFrame*>		GM_MapFrame;	// PTS => AVFrame   => 解码后的视频帧 => 毫秒 => 1/1000
-typedef map<int64_t, string>		GM_MapAudio;	// PTS => string    => 解码后的音频帧 => 毫秒 => 1/1000
 
 // 第三版：音视频线程分开播放...
 class CRenderWnd;
@@ -59,13 +59,14 @@ private:
 	int				m_nHeight;
 	string			m_strSPS;
 	string			m_strPPS;
-	CRenderWnd	 *	m_lpRenderWnd;
-	SDL_Window   *  m_sdlScreen;
-	SDL_Renderer *  m_sdlRenderer;
-    SDL_Texture  *  m_sdlTexture;
 
-	OSMutex			m_Mutex;
-	CPlaySDL	 *  m_lpPlaySDL;
+	CRenderWnd	 *	m_lpRenderWnd;		// 播放窗口
+	SDL_Window   *  m_sdlScreen;		// SDL窗口
+	SDL_Renderer *  m_sdlRenderer;		// SDL渲染
+    SDL_Texture  *  m_sdlTexture;		// SDL纹理
+
+	OSMutex			m_Mutex;			// 互斥对象
+	CPlaySDL	 *  m_lpPlaySDL;		// 播放控制
 };
 
 class CAudioThread : public CDecoder, public OSThread
@@ -86,15 +87,15 @@ private:
 	int				    m_audio_sample_rate;
 	int					m_nSampleDuration;
 
-	uint8_t		 *		m_out_buffer;
-	int					m_out_buffer_size;
-	SwrContext   *		m_au_convert_ctx;
+	SwrContext   *		m_au_convert_ctx;	// 音频格式转换
+	uint8_t		 *		m_out_buffer_ptr;	// 单帧输出空间
+	int					m_out_buffer_size;	// 单帧输出大小
 
-	GM_MapAudio			m_MapAudio;
-	SDL_AudioDeviceID	m_nDeviceID;
+	circlebuf			m_circle;			// PCM数据环形队列
+	SDL_AudioDeviceID	m_nDeviceID;		// 音频设备编号
 
-	OSMutex				m_Mutex;
-	CPlaySDL	 *		m_lpPlaySDL;
+	OSMutex				m_Mutex;			// 互斥对象
+	CPlaySDL	 *		m_lpPlaySDL;		// 播放控制
 };
 
 class CPlaySDL
