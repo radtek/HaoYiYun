@@ -752,7 +752,7 @@ int CPushThread::PushFrame(FMS_FRAME & inFrame)
 #endif //DEBUG_DECODE
 	// 将音视频数据推入播放线程...
 	if( m_lpPlaySDL != NULL && bResult ) {
-		m_lpPlaySDL->PushFrame(inFrame.strData, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime);
+		m_lpPlaySDL->PushFrame(0, inFrame.strData, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.dwSendTime);
 	}
 	// 将超时计时点复位，重新计时...
 	m_dwTimeOutMS = ::GetTickCount();

@@ -107,7 +107,7 @@ public:
 	CPlaySDL(int64_t inSysZeroNS);
 	~CPlaySDL();
 public:
-	void		PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime);
+	void		PushFrame(int zero_delay_ms, string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime);
 	BOOL		InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);
 	BOOL		InitAudio(int nRateIndex, int nChannelNum);
 	int64_t		GetZeroDelayMS() { return m_zero_delay_ms; }

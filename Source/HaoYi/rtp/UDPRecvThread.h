@@ -57,6 +57,8 @@ private:
 	bool			m_bNeedSleep;			// 休息标志 => 只要有发包或收包就不能休息...
 	int				m_rtt_ms;				// 网络往返延迟值 => 毫秒
 	int				m_rtt_var_ms;			// 网络抖动时间差 => 毫秒
+	int				m_cache_time_ms;		// 缓冲评估时间 => 毫秒 => 就是播放延时时间
+	int				m_nMaxResendCount;		// 当前丢包最大重发次数
 
 	circlebuf		m_audio_circle;			// 音频环形队列
 	circlebuf		m_video_circle;			// 视频环形队列

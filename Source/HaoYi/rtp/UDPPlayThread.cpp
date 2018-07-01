@@ -745,7 +745,7 @@ CPlaySDL::CPlaySDL(int64_t inSysZeroNS)
   , m_bFindFirstVKey(false)
   , m_lpVideoThread(NULL)
   , m_lpAudioThread(NULL)
-  , m_zero_delay_ms(0)
+  , m_zero_delay_ms(-1)
   , m_start_pts_ms(-1)
 {
 	ASSERT( m_sys_zero_ns > 0 );
@@ -786,8 +786,13 @@ BOOL CPlaySDL::InitAudio(int nRateIndex, int nChannelNum)
 	return m_lpAudioThread->InitAudio(nRateIndex, nChannelNum);
 }
 
-void CPlaySDL::PushFrame(string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime)
+void CPlaySDL::PushFrame(int zero_delay_ms, string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime)
 {
+	// 为了解决突发延时抖动，要用一种遗忘衰减算法，进行播放延时控制...
+	// 直接使用计算出的缓存时间设定延时时间 => 缓存就是延时...
+	if( m_zero_delay_ms < 0 ) { m_zero_delay_ms = zero_delay_ms; }
+	else { m_zero_delay_ms = (7 * m_zero_delay_ms + zero_delay_ms) / 8; }
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：不能在这里设置系统0点时刻，必须在之前设定0点时刻...
 	// 系统0点时刻与帧时间戳没有任何关系，是指系统认为的第一帧应该准备好的系统时刻点...
