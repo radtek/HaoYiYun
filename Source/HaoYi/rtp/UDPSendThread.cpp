@@ -5,11 +5,23 @@
 #include "UDPSendThread.h"
 
 CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
-  : m_lpUDPSocket(NULL)
+  : m_total_output_bytes(0)
+  , m_audio_output_bytes(0)
+  , m_video_output_bytes(0)
+  , m_total_output_kbps(0)
+  , m_audio_output_kbps(0)
+  , m_video_output_kbps(0)
+  , m_video_input_bytes(0)
+  , m_audio_input_bytes(0)
+  , m_audio_input_kbps(0)
+  , m_video_input_kbps(0)
   , m_next_create_ns(-1)
   , m_next_header_ns(-1)
   , m_next_detect_ns(-1)
+  , m_start_time_ns(0)
+  , m_total_time_ms(0)
   , m_bNeedSleep(false)
+  , m_lpUDPSocket(NULL)
   , m_nAudioCurPackSeq(0)
   , m_nAudioCurSendSeq(0)
   , m_nVideoCurPackSeq(0)
@@ -126,8 +138,8 @@ BOOL CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	LPCTSTR lpszAddr = "192.168.1.70";
-	//LPCTSTR lpszAddr = DEF_UDP_HOME;
+	//LPCTSTR lpszAddr = "192.168.1.70";
+	LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -193,6 +205,10 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		ASSERT( inFrame.typeFlvTag == PT_TAG_VIDEO && inFrame.is_keyframe );
 		log_trace("[Student-Pusher] StartPTS: %lu, Type: %d, Size: %d", inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.strData.size());
 	}*/
+
+	// 保存输入音视频字节总数，用于计算音视频输入码率...
+	m_audio_input_bytes += ((inFrame.typeFlvTag == PT_TAG_AUDIO) ? inFrame.strData.size() : 0);
+	m_video_input_bytes += ((inFrame.typeFlvTag == PT_TAG_VIDEO) ? inFrame.strData.size() : 0);
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：也可以不限定状态，一开始就进行数据帧的打包，但需要在发包时判断接入状态...
@@ -263,9 +279,35 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	return true;
 }
 
+void CUDPSendThread::doCalcAVBitRate()
+{
+	// 设定码率的检测刻度值 => 越小越精确，可以判断瞬时码率...
+	int rate_tick_ms = 1000;
+	// 计算持续线程启动到现在总的毫秒数，如果不到1秒钟，直接返回...
+	int64_t cur_total_ms = (CUtilTool::os_gettime_ns() - m_start_time_ns)/1000000;
+	if((cur_total_ms - m_total_time_ms) < rate_tick_ms )
+		return;
+	// 保存总的持续时间 => 毫秒数...
+	m_total_time_ms = cur_total_ms;
+	// 根据音视频当前输入输出的总字节数，计算输入输出平均码率...
+	m_audio_input_kbps = (m_audio_input_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	m_video_input_kbps = (m_video_input_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	m_audio_output_kbps = (m_audio_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	m_video_output_kbps = (m_video_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	m_total_output_kbps = (m_total_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	// 打印计算获得的音视频输入输出平均码流值...
+	log_trace("[Student-Pusher] AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", m_audio_input_kbps, m_video_input_kbps);
+	log_trace("[Student-Pusher] AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
+}
+
 void CUDPSendThread::Entry()
 {
+	// 码率计算计时起点...
+	m_start_time_ns = CUtilTool::os_gettime_ns();
+	// 开始进行线程循环操作...
 	while( !this->IsStopRequested() ) {
+		// 计算音视频输入输出平均码流...
+		this->doCalcAVBitRate();
 		// 设置休息标志 => 只要有发包或收包就不能休息...
 		m_bNeedSleep = true;
 		// 发送观看端需要的音频丢失数据包...
@@ -300,6 +342,8 @@ void CUDPSendThread::doSendDeleteCmd()
 	// 套接字有效，直接发送删除命令...
 	ASSERT( m_lpUDPSocket != NULL );
 	theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_delete, sizeof(m_rtp_delete));
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += sizeof(m_rtp_delete);
 	// 打印已发送删除命令包...
 	log_trace("[Student-Pusher] Send Delete RoomID: %lu, LiveID: %d", m_rtp_delete.roomID, m_rtp_delete.liveID);
 }
@@ -320,6 +364,8 @@ void CUDPSendThread::doSendCreateCmd()
 	// 首先，发送一个创建房间命令...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_create, sizeof(m_rtp_create));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += sizeof(m_rtp_create);
 	// 打印已发送创建命令包 => 第一个包有可能没有发送出去，也返回正常...
 	log_trace("[Student-Pusher] Send Create RoomID: %lu, LiveID: %d", m_rtp_create.roomID, m_rtp_create.liveID);
 	// 计算下次发送创建命令的时间戳...
@@ -355,6 +401,8 @@ void CUDPSendThread::doSendHeaderCmd()
 	// 调用套接字接口，直接发送RTP数据包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)strSeqHeader.c_str(), strSeqHeader.size());
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += strSeqHeader.size();
 	// 打印已发送序列头命令包...
 	log_trace("[Student-Pusher] Send Header SPS: %lu, PPS: %d", m_strSPS.size(), m_strPPS.size());
 	// 计算下次发送创建命令的时间戳...
@@ -383,6 +431,8 @@ void CUDPSendThread::doSendDetectCmd()
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += sizeof(m_rtp_detect);
 	// 打印已发送探测命令包...
 	//log_trace("[Student-Pusher] Send Detect dtNum: %d", m_rtp_detect.dtNum);
 	// 计算下次发送探测命令的时间戳...
@@ -454,6 +504,8 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	// 调用套接字接口，直接发送RTP数据包...
 	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += nSendSize;
 	// 打印已经发送补包信息...
 	log_trace("[Student-Pusher] Supply Send => Seq: %lu, TS: %lu, Slice: %d, Type: %d", lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->psize, lpSendHeader->pt);
 }
@@ -513,6 +565,11 @@ void CUDPSendThread::doSendPacket(bool bIsAudio)
 	// 不丢包 => 调用套接字接口，直接发送RTP数据包...
 	theErr = m_lpUDPSocket->SendTo((void*)lpSendHeader, nSendSize);
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+
+	// 累加总体、音视频输出总字节数...
+	m_total_output_bytes += nSendSize;
+	m_audio_output_bytes += (bIsAudio ? nSendSize : 0);
+	m_video_output_bytes += (bIsAudio ? 0 : nSendSize);
 
 	/////////////////////////////////////////////////////////////////////////////////
 	// 实验：随机丢包...
@@ -630,6 +687,8 @@ void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	// 调用套接字接口，直接发送RTP数据包...
 	GM_Error theErr = m_lpUDPSocket->SendTo(&rtpReady, sizeof(rtpReady));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 累加总的输出字节数，便于计算输出平均码流...
+	m_total_output_bytes += sizeof(rtpReady);
 	// 打印发送准备就绪回复命令包...
 	log_trace("[Student-Pusher] Send Ready command for reply");
 }
@@ -788,6 +847,8 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 	if( tmTag == TM_TAG_TEACHER && idTag == ID_TAG_LOOKER ) {
 		// 先将收到探测数据包原样返回给服务器端...
 		theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
+		// 累加总的输出字节数，便于计算输出平均码流...
+		m_total_output_bytes += inRecvLen;
 		// 再处理观看端已经收到的最大音视频连续包号...
 		rtp_detect_t * lpDetect = (rtp_detect_t*)lpBuffer;
 		// 先处理音频最大连续序号包...

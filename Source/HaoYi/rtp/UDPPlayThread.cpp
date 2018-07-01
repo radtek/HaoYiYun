@@ -382,7 +382,7 @@ void CVideoThread::doDecodeFrame()
 		(m_lpRenderWnd != NULL) ? DoSaveNetFile(m_lpDFrame, true, thePacket) : DoSaveLocFile(m_lpDFrame, true, thePacket);
 #endif // DEBUG_DECODE
 		// 打印解码失败信息，显示坏帧的个数...
-		log_trace("[Video] %s Error => decode_frame failed, BFrame: %d, PTS: %I64d, DecodeSize: %d, PacketSize: %d", (m_lpRenderWnd != NULL) ? "net" : "loc", m_lpDecoder->has_b_frames, thePacket.pts + inStartPtsMS, nResult, thePacket.size);
+		//log_trace("[Video] %s Error => decode_frame failed, BFrame: %d, PTS: %I64d, DecodeSize: %d, PacketSize: %d", (m_lpRenderWnd != NULL) ? "net" : "loc", m_lpDecoder->has_b_frames, thePacket.pts + inStartPtsMS, nResult, thePacket.size);
 		// 这里非常关键，告诉解码器不要缓存坏帧(B帧)，一旦有解码错误，直接扔掉，这就是低延时解码模式...
 		m_lpDecoder->has_b_frames = 0;
 		// 丢掉解码失败的数据帧...
@@ -516,6 +516,17 @@ void CAudioThread::doDisplaySDL()
 	// 注意：使用主动投递方式，可以有效降低回调造成的延时...
 	//////////////////////////////////////////////////////////////////
 	OSMutexLocker theLock(&m_Mutex);
+
+	/*////////////////////////////////////////////////////////////////
+	// 测试：这里可以明显看出，网络抖动之后，后面数据一下子就被灌入，
+	// 但是，音频播放并不会因此加速播放，卡顿时间被累积，音频被拉长，
+	// 后续数据就发生堆积，累积延时增大，引发音频清理，造成咔哒声音，
+	// 因此，需要找到能够精确控制音频播放的工具，不能只是扔给硬件了事
+	//////////////////////////////////////////////////////////////////
+	if( m_nDeviceID > 0 ) {
+		log_debug("[Audio] QueueBytes => %d, circle: %lu", SDL_GetQueuedAudioSize(m_nDeviceID), m_circle.size);
+	}*/
+
 	// 如果没有已解码数据帧，直接返回最大休息毫秒数...
 	if( m_circle.size <= 0 || m_nDeviceID <= 0 ) {
 		m_play_next_ns = CUtilTool::os_gettime_ns() + MAX_SLEEP_MS * 1000000;
@@ -529,12 +540,13 @@ void CAudioThread::doDisplaySDL()
 	sys_cur_ms -= m_lpPlaySDL->GetZeroDelayMS();
 	// 获取第一个已解码数据帧 => 时间最小的数据帧...
 	int64_t frame_pts_ms = 0;
+	int nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
 	int frame_per_size = sizeof(int64_t) + m_out_buffer_size;
 	circlebuf_peek_front(&m_circle, &frame_pts_ms, sizeof(int64_t));
 	// 不能超前投递数据，会造成硬件层数据堆积，造成缓存积压，引发缓存清理...
 	if( frame_pts_ms > sys_cur_ms ) {
 		m_play_next_ns = CUtilTool::os_gettime_ns() + (frame_pts_ms - sys_cur_ms)*1000000;
-		//log_trace("[Audio] Advance => PTS: %I64d ms, Delay: %I64d ms, AudioSize: %d", frame_pts_ms + inStartPtsMS, frame_pts_ms - sys_cur_ms, m_circle.size/frame_per_size);
+		//log_trace("[Audio] Advance => PTS: %I64d ms, Delay: %I64d ms, AudioSize: %d, QueueBytes: %d", frame_pts_ms + inStartPtsMS, frame_pts_ms - sys_cur_ms, m_circle.size/frame_per_size, nQueueBytes);
 		return;
 	}
 	// 当前帧长度从环形队列当中移除 => 后面就是音频数据帧...
@@ -548,11 +560,10 @@ void CAudioThread::doDisplaySDL()
 	///////////////////////////////////////////////////////////////////////////////////////////
 	int nAllowDelay = 500;
 	int nAllowSample = nAllowDelay / m_nSampleDuration;
-	int nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
 	int nQueueSample = nQueueBytes / m_out_buffer_size;
 	// 清理之后，立即继续灌音频数据，避免数据进一步堆积...
 	if( nQueueSample > nAllowSample ) {
-		log_trace("[Audio] Clear Audio Buffer, QueueBytes: %lu, AVPacket: %d, AVFrame: %d", nQueueBytes, m_MapPacket.size(), m_circle.size/frame_per_size);
+		log_trace("[Audio] Clear Audio Buffer, QueueBytes: %d, AVPacket: %d, AVFrame: %d", nQueueBytes, m_MapPacket.size(), m_circle.size/frame_per_size);
 		SDL_ClearQueuedAudio(m_nDeviceID);
 	}
 	// 注意：失败也不要返回，继续执行，目的是移除缓存...
@@ -562,7 +573,7 @@ void CAudioThread::doDisplaySDL()
 	}
 	// 打印已经投递的音频数据信息...
 	//nQueueBytes = SDL_GetQueuedAudioSize(m_nDeviceID);
-	//log_debug("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %lu", frame_pts_ms + inStartPtsMS, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_circle.size/frame_per_size, nQueueBytes);
+	//log_debug("[Audio] Player => PTS: %I64d ms, Delay: %I64d ms, AVPackSize: %d, AudioSize: %d, QueueBytes: %d", frame_pts_ms + inStartPtsMS, sys_cur_ms - frame_pts_ms, m_MapPacket.size(), m_circle.size/frame_per_size, nQueueBytes);
 	// 删除已经使用的音频数据 => 从环形队列中移除...
 	circlebuf_pop_front(&m_circle, NULL, m_out_buffer_size);
 	// 修改休息状态 => 已经有播放，不能休息...
@@ -735,8 +746,8 @@ CPlaySDL::CPlaySDL(int64_t inSysZeroNS)
   , m_bFindFirstVKey(false)
   , m_lpVideoThread(NULL)
   , m_lpAudioThread(NULL)
-  , m_start_pts_ms(-1)
   , m_zero_delay_ms(0)
+  , m_start_pts_ms(-1)
 {
 	ASSERT( m_sys_zero_ns > 0 );
 }
