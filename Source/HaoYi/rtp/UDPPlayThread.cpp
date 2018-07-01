@@ -469,6 +469,7 @@ void CAudioThread::doDecodeFrame()
 	int got_picture = 0, nResult = 0;
 	GM_MapPacket::iterator itorItem = m_MapPacket.begin();
 	AVPacket & thePacket = itorItem->second;
+	// 注意：这里解码后的格式是4bit，需要转换成16bit，调用swr_convert
 	nResult = avcodec_decode_audio4(m_lpDecoder, m_lpDFrame, &got_picture, &thePacket);
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：这里使用全局AVFrame，非常重要，能提供后续AVPacket的解码支持...
@@ -558,11 +559,9 @@ void CAudioThread::doDisplaySDL()
 	// 注意：必须对音频播放内部的缓存做定期伐值清理 => CPU过高时，DirectSound会堆积缓存...
 	// 投递数据前，先查看正在排队的音频数据 => 缓存超过500毫秒就清理...
 	///////////////////////////////////////////////////////////////////////////////////////////
-	int nAllowDelay = 500;
-	int nAllowSample = nAllowDelay / m_nSampleDuration;
-	int nQueueSample = nQueueBytes / m_out_buffer_size;
+	int nAllowQueueSize = (int)(500.0f / m_nSampleDuration * m_out_buffer_size);
 	// 清理之后，立即继续灌音频数据，避免数据进一步堆积...
-	if( nQueueSample > nAllowSample ) {
+	if( nQueueBytes > nAllowQueueSize ) {
 		log_trace("[Audio] Clear Audio Buffer, QueueBytes: %d, AVPacket: %d, AVFrame: %d", nQueueBytes, m_MapPacket.size(), m_circle.size/frame_per_size);
 		SDL_ClearQueuedAudio(m_nDeviceID);
 	}
