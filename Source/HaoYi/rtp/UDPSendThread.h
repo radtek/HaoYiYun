@@ -39,6 +39,9 @@ private:
 	void			doTagSupplyProcess(char * lpBuffer, int inRecvLen);
 
 	void			doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq);
+
+	uint32_t		doCalcVideoMinSeq();
+	uint32_t		doCalcAudioMinSeq();
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态

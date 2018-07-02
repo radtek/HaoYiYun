@@ -439,6 +439,9 @@ void CUDPSendThread::doSendDetectCmd()
 	m_rtp_detect.tsSrc  = (uint32_t)(cur_time_ns / 1000000);
 	m_rtp_detect.dtDir  = DT_TO_SERVER;
 	m_rtp_detect.dtNum += 1;
+	// 计算最小音视频序号包 => 必须先计算视频，音频依赖视频...
+	m_rtp_detect.maxVConSeq = this->doCalcVideoMinSeq();
+	m_rtp_detect.maxAConSeq = this->doCalcAudioMinSeq();
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
@@ -459,6 +462,20 @@ void CUDPSendThread::doSendDetectCmd()
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
 	m_bNeedSleep = false;
+}
+
+uint32_t CUDPSendThread::doCalcVideoMinSeq()
+{
+	// 视频环形队列为空，最小序号包就是当前已发送序号包...
+	if(  m_video_circle.size <= 0  )
+		return m_nVideoCurSendSeq;
+	// 遍历环形队列，如果有两个关键帧存在，
+	return 0;
+}
+
+uint32_t CUDPSendThread::doCalcAudioMinSeq()
+{
+	return 0;
 }
 
 void CUDPSendThread::doSendLosePacket(bool bIsAudio)
