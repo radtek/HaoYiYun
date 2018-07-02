@@ -35,10 +35,10 @@ private:
 	void			doProcServerReady(char * lpBuffer, int inRecvLen);
 	void			doProcServerReload(char * lpBuffer, int inRecvLen);
 
-	void			doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq);
-
 	void			doTagDetectProcess(char * lpBuffer, int inRecvLen);
 	void			doTagSupplyProcess(char * lpBuffer, int inRecvLen);
+
+	void			doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq);
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态
@@ -54,9 +54,15 @@ private:
 	OSMutex			m_Mutex;				// 互斥对象
 	UDPSocket	*	m_lpUDPSocket;			// UDP对象
 
+	uint16_t		m_HostServerPort;		// 服务器端口 => host
+	uint32_t	    m_HostServerAddr;		// 服务器地址 => host
+
 	bool			m_bNeedSleep;			// 休息标志 => 只要有发包或收包就不能休息...
-	int				m_rtt_ms;				// 网络往返延迟值 => 毫秒
-	int				m_rtt_var_ms;			// 网络抖动时间差 => 毫秒
+	int				m_dt_to_dir;			// 发包路线方向 => TO_SERVER | TO_P2P
+	int				m_p2p_rtt_ms;			// P2P    => 网络往返延迟值 => 毫秒
+	int				m_p2p_rtt_var_ms;		// P2P    => 网络抖动时间差 => 毫秒
+	int				m_server_rtt_ms;		// Server => 网络往返延迟值 => 毫秒
+	int				m_server_rtt_var_ms;	// Server => 网络抖动时间差 => 毫秒
 
 	circlebuf		m_audio_circle;			// 音频环形队列
 	circlebuf		m_video_circle;			// 视频环形队列

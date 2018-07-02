@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "UtilTool.h"
 #include "UDPSocket.h"
+#include "SocketUtils.h"
 #include "UDPPlayThread.h"
 #include "UDPRecvThread.h"
 #include "../PushThread.h"
@@ -11,18 +12,25 @@ CUDPRecvThread::CUDPRecvThread(CPushThread * lpPushThread, int nDBRoomID, int nD
   , m_lpUDPSocket(NULL)
   , m_lpPlaySDL(NULL)
   , m_bNeedSleep(false)
+  , m_HostServerPort(0)
+  , m_HostServerAddr(0)
   , m_nAudioMaxPlaySeq(0)
   , m_nVideoMaxPlaySeq(0)
   , m_nMaxResendCount(0)
   , m_next_create_ns(-1)
   , m_next_detect_ns(-1)
   , m_next_ready_ns(-1)
-  , m_cache_time_ms(-1)
   , m_sys_zero_ns(-1)
-  , m_rtt_var_ms(-1)
-  , m_rtt_ms(-1)
+  , m_server_cache_time_ms(-1)
+  , m_server_rtt_var_ms(-1)
+  , m_server_rtt_ms(-1)
+  , m_p2p_cache_time_ms(-1)
+  , m_p2p_rtt_var_ms(-1)
+  , m_p2p_rtt_ms(-1)
 {
 	ASSERT( m_lpPushThread != NULL );
+	// 初始化发包路线 => 服务器方向...
+	m_dt_to_dir = DT_TO_SERVER;
 	// 初始化命令状态...
 	m_nCmdState = kCmdSendCreate;
 	// 初始化rtp序列头结构体...
@@ -117,6 +125,9 @@ GM_Error CUDPRecvThread::InitThread()
 	}
 	// 保存服务器地址，简化SendTo参数......
 	m_lpUDPSocket->SetRemoteAddr(lpszAddr, DEF_UDP_PORT);
+	// 服务器地址和端口转换成host格式，保存起来...
+	m_HostServerPort = DEF_UDP_PORT;
+	m_HostServerAddr = ntohl(inet_addr(lpszAddr));
 	// 启动组播接收线程...
 	this->Start();
 	// 返回执行结果...
@@ -203,8 +214,9 @@ void CUDPRecvThread::doSendDetectCmd()
 	if( m_next_detect_ns > cur_time_ns )
 		return;
 	ASSERT( cur_time_ns >= m_next_detect_ns );
-	// 将探测起点时间转换成毫秒，累加探测计数器...
+	// 通过服务器中转的探测 => 将探测起点时间转换成毫秒，累加探测计数器...
 	m_rtp_detect.tsSrc  = (uint32_t)(cur_time_ns / 1000000);
+	m_rtp_detect.dtDir  = DT_TO_SERVER;
 	m_rtp_detect.dtNum += 1;
 	// 计算已收到音视频最大连续包号...
 	m_rtp_detect.maxAConSeq = this->doCalcMaxConSeq(true);
@@ -212,6 +224,14 @@ void CUDPRecvThread::doSendDetectCmd()
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	// 通过P2P进行的探测 => 如果推流端的映射地址有效...
+	if( m_rtp_ready.recvAddr > 0 && m_rtp_ready.recvPort > 0 ) {
+		m_rtp_detect.dtDir = DT_TO_P2P;
+		m_rtp_detect.tsSrc = (uint32_t)(cur_time_ns / 1000000);
+		theErr = m_lpUDPSocket->SendTo( m_rtp_ready.recvAddr, m_rtp_ready.recvPort, 
+										(void*)&m_rtp_detect, sizeof(m_rtp_detect) );
+		(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
+	}
 	// 打印已发送探测命令包...
 	//log_trace("[Teacher-Looker] Send Detect dtNum: %d, MaxConSeq: %lu", m_rtp_detect.dtNum, m_rtp_detect.maxConSeq);
 	// 计算下次发送探测命令的时间戳...
@@ -291,6 +311,8 @@ void CUDPRecvThread::doSendSupplyCmd(bool bIsAudio)
 	char * lpData = szPacket + nHeadSize;
 	// 获取当前时间的毫秒值 => 小于或等于当前时间的丢包都需要通知发送端再次发送...
 	uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
+	// 需要对网络往返延迟值进行线路选择 => TO_SERVER or TO_P2P...
+	int cur_rtt_ms = ((m_dt_to_dir == DT_TO_SERVER) ? m_server_rtt_ms : m_p2p_rtt_ms);
 	// 重置补报长度为0 => 重新计算需要补包的个数...
 	m_rtp_supply.suType = bIsAudio ? PT_TAG_AUDIO : PT_TAG_VIDEO;
 	m_rtp_supply.suSize = 0;
@@ -313,8 +335,8 @@ void CUDPRecvThread::doSendSupplyCmd(bool bIsAudio)
 			nCalcMaxResend = max(nCalcMaxResend, rtpLose.resend_count);
 			// 注意：如果一个网络往返延时都没有收到补充包，需要再次发起这个包的补包命令...
 			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况，也不能为0，会猛烈发包...
-			// 修正下次重传时间点 => cur_time + rtt => 丢包时的当前时间 + 网络往返延迟值...
-			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_ms, MAX_SLEEP_MS);
+			// 修正下次重传时间点 => cur_time + rtt => 丢包时的当前时间 + 网络往返延迟值 => 需要进行线路选择...
+			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(cur_rtt_ms, MAX_SLEEP_MS);
 			// 如果补包次数大于1，下次补包不要太快，追加一个休息周期..
 			rtpLose.resend_time += ((rtpLose.resend_count > 1) ? MAX_SLEEP_MS : 0);
 		}
@@ -326,17 +348,27 @@ void CUDPRecvThread::doSendSupplyCmd(bool bIsAudio)
 		return;
 	// 保存计算出来的最大丢包重发次数...
 	m_nMaxResendCount = nCalcMaxResend;
-	// 打印已发送补包命令...
-	log_trace("[Teacher-Looker] Supply Send => Count: %d", m_rtp_supply.suSize/sizeof(uint32_t));
 	// 更新补包命令头内容块...
 	memcpy(szPacket, &m_rtp_supply, nHeadSize);
 	// 如果补包缓冲不为空，才进行补包命令发送...
 	GM_Error theErr = GM_NoErr;
 	int nDataSize = nHeadSize + m_rtp_supply.suSize;
-	theErr = m_lpUDPSocket->SendTo(szPacket, nDataSize);
+	////////////////////////////////////////////////////////////////////////////////////////
+	// 调用套接字接口，直接发送RTP数据包 => 根据发包线路进行有选择的路线发送...
+	// 目前只有两条线路可供选择 => TO_SERVER or TO_P2P...
+	////////////////////////////////////////////////////////////////////////////////////////
+	if((m_dt_to_dir == DT_TO_P2P) && (m_rtp_ready.recvAddr > 0) && (m_rtp_ready.recvPort > 0)) {
+		theErr = m_lpUDPSocket->SendTo(m_rtp_ready.recvAddr, m_rtp_ready.recvPort, szPacket, nDataSize);
+	} else {
+		ASSERT( m_dt_to_dir == DT_TO_SERVER );
+		theErr = m_lpUDPSocket->SendTo(szPacket, nDataSize);
+	}
+	// 如果有错误发生，打印出来...
 	((theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL);
 	// 修改休息状态 => 已经有发包，不能休息...
 	m_bNeedSleep = false;
+	// 打印已发送补包命令...
+	log_trace("[Teacher-Looker] Supply Send => Dir: %d, Count: %d", m_dt_to_dir, m_rtp_supply.suSize/sizeof(uint32_t));
 }
 
 void CUDPRecvThread::doRecvPacket()
@@ -432,7 +464,8 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	// 新建播放器，初始化音视频线程...
 	m_lpPlaySDL = new CPlaySDL(m_sys_zero_ns);
 	// 计算默认的网络缓冲评估时间 => 使用帧率来计算...
-	m_cache_time_ms = 1000 / ((m_rtp_header.fpsNum > 0) ? m_rtp_header.fpsNum : 25); 
+	m_server_cache_time_ms = 1000 / ((m_rtp_header.fpsNum > 0) ? m_rtp_header.fpsNum : 25); 
+	m_p2p_cache_time_ms = m_server_cache_time_ms; 
 	// 如果有视频，初始化视频线程...
 	if( m_rtp_header.hasVideo ) {
 		int nPicFPS = m_rtp_header.fpsNum;
@@ -471,8 +504,9 @@ void CUDPRecvThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	m_nCmdState = kCmdConnetOK;
 	// 保存学生推流端发送的准备就绪数据包内容...
 	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
-	// 打印收到准备就绪命令包...
-	log_trace("[Teacher-Looker] Recv Ready from %lu:%d", m_rtp_ready.recvAddr, m_rtp_ready.recvPort);
+	// 打印收到准备就绪命令包 => 将地址转换成字符串...
+	string strAddr = SocketUtils::ConvertAddrToString(m_rtp_ready.recvAddr);
+	log_trace("[Teacher-Looker] Recv Ready from %s:%d", strAddr.c_str(), m_rtp_ready.recvPort);
 }
 //
 // 处理服务器发送过来的重建命令...
@@ -545,9 +579,18 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
     uint8_t idTag = (lpBuffer[0] >> 2) & 0x03;
     // 获取第一个字节的高4位，得到数据包类型...
     uint8_t ptTag = (lpBuffer[0] >> 4) & 0x0F;
-	// 如果是 学生推流端 发出的探测包，将收到的探测数据包原样返回给服务器端...
+	// 如果是 学生推流端 发出的探测包，将收到的探测数据包原样返回给发出者...
 	if( tmTag == TM_TAG_STUDENT && idTag == ID_TAG_PUSHER ) {
-		theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
+		rtp_detect_t * lpDetect = (rtp_detect_t*)lpBuffer;
+		// 将收到探测数据包原样返回给发送者 => 目前只有两条线路可供选择 => TO_SERVER or TO_P2P...
+		if((lpDetect->dtDir == DT_TO_P2P) && (m_rtp_ready.recvAddr > 0) && (m_rtp_ready.recvPort > 0)) {
+			theErr = m_lpUDPSocket->SendTo(m_rtp_ready.recvAddr, m_rtp_ready.recvPort, lpBuffer, inRecvLen);
+		} else {
+			// 注意：有可能没有收到推流端映射地址，但收到了推流端P2P探测包，这时，需要通过服务器中转探测包...
+			theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
+		}
+		// 如果有错误发生，打印出来...
+		((theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL);
 		return;
 	}
 	// 如果是 老师观看端 自己发出的探测包，计算网络延时...
@@ -558,25 +601,55 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 		// 当前时间转换成毫秒，计算网络延时 => 当前时间 - 探测时间...
 		uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
 		int keep_rtt = cur_time_ms - rtpDetect.tsSrc;
-		// 防止网络突发延迟增大, 借鉴 TCP 的 RTT 遗忘衰减的算法...
-		if( m_rtt_ms < 0 ) { m_rtt_ms = keep_rtt; }
-		else { m_rtt_ms = (7 * m_rtt_ms + keep_rtt) / 8; }
-		// 计算网络抖动的时间差值 => RTT的修正值...
-		if( m_rtt_var_ms < 0 ) { m_rtt_var_ms = abs(m_rtt_ms - keep_rtt); }
-		else { m_rtt_var_ms = (m_rtt_var_ms * 3 + abs(m_rtt_ms - keep_rtt)) / 4; }
 		// 如果音频和视频都没有丢包，直接设定最大重发次数为0...
 		if( m_AudioMapLose.size() <= 0 && m_VideoMapLose.size() <= 0 ) {
 			m_nMaxResendCount = 0;
 		}
-		// 计算缓冲评估时间 => 如果没有丢包，使用网络往返延时+网络抖动延时之和...
-		if( m_nMaxResendCount > 0 ) {
-			m_cache_time_ms = (2 * m_nMaxResendCount + 1) * (m_rtt_ms + m_rtt_var_ms) / 2;
-		} else {
-			m_cache_time_ms = m_rtt_ms + m_rtt_var_ms;
+		// 处理来自服务器方向的探测结果...
+		if( rtpDetect.dtDir == DT_TO_SERVER ) {
+			// 防止网络突发延迟增大, 借鉴 TCP 的 RTT 遗忘衰减的算法...
+			if( m_server_rtt_ms < 0 ) { m_server_rtt_ms = keep_rtt; }
+			else { m_server_rtt_ms = (7 * m_server_rtt_ms + keep_rtt) / 8; }
+			// 计算网络抖动的时间差值 => RTT的修正值...
+			if( m_server_rtt_var_ms < 0 ) { m_server_rtt_var_ms = abs(m_server_rtt_ms - keep_rtt); }
+			else { m_server_rtt_var_ms = (m_server_rtt_var_ms * 3 + abs(m_server_rtt_ms - keep_rtt)) / 4; }
+			// 计算缓冲评估时间 => 如果没有丢包，使用网络往返延时+网络抖动延时之和...
+			if( m_nMaxResendCount > 0 ) {
+				m_server_cache_time_ms = (2 * m_nMaxResendCount + 1) * (m_server_rtt_ms + m_server_rtt_var_ms) / 2;
+			} else {
+				m_server_cache_time_ms = m_server_rtt_ms + m_server_rtt_var_ms;
+			}
+			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
+			log_trace( "[Teacher-Looker] Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms, cache_time: %d ms, AMaxConSeq: %lu, VMaxConSeq: %lu",
+					rtpDetect.dtDir, rtpDetect.dtNum, m_server_rtt_ms, m_server_rtt_var_ms, m_server_cache_time_ms, rtpDetect.maxAConSeq, rtpDetect.maxVConSeq );
 		}
-		// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-		log_trace( "[Teacher-Looker] Recv Detect dtNum: %d, rtt: %d ms, rtt_var: %d ms, cache_time: %d ms, AMaxConSeq: %lu, VMaxConSeq: %lu",
-					rtpDetect.dtNum, m_rtt_ms, m_rtt_var_ms, m_cache_time_ms, rtpDetect.maxAConSeq, rtpDetect.maxVConSeq );
+		// 处理来自P2P方向的探测结果...
+		if( rtpDetect.dtDir == DT_TO_P2P ) {
+			// 防止网络突发延迟增大, 借鉴 TCP 的 RTT 遗忘衰减的算法...
+			if( m_p2p_rtt_ms < 0 ) { m_p2p_rtt_ms = keep_rtt; }
+			else { m_p2p_rtt_ms = (7 * m_p2p_rtt_ms + keep_rtt) / 8; }
+			// 计算网络抖动的时间差值 => RTT的修正值...
+			if( m_p2p_rtt_var_ms < 0 ) { m_p2p_rtt_var_ms = abs(m_p2p_rtt_ms - keep_rtt); }
+			else { m_p2p_rtt_var_ms = (m_p2p_rtt_var_ms * 3 + abs(m_p2p_rtt_ms - keep_rtt)) / 4; }
+			// 计算缓冲评估时间 => 如果没有丢包，使用网络往返延时+网络抖动延时之和...
+			if( m_nMaxResendCount > 0 ) {
+				m_p2p_cache_time_ms = (2 * m_nMaxResendCount + 1) * (m_p2p_rtt_ms + m_p2p_rtt_var_ms) / 2;
+			} else {
+				m_p2p_cache_time_ms = m_p2p_rtt_ms + m_p2p_rtt_var_ms;
+			}
+			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
+			log_trace( "[Teacher-Looker] Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms, cache_time: %d ms, AMaxConSeq: %lu, VMaxConSeq: %lu",
+						rtpDetect.dtDir, rtpDetect.dtNum, m_p2p_rtt_ms, m_p2p_rtt_var_ms, m_p2p_cache_time_ms, rtpDetect.maxAConSeq, rtpDetect.maxVConSeq );
+		}
+		/////////////////////////////////////////////////////////////////////////
+		// 对补包线路进行选择 => 选择已联通的最小rtt为补包通知线路...
+		/////////////////////////////////////////////////////////////////////////
+		// 如果P2P线路有效，并且更快，设定为P2P线路，否则，设定为服务器线路...
+		if((m_p2p_rtt_ms >= 0) && (m_p2p_rtt_ms < m_server_rtt_ms)) {
+			m_dt_to_dir = DT_TO_P2P;
+		} else {
+			m_dt_to_dir = DT_TO_SERVER;
+		}
 	}
 }
 
@@ -782,9 +855,11 @@ void CUDPRecvThread::doParseFrame(bool bIsAudio)
 
 	// 删除已解析完毕的环形队列数据包 => 回收缓冲区...
 	circlebuf_pop_front(&cur_circle, NULL, nConsumeSize);
+	// 需要对网络缓冲评估延时时间进行线路选择 => TO_SERVER or TO_P2P...
+	int cur_cache_ms = ((m_dt_to_dir == DT_TO_SERVER) ? m_server_cache_time_ms : m_p2p_cache_time_ms);
 	// 将解析到的有效数据帧推入播放对象当中...
 	if( m_lpPlaySDL != NULL ) {
-		m_lpPlaySDL->PushFrame(m_cache_time_ms, strFrame, pt_type, is_key, ts_ms);
+		m_lpPlaySDL->PushFrame(cur_cache_ms, strFrame, pt_type, is_key, ts_ms);
 	}
 	// 打印已投递的完整数据帧信息...
 	//log_trace( "[Teacher-Looker] Frame => Type: %d, Key: %d, PTS: %lu, Size: %d, PlaySeq: %lu, CircleSize: %d", 
@@ -815,6 +890,8 @@ void CUDPRecvThread::doFillLosePack(uint8_t inPType, uint32_t nStartLoseID, uint
 	// 根据数据包类型，找到丢包集合...
 	circlebuf & cur_circle = (inPType == PT_TAG_AUDIO) ? m_audio_circle : m_video_circle;
 	GM_MapLose & theMapLose = (inPType == PT_TAG_AUDIO) ? m_AudioMapLose : m_VideoMapLose;
+	// 需要对网络抖动时间差进行线路选择 => TO_SERVER or TO_P2P...
+	int cur_rtt_var_ms = ((m_dt_to_dir == DT_TO_SERVER) ? m_server_rtt_var_ms : m_p2p_rtt_var_ms);
 	// 准备数据包结构体并进行初始化...
 	uint32_t sup_id = nStartLoseID;
 	rtp_hdr_t rtpDis = {0};
@@ -830,9 +907,10 @@ void CUDPRecvThread::doFillLosePack(uint8_t inPType, uint32_t nStartLoseID, uint
 		rtpLose.resend_count = 0;
 		rtpLose.lose_seq = sup_id;
 		rtpLose.lose_type = inPType;
+		// 注意：需要对网络抖动时间差进行线路选择 => TO_SERVER or TO_P2P...
 		// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况，也不能为0，会猛烈发包...
 		// 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差 => 避免不是丢包，只是乱序的问题...
-		rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(m_rtt_var_ms, MAX_SLEEP_MS);
+		rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(cur_rtt_var_ms, MAX_SLEEP_MS);
 		theMapLose[sup_id] = rtpLose;
 		// 打印已丢包信息，丢包队列长度...
 		log_trace("[Teacher-Looker] Lose Seq: %lu, LoseSize: %lu, Type: %d", sup_id, theMapLose.size(), inPType);

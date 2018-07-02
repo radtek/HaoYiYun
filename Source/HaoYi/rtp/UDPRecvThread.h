@@ -53,11 +53,18 @@ private:
 
 	OSMutex			m_Mutex;				// 互斥对象
 	UDPSocket	*	m_lpUDPSocket;			// UDP对象
+  
+	uint16_t		m_HostServerPort;		// 服务器端口 => host
+	uint32_t	    m_HostServerAddr;		// 服务器地址 => host
 
 	bool			m_bNeedSleep;			// 休息标志 => 只要有发包或收包就不能休息...
-	int				m_rtt_ms;				// 网络往返延迟值 => 毫秒
-	int				m_rtt_var_ms;			// 网络抖动时间差 => 毫秒
-	int				m_cache_time_ms;		// 缓冲评估时间 => 毫秒 => 就是播放延时时间
+	int				m_dt_to_dir;			// 发包路线方向 => TO_SERVER | TO_P2P
+	int				m_p2p_rtt_ms;			// P2P    => 网络往返延迟值 => 毫秒
+	int				m_p2p_rtt_var_ms;		// P2P    => 网络抖动时间差 => 毫秒
+	int				m_p2p_cache_time_ms;	// P2P    => 缓冲评估时间   => 毫秒 => 就是播放延时时间
+	int				m_server_rtt_ms;		// Server => 网络往返延迟值 => 毫秒
+	int				m_server_rtt_var_ms;	// Server => 网络抖动时间差 => 毫秒
+	int				m_server_cache_time_ms;	// Server => 缓冲评估时间   => 毫秒 => 就是播放延时时间
 	int				m_nMaxResendCount;		// 当前丢包最大重发次数
 
 	circlebuf		m_audio_circle;			// 音频环形队列
