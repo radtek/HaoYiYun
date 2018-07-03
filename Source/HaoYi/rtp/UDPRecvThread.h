@@ -41,6 +41,7 @@ private:
 	void			doParseFrame(bool bIsAudio);
 
 	uint32_t		doCalcMaxConSeq(bool bIsAudio);
+	void			doProcMinSeq(bool bIsAudio, uint32_t inMinSeq);
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态

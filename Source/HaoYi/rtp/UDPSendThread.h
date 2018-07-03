@@ -39,6 +39,7 @@ private:
 	void			doTagSupplyProcess(char * lpBuffer, int inRecvLen);
 
 	void			doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq);
+	void			doEarseAudioByTime(uint32_t inTimeStamp);
 
 	uint32_t		doCalcVideoMinSeq();
 	uint32_t		doCalcAudioMinSeq();

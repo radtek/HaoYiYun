@@ -469,13 +469,98 @@ uint32_t CUDPSendThread::doCalcVideoMinSeq()
 	// 视频环形队列为空，最小序号包就是当前已发送序号包...
 	if(  m_video_circle.size <= 0  )
 		return m_nVideoCurSendSeq;
-	// 遍历环形队列，如果有两个关键帧存在，
-	return 0;
+	// 遍历环形队列，如果有两个关键帧存在，删除第一个关键帧之前的所有数据包...
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf & cur_circle = m_video_circle;
+	rtp_hdr_t * lpCurHeader = NULL;
+	uint32_t    min_seq = 0;
+	uint32_t    nPosition = 0;
+	int         nGopCount = 0;
+	// 读取第一个数据包的内容，获取最小序号包...
+	circlebuf_peek_front(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	min_seq = lpCurHeader->seq;
+	// 循环遍历视频环形队列...
+	while( true ) {
+		// 如果是关键帧的起始帧 => 关键帧计数增加...
+		if( lpCurHeader->pk > 0 && lpCurHeader->pst > 0 ) {
+			// 如果超过2个关键帧 => 删除当前包之前的所有数据包...
+			if( ++nGopCount >= 2 ) {
+				// 打印视频拥塞信息 => 当前位置，已发送数据包...
+				log_trace("[Student-Pusher] Jam => Video CurSeq: %lu, SendSeq: %lu", lpCurHeader->seq, m_nVideoCurSendSeq);
+				// 删除当前包之前的所有数据包...
+				circlebuf_pop_front(&cur_circle, NULL, nPosition);
+				// 删除音频相关时间的数据包...
+				this->doEarseAudioByTime(lpCurHeader->ts);
+				// 将当前未删除的序号包，保存为将要发送的下一个数据包...
+				m_nVideoCurSendSeq = lpCurHeader->seq;
+				// 返回最小序号包，lpCurHeader空间始终有效...
+				return lpCurHeader->seq;
+			}
+		}
+		// 如果不是关键帧的开始包，并且没有超过2个关键帧，累加读取位置...
+		nPosition += nPerPackSize;
+		// 已经读取到达环形队列尾部，直接跳出循环...
+		if( nPosition >= cur_circle.size )
+			break;
+		// 读取没有越界的环形队列...
+		circlebuf_read(&cur_circle, nPosition, szPacketBuffer, nPerPackSize);
+		lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	}
+	// 遍历结束，返回最小序号包...
+	return min_seq;
+}
+
+void CUDPSendThread::doEarseAudioByTime(uint32_t inTimeStamp)
+{
+	// 音频环形队列为空，直接返回...
+	if( m_audio_circle.size <= 0 )
+		return;
+	// 遍历环形队列，删除所有时间戳小于输入时间戳的数据包，保持音视频时间戳同步...
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf & cur_circle = m_audio_circle;
+	rtp_hdr_t * lpCurHeader = NULL;
+	uint32_t    nPosition = 0;
+	// 读取第一个音频数据包的内容...
+	circlebuf_peek_front(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	// 循环遍历音频环形队列...
+	while( true ) {
+		// 如果当前包的时间戳大于或等于输入时间戳，删除这个序号包之前的所有数据包...
+		if( lpCurHeader->ts >= inTimeStamp ) {
+			// 删除当前包之前的所有数据包...
+			circlebuf_pop_front(&cur_circle, NULL, nPosition);
+			// 将当前未删除的序号包，保存为将要发送的下一个数据包...
+			m_nAudioCurSendSeq = lpCurHeader->seq;
+			// 打印音频拥塞信息 => 当前位置，已发送数据包...
+			log_trace("[Student-Pusher] Jam => Audio CurSeq: %lu, SendSeq: %lu", lpCurHeader->seq, m_nAudioCurSendSeq);
+			return;
+		}
+		// 当前包的时间戳小于输入时间戳，累加读取位置...
+		nPosition += nPerPackSize;
+		// 已经读取到环形队列尾部，直接跳出循环...
+		if( nPosition >= cur_circle.size )
+			break;
+		// 读取没有越界的环形队列...
+		circlebuf_read(&cur_circle, nPosition, szPacketBuffer, nPerPackSize);
+		lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	}
 }
 
 uint32_t CUDPSendThread::doCalcAudioMinSeq()
 {
-	return 0;
+	// 音频环形队列为空，，最小序号包就是当前已发送序号包...
+	if(  m_audio_circle.size <= 0  )
+		return m_nAudioCurSendSeq;
+	// 读取环形队列的第一个数据包，一定要拷贝数据出来，因为有可能环形回还的问题，千万不能指针操作...
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf_peek_front(&m_audio_circle, szPacketBuffer, nPerPackSize);
+	rtp_hdr_t * lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
+	// 音频最小序号包就是环形队列里的最小序号包...
+	return lpFrontHeader->seq;
 }
 
 void CUDPSendThread::doSendLosePacket(bool bIsAudio)

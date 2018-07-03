@@ -568,6 +568,14 @@ void CUDPRecvThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_strPPS.clear();*/
 }
 
+void CUDPRecvThread::doProcMinSeq(bool bIsAudio, uint32_t inMinSeq)
+{
+	// 音视频使用不同的打包对象、最大播放序号、对包队列...
+	uint32_t & nMaxPlaySeq = bIsAudio ? m_nAudioMaxPlaySeq : m_nVideoMaxPlaySeq;
+	circlebuf & cur_circle = bIsAudio ? m_audio_circle : m_video_circle;
+	GM_MapLose & theMapLose = bIsAudio ? m_AudioMapLose : m_VideoMapLose;
+}
+
 void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 {
 	GM_Error theErr = GM_NoErr;
@@ -589,8 +597,10 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			// 注意：有可能没有收到推流端映射地址，但收到了推流端P2P探测包，这时，需要通过服务器中转探测包...
 			theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
 		}
-		// 如果有错误发生，打印出来...
-		((theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL);
+		// 先处理推流端当前视频缓冲区最小序号包...
+		this->doProcMinSeq(false, lpDetect->maxVConSeq);
+		// 再处理推流端当前音频缓冲区最小序号包...
+		this->doProcMinSeq(true, lpDetect->maxAConSeq);
 		return;
 	}
 	// 如果是 老师观看端 自己发出的探测包，计算网络延时...
