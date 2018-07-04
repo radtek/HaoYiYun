@@ -333,10 +333,11 @@ void CUDPRecvThread::doSendSupplyCmd(bool bIsAudio)
 			++rtpLose.resend_count;
 			// 计算最大丢包重发次数...
 			nCalcMaxResend = max(nCalcMaxResend, rtpLose.resend_count);
+			// 注意：同时发送的补包，下次也同时发送，避免形成多个散列的补包命令...
 			// 注意：如果一个网络往返延时都没有收到补充包，需要再次发起这个包的补包命令...
 			// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况，也不能为0，会猛烈发包...
 			// 修正下次重传时间点 => cur_time + rtt => 丢包时的当前时间 + 网络往返延迟值 => 需要进行线路选择...
-			rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(cur_rtt_ms, MAX_SLEEP_MS);
+			rtpLose.resend_time = cur_time_ms + max(cur_rtt_ms, MAX_SLEEP_MS);
 			// 如果补包次数大于1，下次补包不要太快，追加一个休息周期..
 			rtpLose.resend_time += ((rtpLose.resend_count > 1) ? MAX_SLEEP_MS : 0);
 		}
@@ -568,12 +569,77 @@ void CUDPRecvThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_strPPS.clear();*/
 }
 
-void CUDPRecvThread::doProcMinSeq(bool bIsAudio, uint32_t inMinSeq)
+void CUDPRecvThread::doProcJamSeq(bool bIsAudio, uint32_t inJamSeq)
 {
-	// 音视频使用不同的打包对象、最大播放序号、对包队列...
+	////////////////////////////////////////////////////////////////////////////
+	// 注意：当前播放最大序号包是已经被删除包的序号，它的下一个包有效；
+	// 注意：输入最小序号包是没有被删除的，是推流端的有效的第一个序号包；
+	// 注意：删包区间 => [min_seq, inJamSeq - 1]
+	////////////////////////////////////////////////////////////////////////////
+	// 如果输入最小序号包为0，没有拥塞，直接返回...
+	if( inJamSeq <= 0 )
+		return;
+	ASSERT( inJamSeq > 0 );
+	// 音视频使用不同的打包对象、最大播放序号、丢包队列...
 	uint32_t & nMaxPlaySeq = bIsAudio ? m_nAudioMaxPlaySeq : m_nVideoMaxPlaySeq;
 	circlebuf & cur_circle = bIsAudio ? m_audio_circle : m_video_circle;
 	GM_MapLose & theMapLose = bIsAudio ? m_AudioMapLose : m_VideoMapLose;
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	// 如果输入推流端最小序号包比当前播放包还要小，直接返回...
+	if( inJamSeq <= (nMaxPlaySeq + 1) ) {
+		log_trace("[Teacher-Looker] Jam Failed => %s JamSeq: %lu, MaxPlaySeq: %lu, Circle: %d", (bIsAudio ? "Audio" : "Video"), inJamSeq, nMaxPlaySeq, cur_circle.size/nPerPackSize);
+		return;
+	}
+	// 如果输入推流端最小序号包比当前播放包大，遍历丢包管理器，丢掉过期数据包号...
+	GM_MapLose::iterator itorItem = theMapLose.begin();
+	while( itorItem != theMapLose.end() ) {
+		// 注意：输入最小包是有效的，是能被补上的...
+		// 如果补包号大于或等于输入最小包，当前和后面的包都能补...
+		if( itorItem->first >= inJamSeq )
+			break;
+		// 如果补包号小于输入最小包，已经无法补包，直接扔掉...
+		ASSERT( itorItem->first < inJamSeq );
+		theMapLose.erase(itorItem++);
+	}
+	// 如果环形队列为空或只有一个包，没有可以删除的空间，直接返回...
+	if( cur_circle.size <= nPerPackSize ) {
+		log_trace("[Teacher-Looker] Jam Failed => %s JamSeq: %lu, MaxPlaySeq: %lu, Circle: Zero", (bIsAudio ? "Audio" : "Video"), inJamSeq, nMaxPlaySeq, cur_circle.size/nPerPackSize);
+		return;
+	}
+	// 从环形队列的第一个包开始，计算要删除的总长度...
+	rtp_hdr_t * lpCurHeader = NULL;
+	uint32_t    min_seq = 0;
+	uint32_t    max_seq = 0;
+	// 先找到环形队列中的最小序号包...
+	circlebuf_peek_front(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	min_seq = lpCurHeader->seq;
+	// 再找到环形队列中的最大序号包...
+	circlebuf_peek_back(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	max_seq = lpCurHeader->seq;
+	///////////////////////////////////////////////////////////////////////////////////
+	// 注意：相等的最小包有可能是丢包，不能过早删除...
+	// 如果输入最小序号包小于或等于环形队列最小包，说明要删除的包都已经没有了...
+	///////////////////////////////////////////////////////////////////////////////////
+	if( inJamSeq <= min_seq ) {
+		log_trace( "[Teacher-Looker] Jam Failed => %s MinSeq: %lu, JamSeq: %lu, MaxSeq: %lu, MaxPlaySeq: %lu, Circle: %d",
+				   (bIsAudio ? "Audio" : "Video"), min_seq, inJamSeq, max_seq, nMaxPlaySeq, cur_circle.size/nPerPackSize );
+		return;
+	}
+	// 如果输入最小序号包比环形队列里最大包还要大，说明整个环形队列数据都过期了...
+	inJamSeq = min(inJamSeq, max_seq);
+	// 输入最小序号包一定比环形队列最小包号大，才有删除的必要...
+	ASSERT( inJamSeq > min_seq && inJamSeq <= max_seq );
+	// 删除区间 => [min_seq, inMinSeq - 1]，计算回收空间的长度;
+	uint32_t nPopSize = (inJamSeq - min_seq) * nPerPackSize;
+	circlebuf_pop_front(&cur_circle, NULL, nPopSize);
+	// 将输入最小序号包减1设置成当前最大播放包 => 这个最小包的前一个包是已被删除的最大包...
+	nMaxPlaySeq = inJamSeq - 1;
+	// 打印拥塞最终处理情况 => 环形队列之前的最小序号、拥塞序号、环形队列最大序号、当前最大播放包...
+	log_trace( "[Teacher-Looker] Jam Success => %s MinSeq: %lu, JamSeq: %lu, MaxSeq: %lu, MaxPlaySeq: %lu, Circle: %d",
+			   (bIsAudio ? "Audio" : "Video"), min_seq, inJamSeq, max_seq, nMaxPlaySeq, cur_circle.size/nPerPackSize );
 }
 
 void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
@@ -597,10 +663,10 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			// 注意：有可能没有收到推流端映射地址，但收到了推流端P2P探测包，这时，需要通过服务器中转探测包...
 			theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
 		}
-		// 先处理推流端当前视频缓冲区最小序号包...
-		this->doProcMinSeq(false, lpDetect->maxVConSeq);
-		// 再处理推流端当前音频缓冲区最小序号包...
-		this->doProcMinSeq(true, lpDetect->maxAConSeq);
+		// 先处理推流端视频拥塞序号包...
+		this->doProcJamSeq(false, lpDetect->maxVConSeq);
+		// 再处理推流端音频拥塞序号包...
+		this->doProcJamSeq(true, lpDetect->maxAConSeq);
 		return;
 	}
 	// 如果是 老师观看端 自己发出的探测包，计算网络延时...
@@ -902,7 +968,8 @@ void CUDPRecvThread::doFillLosePack(uint8_t inPType, uint32_t nStartLoseID, uint
 	GM_MapLose & theMapLose = (inPType == PT_TAG_AUDIO) ? m_AudioMapLose : m_VideoMapLose;
 	// 需要对网络抖动时间差进行线路选择 => TO_SERVER or TO_P2P...
 	int cur_rtt_var_ms = ((m_dt_to_dir == DT_TO_SERVER) ? m_server_rtt_var_ms : m_p2p_rtt_var_ms);
-	// 准备数据包结构体并进行初始化...
+	// 准备数据包结构体并进行初始化 => 连续丢包，设置成相同的重发时间点，否则，会连续发非常多的补包命令...
+	uint32_t cur_time_ms = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000);
 	uint32_t sup_id = nStartLoseID;
 	rtp_hdr_t rtpDis = {0};
 	rtpDis.pt = PT_TAG_LOSE;
@@ -920,7 +987,7 @@ void CUDPRecvThread::doFillLosePack(uint8_t inPType, uint32_t nStartLoseID, uint
 		// 注意：需要对网络抖动时间差进行线路选择 => TO_SERVER or TO_P2P...
 		// 注意：这里要避免 网络抖动时间差 为负数的情况 => 还没有完成第一次探测的情况，也不能为0，会猛烈发包...
 		// 重发时间点 => cur_time + rtt_var => 丢包时的当前时间 + 丢包时的网络抖动时间差 => 避免不是丢包，只是乱序的问题...
-		rtpLose.resend_time = (uint32_t)(CUtilTool::os_gettime_ns() / 1000000) + max(cur_rtt_var_ms, MAX_SLEEP_MS);
+		rtpLose.resend_time = cur_time_ms + max(cur_rtt_var_ms, MAX_SLEEP_MS);
 		theMapLose[sup_id] = rtpLose;
 		// 打印已丢包信息，丢包队列长度...
 		log_trace("[Teacher-Looker] Lose Seq: %lu, LoseSize: %lu, Type: %d", sup_id, theMapLose.size(), inPType);

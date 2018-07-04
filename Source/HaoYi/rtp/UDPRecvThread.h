@@ -41,7 +41,7 @@ private:
 	void			doParseFrame(bool bIsAudio);
 
 	uint32_t		doCalcMaxConSeq(bool bIsAudio);
-	void			doProcMinSeq(bool bIsAudio, uint32_t inMinSeq);
+	void			doProcJamSeq(bool bIsAudio, uint32_t inJamSeq);
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态
@@ -68,8 +68,6 @@ private:
 	int				m_server_cache_time_ms;	// Server => 缓冲评估时间   => 毫秒 => 就是播放延时时间
 	int				m_nMaxResendCount;		// 当前丢包最大重发次数
 
-	circlebuf		m_audio_circle;			// 音频环形队列
-	circlebuf		m_video_circle;			// 视频环形队列
 
 	rtp_detect_t	m_rtp_detect;			// RTP探测命令结构体
 	rtp_create_t	m_rtp_create;			// RTP创建房间和直播结构体
@@ -84,6 +82,9 @@ private:
 	int64_t			m_next_create_ns;		// 下次发送创建命令时间戳 => 纳秒 => 每隔100毫秒发送一次...
 	int64_t			m_next_detect_ns;		// 下次发送探测包的时间戳 => 纳秒 => 每隔1秒发送一次...
 	int64_t			m_next_ready_ns;		// 下次发送就绪命令时间戳 => 纳秒 => 每隔100毫秒发送一次...
+
+	circlebuf		m_audio_circle;			// 音频环形队列
+	circlebuf		m_video_circle;			// 视频环形队列
 
 	uint32_t		m_nAudioMaxPlaySeq;		// 音频RTP当前最大播放序列号 => 最大连续有效序列号...
 	uint32_t		m_nVideoMaxPlaySeq;		// 视频RTP当前最大播放序列号 => 最大连续有效序列号...

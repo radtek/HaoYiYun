@@ -39,10 +39,9 @@ private:
 	void			doTagSupplyProcess(char * lpBuffer, int inRecvLen);
 
 	void			doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq);
-	void			doEarseAudioByTime(uint32_t inTimeStamp);
 
-	uint32_t		doCalcVideoMinSeq();
-	uint32_t		doCalcAudioMinSeq();
+	void			doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoSeq);
+	uint32_t		doEarseAudioByTime(uint32_t inTimeStamp);
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态
@@ -68,9 +67,6 @@ private:
 	int				m_server_rtt_ms;		// Server => 网络往返延迟值 => 毫秒
 	int				m_server_rtt_var_ms;	// Server => 网络抖动时间差 => 毫秒
 
-	circlebuf		m_audio_circle;			// 音频环形队列
-	circlebuf		m_video_circle;			// 视频环形队列
-
 	rtp_detect_t	m_rtp_detect;			// RTP探测命令结构体
 	rtp_create_t	m_rtp_create;			// RTP创建房间和直播结构体
 	rtp_delete_t	m_rtp_delete;			// RTP删除房间和直播结构体
@@ -82,6 +78,9 @@ private:
 	int64_t			m_next_create_ns;		// 下次发送创建命令时间戳 => 纳秒 => 每隔100毫秒发送一次...
 	int64_t			m_next_header_ns;		// 下次发送序列头命令时间戳 => 纳秒 => 每隔100毫秒发送一次...
 	int64_t			m_next_detect_ns;		// 下次发送探测包的时间戳 => 纳秒 => 每隔1秒发送一次...
+
+	circlebuf		m_audio_circle;			// 音频环形队列
+	circlebuf		m_video_circle;			// 视频环形队列
 
 	uint32_t		m_nAudioCurPackSeq;		// 音频RTP当前打包序列号
 	uint32_t		m_nAudioCurSendSeq;		// 音频RTP当前发送序列号
