@@ -50,6 +50,8 @@ public:
 
 	void			StartUDPRecvThread();
 	void			StartUDPSendThread();
+
+	void			ReInitSDLWindow();
 private:
 	void			StartSendByAudio(int nRateIndex, int nChannelNum);
 	void			StartSendByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS);

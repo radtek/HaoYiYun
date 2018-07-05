@@ -88,6 +88,8 @@ public:
 	BOOL			IsStreamLogin();
 	LPCTSTR			GetStreamPushUrl();
 	void			GetStreamPullUrl(CString & outPullUrl);
+
+	void			ReInitSDLWindow();
 private:
 	void			doFocusAction();
 	void			doEarseRecStatus();

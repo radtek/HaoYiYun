@@ -884,3 +884,10 @@ LPCTSTR	CCamera::GetStreamPushUrl()
 		return NULL;
 	return m_lpPushThread->m_strRtmpUrl.c_str();
 }
+
+void CCamera::ReInitSDLWindow()
+{
+	if( m_lpPushThread == NULL )
+		return;
+	m_lpPushThread->ReInitSDLWindow();
+}

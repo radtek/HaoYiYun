@@ -14,6 +14,8 @@ CUDPRecvThread::CUDPRecvThread(CPushThread * lpPushThread, int nDBRoomID, int nD
   , m_bNeedSleep(false)
   , m_HostServerPort(0)
   , m_HostServerAddr(0)
+  , m_bFirstAudioSeq(false)
+  , m_bFirstVideoSeq(false)
   , m_nAudioMaxPlaySeq(0)
   , m_nVideoMaxPlaySeq(0)
   , m_nMaxResendCount(0)
@@ -456,10 +458,11 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	// 如果播放器已经创建，直接返回...
 	if( m_lpPlaySDL != NULL || m_lpPushThread == NULL )
 		return;
+	// 注意：如果收到第一个包或第一个命令的延时，会累加到播放层...
 	// 计算系统0点时刻 => 第一个数据包到达时间就是系统0点时刻...
 	// 有可能第一个数据包还没有到达，就立即用当前系统时刻做为0点时刻...
 	if( m_sys_zero_ns < 0 ) {
-		m_sys_zero_ns = CUtilTool::os_gettime_ns();
+		m_sys_zero_ns = CUtilTool::os_gettime_ns() - 100 * 1000000;
 		log_trace("[Teacher-Looker] Set System Zero Time By Header => %I64d ms", m_sys_zero_ns/1000000);
 	}
 	// 新建播放器，初始化音视频线程...
@@ -1022,7 +1025,7 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	// 因此，这里采用收到第一个数据包就设定为系统0点时刻，尽量降低网络传输延时...
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	if( m_sys_zero_ns < 0 ) {
-		m_sys_zero_ns = CUtilTool::os_gettime_ns();
+		m_sys_zero_ns = CUtilTool::os_gettime_ns() - 100 * 1000000;
 		log_trace("[Teacher-Looker] Set System Zero Time By First Data => %I64d ms", m_sys_zero_ns/1000000);
 	}
 	// 如果收到的缓冲区长度不够 或 填充量为负数，直接丢弃...
@@ -1040,10 +1043,12 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	}
 	// 音视频使用不同的打包对象和变量...
 	uint32_t & nMaxPlaySeq = (pt_tag == PT_TAG_AUDIO) ? m_nAudioMaxPlaySeq : m_nVideoMaxPlaySeq;
+	bool   &  bFirstSeqSet = (pt_tag == PT_TAG_AUDIO) ? m_bFirstAudioSeq : m_bFirstVideoSeq;
 	circlebuf & cur_circle = (pt_tag == PT_TAG_AUDIO) ? m_audio_circle : m_video_circle;
 	// 注意：观看端后接入时，最大播放包序号不是从0开始的...
 	// 如果最大播放序列包是0，说明是第一个包，需要保存为最大播放包 => 当前包号 - 1 => 最大播放包是已删除包，当前包序号从1开始...
-	if( nMaxPlaySeq <= 0 ) {
+	if( nMaxPlaySeq <= 0 && !bFirstSeqSet ) {
+		bFirstSeqSet = true;
 		nMaxPlaySeq = new_id - 1;
 		log_trace("[Teacher-Looker] First Packet => Seq: %lu, Key: %d, PTS: %lu, PStart: %d, Type: %d", new_id, lpNewHeader->pk, lpNewHeader->ts, lpNewHeader->pst, pt_tag);
 	}
@@ -1139,4 +1144,11 @@ void CUDPRecvThread::doSleepTo()
 	uint64_t cur_time_ns = CUtilTool::os_gettime_ns();
 	// 调用系统工具函数，进行sleep休息...
 	CUtilTool::os_sleepto_ns(cur_time_ns + delta_ns);
+}
+
+void CUDPRecvThread::ReInitSDLWindow()
+{
+	if( m_lpPlaySDL == NULL )
+		return;
+	m_lpPlaySDL->ReInitSDLWindow();
 }

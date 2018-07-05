@@ -1280,6 +1280,13 @@ CRenderWnd * CPushThread::GetRenderWnd()
 	return m_lpCamera->GetVideoWnd()->GetRenderWnd();
 }
 
+void CPushThread::ReInitSDLWindow()
+{
+	if( m_lpUDPRecvThread == NULL )
+		return;
+	m_lpUDPRecvThread->ReInitSDLWindow();
+}
+
 void CPushThread::StartUDPRecvThread()
 {
 #ifdef DEBUG_RECV_ONLY

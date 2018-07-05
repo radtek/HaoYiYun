@@ -17,6 +17,7 @@ public:
 	virtual void Entry();
 public:
 	GM_Error		InitThread();
+	void			ReInitSDLWindow();
 private:
 	void			ClosePlayer();
 	void			CloseSocket();
@@ -66,8 +67,7 @@ private:
 	int				m_server_rtt_var_ms;	// Server => 网络抖动时间差 => 毫秒
 	int				m_server_cache_time_ms;	// Server => 缓冲评估时间   => 毫秒 => 就是播放延时时间
 	int				m_nMaxResendCount;		// 当前丢包最大重发次数
-
-
+	
 	rtp_detect_t	m_rtp_detect;			// RTP探测命令结构体
 	rtp_create_t	m_rtp_create;			// RTP创建房间和直播结构体
 	rtp_delete_t	m_rtp_delete;			// RTP删除房间和直播结构体
@@ -85,6 +85,8 @@ private:
 	circlebuf		m_audio_circle;			// 音频环形队列
 	circlebuf		m_video_circle;			// 视频环形队列
 
+	bool			m_bFirstAudioSeq;		// 音频第一个数据包已收到标志...
+	bool			m_bFirstVideoSeq;		// 视频第一个数据包已收到标志...
 	uint32_t		m_nAudioMaxPlaySeq;		// 音频RTP当前最大播放序列号 => 最大连续有效序列号...
 	uint32_t		m_nVideoMaxPlaySeq;		// 视频RTP当前最大播放序列号 => 最大连续有效序列号...
 

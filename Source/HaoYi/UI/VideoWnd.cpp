@@ -418,6 +418,16 @@ void CVideoWnd::OnSize(UINT nType, int cx, int cy)
 	int nReal = nTitle;
 	//int nReal = (m_nWndState == kFixState) ? 0 : nTitle;
 	(m_lpRenderWnd != NULL) ? m_lpRenderWnd->MoveWindow(1, nReal + 1, cx - 2, cy - nReal - 2) : NULL;
+
+	// 需要重建SDL播放窗口...
+	this->ReInitSDLWindow();
+}
+
+void CVideoWnd::ReInitSDLWindow()
+{
+	if( m_lpCamera == NULL )
+		return;
+	m_lpCamera->ReInitSDLWindow();
 }
 
 void CVideoWnd::BuildRenderWnd(int inRenderWndID)

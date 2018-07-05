@@ -55,6 +55,8 @@ public:
 	void		doDeletePushThread();
 
 	void		doWebStatCamera(int nStatus, int nErrCode = 0, LPCTSTR lpszErrMsg = NULL);
+
+	void		ReInitSDLWindow();
 private:
 	static void CALLBACK DeviceLoginResult(LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void * pUser);
 	static void CALLBACK DeviceException(DWORD dwType, LONG lUserID, LONG lHandle, void * pUser);

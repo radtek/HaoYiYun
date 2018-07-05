@@ -122,6 +122,35 @@ CVideoThread::~CVideoThread()
 	}
 }
 
+void CVideoThread::doReBuildSDL()
+{
+	// 销毁SDL窗口 => 会自动隐藏关联窗口...
+	if( m_sdlScreen != NULL ) {
+		SDL_DestroyWindow(m_sdlScreen);
+		m_sdlScreen = NULL;
+	}
+	// 销毁渲染器...
+	if( m_sdlRenderer != NULL ) {
+		SDL_DestroyRenderer(m_sdlRenderer);
+		m_sdlRenderer = NULL;
+	}
+	// 销毁纹理...
+	if( m_sdlTexture != NULL ) {
+		SDL_DestroyTexture(m_sdlTexture);
+		m_sdlTexture = NULL;
+	}
+	// 重建SDL相关对象...
+	if( m_lpRenderWnd != NULL ) {
+		// 销毁SDL窗口时会隐藏关联窗口...
+		m_lpRenderWnd->ShowWindow(SW_SHOW);
+		m_lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
+		// 创建SDL需要的对象 => 窗口、渲染、纹理...
+		m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
+		m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
+		m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nDstWidth, m_nDstHeight);
+	}
+}
+
 BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
 {
 	OSMutexLocker theLock(&m_Mutex);
@@ -136,14 +165,8 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	m_nDstFPS = nFPS;
 	m_strSPS = inSPS;
 	m_strPPS = inPPS;
-	// 设置播放窗口状态...
-	if( m_lpRenderWnd != NULL ) {
-		m_lpRenderWnd->SetRenderState(CRenderWnd::ST_WAIT);
-		// 创建SDL需要的对象...
-		m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
-		m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
-		m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nDstWidth, m_nDstHeight);
-	}
+	// 重建SDL窗口对象...
+	this->doReBuildSDL();
 	// 初始化ffmpeg解码器...
 	av_register_all();
 	// 准备一些特定的参数...
@@ -179,6 +202,14 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	// 启动线程开始运转...
 	this->Start();
 	return true;
+}
+
+void CVideoThread::doReInitSDLWindow()
+{
+	// 进入线程互斥状态中...
+	OSMutexLocker theLock(&m_Mutex);
+	// 重建SDL窗口对象...
+	this->doReBuildSDL();
 }
 
 void CVideoThread::Entry()
@@ -304,8 +335,11 @@ void CVideoThread::doDisplaySDL()
 		dstSdlRect.h = rcRect.Height();
 		// 先把画面绘制的Texture上，再把Texture缩放到播放窗口上面，Texture的大小在创建时使用的是预设高宽...
 		nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame.data[0], pDestFrame.linesize[0] );
+		if( nResult < 0 ) { log_trace("[Video] Error => %s", SDL_GetError()); }
 		nResult = SDL_RenderClear( m_sdlRenderer );
+		if( nResult < 0 ) { log_trace("[Video] Error => %s", SDL_GetError()); }
 		nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );
+		if( nResult < 0 ) { log_trace("[Video] Error => %s", SDL_GetError()); }
 		SDL_RenderPresent( m_sdlRenderer );
 	}
 	// 释放临时分配的数据空间...
@@ -769,6 +803,13 @@ CPlaySDL::~CPlaySDL()
 		delete m_lpVideoThread;
 		m_lpVideoThread = NULL;
 	}
+}
+
+void CPlaySDL::ReInitSDLWindow()
+{
+	if( m_lpVideoThread == NULL )
+		return;
+	m_lpVideoThread->doReInitSDLWindow();
 }
 
 BOOL CPlaySDL::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
