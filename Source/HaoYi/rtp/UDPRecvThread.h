@@ -41,7 +41,6 @@ private:
 	void			doParseFrame(bool bIsAudio);
 
 	uint32_t		doCalcMaxConSeq(bool bIsAudio);
-	void			doProcJamSeq(bool bIsAudio, uint32_t inJamSeq);
 private:
 	enum {
 		kCmdSendCreate	= 0,				// 开始发送 => 创建命令状态

@@ -54,14 +54,11 @@ private:
 	void	doDecodeFrame();
 	void	doDisplaySDL();
 private:
-	int				m_nFPS;
-	int				m_nWidth;
-	int				m_nHeight;
+	int				m_nDstFPS;
+	int				m_nDstWidth;
+	int				m_nDstHeight;
 	string			m_strSPS;
 	string			m_strPPS;
-
-	uint8_t      *  m_img_buffer_ptr;	// 单帧图像输出空间
-	int             m_img_buffer_size;	// 单帧图像输出大小
 
 	CRenderWnd	 *	m_lpRenderWnd;		// 播放窗口
 	SDL_Window   *  m_sdlScreen;		// SDL窗口
@@ -70,6 +67,9 @@ private:
 
 	OSMutex			m_Mutex;			// 互斥对象
 	CPlaySDL	 *  m_lpPlaySDL;		// 播放控制
+
+	uint8_t      *  m_img_buffer_ptr;   // 单帧图像输出空间
+	int             m_img_buffer_size;  // 单帧图像输出大小
 };
 
 class CAudioThread : public CDecoder, public OSThread

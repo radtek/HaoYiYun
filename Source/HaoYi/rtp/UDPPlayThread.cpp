@@ -86,9 +86,9 @@ CVideoThread::CVideoThread(CPlaySDL * lpPlaySDL)
   , m_sdlRenderer(NULL)
   , m_sdlTexture(NULL)
   , m_sdlScreen(NULL)
-  , m_nHeight(0)
-  , m_nWidth(0)
-  , m_nFPS(0)
+  , m_nDstHeight(0)
+  , m_nDstWidth(0)
+  , m_nDstFPS(0)
 {
 	ASSERT( m_lpPlaySDL != NULL );
 }
@@ -131,9 +131,9 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	ASSERT( m_lpCodec == NULL && m_lpDecoder == NULL );
 	// 保存传递过来的参数信息...
 	m_lpRenderWnd = lpRenderWnd;
-	m_nHeight = nHeight;
-	m_nWidth = nWidth;
-	m_nFPS = nFPS;
+	m_nDstHeight = nHeight;
+	m_nDstWidth = nWidth;
+	m_nDstFPS = nFPS;
 	m_strSPS = inSPS;
 	m_strPPS = inPPS;
 	// 设置播放窗口状态...
@@ -142,7 +142,7 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 		// 创建SDL需要的对象...
 		m_sdlScreen = SDL_CreateWindowFrom((void*)m_lpRenderWnd->m_hWnd);
 		m_sdlRenderer = SDL_CreateRenderer(m_sdlScreen, -1, 0);
-		m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nWidth, m_nHeight);
+		m_sdlTexture = SDL_CreateTexture(m_sdlRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, m_nDstWidth, m_nDstHeight);
 	}
 	// 初始化ffmpeg解码器...
 	av_register_all();
@@ -170,10 +170,10 @@ BOOL CVideoThread::InitVideo(CRenderWnd * lpRenderWnd, string & inSPS, string & 
 	ASSERT( m_lpDFrame != NULL );
 
 	// 分配单帧图像转换空间...
-	int nSrcWidth = m_nWidth;
-	int nSrcHeight = m_nHeight;
+	int nDstWidth = m_nDstWidth;
+	int nDstHeight = m_nDstHeight;
 	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
-	m_img_buffer_size = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	m_img_buffer_size = avpicture_get_size(nDestFormat, nDstWidth, nDstHeight);
 	m_img_buffer_ptr = (uint8_t *)av_malloc(m_img_buffer_size);
 
 	// 启动线程开始运转...
@@ -268,19 +268,24 @@ void CVideoThread::doDisplaySDL()
 	// 准备需要转换的格式信息...
 	enum AVPixelFormat nDestFormat = AV_PIX_FMT_YUV420P;
 	enum AVPixelFormat nSrcFormat = m_lpDecoder->pix_fmt;
+	// 解码后的高宽，可能与预设的高宽不一致...
 	int nSrcWidth = m_lpDecoder->width;
 	int nSrcHeight = m_lpDecoder->height;
-	ASSERT( nSrcWidth == m_nWidth );
-	ASSERT( nSrcHeight == m_nHeight);
-	// 不管什么格式，都需要进行像素格式的转换...
+	int nDstWidth = m_nDstWidth;
+	int nDstHeight = m_nDstHeight;
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：解码后的高宽，可能与预设高宽不一致...
+	// 注意：不管什么格式，都需要进行像素格式的转换...
+	// 注意：必须按照预设图像的高宽进行转换，预先分配转换空间，避免来回创建释放临时空间...
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	AVPicture pDestFrame = {0};
-	avpicture_fill(&pDestFrame, m_img_buffer_ptr, nDestFormat, nSrcWidth, nSrcHeight);
+	avpicture_fill(&pDestFrame, m_img_buffer_ptr, nDestFormat, nDstWidth, nDstHeight);
 	// 另一种方法：临时分配图像格式转换空间的方法...
-	//int nDestBufSize = avpicture_get_size(nDestFormat, nSrcWidth, nSrcHeight);
+	//int nDestBufSize = avpicture_get_size(nDestFormat, nDstWidth, nDstHeight);
 	//uint8_t * pDestOutBuf = (uint8_t *)av_malloc(nDestBufSize);
-	//avpicture_fill(&pDestFrame, pDestOutBuf, nDestFormat, nSrcWidth, nSrcHeight);
+	//avpicture_fill(&pDestFrame, pDestOutBuf, nDestFormat, nDstWidth, nDstHeight);
 	// 调用ffmpeg的格式转换接口函数...
-	struct SwsContext * img_convert_ctx = sws_getContext(nSrcWidth, nSrcHeight, nSrcFormat, nSrcWidth, nSrcHeight, nDestFormat, SWS_BICUBIC, NULL, NULL, NULL);
+	struct SwsContext * img_convert_ctx = sws_getContext(nSrcWidth, nSrcHeight, nSrcFormat, nDstWidth, nDstHeight, nDestFormat, SWS_BICUBIC, NULL, NULL, NULL);
 	int nReturn = sws_scale(img_convert_ctx, (const uint8_t* const*)lpSrcFrame->data, lpSrcFrame->linesize, 0, nSrcHeight, pDestFrame.data, pDestFrame.linesize);
 	sws_freeContext(img_convert_ctx);
 	//////////////////////////////////////////////
@@ -289,13 +294,15 @@ void CVideoThread::doDisplaySDL()
 	if( m_lpRenderWnd != NULL ) {
 		int nResult = 0;
 		CRect rcRect;
+		// 注意：这里的源是转换后的图像，目的是播放窗口..
 		SDL_Rect srcSdlRect = { 0 };
 		SDL_Rect dstSdlRect = { 0 };
 		m_lpRenderWnd->GetClientRect(rcRect);
-		srcSdlRect.w = nSrcWidth;
-		srcSdlRect.h = nSrcHeight;
+		srcSdlRect.w = nDstWidth;
+		srcSdlRect.h = nDstHeight;
 		dstSdlRect.w = rcRect.Width();
 		dstSdlRect.h = rcRect.Height();
+		// 先把画面绘制的Texture上，再把Texture缩放到播放窗口上面，Texture的大小在创建时使用的是预设高宽...
 		nResult = SDL_UpdateTexture( m_sdlTexture, &srcSdlRect, pDestFrame.data[0], pDestFrame.linesize[0] );
 		nResult = SDL_RenderClear( m_sdlRenderer );
 		nResult = SDL_RenderCopy( m_sdlRenderer, m_sdlTexture, &srcSdlRect, &dstSdlRect );

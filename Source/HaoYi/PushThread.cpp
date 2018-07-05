@@ -161,6 +161,7 @@ CPushThread::~CPushThread()
 // 处理流转发线程的初始化...
 BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strStreamUrl, string & strStreamMP4)
 {
+#ifdef DEBUG_SEND_ONLY
 	// 保存传递过来的参数...
 	if( m_lpCamera == NULL )
 		return false;
@@ -186,6 +187,7 @@ BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strS
 	m_dwTimeOutMS = dwInitTimeMS;
 	// 记录通道截图间隔时间，单位（毫秒）...
 	m_dwSnapTimeMS = dwInitTimeMS;
+#endif // DEBUG_SEND_ONLY
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：老师观看端一定是先于学生推流端被创建，因为，是由老师观看端引发的学生推流操作
@@ -976,11 +978,14 @@ void CPushThread::EndSendPacket()
 // 获取接收码流 => -1 表示超时...
 int CPushThread::GetRecvKbps()
 {
+#ifdef DEBUG_SEND_ONLY
 	// 如果发生超时，返回 -1，等待删除...
 	if( this->IsFrameTimeout() ) {
 		MsgLogGM(GM_Err_Timeout);
 		return -1;
 	}
+#endif // DEBUG_SEND_ONLY
+
 	// 返回接收码流...
 	return m_nRecvKbps;
 }
@@ -1277,6 +1282,8 @@ CRenderWnd * CPushThread::GetRenderWnd()
 
 void CPushThread::StartUDPRecvThread()
 {
+#ifdef DEBUG_RECV_ONLY
+	// 如果观看线程已经创建，直接返回...
 	if( m_lpUDPRecvThread != NULL )
 		return;
 	// 准备创建接收线程需要的配置信息...
@@ -1286,10 +1293,12 @@ void CPushThread::StartUDPRecvThread()
 	// 创建并初始化接收线程对象....
 	m_lpUDPRecvThread = new CUDPRecvThread(this, nDBRoomID, nDBCameraID);
 	m_lpUDPRecvThread->InitThread();
+#endif // DEBUG_RECV_ONLY
 }
 
 void CPushThread::StartUDPSendThread()
 {
+#ifdef DEBUG_SEND_ONLY
 	if( m_lpRtspThread == NULL )
 		return;
 	int nRateIndex = m_lpRtspThread->GetAudioRateIndex();
@@ -1315,6 +1324,7 @@ void CPushThread::StartUDPSendThread()
 	if( m_lpUDPSendThread != NULL ) {
 		m_lpUDPSendThread->InitThread();
 	}
+#endif // DEBUG_SEND_ONLY
 }
 
 void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)

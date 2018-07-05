@@ -21,6 +21,9 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
   , m_next_detect_ns(-1)
   , m_start_time_ns(0)
   , m_total_time_ms(0)
+  , m_nJamCount(0)
+  , m_bIsJamAudio(false)
+  , m_bIsJamFlag(false)
   , m_bNeedSleep(false)
   , m_lpUDPSocket(NULL)
   , m_HostServerPort(0)
@@ -243,6 +246,17 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
 #endif // DEBUG_FRAME
 
+	// 如果有音频，且多次发生网络拥塞，全部丢掉视频...
+	if( m_rtp_header.hasAudio && m_bIsJamAudio && inFrame.typeFlvTag == PT_TAG_VIDEO ) {
+		log_trace("[Student-Pusher] Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
+		return true;
+	}
+	// 如果发生网络拥塞，视频只发送关键帧...
+	if( m_bIsJamFlag && inFrame.typeFlvTag == PT_TAG_VIDEO && !inFrame.is_keyframe ) {
+		log_trace("[Student-Pusher] Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
+		return true;
+	}
+
 	// 音视频使用不同的打包对象和变量...
 	uint32_t & nCurPackSeq = (inFrame.typeFlvTag == PT_TAG_AUDIO) ? m_nAudioCurPackSeq : m_nVideoCurPackSeq;
 	circlebuf & cur_circle = (inFrame.typeFlvTag == PT_TAG_AUDIO) ? m_audio_circle : m_video_circle;
@@ -302,9 +316,12 @@ void CUDPSendThread::doCalcAVBitRate()
 	// 根据音视频当前输入输出的总字节数，计算输入输出平均码率...
 	m_audio_input_kbps = (m_audio_input_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
 	m_video_input_kbps = (m_video_input_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
-	m_audio_output_kbps = (m_audio_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
-	m_video_output_kbps = (m_video_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
-	m_total_output_kbps = (m_total_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	//m_audio_output_kbps = (m_audio_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	//m_video_output_kbps = (m_video_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	//m_total_output_kbps = (m_total_output_bytes * 8 / (m_total_time_ms / rate_tick_ms)) / 1024;
+	m_audio_output_kbps = (m_audio_output_bytes * 8) / 1024; m_audio_output_bytes = 0;
+	m_video_output_kbps = (m_video_output_bytes * 8) / 1024; m_video_output_bytes = 0;
+	m_total_output_kbps = (m_total_output_bytes * 8) / 1024; m_total_output_bytes = 0;
 	// 打印计算获得的音视频输入输出平均码流值...
 	log_trace("[Student-Pusher] AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", m_audio_input_kbps, m_video_input_kbps);
 	log_trace("[Student-Pusher] AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
@@ -439,9 +456,16 @@ void CUDPSendThread::doSendDetectCmd()
 	m_rtp_detect.tsSrc  = (uint32_t)(cur_time_ns / 1000000);
 	m_rtp_detect.dtDir  = DT_TO_SERVER;
 	m_rtp_detect.dtNum += 1;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：这种靠丢数据来解决网络拥塞的方法不可取，网络已经拥塞，无法将结果同步到观看端...
 	// 注意：没有发生拥塞时，音视频的拥塞点都设置成0，观看端也容易判断...
 	// 计算音视频的拥塞点 => 用视频做为判断依据 => 超过多个GOP之后就认为拥塞...
-	this->doCalcAVJamSeq(m_rtp_detect.maxAConSeq, m_rtp_detect.maxVConSeq);
+	//this->doCalcAVJamSeq(m_rtp_detect.maxAConSeq, m_rtp_detect.maxVConSeq);
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 采用了新的拥塞处理 => 判断缓存时间，设置标志，只发关键帧的方式，最简单、高效、稳定...
+	this->doCalcAVJamFlag();
+
 	// 调用接口发送探测命令包...
 	GM_Error theErr = m_lpUDPSocket->SendTo((void*)&m_rtp_detect, sizeof(m_rtp_detect));
 	(theErr != GM_NoErr) ? MsgLogGM(theErr) : NULL;
@@ -464,7 +488,51 @@ void CUDPSendThread::doSendDetectCmd()
 	m_bNeedSleep = false;
 }
 
-void CUDPSendThread::doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoSeq)
+void CUDPSendThread::doCalcAVJamFlag()
+{
+	// 视频环形队列为空，没有拥塞，直接返回...
+	if( m_video_circle.size <= 0 )
+		return;
+	// 遍历环形队列，缓存了5秒数据，认为发生了拥塞，设置只能灌输视频关键帧标志...
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	static char szPacketBuffer[nPerPackSize] = {0};
+	circlebuf & cur_circle = m_video_circle;
+	rtp_hdr_t * lpCurHeader = NULL;
+	uint32_t    min_ts = 0;
+	uint32_t    max_ts = 0;
+	// 读取第一个数据包的内容，获取最小时间戳...
+	circlebuf_peek_front(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	min_ts = lpCurHeader->ts;
+	// 读取第大的数据包的内容，获取最大时间戳...
+	circlebuf_peek_back(&cur_circle, szPacketBuffer, nPerPackSize);
+	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
+	max_ts = lpCurHeader->ts;
+	// 计算环形队列当中总的缓存时间...
+	uint32_t cur_buf_ms = max_ts - min_ts;
+	// 如果总缓存时间低于1秒，设置网络恢复标志...
+	if( cur_buf_ms <= 1000 ) {
+		m_bIsJamFlag = false;
+	}
+	// 如果总缓存时间超过3秒，设置网络拥塞标志...
+	if( cur_buf_ms >= 3000 ) {
+		m_bIsJamFlag = true;
+		++m_nJamCount;
+	}
+	// 如果已经累计发生网络拥堵超过5次，只能发送音频...
+	if( m_nJamCount >= 5 ) {
+		m_bIsJamFlag = true;
+		m_bIsJamAudio = true;
+	}
+	/*// 如果累加发生网络拥塞超过10次，只能发送音频...
+	if( m_nJamCount >= 10 ) {
+		m_bIsJamAudio = true;
+	}*/
+	// 打印网络拥塞情况 => 就是视频缓存的拥塞情况...
+	log_trace("[Student-Pusher] Jam => Count: %d, Flag: %d, CurBufMS: %lu, Circle: %d", m_nJamCount, m_bIsJamFlag, cur_buf_ms, cur_circle.size/nPerPackSize);
+}
+
+/*void CUDPSendThread::doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoSeq)
 {
 	// 设置默认的拥塞序号为0...
 	outAudioSeq = outVideoSeq = 0;
@@ -487,16 +555,14 @@ void CUDPSendThread::doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoS
 	while( true ) {
 		// 如果是关键帧的起始帧 => 关键帧计数增加...
 		if( lpCurHeader->pk > 0 && lpCurHeader->pst > 0 ) {
-			// 如果超过4个关键帧 => 发生拥塞， 删除当前包之前的所有数据包...
-			if( ++nGopCount >= 4 ) {
+			// 如果超过5个关键帧 => 发生拥塞， 删除当前包之前的所有数据包...
+			if( ++nGopCount >= 5 ) {
 				// 删除当前包之前的所有数据包...
 				circlebuf_pop_front(&cur_circle, NULL, nPosition);
 				// 打印视频拥塞信息 => 当前位置，已发送数据包 => 两者之差就是观看端的有效补包空间...
 				log_trace("[Student-Pusher] Jam => Video MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Cirlce: %d", min_seq, lpCurHeader->seq, m_nVideoCurSendSeq, cur_circle.size/nPerPackSize);
-				// 如果删除点超过了已发送位置，将删除点保存为已发包序号...
-				if( lpCurHeader->seq >= m_nVideoCurSendSeq ) {
-					m_nVideoCurSendSeq = lpCurHeader->seq;
-				}
+				// 直接将发包位置调整当前包，从当前包开始发包...
+				m_nVideoCurSendSeq = lpCurHeader->seq;
 				// 拥塞序号包设置为当前序号包...
 				outVideoSeq = lpCurHeader->seq;
 				// 删除音频相关时间的数据包，返回拥塞音频序号包...
@@ -553,17 +619,15 @@ uint32_t CUDPSendThread::doEarseAudioByTime(uint32_t inTimeStamp)
 	// 注意：当期包是拷贝出来的，缓存始终有效...
 	// 删除当前包之前的所有数据包...
 	circlebuf_pop_front(&cur_circle, NULL, nPosition);
-	// 如果删除点超过了已发送位置，将删除点保存为已发包序号...
-	if( lpCurHeader->seq >= m_nAudioCurSendSeq ) {
-		m_nAudioCurSendSeq = lpCurHeader->seq;
-	}
-	// 拥塞序号设置为当前序号包...
-	nAudioJamSeq = lpCurHeader->seq;
 	// 打印音频拥塞信息 => 当前位置，已发送数据包 => 两者之差就是观看端的有效补包空间...
 	log_trace("[Student-Pusher] Jam => Audio MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Circle: %d", min_seq, lpCurHeader->seq, m_nAudioCurSendSeq, cur_circle.size/nPerPackSize);
+	// 直接将发包位置调整当前包，从当前包开始发包...
+	m_nAudioCurSendSeq = lpCurHeader->seq;
+	// 拥塞序号设置为当前序号包...
+	nAudioJamSeq = lpCurHeader->seq;
 	// 返回最终获取到的音频拥塞点...
 	return nAudioJamSeq;
-}
+}*/
 
 void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 {
@@ -941,10 +1005,11 @@ void CUDPSendThread::doTagSupplyProcess(char * lpBuffer, int inRecvLen)
 
 void CUDPSendThread::doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq)
 {
-	// 根据数据包类型，找到环形队列、最大播放序号...
+	// 根据数据包类型，找到环形队列、最大播放序号、当前拥塞点...
 	circlebuf & cur_circle = bIsAudio ? m_audio_circle : m_video_circle;
 	uint32_t & nCurSendSeq = bIsAudio ? m_nAudioCurSendSeq : m_nVideoCurSendSeq;
 	uint32_t & nCurPackSeq = bIsAudio ? m_nAudioCurPackSeq : m_nVideoCurPackSeq;
+	// 如果输入的最大连续包号无效或环形队列为空，直接返回...
 	if( inMaxConSeq <= 0 || cur_circle.size <= 0 )
 		return;
 	// 先找到环形队列中最前面数据包的头指针 => 最小序号...
@@ -972,7 +1037,7 @@ void CUDPSendThread::doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq)
 	// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 	// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
 	uint32_t nRemainCount = cur_circle.size / nPerPackSize;
-	log_trace( "[Student-Pusher] Recv Detect => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
+	log_trace( "[Student-Pusher] Detect Erase Success => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
 				bIsAudio ? "Audio" : "Video", inMaxConSeq, lpFrontHeader->seq, nCurSendSeq, nCurPackSeq, nRemainCount );
 }
 

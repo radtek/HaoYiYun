@@ -66,10 +66,10 @@ CUDPRecvThread::~CUDPRecvThread()
 {
 	// 停止线程，等待退出...
 	this->StopAndWaitForThread();
-	// 删除音视频播放线程...
-	this->ClosePlayer();
 	// 关闭UDPSocket对象...
 	this->CloseSocket();
+	// 删除音视频播放线程...
+	this->ClosePlayer();
 	// 释放音视频环形队列空间...
 	circlebuf_free(&m_audio_circle);
 	circlebuf_free(&m_video_circle);
@@ -569,14 +569,16 @@ void CUDPRecvThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_strPPS.clear();*/
 }
 
-void CUDPRecvThread::doProcJamSeq(bool bIsAudio, uint32_t inJamSeq)
+/*void CUDPRecvThread::doProcJamSeq(bool bIsAudio, uint32_t inJamSeq)
 {
-	////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：这种靠丢数据来解决网络拥塞的方法不可取，网络已经拥塞，无法将结果同步到观看端...
+	// 注意：推流端会从输入拥塞点开始发包，拥塞点是有效包，还是关键帧的开始包...
 	// 注意：当前播放最大序号包是已经被删除包的序号，它的下一个包有效；
-	// 注意：输入最小序号包是没有被删除的，是推流端的有效的第一个序号包；
-	// 注意：删包区间 => [min_seq, inJamSeq - 1]
-	////////////////////////////////////////////////////////////////////////////
-	// 如果输入最小序号包为0，没有拥塞，直接返回...
+	// 注意：输入拥塞点是没有被删除的，是推流端的有效的第一个序号包；
+	// 注意：删包区间 => [min_seq, inJamSeq] => 不包括拥塞点；
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	// 如果输入拥塞点为0，没有拥塞，直接返回...
 	if( inJamSeq <= 0 )
 		return;
 	ASSERT( inJamSeq > 0 );
@@ -586,61 +588,44 @@ void CUDPRecvThread::doProcJamSeq(bool bIsAudio, uint32_t inJamSeq)
 	GM_MapLose & theMapLose = bIsAudio ? m_AudioMapLose : m_VideoMapLose;
 	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
 	static char szPacketBuffer[nPerPackSize] = {0};
-	// 如果输入推流端最小序号包比当前播放包还要小，直接返回...
-	if( inJamSeq <= (nMaxPlaySeq + 1) ) {
-		log_trace("[Teacher-Looker] Jam Failed => %s JamSeq: %lu, MaxPlaySeq: %lu, Circle: %d", (bIsAudio ? "Audio" : "Video"), inJamSeq, nMaxPlaySeq, cur_circle.size/nPerPackSize);
+	// 打印收到拥塞命令信息...
+	log_trace( "[Teacher-Looker] Jam Recv => %s JamSeq: %lu, MaxPlaySeq: %lu, LoseSize: %d, Circle: %d",
+			   (bIsAudio ? "Audio" : "Video"), inJamSeq, nMaxPlaySeq, theMapLose.size(), cur_circle.size/nPerPackSize );
+	// 删除所有的补包队列，推流端已经把发包位置往前移动了...
+	theMapLose.clear();
+	// 将输入拥塞点减1设置成当前最大播放包 => 最大播放包是已经被删除的序号包...
+	nMaxPlaySeq = inJamSeq - 1;
+	// 如果环形队列为空，直接返回...
+	if( cur_circle.size <= 0 )
 		return;
-	}
-	// 如果输入推流端最小序号包比当前播放包大，遍历丢包管理器，丢掉过期数据包号...
-	GM_MapLose::iterator itorItem = theMapLose.begin();
-	while( itorItem != theMapLose.end() ) {
-		// 注意：输入最小包是有效的，是能被补上的...
-		// 如果补包号大于或等于输入最小包，当前和后面的包都能补...
-		if( itorItem->first >= inJamSeq )
-			break;
-		// 如果补包号小于输入最小包，已经无法补包，直接扔掉...
-		ASSERT( itorItem->first < inJamSeq );
-		theMapLose.erase(itorItem++);
-	}
-	// 如果环形队列为空或只有一个包，没有可以删除的空间，直接返回...
-	if( cur_circle.size <= nPerPackSize ) {
-		log_trace("[Teacher-Looker] Jam Failed => %s JamSeq: %lu, MaxPlaySeq: %lu, Circle: Zero", (bIsAudio ? "Audio" : "Video"), inJamSeq, nMaxPlaySeq, cur_circle.size/nPerPackSize);
-		return;
-	}
 	// 从环形队列的第一个包开始，计算要删除的总长度...
 	rtp_hdr_t * lpCurHeader = NULL;
 	uint32_t    min_seq = 0;
 	uint32_t    max_seq = 0;
-	// 先找到环形队列中的最小序号包...
+	// 先找到当前环形队列的最小序号包...
 	circlebuf_peek_front(&cur_circle, szPacketBuffer, nPerPackSize);
 	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
 	min_seq = lpCurHeader->seq;
-	// 再找到环形队列中的最大序号包...
+	// 再找到当前环形队列中的最大序号包...
 	circlebuf_peek_back(&cur_circle, szPacketBuffer, nPerPackSize);
 	lpCurHeader = (rtp_hdr_t*)szPacketBuffer;
 	max_seq = lpCurHeader->seq;
-	///////////////////////////////////////////////////////////////////////////////////
-	// 注意：相等的最小包有可能是丢包，不能过早删除...
-	// 如果输入最小序号包小于或等于环形队列最小包，说明要删除的包都已经没有了...
-	///////////////////////////////////////////////////////////////////////////////////
+	// 如果输入拥塞点小于或等于环形队列最小包，说明要删除的包都已经没有了...
 	if( inJamSeq <= min_seq ) {
-		log_trace( "[Teacher-Looker] Jam Failed => %s MinSeq: %lu, JamSeq: %lu, MaxSeq: %lu, MaxPlaySeq: %lu, Circle: %d",
+		log_trace( "[Teacher-Looker] Jam Error => %s MinSeq: %lu, JamSeq: %lu, MaxSeq: %lu, MaxPlaySeq: %lu, Circle: %d",
 				   (bIsAudio ? "Audio" : "Video"), min_seq, inJamSeq, max_seq, nMaxPlaySeq, cur_circle.size/nPerPackSize );
 		return;
 	}
-	// 如果输入最小序号包比环形队列里最大包还要大，说明整个环形队列数据都过期了...
-	inJamSeq = min(inJamSeq, max_seq);
-	// 输入最小序号包一定比环形队列最小包号大，才有删除的必要...
-	ASSERT( inJamSeq > min_seq && inJamSeq <= max_seq );
-	// 删除区间 => [min_seq, inMinSeq - 1]，计算回收空间的长度;
+	// 删除区间 => [min_seq, inMinSeq]，计算回收空间的长度;
 	uint32_t nPopSize = (inJamSeq - min_seq) * nPerPackSize;
+	// 如果输入拥塞点比环形队列里最大包还要大，说明整个环形队列数据都过期了...
+	if( inJamSeq > max_seq ) { nPopSize = cur_circle.size; }
+	// 使用最终计算的结果，应用到环形队列当中，进行删除操作...
 	circlebuf_pop_front(&cur_circle, NULL, nPopSize);
-	// 将输入最小序号包减1设置成当前最大播放包 => 这个最小包的前一个包是已被删除的最大包...
-	nMaxPlaySeq = inJamSeq - 1;
 	// 打印拥塞最终处理情况 => 环形队列之前的最小序号、拥塞序号、环形队列最大序号、当前最大播放包...
 	log_trace( "[Teacher-Looker] Jam Success => %s MinSeq: %lu, JamSeq: %lu, MaxSeq: %lu, MaxPlaySeq: %lu, Circle: %d",
 			   (bIsAudio ? "Audio" : "Video"), min_seq, inJamSeq, max_seq, nMaxPlaySeq, cur_circle.size/nPerPackSize );
-}
+}*/
 
 void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 {
@@ -663,10 +648,14 @@ void CUDPRecvThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			// 注意：有可能没有收到推流端映射地址，但收到了推流端P2P探测包，这时，需要通过服务器中转探测包...
 			theErr = m_lpUDPSocket->SendTo(lpBuffer, inRecvLen);
 		}
+		////////////////////////////////////////////////////////////////////////////////////////////////
+		// 注意：这种靠丢数据来解决网络拥塞的方法不可取，网络已经拥塞，无法将结果同步到观看端...
+		// 注意：推流端目前使用的是在打包之前丢视频帧的方式来解决网络拥塞问题...
 		// 先处理推流端视频拥塞序号包...
-		this->doProcJamSeq(false, lpDetect->maxVConSeq);
+		//this->doProcJamSeq(false, lpDetect->maxVConSeq);
 		// 再处理推流端音频拥塞序号包...
-		this->doProcJamSeq(true, lpDetect->maxAConSeq);
+		//this->doProcJamSeq(true, lpDetect->maxAConSeq);
+		////////////////////////////////////////////////////////////////////////////////////////////////
 		return;
 	}
 	// 如果是 老师观看端 自己发出的探测包，计算网络延时...
@@ -909,6 +898,8 @@ void CUDPRecvThread::doParseFrame(bool bIsAudio)
 	/*if( nConsumeSize >= m_circle.size ) {
 		log_trace("[Teacher-Looker] Error => Circle Empty, PlaySeq: %lu, CurSeq: %lu", m_nMaxPlaySeq, cur_seq);
 	}*/
+
+	// 注意：已解析的序列号是已经被删除的序列号...
 	// 当前已解析的序列号保存为当前最大播放序列号...
 	nMaxPlaySeq = cur_seq;
 	
@@ -999,9 +990,12 @@ void CUDPRecvThread::doFillLosePack(uint8_t inPType, uint32_t nStartLoseID, uint
 // 将获取的音视频数据包存入环形队列当中...
 void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 {
-	// 判断输入数据包的有效性...
-	if( lpBuffer == NULL || inRecvLen < 0 || inRecvLen < sizeof(rtp_hdr_t) )
+	// 判断输入数据包的有效性 => 不能小于数据包的头结构长度...
+	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
+	if( lpBuffer == NULL || inRecvLen < sizeof(rtp_hdr_t) || inRecvLen > nPerPackSize ) {
+		log_trace("[Teacher-Looker] Error => RecvLen: %d, Max: %d", inRecvLen, nPerPackSize);
 		return;
+	}
 	/////////////////////////////////////////////////////////////////////////////////
 	// 注意：这里只需要判断序列头是否到达，不用判断推流端的准备就绪包是否到达...
 	// 注意：因为可能音视频数据包会先于准备就绪包到达，那样的话就会造成丢包...
@@ -1039,14 +1033,20 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	uint32_t new_id = lpNewHeader->seq;
 	uint32_t max_id = new_id;
 	uint32_t min_id = new_id;
+	// 出现打包错误，丢掉错误包，打印错误信息...
 	if( inRecvLen != nDataSize || nZeroSize < 0 ) {
-		log_trace("[Teacher-Looker] Discard => Seq: %lu, TS: %lu, Type: %d, Slice: %d, ZeroSize: %d", lpNewHeader->seq, lpNewHeader->ts, lpNewHeader->pt, lpNewHeader->psize, nZeroSize);
+		log_trace("[Teacher-Looker] Error => RecvLen: %d, DataSize: %d, ZeroSize: %d", inRecvLen, nDataSize, nZeroSize);
 		return;
 	}
 	// 音视频使用不同的打包对象和变量...
 	uint32_t & nMaxPlaySeq = (pt_tag == PT_TAG_AUDIO) ? m_nAudioMaxPlaySeq : m_nVideoMaxPlaySeq;
 	circlebuf & cur_circle = (pt_tag == PT_TAG_AUDIO) ? m_audio_circle : m_video_circle;
-
+	// 注意：观看端后接入时，最大播放包序号不是从0开始的...
+	// 如果最大播放序列包是0，说明是第一个包，需要保存为最大播放包 => 当前包号 - 1 => 最大播放包是已删除包，当前包序号从1开始...
+	if( nMaxPlaySeq <= 0 ) {
+		nMaxPlaySeq = new_id - 1;
+		log_trace("[Teacher-Looker] First Packet => Seq: %lu, Key: %d, PTS: %lu, PStart: %d, Type: %d", new_id, lpNewHeader->pk, lpNewHeader->ts, lpNewHeader->pst, pt_tag);
+	}
 	// 如果收到的补充包比当前最大播放包还要小 => 说明是多次补包的冗余包，直接扔掉...
 	// 注意：即使相等也要扔掉，因为最大播放序号包本身已经投递到了播放层，已经被删除了...
 	if( new_id <= nMaxPlaySeq ) {
@@ -1060,7 +1060,6 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：每个环形队列中的数据包大小是一样的 => rtp_hdr_t + slice + Zero => 12 + 800 => 812
 	//////////////////////////////////////////////////////////////////////////////////////////////////
-	const int nPerPackSize = DEF_MTU_SIZE + sizeof(rtp_hdr_t);
 	static char szPacketBuffer[nPerPackSize] = {0};
 	// 如果环形队列为空 => 需要对丢包做提前预判并进行处理...
 	if( cur_circle.size < nPerPackSize ) {
