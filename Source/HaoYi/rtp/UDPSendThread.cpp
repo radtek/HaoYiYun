@@ -69,6 +69,7 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
 
 CUDPSendThread::~CUDPSendThread()
 {
+	log_trace("== [~CUDPSendThread Thread] - Exit Start ==");
 	// 未知状态，阻止继续塞包...
 	m_nCmdState = kCmdUnkownState;
 	// 停止线程，等待退出...
@@ -78,6 +79,7 @@ CUDPSendThread::~CUDPSendThread()
 	// 释放音视频环形队列空间...
 	circlebuf_free(&m_audio_circle);
 	circlebuf_free(&m_video_circle);
+	log_trace("== [~CUDPSendThread Thread] - Exit End ==");
 }
 
 void CUDPSendThread::CloseSocket()

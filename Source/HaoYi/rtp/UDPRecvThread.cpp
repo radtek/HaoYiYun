@@ -66,6 +66,8 @@ CUDPRecvThread::CUDPRecvThread(CPushThread * lpPushThread, int nDBRoomID, int nD
 
 CUDPRecvThread::~CUDPRecvThread()
 {
+	log_trace("== [~CUDPRecvThread Thread] - Exit Start ==");
+
 	// 停止线程，等待退出...
 	this->StopAndWaitForThread();
 	// 关闭UDPSocket对象...
@@ -75,6 +77,8 @@ CUDPRecvThread::~CUDPRecvThread()
 	// 释放音视频环形队列空间...
 	circlebuf_free(&m_audio_circle);
 	circlebuf_free(&m_video_circle);
+
+	log_trace("== [~CUDPRecvThread Thread] - Exit End ==");
 }
 
 void CUDPRecvThread::ClosePlayer()
@@ -200,6 +204,13 @@ void CUDPRecvThread::doSendCreateCmd()
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
 	m_bNeedSleep = false;
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：如果收到第一个包或第一个命令的延时，会累加到播放层...
+	// 因此，在发出每一个Create命令的时候都更新系统0点时刻，相当于提前设置了系统0点时刻...
+	// 相当于在发出创建命令就认为是第一帧数据已经准备好可以播放的时刻点，这样受网络波动延时的影响最小；
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	m_sys_zero_ns = CUtilTool::os_gettime_ns();
+	log_trace("[Teacher-Looker] Set System Zero Time By Create => %I64d ms", m_sys_zero_ns/1000000);
 }
 
 void CUDPRecvThread::doSendDetectCmd()
@@ -449,22 +460,23 @@ void CUDPRecvThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	m_nCmdState = kCmdSendReady;
 	// 打印收到序列头结构体信息...
 	log_trace("[Teacher-Looker] Recv Header SPS: %d, PPS: %d", m_strSPS.size(), m_strPPS.size());
+	// 如果播放器已经创建，直接返回...
+	if( m_lpPlaySDL != NULL || m_lpPushThread == NULL )
+		return;
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 开始重建本地播放器对象，设定观看端的0点时刻...
 	// 注意：这里非常重要，服务器开始转发推流者音视频数据了，必须设定观看者的系统计时起点，0点时刻...
 	// 0点时刻：系统认为第一帧数据的真正系统时间起点，第一帧数据就应该在这个时刻点已经被准备好...
 	// 但是，由于网络延时，根本不可能在这个时刻点被准备好，如果在收到第一帧数据之后再设定0点时刻，就会产生永久的接入延时...
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// 如果播放器已经创建，直接返回...
-	if( m_lpPlaySDL != NULL || m_lpPushThread == NULL )
-		return;
 	// 注意：如果收到第一个包或第一个命令的延时，会累加到播放层...
+	// 注意：最终采用的方案 => 发送Create命令设置系统0点时刻...
 	// 计算系统0点时刻 => 第一个数据包到达时间就是系统0点时刻...
 	// 有可能第一个数据包还没有到达，就立即用当前系统时刻做为0点时刻...
-	if( m_sys_zero_ns < 0 ) {
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*if( m_sys_zero_ns < 0 ) {
 		m_sys_zero_ns = CUtilTool::os_gettime_ns() - 100 * 1000000;
 		log_trace("[Teacher-Looker] Set System Zero Time By Header => %I64d ms", m_sys_zero_ns/1000000);
-	}
+	}*/
 	// 新建播放器，初始化音视频线程...
 	m_lpPlaySDL = new CPlaySDL(m_sys_zero_ns);
 	// 计算默认的网络缓冲评估时间 => 使用帧率来计算...
@@ -1020,14 +1032,16 @@ void CUDPRecvThread::doTagAVPackProcess(char * lpBuffer, int inRecvLen)
 	///////////////////////////////////////////////////////////////////////////////////////////
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 注意：最终采用的方案 => 发送Create命令设置系统0点时刻...
 	// 设定播放器的0点时刻 => 系统认为的第一帧应该已经准备好的系统时刻点...
 	// 但由于网络延时，根本不可能在这个时刻点被准备好，一定会产生延时...
 	// 因此，这里采用收到第一个数据包就设定为系统0点时刻，尽量降低网络传输延时...
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	if( m_sys_zero_ns < 0 ) {
+	/*if( m_sys_zero_ns < 0 ) {
 		m_sys_zero_ns = CUtilTool::os_gettime_ns() - 100 * 1000000;
 		log_trace("[Teacher-Looker] Set System Zero Time By First Data => %I64d ms", m_sys_zero_ns/1000000);
-	}
+	}*/
+
 	// 如果收到的缓冲区长度不够 或 填充量为负数，直接丢弃...
 	rtp_hdr_t * lpNewHeader = (rtp_hdr_t*)lpBuffer;
 	int nDataSize = lpNewHeader->psize + sizeof(rtp_hdr_t);

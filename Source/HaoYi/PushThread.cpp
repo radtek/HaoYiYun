@@ -67,27 +67,10 @@ CPushThread::CPushThread(HWND hWndVideo, CCamera * lpCamera)
 
 CPushThread::~CPushThread()
 {
+	log_trace("== [~CPushThread Thread] - Exit Start ==");
+
 	// 停止线程...
 	this->StopAndWaitForThread();
-
-	// 删除UDP数据接收线程...
-	if( m_lpUDPRecvThread != NULL ) {
-		delete m_lpUDPRecvThread;
-		m_lpUDPRecvThread = NULL;
-	}
-	// 删除UDP数据发送线程...
-	{
-		OSMutexLocker theLock(&m_Mutex);
-		if( m_lpUDPSendThread != NULL ) {
-			delete m_lpUDPSendThread;
-			m_lpUDPSendThread = NULL;
-		}
-	}
-
-	if( m_lpPlaySDL != NULL ) {
-		delete m_lpPlaySDL;
-		m_lpPlaySDL = NULL;
-	}
 
 	// 删除rtmp对象，这里必须加互斥，避免Connect返回时rtmp已经被删除，造成内存错误...
 	{
@@ -119,7 +102,27 @@ CPushThread::~CPushThread()
 	m_nKeyFrame = 0;
 	m_bIsPublishing = false;
 	m_bStreamPlaying = false;
-	MsgLogINFO("== [~CPushThread Thread] - Exit ==");
+
+	// 删除UDP数据发送线程...
+	{
+		OSMutexLocker theLock(&m_Mutex);
+		if( m_lpUDPSendThread != NULL ) {
+			delete m_lpUDPSendThread;
+			m_lpUDPSendThread = NULL;
+		}
+	}
+	// 删除UDP数据接收线程...
+	if( m_lpUDPRecvThread != NULL ) {
+		delete m_lpUDPRecvThread;
+		m_lpUDPRecvThread = NULL;
+	}
+	// 删除播放器对象...
+	if( m_lpPlaySDL != NULL ) {
+		delete m_lpPlaySDL;
+		m_lpPlaySDL = NULL;
+	}
+
+	log_trace("== [~CPushThread Thread] - Exit End ==");
 
 	// 释放存盘文件...
 #ifdef _SAVE_H264_
