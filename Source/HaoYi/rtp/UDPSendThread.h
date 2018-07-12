@@ -7,10 +7,11 @@
 #include "rtp.h"
 
 class UDPSocket;
+class CPushThread;
 class CUDPSendThread : public OSThread
 {
 public:
-	CUDPSendThread(int nDBRoomID, int nDBCameraID);
+	CUDPSendThread(CPushThread * lpPushThread, int nDBRoomID, int nDBCameraID);
 	virtual ~CUDPSendThread();
 	virtual void Entry();
 public:
@@ -55,6 +56,7 @@ private:
 
 	OSMutex			m_Mutex;				// 互斥对象
 	UDPSocket	*	m_lpUDPSocket;			// UDP对象
+	CPushThread *   m_lpPushThread;
 
 	uint16_t		m_HostServerPort;		// 服务器端口 => host
 	uint32_t	    m_HostServerAddr;		// 服务器地址 => host

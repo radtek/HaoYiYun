@@ -574,7 +574,7 @@ void CRtspThread::StartPushThread()
 		return;
 	ASSERT( m_lpPushThread != NULL );
 	// 启动UDP推流线程...
-	m_lpPushThread->StartUDPSendThread();
+	//m_lpPushThread->StartUDPSendThread();
 	// 设置流的播放状态...
 	m_lpPushThread->SetStreamPlaying(true);
 

@@ -164,7 +164,6 @@ CPushThread::~CPushThread()
 // 处理流转发线程的初始化...
 BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strStreamUrl, string & strStreamMP4)
 {
-#ifdef DEBUG_SEND_ONLY
 	// 保存传递过来的参数...
 	if( m_lpCamera == NULL )
 		return false;
@@ -190,7 +189,6 @@ BOOL CPushThread::StreamInitThread(BOOL bFileMode, BOOL bUsingTCP, string & strS
 	m_dwTimeOutMS = dwInitTimeMS;
 	// 记录通道截图间隔时间，单位（毫秒）...
 	m_dwSnapTimeMS = dwInitTimeMS;
-#endif // DEBUG_SEND_ONLY
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：老师观看端一定是先于学生推流端被创建，因为，是由老师观看端引发的学生推流操作
@@ -207,7 +205,18 @@ BOOL CPushThread::StreamStartLivePush(string & strRtmpUrl)
 	if( m_lpCamera == NULL )
 		return false;
 	ASSERT( m_lpCamera != NULL );
+	//////////////////////////////////////////////////////////
+	// 注意：改造成rtp推流模式...
 	// IE8会连续发送两遍播放命令，需要确保只启动一次...
+	//////////////////////////////////////////////////////////
+	if( m_lpUDPSendThread != NULL )
+		return true;
+	// 启动rtp推流线程对象...
+	OSMutexLocker theLock(&m_Mutex);
+	this->StartUDPSendThread();
+	return true;
+
+	/*// IE8会连续发送两遍播放命令，需要确保只启动一次...
 	if( m_lpRtmpPush != NULL )
 		return true;
 	// 保存需要的数据信息...
@@ -218,7 +227,7 @@ BOOL CPushThread::StreamStartLivePush(string & strRtmpUrl)
 	ASSERT( m_lpRtmpPush != NULL );
 	// 立即启动推流线程...
 	this->Start();
-	return true;
+	return true;*/
 }
 //
 // 停止流转发直播上传...
@@ -227,7 +236,15 @@ BOOL CPushThread::StreamStopLivePush()
 	if( m_lpCamera == NULL )
 		return false;
 	ASSERT( m_lpCamera != NULL );
-	// 停止上传线程，复位发布状态标志...
+	// 注意：改造成rtp推流模式...
+	OSMutexLocker theLock(&m_Mutex);
+	if( m_lpUDPSendThread != NULL ) {
+		delete m_lpUDPSendThread;
+		m_lpUDPSendThread = NULL;
+	}
+	return true;
+
+	/*// 停止上传线程，复位发布状态标志...
 	this->StopAndWaitForThread();
 	this->SetStreamPublish(false);
 	this->EndSendPacket();
@@ -235,7 +252,7 @@ BOOL CPushThread::StreamStopLivePush()
 	m_dwFirstSendTime = 0;
 	m_nCurSendByte = 0;
 	m_nSendKbps = 0;
-	return true;
+	return true;*/
 }
 
 BOOL CPushThread::MP4CreateVideoTrack()
@@ -981,14 +998,11 @@ void CPushThread::EndSendPacket()
 // 获取接收码流 => -1 表示超时...
 int CPushThread::GetRecvKbps()
 {
-#ifdef DEBUG_SEND_ONLY
 	// 如果发生超时，返回 -1，等待删除...
 	if( this->IsFrameTimeout() ) {
 		MsgLogGM(GM_Err_Timeout);
 		return -1;
 	}
-#endif // DEBUG_SEND_ONLY
-
 	// 返回接收码流...
 	return m_nRecvKbps;
 }
@@ -1292,7 +1306,6 @@ void CPushThread::ReInitSDLWindow()
 
 void CPushThread::StartUDPRecvThread()
 {
-#ifdef DEBUG_RECV_ONLY
 	// 如果观看线程已经创建，直接返回...
 	if( m_lpUDPRecvThread != NULL )
 		return;
@@ -1303,12 +1316,10 @@ void CPushThread::StartUDPRecvThread()
 	// 创建并初始化接收线程对象....
 	m_lpUDPRecvThread = new CUDPRecvThread(this, nDBRoomID, nDBCameraID);
 	m_lpUDPRecvThread->InitThread();
-#endif // DEBUG_RECV_ONLY
 }
 
 void CPushThread::StartUDPSendThread()
 {
-#ifdef DEBUG_SEND_ONLY
 	if( m_lpRtspThread == NULL )
 		return;
 	int nRateIndex = m_lpRtspThread->GetAudioRateIndex();
@@ -1334,7 +1345,13 @@ void CPushThread::StartUDPSendThread()
 	if( m_lpUDPSendThread != NULL ) {
 		m_lpUDPSendThread->InitThread();
 	}
-#endif // DEBUG_SEND_ONLY
+}
+
+// 利用界面层通知停止推流操作...
+void CPushThread::StopUDPSendThread()
+{
+	WPARAM wMsgID = WM_STOP_LIVE_PUSH_MSG;
+	::PostMessage(m_hWndVideo, wMsgID, NULL, NULL);
 }
 
 void CPushThread::StartPlayByVideo(string & inSPS, string & inPPS, int nWidth, int nHeight, int nFPS)
@@ -1365,7 +1382,7 @@ void CPushThread::StartSendByAudio(int nRateIndex, int nChannelNum)
 	int nDBRoomID = theConfig.GetCurSelRoomID();
 	int nDBCameraID = m_lpCamera->GetDBCameraID();
 	if( m_lpUDPSendThread == NULL ) {
-		m_lpUDPSendThread = new CUDPSendThread(nDBRoomID, nDBCameraID);
+		m_lpUDPSendThread = new CUDPSendThread(this, nDBRoomID, nDBCameraID);
 	}
 	ASSERT( m_lpUDPSendThread != NULL );
 	m_lpUDPSendThread->InitAudio(nRateIndex, nChannelNum);
@@ -1377,7 +1394,7 @@ void CPushThread::StartSendByVideo(string & inSPS, string & inPPS, int nWidth, i
 	int nDBRoomID = theConfig.GetCurSelRoomID();
 	int nDBCameraID = m_lpCamera->GetDBCameraID();
 	if( m_lpUDPSendThread == NULL ) {
-		m_lpUDPSendThread = new CUDPSendThread(nDBRoomID, nDBCameraID);
+		m_lpUDPSendThread = new CUDPSendThread(this, nDBRoomID, nDBCameraID);
 	}
 	ASSERT( m_lpUDPSendThread != NULL );
 	m_lpUDPSendThread->InitVideo(inSPS, inPPS, nWidth, nHeight, nFPS);

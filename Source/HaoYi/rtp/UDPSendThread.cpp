@@ -4,9 +4,11 @@
 #include "UDPSocket.h"
 #include "SocketUtils.h"
 #include "UDPSendThread.h"
+#include "../PushThread.h"
 
-CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
-  : m_total_output_bytes(0)
+CUDPSendThread::CUDPSendThread(CPushThread * lpPushThread, int nDBRoomID, int nDBCameraID)
+  : m_lpPushThread(lpPushThread)
+  , m_total_output_bytes(0)
   , m_audio_output_bytes(0)
   , m_video_output_bytes(0)
   , m_total_output_kbps(0)
@@ -69,7 +71,7 @@ CUDPSendThread::CUDPSendThread(int nDBRoomID, int nDBCameraID)
 
 CUDPSendThread::~CUDPSendThread()
 {
-	log_trace("== [~CUDPSendThread Thread] - Exit Start ==");
+	log_trace("%s == [~CUDPSendThread Thread] - Exit Start ==", TM_SEND_NAME);
 	// 未知状态，阻止继续塞包...
 	m_nCmdState = kCmdUnkownState;
 	// 停止线程，等待退出...
@@ -79,7 +81,7 @@ CUDPSendThread::~CUDPSendThread()
 	// 释放音视频环形队列空间...
 	circlebuf_free(&m_audio_circle);
 	circlebuf_free(&m_video_circle);
-	log_trace("== [~CUDPSendThread Thread] - Exit End ==");
+	log_trace("%s == [~CUDPSendThread Thread] - Exit End ==", TM_SEND_NAME);
 }
 
 void CUDPSendThread::CloseSocket()
@@ -104,7 +106,7 @@ BOOL CUDPSendThread::InitVideo(string & inSPS, string & inPPS, int nWidth, int n
 	m_rtp_header.ppsSize = inPPS.size();
 	m_strSPS = inSPS; m_strPPS = inPPS;
 	// 打印已初始化视频信息...
-	log_trace("[Student-Pusher] InitVideo OK");
+	log_trace("%s InitVideo OK", TM_SEND_NAME);
 	// 线程一定要确认音视频都准备好之后才能启动...
 	ASSERT( this->GetThreadHandle() == NULL );
 	return true;
@@ -119,7 +121,7 @@ BOOL CUDPSendThread::InitAudio(int nRateIndex, int nChannelNum)
 	m_rtp_header.rateIndex = nRateIndex;
 	m_rtp_header.channelNum = nChannelNum;
 	// 打印已初始化音频信息...
-	log_trace("[Student-Pusher] InitAudio OK");
+	log_trace("%s InitAudio OK", TM_SEND_NAME);
 	// 线程一定要确认音视频都准备好之后才能启动...
 	ASSERT( this->GetThreadHandle() == NULL );
 	return true;
@@ -150,8 +152,8 @@ BOOL CUDPSendThread::InitThread()
 	// 设置TTL网络穿越数值...
 	m_lpUDPSocket->SetTtl(32);
 	// 获取服务器地址信息 => 假设输入信息就是一个IPV4域名...
-	//LPCTSTR lpszAddr = "192.168.1.70";
-	LPCTSTR lpszAddr = DEF_UDP_HOME;
+	LPCTSTR lpszAddr = "192.168.1.70";
+	//LPCTSTR lpszAddr = DEF_UDP_HOME;
 	hostent * lpHost = gethostbyname(lpszAddr);
 	if( lpHost != NULL && lpHost->h_addr_list != NULL ) {
 		lpszAddr = inet_ntoa(*(in_addr*)lpHost->h_addr_list[0]);
@@ -195,12 +197,12 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	OSMutexLocker theLock(&m_Mutex);
 	// 判断线程是否已经退出...
 	if( this->IsStopRequested() ) {
-		log_trace("[Student-Pusher] Error => Send Thread has been stoped");
+		log_trace("%s Error => Send Thread has been stoped", TM_SEND_NAME);
 		return false;
 	}
 	// 如果数据帧的长度为0，打印错误，直接返回...
 	if( inFrame.strData.size() <= 0 ) {
-		log_trace("[Student-Pusher] Error => Input Frame Size is Zero");
+		log_trace("%s Error => Input Frame Size is Zero", TM_SEND_NAME);
 		return false;
 	}
 	/*/////////////////////////////////////////////////////////////////////
@@ -221,10 +223,6 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 		log_trace("[Student-Pusher] StartPTS: %lu, Type: %d, Size: %d", inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.strData.size());
 	}*/
 
-	// 保存输入音视频字节总数，用于计算音视频输入码率...
-	m_audio_input_bytes += ((inFrame.typeFlvTag == PT_TAG_AUDIO) ? inFrame.strData.size() : 0);
-	m_video_input_bytes += ((inFrame.typeFlvTag == PT_TAG_VIDEO) ? inFrame.strData.size() : 0);
-
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	// 注意：也可以不限定状态，一开始就进行数据帧的打包，但需要在发包时判断接入状态...
 	// 并且，需要在接入失败之后，或 一定时间之后，需要自动清理环形队列，避免数据堆积...
@@ -238,11 +236,15 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 	// 准备就绪的命令作用：是为了获取穿透地址，便于P2P交互，不能做为收发包依据，更不能做为控制条件；
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	if( m_nCmdState == kCmdUnkownState || m_nCmdState <= kCmdSendHeader ) {
-		log_trace("[Student-Pusher] State Error => PTS: %lu, Type: %d, Size: %d", inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.strData.size());
+		log_trace("%s State Error => PTS: %lu, Type: %d, Size: %d", TM_SEND_NAME, inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.strData.size());
 		return false;
 	}
 	// 打印所有的音视频数据帧...
 	//log_trace("[Student-Pusher] Frame => PTS: %lu, Type: %d, Key: %d, Size: %d", inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData.size());
+
+	// 保存输入音视频字节总数，用于计算音视频输入码率...
+	m_audio_input_bytes += ((inFrame.typeFlvTag == PT_TAG_AUDIO) ? inFrame.strData.size() : 0);
+	m_video_input_bytes += ((inFrame.typeFlvTag == PT_TAG_VIDEO) ? inFrame.strData.size() : 0);
 
 #ifdef DEBUG_FRAME
 	DoSaveSendFile(inFrame.dwSendTime, inFrame.typeFlvTag, inFrame.is_keyframe, inFrame.strData);
@@ -250,12 +252,12 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 
 	// 如果有音频，且多次发生网络拥塞，全部丢掉视频...
 	if( m_rtp_header.hasAudio && m_bIsJamAudio && inFrame.typeFlvTag == PT_TAG_VIDEO ) {
-		log_trace("[Student-Pusher] Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
+		log_trace("%s Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", TM_SEND_NAME, m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
 		return true;
 	}
 	// 如果发生网络拥塞，视频只发送关键帧...
 	if( m_bIsJamFlag && inFrame.typeFlvTag == PT_TAG_VIDEO && !inFrame.is_keyframe ) {
-		log_trace("[Student-Pusher] Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
+		log_trace("%s Jam => OnlyAudio: %d, Video Drop, PTS: %lu, Size: %d", TM_SEND_NAME, m_bIsJamAudio, inFrame.dwSendTime, inFrame.strData.size());
 		return true;
 	}
 
@@ -296,7 +298,7 @@ BOOL CUDPSendThread::PushFrame(FMS_FRAME & inFrame)
 			circlebuf_push_back_zero(&cur_circle, nZeroSize);
 		}
 		// 打印调试信息...
-		//log_trace( "[Student-Pusher] Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu",
+		//log_trace( "%s Seq: %lu, Type: %d, Key: %d, Size: %d, TS: %lu", TM_SEND_NAME,
 		//		rtpHeader.seq, rtpHeader.pt, rtpHeader.pk, rtpHeader.psize, rtpHeader.ts);
 #ifdef DEBUG_FRAME
 		DoSaveSendSeq(rtpHeader.seq, rtpHeader.psize, rtpHeader.pst, rtpHeader.ped, rtpHeader.ts);
@@ -325,8 +327,8 @@ void CUDPSendThread::doCalcAVBitRate()
 	m_video_output_kbps = (m_video_output_bytes * 8) / 1024; m_video_output_bytes = 0;
 	m_total_output_kbps = (m_total_output_bytes * 8) / 1024; m_total_output_bytes = 0;
 	// 打印计算获得的音视频输入输出平均码流值...
-	log_trace("[Student-Pusher] AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", m_audio_input_kbps, m_video_input_kbps);
-	log_trace("[Student-Pusher] AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
+	log_trace("%s AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", TM_SEND_NAME, m_audio_input_kbps, m_video_input_kbps);
+	log_trace("%s AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", TM_SEND_NAME, m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
 }
 
 void CUDPSendThread::Entry()
@@ -374,7 +376,7 @@ void CUDPSendThread::doSendDeleteCmd()
 	// 累加总的输出字节数，便于计算输出平均码流...
 	m_total_output_bytes += sizeof(m_rtp_delete);
 	// 打印已发送删除命令包...
-	log_trace("[Student-Pusher] Send Delete RoomID: %lu, LiveID: %d", m_rtp_delete.roomID, m_rtp_delete.liveID);
+	log_trace("%s Send Delete RoomID: %lu, LiveID: %d", TM_SEND_NAME, m_rtp_delete.roomID, m_rtp_delete.liveID);
 }
 
 void CUDPSendThread::doSendCreateCmd()
@@ -396,7 +398,7 @@ void CUDPSendThread::doSendCreateCmd()
 	// 累加总的输出字节数，便于计算输出平均码流...
 	m_total_output_bytes += sizeof(m_rtp_create);
 	// 打印已发送创建命令包 => 第一个包有可能没有发送出去，也返回正常...
-	log_trace("[Student-Pusher] Send Create RoomID: %lu, LiveID: %d", m_rtp_create.roomID, m_rtp_create.liveID);
+	log_trace("%s Send Create RoomID: %lu, LiveID: %d", TM_SEND_NAME, m_rtp_create.roomID, m_rtp_create.liveID);
 	// 计算下次发送创建命令的时间戳...
 	m_next_create_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -433,7 +435,7 @@ void CUDPSendThread::doSendHeaderCmd()
 	// 累加总的输出字节数，便于计算输出平均码流...
 	m_total_output_bytes += strSeqHeader.size();
 	// 打印已发送序列头命令包...
-	log_trace("[Student-Pusher] Send Header SPS: %lu, PPS: %d", m_strSPS.size(), m_strPPS.size());
+	log_trace("%s Send Header SPS: %lu, PPS: %d", TM_SEND_NAME, m_strSPS.size(), m_strPPS.size());
 	// 计算下次发送创建命令的时间戳...
 	m_next_header_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -483,7 +485,7 @@ void CUDPSendThread::doSendDetectCmd()
 		m_total_output_bytes += sizeof(m_rtp_detect);
 	}
 	// 打印已发送探测命令包...
-	//log_trace("[Student-Pusher] Send Detect dtNum: %d", m_rtp_detect.dtNum);
+	//log_trace("%s Send Detect dtNum: %d", TM_SEND_NAME, m_rtp_detect.dtNum);
 	// 计算下次发送探测命令的时间戳...
 	m_next_detect_ns = CUtilTool::os_gettime_ns() + period_ns;
 	// 修改休息状态 => 已经有发包，不能休息...
@@ -516,8 +518,15 @@ void CUDPSendThread::doCalcAVJamFlag()
 	if( cur_buf_ms <= 1000 ) {
 		m_bIsJamFlag = false;
 	}
-	// 如果总缓存时间超过3秒，设置网络拥塞标志...
+	// 如果总缓存时间超过3秒，需要判断是否有用户接入...
 	if( cur_buf_ms >= 3000 ) {
+		// 如果观看端还没有接入，直接中断推流操作...
+		if( m_nCmdState != kCmdSendAVPack ) {
+			log_trace("%s Jam => Stop Push, After %lu ms no user login", TM_SEND_NAME, cur_buf_ms);
+			m_lpPushThread->StopUDPSendThread();
+			return;
+		}
+		// 设置网络拥塞标志...
 		m_bIsJamFlag = true;
 		++m_nJamCount;
 	}
@@ -531,7 +540,7 @@ void CUDPSendThread::doCalcAVJamFlag()
 		m_bIsJamAudio = true;
 	}*/
 	// 打印网络拥塞情况 => 就是视频缓存的拥塞情况...
-	log_trace("[Student-Pusher] Jam => Count: %d, Flag: %d, CurBufMS: %lu, Circle: %d", m_nJamCount, m_bIsJamFlag, cur_buf_ms, cur_circle.size/nPerPackSize);
+	log_trace("%s Jam => Count: %d, Flag: %d, CurBufMS: %lu, Circle: %d", TM_SEND_NAME, m_nJamCount, m_bIsJamFlag, cur_buf_ms, cur_circle.size/nPerPackSize);
 }
 
 /*void CUDPSendThread::doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoSeq)
@@ -562,7 +571,7 @@ void CUDPSendThread::doCalcAVJamFlag()
 				// 删除当前包之前的所有数据包...
 				circlebuf_pop_front(&cur_circle, NULL, nPosition);
 				// 打印视频拥塞信息 => 当前位置，已发送数据包 => 两者之差就是观看端的有效补包空间...
-				log_trace("[Student-Pusher] Jam => Video MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Cirlce: %d", min_seq, lpCurHeader->seq, m_nVideoCurSendSeq, cur_circle.size/nPerPackSize);
+				log_trace("%s Jam => Video MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Cirlce: %d", TM_SEND_NAME, min_seq, lpCurHeader->seq, m_nVideoCurSendSeq, cur_circle.size/nPerPackSize);
 				// 直接将发包位置调整当前包，从当前包开始发包...
 				m_nVideoCurSendSeq = lpCurHeader->seq;
 				// 拥塞序号包设置为当前序号包...
@@ -622,7 +631,7 @@ uint32_t CUDPSendThread::doEarseAudioByTime(uint32_t inTimeStamp)
 	// 删除当前包之前的所有数据包...
 	circlebuf_pop_front(&cur_circle, NULL, nPosition);
 	// 打印音频拥塞信息 => 当前位置，已发送数据包 => 两者之差就是观看端的有效补包空间...
-	log_trace("[Student-Pusher] Jam => Audio MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Circle: %d", min_seq, lpCurHeader->seq, m_nAudioCurSendSeq, cur_circle.size/nPerPackSize);
+	log_trace("%s Jam => Audio MinSeq: %lu, JamSeq: %lu, SendSeq: %lu, Circle: %d", TM_SEND_NAME, min_seq, lpCurHeader->seq, m_nAudioCurSendSeq, cur_circle.size/nPerPackSize);
 	// 直接将发包位置调整当前包，从当前包开始发包...
 	m_nAudioCurSendSeq = lpCurHeader->seq;
 	// 拥塞序号设置为当前序号包...
@@ -665,7 +674,7 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	lpFrontHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果要补充的数据包序号比最小序号还要小 => 没有找到，直接返回...
 	if( rtpLose.lose_seq < lpFrontHeader->seq ) {
-		log_trace("[Student-Pusher] Supply Error => lose: %lu, min: %lu, Type: %d", rtpLose.lose_seq, lpFrontHeader->seq, rtpLose.lose_type);
+		log_trace("%s Supply Error => lose: %lu, min: %lu, Type: %d", TM_SEND_NAME, rtpLose.lose_seq, lpFrontHeader->seq, rtpLose.lose_type);
 		return;
 	}
 	ASSERT( rtpLose.lose_seq >= lpFrontHeader->seq );
@@ -674,7 +683,7 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	nSendPos = (rtpLose.lose_seq - lpFrontHeader->seq) * nPerPackSize;
 	// 如果补包位置大于或等于环形队列长度 => 补包越界...
 	if( nSendPos >= cur_circle.size ) {
-		log_trace("[Student-Pusher] Supply Error => Position Excessed");
+		log_trace("%s Supply Error => Position Excessed", TM_SEND_NAME);
 		return;
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -686,7 +695,7 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	lpSendHeader = (rtp_hdr_t*)szPacketBuffer;
 	// 如果找到的序号位置不对，直接返回...
 	if( lpSendHeader->seq != rtpLose.lose_seq ) {
-		log_trace("[Student-Pusher] Supply Error => Seq: %lu, Find: %lu, Type: %d", rtpLose.lose_seq, lpSendHeader->seq, rtpLose.lose_type);
+		log_trace("%s Supply Error => Seq: %lu, Find: %lu, Type: %d", TM_SEND_NAME, rtpLose.lose_seq, lpSendHeader->seq, rtpLose.lose_type);
 		return;
 	}
 	// 获取有效的数据区长度 => 包头 + 数据...
@@ -706,7 +715,7 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	// 累加总的输出字节数，便于计算输出平均码流...
 	m_total_output_bytes += nSendSize;
 	// 打印已经发送补包信息...
-	log_trace("[Student-Pusher] Supply Send => Dir: %d, Seq: %lu, TS: %lu, Slice: %d, Type: %d", m_dt_to_dir, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->psize, lpSendHeader->pt);
+	log_trace("%s Supply Send => Dir: %d, Seq: %lu, TS: %lu, Slice: %d, Type: %d", TM_SEND_NAME, m_dt_to_dir, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->psize, lpSendHeader->pt);
 }
 
 void CUDPSendThread::doSendPacket(bool bIsAudio)
@@ -796,7 +805,7 @@ void CUDPSendThread::doSendPacket(bool bIsAudio)
 
 	// 打印调试信息 => 刚刚发送的数据包...
 	//int nZeroSize = DEF_MTU_SIZE - lpSendHeader->psize;
-	//log_trace("[Student-Pusher] Type: %d, Seq: %lu, TS: %lu, pst: %d, ped: %d, Slice: %d, Zero: %d", lpSendHeader->pt, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
+	//log_trace("%s Type: %d, Seq: %lu, TS: %lu, pst: %d, ped: %d, Slice: %d, Zero: %d", TM_SEND_NAME, lpSendHeader->pt, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->pst, lpSendHeader->ped, lpSendHeader->psize, nZeroSize);
 }
 
 void CUDPSendThread::doRecvPacket()
@@ -848,7 +857,7 @@ void CUDPSendThread::doProcServerCreate(char * lpBuffer, int inRecvLen)
 	// 修改命令状态 => 开始发送序列头...
 	m_nCmdState = kCmdSendHeader;
 	// 打印收到服务器反馈的创建命令包...
-	log_trace("[Student-Pusher] Recv Create from Server");
+	log_trace("%s Recv Create from Server", TM_SEND_NAME);
 }
 
 void CUDPSendThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
@@ -865,7 +874,7 @@ void CUDPSendThread::doProcServerHeader(char * lpBuffer, int inRecvLen)
 	// 修改命令状态 => 开始接收观看端准备就绪命令...
 	m_nCmdState = kCmdWaitReady;
 	// 打印收到服务器反馈的序列头命令包...
-	log_trace("[Student-Pusher] Recv Header from Server");
+	log_trace("%s Recv Header from Server", TM_SEND_NAME);
 }
 
 void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
@@ -887,7 +896,7 @@ void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	memcpy(&m_rtp_ready, lpBuffer, sizeof(m_rtp_ready));
 	// 打印收到准备就绪命令包 => 将地址转换成字符串...
 	string strAddr = SocketUtils::ConvertAddrToString(m_rtp_ready.recvAddr);
-	log_trace("[Student-Pusher] Recv Ready from %s:%d", strAddr.c_str(), m_rtp_ready.recvPort);
+	log_trace("%s Recv Ready from %s:%d", TM_SEND_NAME, strAddr.c_str(), m_rtp_ready.recvPort);
 	// 立即反馈给老师观看者 => 准备就绪包已经收到，不要再发了...
 	rtp_ready_t rtpReady = {0};
 	rtpReady.tm = TM_TAG_STUDENT;
@@ -899,7 +908,7 @@ void CUDPSendThread::doProcServerReady(char * lpBuffer, int inRecvLen)
 	// 累加总的输出字节数，便于计算输出平均码流...
 	m_total_output_bytes += sizeof(rtpReady);
 	// 打印发送准备就绪回复命令包...
-	log_trace("[Student-Pusher] Send Ready command for reply");
+	log_trace("%s Send Ready command for reply", TM_SEND_NAME);
 }
 //
 // 处理服务器发送过来的重建命令...
@@ -932,7 +941,7 @@ void CUDPSendThread::doProcServerReload(char * lpBuffer, int inRecvLen)
 	m_rtp_reload.reload_time = (uint32_t)(CUtilTool::os_gettime_ns()/1000000);
 	++m_rtp_reload.reload_count;
 	// 打印收到服务器重建命令...
-	log_trace("[Student-Pusher] Server Reload Count: %d", m_rtp_reload.reload_count);
+	log_trace("%s Server Reload Count: %d", TM_SEND_NAME, m_rtp_reload.reload_count);
 	// 重置相关命令包...
 	memset(&m_rtp_ready, 0, sizeof(m_rtp_ready));
 	// 清空补包集合队列...
@@ -1002,7 +1011,7 @@ void CUDPSendThread::doTagSupplyProcess(char * lpBuffer, int inRecvLen)
 		nDataSize -= sizeof(int);
 	}
 	// 打印已收到补包命令...
-	log_trace("[Student-Pusher] Supply Recv => Count: %d, Type: %d", rtpSupply.suSize / sizeof(int), rtpSupply.suType);
+	log_trace("%s Supply Recv => Count: %d, Type: %d", TM_SEND_NAME, rtpSupply.suSize / sizeof(int), rtpSupply.suType);
 }
 
 void CUDPSendThread::doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq)
@@ -1039,7 +1048,7 @@ void CUDPSendThread::doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq)
 	// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 	// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
 	uint32_t nRemainCount = cur_circle.size / nPerPackSize;
-	log_trace( "[Student-Pusher] Detect Erase Success => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", 
+	log_trace( "%s Detect Erase Success => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", TM_SEND_NAME,
 				bIsAudio ? "Audio" : "Video", inMaxConSeq, lpFrontHeader->seq, nCurSendSeq, nCurPackSeq, nRemainCount );
 }
 
@@ -1089,7 +1098,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			if( m_server_rtt_var_ms < 0 ) { m_server_rtt_var_ms = abs(m_server_rtt_ms - keep_rtt); }
 			else { m_server_rtt_var_ms = (m_server_rtt_var_ms * 3 + abs(m_server_rtt_ms - keep_rtt)) / 4; }
 			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-			log_trace("[Student-Pusher] Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", rtpDetect.dtDir, rtpDetect.dtNum, m_server_rtt_ms, m_server_rtt_var_ms);
+			log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_server_rtt_ms, m_server_rtt_var_ms);
 		}
 		// 处理来自P2P方向的探测结果...
 		if( rtpDetect.dtDir == DT_TO_P2P ) {
@@ -1100,7 +1109,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			if( m_p2p_rtt_var_ms < 0 ) { m_p2p_rtt_var_ms = abs(m_p2p_rtt_ms - keep_rtt); }
 			else { m_p2p_rtt_var_ms = (m_p2p_rtt_var_ms * 3 + abs(m_p2p_rtt_ms - keep_rtt)) / 4; }
 			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-			log_trace("[Student-Pusher] Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", rtpDetect.dtDir, rtpDetect.dtNum, m_p2p_rtt_ms, m_p2p_rtt_var_ms);
+			log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_p2p_rtt_ms, m_p2p_rtt_var_ms);
 		}
 		//////////////////////////////////////////////////////////////////////////////
 		// 对发包线路进行选择 => 选择已联通的最小rtt进行发送正常包和发送补包...

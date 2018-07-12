@@ -48,9 +48,10 @@ public:
 
 	int				PushFrame(FMS_FRAME & inFrame);
 
-	void			StartUDPRecvThread();
 	void			StartUDPSendThread();
+	void			StopUDPSendThread();
 
+	void			StartUDPRecvThread();
 	void			ReInitSDLWindow();
 private:
 	void			StartSendByAudio(int nRateIndex, int nChannelNum);
