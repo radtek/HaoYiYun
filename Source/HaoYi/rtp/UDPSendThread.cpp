@@ -327,8 +327,8 @@ void CUDPSendThread::doCalcAVBitRate()
 	m_video_output_kbps = (m_video_output_bytes * 8) / 1024; m_video_output_bytes = 0;
 	m_total_output_kbps = (m_total_output_bytes * 8) / 1024; m_total_output_bytes = 0;
 	// 打印计算获得的音视频输入输出平均码流值...
-	log_trace("%s AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", TM_SEND_NAME, m_audio_input_kbps, m_video_input_kbps);
-	log_trace("%s AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", TM_SEND_NAME, m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
+	//log_trace("%s AVBitRate =>  audio_input: %d kbps,  video_input: %d kbps", TM_SEND_NAME, m_audio_input_kbps, m_video_input_kbps);
+	//log_trace("%s AVBitRate => audio_output: %d kbps, video_output: %d kbps, total_output: %d kbps", TM_SEND_NAME, m_audio_output_kbps, m_video_output_kbps, m_total_output_kbps);
 }
 
 void CUDPSendThread::Entry()
@@ -518,8 +518,8 @@ void CUDPSendThread::doCalcAVJamFlag()
 	if( cur_buf_ms <= 1000 ) {
 		m_bIsJamFlag = false;
 	}
-	// 如果总缓存时间超过3秒，需要判断是否有用户接入...
-	if( cur_buf_ms >= 3000 ) {
+	// 如果总缓存时间超过4秒，需要判断是否有用户接入...
+	if( cur_buf_ms >= 4000 ) {
 		// 如果观看端还没有接入，直接中断推流操作...
 		if( m_nCmdState != kCmdSendAVPack ) {
 			log_trace("%s Jam => Stop Push, After %lu ms no user login", TM_SEND_NAME, cur_buf_ms);
@@ -540,7 +540,7 @@ void CUDPSendThread::doCalcAVJamFlag()
 		m_bIsJamAudio = true;
 	}*/
 	// 打印网络拥塞情况 => 就是视频缓存的拥塞情况...
-	log_trace("%s Jam => Count: %d, Flag: %d, CurBufMS: %lu, Circle: %d", TM_SEND_NAME, m_nJamCount, m_bIsJamFlag, cur_buf_ms, cur_circle.size/nPerPackSize);
+	//log_trace("%s Jam => Count: %d, Flag: %d, CurBufMS: %lu, Circle: %d", TM_SEND_NAME, m_nJamCount, m_bIsJamFlag, cur_buf_ms, cur_circle.size/nPerPackSize);
 }
 
 /*void CUDPSendThread::doCalcAVJamSeq(uint32_t & outAudioSeq, uint32_t & outVideoSeq)
@@ -1050,8 +1050,8 @@ void CUDPSendThread::doProcMaxConSeq(bool bIsAudio, uint32_t inMaxConSeq)
 	// 注意：环形队列当中的数据块大小是连续的，是一样大的...
 	// 打印环形队列删除结果，计算环形队列剩余的数据包个数...
 	uint32_t nRemainCount = cur_circle.size / nPerPackSize;
-	log_trace( "%s Detect Erase Success => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", TM_SEND_NAME,
-				bIsAudio ? "Audio" : "Video", inMaxConSeq, lpFrontHeader->seq, nCurSendSeq, nCurPackSeq, nRemainCount );
+	//log_trace( "%s Detect Erase Success => %s, MaxConSeq: %lu, MinSeq: %lu, CurSendSeq: %lu, CurPackSeq: %lu, Circle: %lu", TM_SEND_NAME,
+	//			bIsAudio ? "Audio" : "Video", inMaxConSeq, lpFrontHeader->seq, nCurSendSeq, nCurPackSeq, nRemainCount );
 }
 
 void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
@@ -1100,7 +1100,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			if( m_server_rtt_var_ms < 0 ) { m_server_rtt_var_ms = abs(m_server_rtt_ms - keep_rtt); }
 			else { m_server_rtt_var_ms = (m_server_rtt_var_ms * 3 + abs(m_server_rtt_ms - keep_rtt)) / 4; }
 			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-			log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_server_rtt_ms, m_server_rtt_var_ms);
+			//log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_server_rtt_ms, m_server_rtt_var_ms);
 		}
 		// 处理来自P2P方向的探测结果...
 		if( rtpDetect.dtDir == DT_TO_P2P ) {
@@ -1111,7 +1111,7 @@ void CUDPSendThread::doTagDetectProcess(char * lpBuffer, int inRecvLen)
 			if( m_p2p_rtt_var_ms < 0 ) { m_p2p_rtt_var_ms = abs(m_p2p_rtt_ms - keep_rtt); }
 			else { m_p2p_rtt_var_ms = (m_p2p_rtt_var_ms * 3 + abs(m_p2p_rtt_ms - keep_rtt)) / 4; }
 			// 打印探测结果 => 探测序号 | 网络延时(毫秒)...
-			log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_p2p_rtt_ms, m_p2p_rtt_var_ms);
+			//log_trace("%s Recv Detect => Dir: %d, dtNum: %d, rtt: %d ms, rtt_var: %d ms", TM_SEND_NAME, rtpDetect.dtDir, rtpDetect.dtNum, m_p2p_rtt_ms, m_p2p_rtt_var_ms);
 		}
 		//////////////////////////////////////////////////////////////////////////////
 		// 对发包线路进行选择 => 选择已联通的最小rtt进行发送正常包和发送补包...
