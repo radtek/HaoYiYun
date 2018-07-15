@@ -716,6 +716,8 @@ void CUDPSendThread::doSendLosePacket(bool bIsAudio)
 	m_total_output_bytes += nSendSize;
 	// 打印已经发送补包信息...
 	log_trace("%s Supply Send => Dir: %d, Seq: %lu, TS: %lu, Slice: %d, Type: %d", TM_SEND_NAME, m_dt_to_dir, lpSendHeader->seq, lpSendHeader->ts, lpSendHeader->psize, lpSendHeader->pt);
+	// 修改休息状态 => 已经有发包，不能休息...
+	m_bNeedSleep = false;
 }
 
 void CUDPSendThread::doSendPacket(bool bIsAudio)
