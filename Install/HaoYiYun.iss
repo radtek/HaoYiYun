@@ -30,6 +30,9 @@ Root: HKLM; Subkey: "Software\HaoYiYun"; ValueType: string; ValueName: "DefaultD
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}";
 
 [Files]
+Source: "..\Source\bin\SDL2.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\swscale-2.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Source\bin\swresample-0.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\HaoYi.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\msvcr100.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Source\bin\mplayer.exe"; DestDir: "{app}"; Flags: ignoreversion
