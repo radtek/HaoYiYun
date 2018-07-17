@@ -834,7 +834,7 @@ BOOL CPlaySDL::InitAudio(int nRateIndex, int nChannelNum)
 	return m_lpAudioThread->InitAudio(nRateIndex, nChannelNum);
 }
 
-void CPlaySDL::PushFrame(int zero_delay_ms, string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime)
+void CPlaySDL::PushPacket(int zero_delay_ms, string & inData, int inTypeTag, bool bIsKeyFrame, uint32_t inSendTime)
 {
 	// 为了解决突发延时抖动，要用一种遗忘衰减算法，进行播放延时控制...
 	// 直接使用计算出的缓存时间设定延时时间 => 缓存就是延时...
