@@ -18,7 +18,7 @@ AllowCancelDuringInstall=no
 OutputDir=..\Product
 
 VersionInfoVersion=1.3.4
-OutputBaseFilename=cloud-gather-1.3.4
+OutputBaseFilename=cloud-gather-nodelay-1.3.4
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
