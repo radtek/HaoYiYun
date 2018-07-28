@@ -101,6 +101,8 @@ class GatherAction extends Action
       $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
       $arrErr['transmit_addr'] = $dbSys['transmit_addr'];
       $arrErr['transmit_port'] = strval($dbSys['transmit_port']);
+      $arrErr['udp_addr'] = $dbSys['udp_addr'];
+      $arrErr['udp_port'] = strval($dbSys['udp_port']);
       $arrErr['local_time'] = date('Y-m-d H:i:s');
       $arrErr['camera'] = $arrCamera;
     }while( false );
@@ -677,7 +679,7 @@ class GatherAction extends Action
     echo json_encode($arrErr);
   }
   //
-  // 处理来自讲师端的云教室登录事件...
+  // 处理来自学生端或讲师端的云教室登录事件...
   public function loginLiveRoom()
   {
     // 准备返回数据结构...
@@ -705,8 +707,16 @@ class GatherAction extends Action
         $arrErr['err_msg'] = '没有找到指定的云教室号码，请确认后重新输入！';
         break;
       }
+      // 验证发送的终端类型是否正确...
+      $nClientType = intval($_POST['type_id']);
+      if(($nClientType != kClientStudent) && ($nClientType != kClientTeacher)) {
+        $arrErr['err_code'] = true;
+        $arrErr['err_msg'] = '不是合法的终端类型，请确认后重新登录';
+        break;
+      }
+      // 2018.07.27 - 新的UDP服务器，不需要rtmp地址信息 => 暂时不要删除这段代码...
       // 构造中转服务器需要的参数 => 直播编号 => LIVE_BEGIN_ID + live_id
-      $dbParam['rtmp_live'] = LIVE_BEGIN_ID + $dbLive['live_id'];
+      /*$dbParam['rtmp_live'] = LIVE_BEGIN_ID + $dbLive['live_id'];
       // 从中转服务器获取云教室直播链接地址...
       $dbResult = $this->getRtmpUrlFromTransmit($dbParam);
       // 如果获取连接中转服务器失败...
@@ -726,31 +736,46 @@ class GatherAction extends Action
       }
       // 将分解后的直播地址反馈给讲师端...
       $arrErr['live_server'] = $arrMatch[1];
-      $arrErr['live_key'] = $arrMatch[2];
-      // 填充存储服务器的地址和端口...
-      $dbSys = D('system')->find();
-      $arrErr['tracker_addr'] = $dbSys['tracker_addr'];
-      $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
-      // 修改云教室直播通道的在线状态...
-      $dbLive['status'] = 1;
-      D('live')->save($dbLive);
+      $arrErr['live_key'] = $arrMatch[2];*/
+      // 如果是讲师端登录，修改房间在线状态，填充中转服务器地址和端口...
+      if( $nClientType == kClientTeacher ) {
+        // 修改房间在线状态...
+        $dbLive['status'] = 1;
+        D('live')->save($dbLive);
+        // 读取系统配置数据库记录...
+        $dbSys = D('system')->find();
+        // 填充跟踪服务器的地址和端口...
+        $arrErr['tracker_addr'] = $dbSys['tracker_addr'];
+        $arrErr['tracker_port'] = strval($dbSys['tracker_port']);
+        // 填充中转服务器的地址和端口...
+        $arrErr['remote_addr'] = $dbSys['transmit_addr'];
+        $arrErr['remote_port'] = strval($dbSys['transmit_port']);
+        // 填充udp服务器的地址和端口...
+        $arrErr['udp_addr'] = $dbSys['udp_addr'];
+        $arrErr['udp_port'] = strval($dbSys['udp_port']);
+      }
     } while( false );
     // 直接反馈最终验证的结果...
     echo json_encode($arrErr);
   }
   //
-  // 处理教室端退出事件...
+  // 处理学生端或老师端退出事件...
   public function logoutLiveRoom()
   {
     // 判断输入的云教室号码是否有效...
-    if( !isset($_POST['room_id']) )
+    if( !isset($_POST['room_id']) || !isset($_POST['type_id']) )
       return;
+    // 获取终端类型...
+    $nClientType = intval($_POST['type_id']);
     // 计算有效的的直播间的数据库的编号...
     $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
-    $dbSave['live_id'] = $nLiveID;
-    $dbSave['status'] = 0;
-    // 直接进行数据库操作...
-    D('live')->save($dbSave);
+    // 如果是讲师端退出，修改房间为离线状态...
+    if( $nClientType == kClientTeacher ) {
+      $dbSave['live_id'] = $nLiveID;
+      $dbSave['status'] = 0;
+      // 直接进行数据库操作...
+      D('live')->save($dbSave);
+    }
   }  
   // 从中转服务器获取直播地址...
   // 成功 => array()

@@ -36,9 +36,8 @@ define('kWeekRepeat',         2);    // 每周
 
 // 定义Transmit中转服务器支持的客户端类型...
 define('kClientPHP',          1);
-define('kClientGather',       2);
-define('kClientLive',         3);  // RTMPAction
-define('kClientPlay',         4);  // RTMPAction
+define('kClientStudent',      2);
+define('kClientTeacher',      3);
 
 // 定义Transmit中转服务器反馈错误号...
 define('ERR_OK',                      0);
@@ -51,31 +50,10 @@ define('ERR_NO_RTMP',             10006);
 define('ERR_NO_MAC_ADDR',         10007);
 
 // 定义Transmit服务器可以执行的命令列表...
-define('kCmd_Gather_Login',           1);
-define('kCmd_PHP_Get_Camera_Status',  2);
-define('kCmd_PHP_Set_Camera_Add',     3);
-define('kCmd_PHP_Set_Camera_Mod',     4);
-define('kCmd_PHP_Set_Camera_Del',     5);
-define('kCmd_PHP_Set_Course_Add',     6);
-define('kCmd_PHP_Set_Course_Mod',     7);
-define('kCmd_PHP_Set_Course_Del',     8);
-define('kCmd_PHP_Get_Gather_Status',  9);
-define('kCmd_PHP_Get_Course_Record', 10);
-define('kCmd_PHP_Get_All_Client',    11);
-define('kCmd_PHP_Get_Live_Server',   12);
-define('kCmd_PHP_Start_Camera',      13);
-define('kCmd_PHP_Stop_Camera',       14);
-define('kCmd_Live_Login',            15);
-define('kCmd_Live_Vary',             16);
-define('kCmd_Live_Quit',             17);
-define('kCmd_Play_Login',            18);
-define('kCmd_Play_Verify',           19);
-define('kCmd_PHP_Set_Gather_SYS',    20);
-define('kCmd_Gather_Camera_List',    21);
-define('kCmd_Gather_Bind_Mini',      22);
-define('kCmd_Gather_UnBind_Mini',    23);
-define('kCmd_PHP_Get_Camera_List',   24);
-define('kCmd_PHP_Get_Player_List',   25);
+define('kCmd_Student_Login',          1);
+define('kCmd_Student_OnLine',         2);
+define('kCmd_Teacher_Login',          3);
+define('kCmd_Teacher_OnLine',         4);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...
