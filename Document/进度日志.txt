@@ -352,6 +352,7 @@
    T：（已完成）启迪未来远程控制帐号和密码；
       （已完成）1025266224:admin123 => i7主机的TeamViewer的登录帐号和密码
       （已完成）Teacher与Student，全新整体打包输出，安装、测试、发布；
+      （已完成）Teacher、Student，32位Release编译、打包、输出；
 
 12.（已完成）发现obs在显示层有1秒左右缓存延时，这个要想办法去掉 => obs_source_set_async_unbuffered
    A：（已完成）win-rtp已经把解码好的数据丢给了obs显示层，网络层没有任何的缓存数据包，缓存应该累积在了obs的显示层；
