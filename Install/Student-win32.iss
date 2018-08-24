@@ -17,8 +17,8 @@ UsePreviousGroup=noUsePreviousLanguage=no
 AllowCancelDuringInstall=no
 OutputDir=..\Product
 
-VersionInfoVersion=1.1.0
-OutputBaseFilename=cloud-student-win32-1.1.0
+VersionInfoVersion=1.1.2
+OutputBaseFilename=cloud-student-win32-1.1.2
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
