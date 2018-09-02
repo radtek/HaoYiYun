@@ -17,8 +17,8 @@ UsePreviousGroup=noUsePreviousLanguage=no
 AllowCancelDuringInstall=no
 OutputDir=..\Product
 
-VersionInfoVersion=1.1.2
-OutputBaseFilename=cloud-teacher-win32-1.1.2
+VersionInfoVersion=1.1.3
+OutputBaseFilename=cloud-teacher-win32-1.1.3
 
 [Languages]
 Name: "chinese"; MessagesFile: "compiler:Default.isl"
