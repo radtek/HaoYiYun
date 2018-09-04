@@ -165,6 +165,8 @@
 
 33. 词汇量测试网页 => https://www.shanbay.com/bdc/client/vocabtest/welcome
 
+34. 各种课件的录制范例 => http://www.bjycsy.com/superiorit
+
 2018.08.31 - 2018.09.30
 ===============================================================================================
 1.（未完成）老师端登录加载过程有一个加载进度条，避免等等很长时间，突然跳出主窗口界面；
@@ -209,10 +211,20 @@
    （未完成）视频部分还需要进一步的查看obs的具体播放代码；
    （未完成）降低老师端音视频捕捉的缓存帧数，降低捕捉层的缓存，降低压缩层的缓存，降低学生端播放层的缓存；
 
-8. （未完成）老师端 => 改进视频压缩采集的矩形框，目前是根据屏幕大小进行采集，经过一次缩放之后，最终输出给压缩器，压缩器是用的最终输出的尺寸；
-   （未完成）老师端 => 现在需要改进的是：使用第一行实际的视频图像尺寸，进行输出尺寸的缩放，而不是用固定的整个屏幕；
-   （未完成）老师端 => 这个判断标准就是在给压缩器输入之前的YUV数据进行JPG存盘测试，以前的代码已经完成，就看前面尺寸变换过程的改进；
-   （未完成）学生端 => 无需对获取的图像进行裁剪，直接使用，双击全屏时，参考老师端的投影机制，进行全屏无黑边框显示机制；
+8. （已完成）老师端 => 改进视频压缩采集的矩形框，目前是根据屏幕大小进行采集，经过一次缩放之后，最终输出给压缩器，压缩器是用的最终输出的尺寸；
+   （已完成）老师端 => 现在需要改进的是：使用第一行实际的视频图像尺寸，进行输出尺寸的缩放，而不是用固定的整个屏幕；
+   （已完成）老师端 => 这个判断标准就是在给压缩器输入之前的YUV数据进行JPG存盘测试，以前的代码已经完成，就看前面尺寸变换过程的改进；
+   （不处理）学生端 => 无需对获取的图像进行裁剪，直接使用，双击全屏时，参考老师端的投影机制，进行全屏无黑边框显示机制；
+   （已完成）学生端 => 由于老师端解决了0点位置的数据源定向采集压缩编码的问题，学生端可以不用进行图像裁剪显示了
+   （已完成）老师端 => 视频数据采集过程 => obs_init_video => video_output_open => init_cache => video_thread 
+   （已完成）老师端 => 视频图像采集过程 => obs_init_video => obs_graphics_thread => output_frame => render_video => output_video_data => video_output_lock_frame => video_output_unlock_frame
+   （已完成）老师端 => 视频图像的渲染，是按source逐个渲染的 => render_video => render_main_texture => obs_view_render => obs_source_video_render => render_video(obs_source_t *source)
+   （已完成）老师端 => 现在要搞清楚每个source数据源的绘制代码与绘制位置，这样才能只用source数据源进行数据压缩，而不是用整个屏幕的数据进行压缩；
+             scene_video_render => 场景会话下面会有关联的一系列source数据源，目前是单场景多数据源的形式；
+             https://blog.csdn.net/qq_35970739/article/details/80497437 => 视频渲染详细说明
+   （已完成）老师端 => 之前的渲染流程(obs-video.c) => render_textures => output_textures => render_convert_texture => stage_output_texture(copy_surfaces)
+   （已完成）这种方式是渲染全部数据源obs_view_render()，新的方式是增加 export_textures，只渲染0点位置的数据源，然后再输出到 output_textures => render_convert_texture => stage_output_texture(copy_surfaces)
+   （已完成）这个过程对opengl|d3d的渲染流程有了一个大致的了解；需要给渲染环境准备参数和状态，才能执行具体的渲染过程；具体参见 obs-video.c::render_export_texture()
 
 9. （已完成）老师端登录云教室时，需要检测教室里是否已经有老师登录，同一个云教室只能有一个老师在线；需要通过网站端的PHP接口到中转服务器获取老师登录状态？
    （已完成）需要新增一个服务器类型 => UDPCenter，专门管理UDPServer服务器，这样就能让 edu.ihaoyi.cn 形成规模效应，自动根据UDPServer的增加而自动扩容；
@@ -278,6 +290,10 @@
   （已完成）1030711791:admin123 => 赛扬主机TeamViewer的登录帐号和密码 => 可以通过设备管理器 网络适配器 => 属性 > 高级 > Network Address => 更改网络地址，来改变ID号
   （已完成）1259738467:admin123 => 岳朝柯家用主机的远程控制，机器有点慢，需要买些配件进行升级；
   （已完成）修改 TeamViewer ID 的方法 => https://blog.csdn.net/dongqing27/article/details/80646510
+6.（已完成）摄像头选型更新，之前的EVI-D70P，拍摄大屏幕会出现曝光补偿无法调节的问题，商家推荐UV和UK系列，最终选择UV系列，能够进行曝光补偿，可以进行菜单配置；
+            https://item.taobao.com/item.htm?id=545022446264 => UV系列，曝光补偿有6个等级；淘宝价比京东价便宜300多；
+            https://item.taobao.com/item.htm?id=571178827900 => UK系列，曝光补偿还是有问题；
+            https://item.taobao.com/item.htm?id=546751723076 => 两路HDMI高清采集卡；
 
 2018.08.01 - 2018.08.30
 ===============================================================================================
