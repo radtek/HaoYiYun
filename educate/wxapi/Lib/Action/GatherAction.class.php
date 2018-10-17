@@ -90,8 +90,6 @@ class GatherAction extends Action
       $arrErr['auto_fdfs'] = $dbGather['auto_fdfs'];
       $arrErr['auto_ipc'] = $dbGather['auto_ipc'];
       $arrErr['page_size'] = $dbGather['page_size'];
-      $arrErr['selected'] = LIVE_BEGIN_ID + $dbGather['live_id'];
-      $arrErr['begin'] = LIVE_BEGIN_ID;
       // 返回采集端需要的参数配置信息...
       $arrErr['web_ver'] = C('VERSION');
       $arrErr['web_tag'] = $dbSys['web_tag'];
@@ -360,7 +358,7 @@ class GatherAction extends Action
       // $arrSrc[1] => RoomID
       // 组合通用数据项...
       $arrData['file_src'] = (is_null($arrSrc[0]) ? $arrData['file_src'] : $arrSrc[0]);
-      $arrData['live_id'] = (is_null($arrSrc[1]) ? 0 : $arrSrc[1]);
+      $arrData['room_id'] = (is_null($arrSrc[1]) ? 0 : $arrSrc[1]);
       $arrData['created'] = date('Y-m-d H:i:s'); // mp4的创建时间 => $arrSrc[2]
       $arrData['updated'] = date('Y-m-d H:i:s');
       // 根据文件扩展名进行数据表分发...
@@ -369,21 +367,20 @@ class GatherAction extends Action
         // 如果是直播截图，进行特殊处理...
         if( strcasecmp($arrData['file_src'], "live") == 0 ) {
           // 重新计算直播间的数据库编号，并在数据库中查找...
-          $arrData['live_id'] = intval($arrData['live_id']) - LIVE_BEGIN_ID;
-          $condition['live_id'] = $arrData['live_id'];
-          $dbLive = D('LiveView')->where($condition)->field('live_id,lesson_id,image_id,image_fdfs')->find();
-          // 如果找到了有效通道...
-          if( is_array($dbLive) ) {
-            if( $dbLive['image_id'] > 0 ) {
+          $arrData['room_id'] = intval($arrData['room_id']) - LIVE_BEGIN_ID;
+          $condition['room_id'] = $arrData['room_id'];
+          $dbRoom = D('RoomView')->where($condition)->field('room_id,image_id,image_fdfs')->find();
+          // 如果找到了有效房间通道...
+          if( is_array($dbRoom) ) {
+            if( $dbRoom['image_id'] > 0 ) {
               // 通道下的截图是有效的，先删除这个截图的物理存在...
-              if( isset($dbLive['image_fdfs']) && strlen($dbLive['image_fdfs']) > 0 ) { 
-                if( !fastdfs_storage_delete_file1($dbLive['image_fdfs']) ) {
-                  logdebug("fdfs delete failed => ".$dbLive['image_fdfs']);
+              if( isset($dbRoom['image_fdfs']) && strlen($dbRoom['image_fdfs']) > 0 ) { 
+                if( !fastdfs_storage_delete_file1($dbRoom['image_fdfs']) ) {
+                  logdebug("fdfs delete failed => ".$dbRoom['image_fdfs']);
                 }
               }
               // 将新的截图存储路径更新到截图表当中...
-              $dbImage['image_id'] = $dbLive['image_id'];
-              $dbImage['lesson_id'] = $dbLive['lesson_id'];
+              $dbImage['image_id'] = $dbRoom['image_id'];
               $dbImage['file_fdfs'] = $arrData['file_fdfs'];
               $dbImage['file_size'] = $arrData['file_size'];
               $dbImage['updated'] = $arrData['updated'];
@@ -392,13 +389,10 @@ class GatherAction extends Action
               $arrErr['image_id'] = $dbImage['image_id'];
             } else {
               // 通道下的截图是无效的，创建新的截图记录...
-              $arrData['lesson_id'] = $dbLive['lesson_id'];
               $arrErr['image_id'] = D('image')->add($arrData);
-              $dbLive['image_id'] = $arrErr['image_id'];
-              // 将新的截图记录更新到课程表中...
-              $dbLesson['lesson_id'] = $dbLive['lesson_id'];
-              $dbLesson['image_id'] = $dbLive['image_id'];
-              D('lesson')->save($dbLesson);
+              $dbRoom['image_id'] = $arrErr['image_id'];
+              // 将对应的截图编号更新到房间记录当中...
+              D('room')->save($dbRoom);
             }
           }
         }
@@ -610,7 +604,7 @@ class GatherAction extends Action
     // 删除该通道下对应的过期录像文件、录像截图...
     $arrList = D('RecordView')->where($condition)->field('record_id,camera_id,file_fdfs,image_id,image_fdfs,created')->select();
     print_r($arrList);
-  }*/
+  }
   //
   // 获取直播间列表事件...
   public function getLiveRoom()
@@ -672,7 +666,7 @@ class GatherAction extends Action
     } while( false );
     // 直接反馈获取的数据内容信息...
     echo json_encode($arrErr);
-  }
+  }*/
   //
   // 处理来自学生端或讲师端的云教室登录事件...
   public function loginLiveRoom()
@@ -689,17 +683,17 @@ class GatherAction extends Action
         $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
         break;
       }
-      // 计算有效的的直播间的数据库的编号...
-      $nLiveID = intval($arrPost['room_id']) - LIVE_BEGIN_ID;
-      if( $nLiveID <= 0 ) {
+      // 计算有效的的直播间的数据库的编号 => 减去数字前缀偏移...
+      $nRoomID = intval($arrPost['room_id']) - LIVE_BEGIN_ID;
+      if( $nRoomID <= 0 ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = '请输入有效的云教室号码，号码从200000开始！';
         break;
       }
       // 验证云教室是否存在...
-      $condition['live_id'] = $nLiveID;
-      $dbLive = D('live')->where($condition)->field('live_id')->find();
-      if( !isset($dbLive['live_id']) ) {
+      $condition['room_id'] = $nRoomID;
+      $dbRoom = D('room')->where($condition)->field('room_id')->find();
+      if( !isset($dbRoom['room_id']) ) {
         $arrErr['err_code'] = true;
         $arrErr['err_msg'] = '没有找到指定的云教室号码，请确认后重新输入！';
         break;
@@ -711,6 +705,7 @@ class GatherAction extends Action
         $arrErr['err_msg'] = '不是合法的终端类型，请确认后重新登录';
         break;
       }
+
       // 2018.07.27 - 新的UDP服务器，不需要rtmp地址信息 => 暂时不要删除这段代码...
       // 构造中转服务器需要的参数 => 直播编号 => LIVE_BEGIN_ID + live_id
       /*$dbParam['rtmp_live'] = LIVE_BEGIN_ID + $dbLive['live_id'];
@@ -737,8 +732,8 @@ class GatherAction extends Action
       
       // 读取系统配置数据库记录...
       $dbSys = D('system')->find();
-      // 构造UDP中心服务器需要的参数 => 房间编号 => LIVE_BEGIN_ID + live_id
-      $dbParam['room_id'] = LIVE_BEGIN_ID + $dbLive['live_id'];
+      // 构造UDP中心服务器需要的参数 => 房间编号 => LIVE_BEGIN_ID + room_id
+      $dbParam['room_id'] = LIVE_BEGIN_ID + $dbRoom['room_id'];
       // 从UDP中心服务器获取UDP直播地址和UDP中转地址...
       $dbResult = $this->getUdpServerFromUdpCenter($dbSys['udpcenter_addr'], $dbSys['udpcenter_port'], $dbParam);
       // 如果获取连接中转服务器失败...
@@ -762,8 +757,8 @@ class GatherAction extends Action
       $arrErr['student'] = strval($dbResult['student']);
       // 如果是讲师端登录，修改房间在线状态...
       if( $nClientType == kClientTeacher ) {
-        $dbLive['status'] = 1;
-        D('live')->save($dbLive);
+        $dbRoom['status'] = 1;
+        D('room')->save($dbRoom);
       }
     } while( false );
     // 直接反馈最终验证的结果...
@@ -809,13 +804,13 @@ class GatherAction extends Action
     // 获取终端类型...
     $nClientType = intval($_POST['type_id']);
     // 计算有效的的直播间的数据库的编号...
-    $nLiveID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
+    $nRoomID = intval($_POST['room_id']) - LIVE_BEGIN_ID;
     // 如果是讲师端退出，修改房间为离线状态...
     if( $nClientType == kClientTeacher ) {
-      $dbSave['live_id'] = $nLiveID;
+      $dbSave['room_id'] = $nRoomID;
       $dbSave['status'] = 0;
       // 直接进行数据库操作...
-      D('live')->save($dbSave);
+      D('room')->save($dbSave);
     }
   }  
   //

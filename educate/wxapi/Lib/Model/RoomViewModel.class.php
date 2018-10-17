@@ -1,0 +1,11 @@
+<?php
+
+class RoomViewModel extends ViewModel {
+    public $viewFields = array(
+        'Room'=>array('*','_type'=>'LEFT'), //Must be LEFT 返回左表所有数据，即使右表没有匹配的
+        'Image'=>array('image_id','file_fdfs'=>'image_fdfs','_on'=>'Image.image_id=Room.image_id','_type'=>'LEFT'),
+        'Subject'=>array('subject_id','subject_name','_on'=>'Subject.subject_id=Room.subject_id','_type'=>'LEFT'),
+        'Teacher'=>array('teacher_id','teacher_name','title_name','sex_name','detail_short','detail_info','_on'=>'Room.teacher_id=Teacher.teacher_id'),
+    );
+}
+?>
