@@ -32,7 +32,7 @@ function doLazyAppear(left, setting) {
   }, 2000);
 }
 // 处理懒加载后的操作...
-function doLazyLoad(left, setting) {
+function doLazyLoaded(left, setting) {
   $(this).parent().find('.rsPreloader').remove();
 }
 
@@ -56,11 +56,12 @@ layui.use(['flow','layer'], function(){
           // 延时加载图片 => 使用外部lazy，不用layui提供的懒加载，不理想...
           // <article>不是标准html标签，必须在外面增加一层<div>...
           // 分页单独懒加载，否则，每次都要全部懒加载...
+          // 屏蔽placeholder，使用默认自带的灰色图片...
           $("#page_"+page+" img.lazy").lazyload({
             effect : "fadeIn",
-            load: doLazyLoad,
+            load: doLazyLoaded,
             appear: doLazyAppear,
-            placeholder: "/wxapi/public/images/snap.png"
+            //placeholder: "/wxapi/public/images/snap.png"
           });
         },
         error: function(XMLHttpRequest, textStatus, errorThrown) {

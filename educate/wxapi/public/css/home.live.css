@@ -159,24 +159,18 @@ h6 {
 	list-style:none;
 }
 .post .feed-live {
-  position: relative;
   -webkit-transition: all .3s ease;
   -moz-transition: all .3s ease;
   -o-transition: all .3s ease;
   transition: all .3s ease;  
-  /*background-color: #264864;*/
-  width: 258px !important;
-  height: 364px !important;
+  background-color: #264864;
+  width: 350px !important;
+  height: 465px !important;
   padding: 0px 0px !important;
   margin: 0px 20px 20px 0px;
-  border-radius: 8px 8px;
-  border: 2px white solid;
-  cursor: pointer;
-  color: white;
   float: left;
 }
 .post .feed-live:hover {
-  position: relative;
   transform: scale(1.03);
   -webkit-transform: scale(1.03);
   -moz-transform: scale(1.03);
@@ -187,42 +181,6 @@ h6 {
   -moz-transition: all .3s ease;
   -o-transition: all .3s ease;
   transition: all .3s ease;  
-  border-radius: 8px 8px;
-  border: 2px red solid;
-  color: yellow;
-  cursor: hand;
-}
-.post .feed-live img {
-  border-radius: 8px 8px;
-}
-.post .feed-live .item-data {
-  position: absolute;
-  margin-top: 260px;
-  height: 100px;
-  width: 254px;
-}
-.post .feed-live .item-data .item-mask {
-  position: absolute;
-  background-color: black;
-  border-radius: 8px 8px;
-  opacity: 0.4;
-  height: 100%;
-  width: 100%;  
-}
-.post .feed-live .item-data .item-info {
-  position: relative;
-  margin: 10px 10px;
-  font-size: 16px;
-  z-index: 100;
-}
-.post .feed-live .item-data .item-info .item-line {
-  line-height: 20px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  /*display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;*/
 }
 .post .l-i-title {
   background: #985054;
