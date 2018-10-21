@@ -256,7 +256,7 @@ class HomeAction extends Action
   }
   //
   // 点击直播教室页面...
-  public function live()
+  public function room()
   {
     // 获取直播导航数据...
     $my_nav = $this->getNavData(NAV_ACTIVE_LIVE, 0);
@@ -265,35 +265,35 @@ class HomeAction extends Action
     $this->assign('my_nav', $my_nav);
     // 得到每页通道数，总记录数，计算总页数...
     $pagePer = 9; //C('PAGE_PER');
-    $totalNum = D('live')->count();
+    $totalNum = D('room')->count();
     $max_page = intval($totalNum / $pagePer);
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
-    $onlineNum = D('live')->where('status > 0')->count();
+    $onlineNum = D('room')->where('status > 0')->count();
     $this->assign('my_online_num', $onlineNum);
     $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     // 设置模板参数...
-    $this->display('live');    
+    $this->display('room');    
   }
   //
   // 直播教室页面流加载...
-  public function pageLive()
+  public function pageRoom()
   {
     // 准备需要的分页参数...
     $pagePer = 9; //C('PAGE_PER'); // 每页显示的通道数...
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 读取通道列表 => 在线优先排序
-    $arrLive = D('LiveView')->limit($pageLimit)->order('start_time DESC')->select();
+    $arrRoom = D('RoomView')->limit($pageLimit)->order('Room.created DESC')->select();
     // 设置其它模板参数 => web_tracker_addr 已经自带了协议头 http://或https://
     $this->assign('my_web_tracker', sprintf("%s:%d/", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port']));
-    // 设置模板参数 => 使用 pageLive 的模版...
+    // 设置模板参数 => 使用 pageRoom 的模版...
     $this->assign('my_live_begin', LIVE_BEGIN_ID);
     $this->assign('my_cur_page', $pageCur);
-    $this->assign('my_list', $arrLive);
-    $this->display('pageLive');
+    $this->assign('my_list', $arrRoom);
+    $this->display('pageRoom');
   }
   //
   // 点击采集器页面...
