@@ -58,7 +58,7 @@ class HomeAction extends Action
   public function userInfo()
   {
     // 判断用户是否已经处于登录状态，直接进行页面跳转...
-    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_ticker') ) {
+    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_usertype') || !Cookie::is_set('wx_shopid') ) {
       echo "<script>window.parent.doReload();</script>";
       return;
     }
@@ -76,7 +76,8 @@ class HomeAction extends Action
     // 删除存放的用户cookie信息...
     setcookie('wx_unionid','',-1,'/');
     setcookie('wx_headurl','',-1,'/');
-    setcookie('wx_ticker','',-1,'/');
+    setcookie('wx_usertype','',-1,'/');
+    setcookie('wx_shopid','',-1,'/');
     
     $my_nav['is_login'] = false;
     $this->assign('my_nav', $my_nav);
@@ -93,7 +94,7 @@ class HomeAction extends Action
   // 获取是否登录状态...
   private function isLogin()
   {
-    return ((Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker')) ? true : false);
+    return ((Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_usertype') && Cookie::is_set('wx_shopid')) ? true : false);
   }
   //
   // 获取登录用户的编号...
@@ -112,7 +113,7 @@ class HomeAction extends Action
   private function getNavData($activeType, $activeID)
   {
     // 根据cookie设定 登录|注销 导航栏...
-    if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker') ) {
+    if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_usertype') && Cookie::is_set('wx_shopid') ) {
       $my_nav['is_login'] = true;
       $my_nav['headurl'] = Cookie::get('wx_headurl');
       // 判断当前页面是否是https协议 => 通过$_SERVER['HTTPS']和$_SERVER['REQUEST_SCHEME']来判断...

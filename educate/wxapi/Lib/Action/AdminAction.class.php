@@ -31,7 +31,7 @@ class AdminAction extends Action
   private function IsLoginUser()
   {
     // 判断需要的cookie是否有效，不用session，避免与微信端混乱...
-    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_ticker') )
+    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_usertype') || !Cookie::is_set('wx_shopid') )
       return false;
     // cookie有效，用户已经处于登录状态...
     return true;
@@ -60,7 +60,8 @@ class AdminAction extends Action
     // 删除存放的用户cookie信息...
     setcookie('wx_unionid','',-1,'/');
     setcookie('wx_headurl','',-1,'/');
-    setcookie('wx_ticker','',-1,'/');
+    setcookie('wx_usertype','',-1,'/');
+    setcookie('wx_shopid','',-1,'/');
     setcookie('auth_days','',-1,'/');
     setcookie('auth_license','',-1,'/');
     setcookie('auth_expired','',-1,'/');
@@ -74,7 +75,7 @@ class AdminAction extends Action
   public function userInfo()
   {
     // cookie失效，通知父窗口页面跳转刷新...
-    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_ticker') ) {
+    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_usertype') || !Cookie::is_set('wx_shopid') ) {
       echo "<script>window.parent.doReload();</script>";
       return;
     }
@@ -117,14 +118,15 @@ class AdminAction extends Action
   */
   public function index()
   {
-    // 获取用户标识信息，如果不是管理员，直接跳转到前端首页...
-    $strTicker = Cookie::get('wx_ticker');
-    if( strcmp($strTicker, USER_ADMIN_TICK) != 0 ) {
-      header("location:".__APP__.'/Home/index');
-      exit; // 注意：这里最好用exit，终止后续代码的执行...
-    }
-    // 重定向到默认的系统页面...
-    header("Location: ".__APP__.'/Admin/system');
+    // 获取用户类型编号、所在门店编号...
+    $nUserType = Cookie::get('wx_usertype');
+    $nShopID = Cookie::get('wx_shopid');
+    // 如果门店编号大于0，跳转代理机构页面...
+    $strAction = (($nShopID > 0) ? '/Agent/index' : '/Admin/system');
+    // 如果用户类型编号小于或等于0，跳转到前台页面，不能进行后台操作...
+    $strAction = (($nUserType <= 0) ? '/Home/room' : $strAction);
+    // 重定向到最终计算之后的跳转页面...
+    header("Location: ".__APP__.$strAction);
   }
   //
   // 链接中转服务器，返回 bool ...
@@ -331,9 +333,9 @@ class AdminAction extends Action
       $strWebAuth = $bAuthLicense ? "【永久授权版】，无使用时间限制！" : sprintf("剩余期限【 %d 】天，请联系供应商获取更多授权！", $nAuthDays);
       $this->assign('my_web_auth', $strWebAuth);
       // 获取用户类型，是管理员还是普通用户...
-      $strTicker = Cookie::get('wx_ticker');
+      $nUserType = Cookie::get('wx_usertype');
       $strUnionID = base64_encode(Cookie::get('wx_unionid'));
-      $bIsAdmin = ((strcmp($strTicker, USER_ADMIN_TICK)==0) ? true : false);
+      $bIsAdmin = (($nUserType==kAdministerUser) ? true : false);
       // 设置是否显示API标识凭证信息...
       $this->assign('my_is_admin', $bIsAdmin);
       $this->assign('my_api_unionid', $strUnionID);

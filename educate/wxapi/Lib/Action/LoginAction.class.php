@@ -70,22 +70,25 @@ class LoginAction extends Action
         $where['user_id'] = $dbUser['user_id'];
         D('user')->where($where)->save($dbUser);
       } else {
-        // 新建一条用户记录 => 如果是第一个用户，设置成管理员...
-        $dbUser['user_tick'] = (($nUserCount <= 0) ? USER_ADMIN_TICK : USER_NORMAL_TICK);
+        // 新建一条用户记录 => 如果是第一个用户，设置成管理员身份，否则设置成家长身份...
+        $dbUser['user_type'] = (($nUserCount <= 0) ? kAdministerUser : kParentUser);
         $dbUser['create_time'] = date('Y-m-d H:i:s');
         $dbUser['update_time'] = date('Y-m-d H:i:s');
+        $dbUser['shop_id'] = 0; // 默认设置成总部用户
         $insertid = D('user')->add($dbUser);
         $dbUser['user_id'] = $insertid;
       }
       // 将有用的数据存放到cookie当中...
       $strUnionid = $dbUser['wx_unionid'];
       $strHeadUrl = $dbUser['wx_headurl'];
-      $strTicker = $dbUser['user_tick'];
+      $nUserType = $dbUser['user_type'];
+      $nShopID = $dbUser['shop_id'];
       $nElapseTime = 3600*24;
       // 把unionid存入cookie当中，有效期设置一整天，必须用Cookie类...
       Cookie::set('wx_unionid', $strUnionid, $nElapseTime);
       Cookie::set('wx_headurl', $strHeadUrl, $nElapseTime);
-      Cookie::set('wx_ticker', $strTicker, $nElapseTime);
+      Cookie::set('wx_usertype', $nUserType, $nElapseTime);
+      Cookie::set('wx_shopid', $nShopID, $nElapseTime);
       // 将授权数据存入cookie当中，有效期设置为一整天，必须用Cookie类...
       Cookie::set('auth_days', $arrUser['auth_days'], $nElapseTime);
       Cookie::set('auth_license', $arrUser['auth_license'], $nElapseTime);
@@ -118,7 +121,7 @@ class LoginAction extends Action
       return;
     }
     // 如果当前的cookie是有效的，直接进行页面跳转 => 前后台处理不一样...
-    if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_ticker') ) {
+    if( Cookie::is_set('wx_unionid') && Cookie::is_set('wx_headurl') && Cookie::is_set('wx_usertype') && Cookie::is_set('wx_shopid') ) {
       if( $bIsAdmin ) { 
         // 后台 => 直接跳转...
         A('Admin')->index();
@@ -131,7 +134,8 @@ class LoginAction extends Action
     // cookie不是完全有效，重置cookie...
     setcookie('wx_unionid','',-1,'/');
     setcookie('wx_headurl','',-1,'/');
-    setcookie('wx_ticker','',-1,'/');
+    setcookie('wx_usertype','',-1,'/');
+    setcookie('wx_shopid','',-1,'/');
     setcookie('auth_days','',-1,'/');
     setcookie('auth_license','',-1,'/');
     setcookie('auth_expired','',-1,'/');
@@ -186,45 +190,5 @@ class LoginAction extends Action
     $this->assign('my_msg_desc', $inMsgDesc);
     $this->display('Common:error_page');
   }
-  //
-  // 根据cookie从数据库中获取当前登录用户信息 => 这里是接口调用，不能进行页面跳转...
-  // 返回统一的结构：err_code | err_msg | data
-  /*public function getWxUser()
-  {
-    // 设置默认的返回数组...
-    $arrErr['err_code'] = false;
-    $arrErr['err_msg'] = 'OK';
-    // 判断用户是否已经处于登录状态 => 返回-1，让终端进行页面跳转...
-    if( !Cookie::is_set('wx_unionid') || !Cookie::is_set('wx_headurl') || !Cookie::is_set('wx_ticker') ) {
-      $arrErr['err_msg'] = 'cookie is not avail.';
-      $arrErr['err_code'] = -1;
-      return $arrErr;
-    }
-    // 通过cookie得到unionid，再用unionid查找用户信息...
-    $strUnionid = Cookie::get('wx_unionid');
-    // 准备服务器链接地址，去掉最后的反斜杠...
-    $this->m_weLogin = C('WECHAT_LOGIN');
-    $strServer = $this->m_weLogin['redirect_uri'];
-    $strServer = removeSlash($strServer);
-    // 准备请求链接地址，调用接口，返回数据...
-    $strUrl = sprintf("%s/wxapi.php/Login/getWxUser/wx_unionid/%s", $strServer, $strUnionid);
-    $result = http_get($strUrl);
-    // 调用失败，返回错误信息...
-    if( !$result ) {
-      $arrErr['err_code'] = true;
-      $arrErr['err_msg'] = sprintf("无法连接用户管理服务器。<br>%s", $strServer);
-      return $arrErr;
-    }
-    // 将返回信息转换成数组...
-    $arrResult = json_decode($result, true);
-    // 如果没有需要的数据区，直接返回调用错误...
-    if( !isset($arrResult['err_code']) || !isset($arrResult['data']) ) {
-      $arrErr['err_code'] = true;
-      $arrErr['err_msg'] = $result;
-      return $arrErr;
-    }
-    // 返回最终的调用结果 => err_code | err_msg | data
-    return $arrResult;
-  }*/
 }
 ?>
