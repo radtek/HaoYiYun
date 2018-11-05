@@ -1,0 +1,33 @@
+
+<div class="layui-field-box">
+  <form class="layui-form layui-form-pane" action="">
+    <div class="layui-form-item">
+      <label class="layui-form-label">教室名称</label>
+      <div class="layui-input-block">
+        <input type="text" name="myRoomName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.room_name}}">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">讲师姓名</label>
+      <div class="layui-input-block">
+        <input type="text" name="myTeacherName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.teacher_name}}">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <div class="layui-inline" style="margin-right:5px">
+        <label class="layui-form-label">直播时间</label>
+        <div class="layui-input-block">
+          <input type="text" name="myStartTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.start_time}}">
+        </div>
+      </div>
+      <div class="layui-inline" style="margin-right:5px">至</div>
+      <div class="layui-inline" style="margin-right:0px">
+        <input type="text" name="myEndTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.end_time}}">
+      </div>
+    </div>
+    <div class="layui-form-item" style="text-align:center;">
+      <button class="layui-btn" lay-submit lay-filter="formRoom">立即保存</button>&nbsp;
+      <button class="layui-btn layui-btn-primary js_form_close" type="button"> 取 消 </button>
+    </div>
+  </form>
+</div>
