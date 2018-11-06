@@ -940,25 +940,26 @@ class AdminAction extends Action
     return json_encode($arrData);
   }
   //
-  // 获取直播管理页面...
-  public function live()
+  // 获取直播教室管理页面...
+  public function room()
   {
-    $this->assign('my_title', $this->m_webTitle . " - 直播管理");
-    $this->assign('my_command', 'live');
+    $this->assign('my_title', $this->m_webTitle . " - 教室管理");
+    $this->assign('my_command', 'room');
     // 得到每页条数，总记录数，计算总页数...
     $pagePer = C('PAGE_PER');
-    $totalNum = D('camera')->count();
+    $totalNum = D('room')->count();
     $max_page = intval($totalNum / $pagePer);
     // 判断是否是整数倍的页码...
     $max_page += (($totalNum % $pagePer) ? 1 : 0);
     // 设置最大页数，设置模板参数...
+    $this->assign('my_begin_id', LIVE_BEGIN_ID);
     $this->assign('my_total_num', $totalNum);
     $this->assign('max_page', $max_page);
     $this->display();
   }
   //
-  // 获取直播通道分页数据...
-  public function pageLive()
+  // 获取直播教室分页数据...
+  public function pageRoom()
   {
     // 加载 ThinkPHP 的扩展函数 => ThinkPHP/Common/extend.php => msubstr()
     Load('extend');
@@ -968,22 +969,22 @@ class AdminAction extends Action
     $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 设置查询条件，查询分页数据，设置模板...
-    $arrLive = D('LiveView')->limit($pageLimit)->order('camera_id DESC')->select();
+    $arrRoom = D('RoomView')->limit($pageLimit)->order('room_id DESC')->select();
     // 设置模板参数，返回模板数据...
-    $this->assign('my_live', $arrLive);
-    echo $this->fetch('pageLive');
+    $this->assign('my_begin_id', LIVE_BEGIN_ID);
+    $this->assign('my_room', $arrRoom);
+    echo $this->fetch('pageRoom');
   }
   //
-  // 获取直播状态信息...
-  public function getLiveStatus()
+  // 获取直播教室单条记录信息...
+  public function getRoom()
   {
-    // 2017.06.14 - by jackey => 通道状态直接从数据库获取，避免从采集端获取状态造成的堵塞情况...
-    $map['camera_id'] = $_GET['camera_id'];
-    $dbCamera = D('camera')->where($map)->find();
-    $dbCamera['device_pass'] = base64_decode($dbCamera['device_pass']);
-    $this->assign('my_live', $dbCamera);
+    $condition['room_id'] = $_GET['room_id'];
+    $dbRoom = D('RoomView')->where($condition)->find();
+    $dbRoom['poster_fdfs'] = sprintf("%s:%d/%s", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port'], $dbRoom['poster_fdfs']);
+    $this->assign('my_room', $dbRoom);
     // 返回构造好的数据...
-    echo $this->fetch('liveStatus');
+    echo $this->fetch('getRoom');
   }
   //
   // 获取新通道页面...
