@@ -14,15 +14,23 @@
       </div>
     </div>
     <div class="layui-form-item">
-      <div class="layui-inline" style="margin-right:5px">
+      <div class="layui-inline" style="margin-right:5px;margin-bottom:0px">
         <label class="layui-form-label">直播时间</label>
         <div class="layui-input-block">
           <input type="text" name="myStartTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.start_time}}">
         </div>
       </div>
-      <div class="layui-inline" style="margin-right:5px">至</div>
-      <div class="layui-inline" style="margin-right:0px">
+      <div class="layui-inline" style="margin-right:5px;margin-bottom:0px">至</div>
+      <div class="layui-inline" style="margin-right:0px;margin-bottom:0px">
         <input type="text" name="myEndTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.end_time}}">
+      </div>
+    </div>
+    <div class="layui-form-item" style="margin-bottom:20px">
+      <button type="button" class="layui-btn layui-btn-danger" style="float:left;width:110px;">
+        <i class="layui-icon">&#xe67c;</i>上传海报
+      </button>
+      <div style="display:inline-block">
+        <img style="margin-left:5px;border-radius:4px;" src="{{$my_room.poster_fdfs}}_200x300"></img>
       </div>
     </div>
     <div class="layui-form-item" style="text-align:center;">

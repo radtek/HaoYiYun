@@ -98,7 +98,7 @@ function doTrClick(inRoomID, objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['530px', '470px'],
+        area: ['530px', '575px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 直播教室 - " + nLiveRoomID,
         content: ajaxData,
         success: function() {
@@ -298,7 +298,7 @@ function doGetPageRoom(cur_page, total_num) {
 }
 //
 // 处理 layui 过程 => checkbox 必须配合 layui-form 使用...
-layui.use(['element','laypage','layer','form'], function(){
+layui.use(['element','laypage','layer','form','upload'], function(){
   var total_num = {{$my_total_num}};
   var form = layui.form;
   var $ = layui.jquery;
