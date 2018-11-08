@@ -102,6 +102,23 @@ function doTrClick(inRoomID, objTr) {
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 直播教室 - " + nLiveRoomID,
         content: ajaxData,
         success: function() {
+          // 点击上传海报的操作...
+          var upload = layui.upload;
+          upload.render({
+            accept: 'file',
+            elem: '#myUpload',
+            exts: 'jpg|png|jpeg|gif',
+            url: siteurl+"/Admin/upload/room_id/"+inRoomID,
+            done: function(res) {
+              // 发生错误，弹出错误信息框...
+              if(res.code > 0 || res.err_code > 0) {
+                return layer.msg('上传失败：' + res.err_msg, {icon: 2});
+              }
+              // 没有错误，更新海报图片地址信息...
+              $('#myPoster').attr('src', res.poster_fdfs+'_200x300');
+            }
+          });
+          // 针对form的操作处理...
           var form = layui.form;
           form.render();
           // 这里必须调用render才能显示select...
@@ -109,6 +126,8 @@ function doTrClick(inRoomID, objTr) {
             // 定义post发送数组集合...
             var arrData = new Object();
             arrData['room_id'] = inRoomID;
+            arrData['room_name'] = data.field.myRoomName;
+            arrData['real_name'] = data.field.myTeacherName;
             // 发送摄像头数据，通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({
@@ -120,14 +139,8 @@ function doTrClick(inRoomID, objTr) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000,shade: 0.2}, function() {
                   layer.closeAll('page');
-                  //$(objTr).children('td').eq(3).text(arrData['camera_name']);
-                  //$(objTr).children('td').eq(4).text(g_stream_type[arrData['stream_prop']]);
-                  //var theSrcTD = $(objTr).children('td').eq(5);
-                  //switch( arrData['stream_prop'] ) {
-                  //  case 0: theSrcTD.attr('title', arrData['device_ip']); theSrcTD.text(arrData['device_ip']); break;
-                  //  case 1: theSrcTD.attr('title', arrData['stream_mp4']); theSrcTD.text(arrData['stream_mp4'].substr(0,20) + '...'); break;
-                  //  case 2: theSrcTD.attr('title', arrData['stream_url']); theSrcTD.text(arrData['stream_url'].substr(0,20) + '...'); break;
-                  //}
+                  $(objTr).children('td').eq(3).text(arrData['room_name']);
+                  $(objTr).children('td').eq(4).text(arrData['real_name']);
                 });
               },
               error: function(XMLHttpRequest, textStatus, errorThrown) {

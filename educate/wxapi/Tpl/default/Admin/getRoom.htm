@@ -4,13 +4,13 @@
     <div class="layui-form-item">
       <label class="layui-form-label">教室名称</label>
       <div class="layui-input-block">
-        <input type="text" name="myRoomName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.room_name}}">
+        <input type="text" name="myRoomName" maxlength="30" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.room_name}}">
       </div>
     </div>
     <div class="layui-form-item">
       <label class="layui-form-label">讲师姓名</label>
       <div class="layui-input-block">
-        <input type="text" name="myTeacherName" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.teacher_name}}">
+        <input type="text" name="myTeacherName" maxlength="10" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.teacher_name}}">
       </div>
     </div>
     <div class="layui-form-item">
@@ -26,11 +26,11 @@
       </div>
     </div>
     <div class="layui-form-item" style="margin-bottom:20px">
-      <button type="button" class="layui-btn layui-btn-danger" style="float:left;width:110px;">
+      <button type="button" class="layui-btn layui-btn-danger" id="myUpload" style="float:left;width:110px;">
         <i class="layui-icon">&#xe67c;</i>上传海报
       </button>
       <div style="display:inline-block">
-        <img style="margin-left:5px;border-radius:4px;" src="{{$my_room.poster_fdfs}}_200x300"></img>
+        <img class="loading" id="myPoster" width="200px" height="300px" style="margin-left:5px;border-radius:8px;" src="{{$my_room.poster_fdfs}}_200x300"></img>
       </div>
     </div>
     <div class="layui-form-item" style="text-align:center;">

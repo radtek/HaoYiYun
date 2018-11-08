@@ -987,6 +987,84 @@ class AdminAction extends Action
     echo $this->fetch('getRoom');
   }
   //
+  // 响应上传事件...
+  public function upload()
+  {
+    // 准备结果数组...
+    $arrErr['err_code'] = false;
+    $arrErr['err_msg'] = "";
+    // 实例化上传类, 设置附件上传目录
+    import("@.ORG.UploadFile");
+    $myUpload = new UploadFile();
+    $myUpload->saveRule = 'uniqid';
+    $myUpload->savePath = APP_PATH . '/upload/';
+    // 上传错误提示错误信息
+    if( !$myUpload->upload() ) {
+      $arrErr['err_code'] = true;
+      $arrErr['err_msg'] = $myUpload->getErrorMsg();
+    } else {
+      // 从上传对象当中读取需要的信息...
+      $arrFile = $myUpload->getUploadFileInfo();
+      $theSize = $arrFile[0]['size'];
+      $theName = $arrFile[0]['savename'];
+      $thePath = $arrFile[0]['savepath'];
+      $theExt  = $arrFile[0]['extension'];
+      // 组合完整绝对路径名称地址，相对路径需要删除第一个字符...
+      $strUploadPath = WK_ROOT . substr($thePath, 1) . $theName;
+      // 构造fdfs对象，上传、返回文件ID...
+      $fdfs = new FastDFS();
+      $tracker = $fdfs->tracker_get_connection();
+      $strPosterImg = $fdfs->storage_upload_by_filebuff1(file_get_contents($strUploadPath), $theExt);
+      $fdfs->tracker_close_all_connections();
+      // 构造返回的海报新地址信息...
+      $arrErr['poster_fdfs'] = sprintf("%s:%d/%s", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port'], $strPosterImg);
+      // 删除已经上传到fdfs的本地临时文件...
+      unlink($strUploadPath);
+      // 通过房间编号查找房间记录...
+      $condition['room_id'] = $_GET['room_id'];
+      $dbRoom = D('RoomView')->where($condition)->field('room_id,poster_id,poster_fdfs')->find();
+      do {
+        // 如果没有找到指定的房间，返回错误...
+        if( !is_array($dbRoom) ) {
+          $arrErr['err_code'] = true;
+          $arrErr['err_msg'] = "查找房间记录失败！";
+          break;
+        }
+        // 构造海报图片记录字段信息...
+        $dbImage['file_fdfs'] = $strPosterImg;
+        $dbImage['file_size'] = $theSize;
+        $dbImage['created'] = date('Y-m-d H:i:s');
+        $dbImage['updated'] = date('Y-m-d H:i:s');
+        // 如果有海报记录，先删除图片再更新记录...
+        if( $dbRoom['poster_id'] > 0 ) {
+          // 判断该房间下的海报是否有效，先删除这个海报的物理存在...
+          if( isset($dbRoom['poster_fdfs']) && strlen($dbRoom['poster_fdfs']) > 0 ) { 
+            if( !fastdfs_storage_delete_file1($dbRoom['poster_fdfs']) ) {
+              logdebug("fdfs delete failed => ".$dbRoom['poster_fdfs']);
+            }
+          }
+          // 将新的海报存储路径更新到图片表当中...
+          $dbImage['image_id'] = $dbRoom['poster_id'];
+          D('image')->save($dbImage);
+        } else {
+          // 房间里的海报是无效的，创建新的图片记录...
+          $dbRoom['poster_id'] = D('image')->add($dbImage);
+          // 将对应的海报编号更新到房间记录当中...
+          D('room')->save($dbRoom);
+        }
+      } while( false );
+    }
+    // 直接返回结果json...
+    echo json_encode($arrErr);
+  }
+  //
+  // 修改房间记录信息...
+  public function modRoom()
+  {
+    $condition['room_id'] = $_POST['room_id'];
+    D('RoomView')->where($condition)->save($_POST);
+  }
+  //
   // 获取新通道页面...
   public function getLiveCamera()
   {
