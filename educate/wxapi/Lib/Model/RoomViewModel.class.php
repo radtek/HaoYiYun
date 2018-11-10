@@ -7,7 +7,7 @@ class RoomViewModel extends ViewModel {
         'Image'=>array('image_id','file_fdfs'=>'image_fdfs','_on'=>'Image.image_id=Room.image_id','_type'=>'LEFT'),
         'Poster'=>array('file_fdfs'=>'poster_fdfs','_table'=>'wk_image','_on'=>'Poster.image_id=Room.poster_id','_type'=>'LEFT'),
         'Teacher'=>array('teacher_id','user_id','title_name','detail_short','detail_info','_on'=>'Room.teacher_id=Teacher.teacher_id','_type'=>'LEFT'),
-        'User'=>array('user_id','real_name'=>'teacher_name','wx_sex'=>'sex_name','_on'=>'Teacher.user_id=User.user_id'),
+        'User'=>array('user_id','real_name'=>'teacher_name','wx_nickname','wx_sex'=>'sex_name','_on'=>'Teacher.user_id=User.user_id'),
     );
 }
 ?>

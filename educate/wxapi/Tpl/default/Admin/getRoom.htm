@@ -8,9 +8,13 @@
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">讲师姓名</label>
+      <label class="layui-form-label">授课讲师</label>
       <div class="layui-input-block">
-        <input type="text" name="myTeacherName" maxlength="10" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.teacher_name}}">
+        <select name="myRoomTeacher" lay-verify="required" lay-search="">
+          <volist name="my_room.arrTeacher" id="vo">
+          <option value="{{$vo.user_id}}">{{$vo.real_name}} - {{$vo.wx_nickname}}</option>
+          </volist>
+        </select>
       </div>
     </div>
     <div class="layui-form-item">
@@ -39,3 +43,7 @@
     </div>
   </form>
 </div>
+<script>
+// 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('myRoomTeacher')[0].value = {{$my_room.teacher_id|default=0}};
+</script>

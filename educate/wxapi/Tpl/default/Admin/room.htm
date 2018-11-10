@@ -167,9 +167,10 @@ function doTrClick(inRoomID, objTr) {
             var arrData = new Object();
             arrData['room_id'] = inRoomID;
             arrData['room_name'] = data.field.myRoomName;
-            arrData['real_name'] = data.field.myTeacherName;
             arrData['start_time'] = data.field.myStartTime;
             arrData['end_time'] = data.field.myEndTime;
+            arrData['teacher_id'] = data.field.myRoomTeacher;
+            var strRealName = $("select[name='myRoomTeacher']").find("option:selected").text();
             // 结束时间必须大于开始时间...
             if(arrData['start_time'] >= arrData['end_time']) {
               layer.msg('直播【结束时间】必须大于【开始时间】', {icon: 2});
@@ -188,7 +189,7 @@ function doTrClick(inRoomID, objTr) {
                   layer.closeAll('page');
                   // 对话框页面关闭之后的记录操作...
                   $(objTr).children('td').eq(3).text(arrData['room_name']);
-                  $(objTr).children('td').eq(4).text(arrData['real_name']);
+                  $(objTr).children('td').eq(4).text(strRealName.split('-')[0]);
                   $(objTr).children('td').eq(5).text(arrData['start_time']);
                   $(objTr).children('td').eq(6).text(arrData['end_time']);
                 });

@@ -982,6 +982,10 @@ class AdminAction extends Action
     $condition['room_id'] = $_GET['room_id'];
     $dbRoom = D('RoomView')->where($condition)->find();
     $dbRoom['poster_fdfs'] = sprintf("%s:%d/%s", $this->m_dbSys['web_tracker_addr'], $this->m_dbSys['web_tracker_port'], $dbRoom['poster_fdfs']);
+    // 查找所有的老师用户列表，根据用户类型查询...
+    $map['user_type'] = array('eq', kTeacherUser);
+    $dbRoom['arrTeacher'] = D('user')->where($map)->field('user_id,real_name,wx_nickname')->select();
+    // 赋值给模版对象...
     $this->assign('my_room', $dbRoom);
     // 返回构造好的数据...
     echo $this->fetch('getRoom');
@@ -1062,7 +1066,7 @@ class AdminAction extends Action
   public function modRoom()
   {
     $condition['room_id'] = $_POST['room_id'];
-    D('RoomView')->where($condition)->save($_POST);
+    D('room')->where($condition)->save($_POST);
   }
   //
   // 获取新通道页面...
