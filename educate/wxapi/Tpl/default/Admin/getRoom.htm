@@ -17,12 +17,12 @@
       <div class="layui-inline" style="margin-right:5px;margin-bottom:0px">
         <label class="layui-form-label">直播时间</label>
         <div class="layui-input-block">
-          <input type="text" name="myStartTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.start_time}}">
+          <input name="myStartTime" type="text" class="date-workinput date-datainp date-wicon" value="{{$my_room.start_time}}" readonly>
         </div>
       </div>
       <div class="layui-inline" style="margin-right:5px;margin-bottom:0px">至</div>
       <div class="layui-inline" style="margin-right:0px;margin-bottom:0px">
-        <input type="text" name="myEndTime" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_room.end_time}}">
+        <input name="myEndTime" type="text" class="date-workinput date-datainp date-wicon" value="{{$my_room.end_time}}" readonly>
       </div>
     </div>
     <div class="layui-form-item" style="margin-bottom:20px">
@@ -30,7 +30,7 @@
         <i class="layui-icon">&#xe67c;</i>上传海报
       </button>
       <div style="display:inline-block">
-        <img class="loading" id="myPoster" width="200px" height="300px" style="margin-left:5px;border-radius:8px;" src="{{$my_room.poster_fdfs}}_200x300"></img>
+        <img class="loading" id="myPoster" width="200px" height="300px" style="margin-left:5px;border-radius:8px;" src="{{$my_room.poster_fdfs}}_200x300" onerror="doErrImg();"></img>
       </div>
     </div>
     <div class="layui-form-item" style="text-align:center;">

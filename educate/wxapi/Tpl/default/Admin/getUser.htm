@@ -23,30 +23,43 @@
     <div class="layui-form-item">
       <label class="layui-form-label">用户类型</label>
       <div class="layui-input-block">
-        <select name="myTicker" lay-verify="required" lay-search="">
-          <option value="{{$my_admin_tick}}">管理员</option>
-          <option value="{{$my_normal_tick}}">用户</option>
+        <select name="myUserType" lay-verify="required" lay-search="">
+          <foreach name="my_user.arrUserType" item="vo">
+          <option value="{{$key}}">{{$vo}}</option>
+          </foreach>
         </select>
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">微信昵称</label>
+      <label class="layui-form-label">家长角色</label>
       <div class="layui-input-block">
-        <label class="layui-form-label" style="width:100%">
-        {{$my_user.wx_nickname}}
-        </label>
+        <select name="myParentType" lay-verify="required" lay-search="">
+          <foreach name="my_user.arrParentType" item="vo">
+          <option value="{{$key}}">{{$vo}}</option>
+          </foreach>
+        </select>
       </div>
     </div>
     <div class="layui-form-item">
       <label class="layui-form-label">用户性别</label>
       <div class="layui-input-block">
-        <label class="layui-form-label" style="width:100%">
-        <switch name="my_user.wx_sex">
-          <case value='1'>男</case>
-          <case value='2'>女</case>
-          <default />男
-        </switch>
-        </label>
+        <select name="mySexType" lay-verify="required" lay-search="">
+          <foreach name="my_user.arrSexType" item="vo">
+          <option value="{{$key}}">{{$vo}}</option>
+          </foreach>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">真实姓名</label>
+      <div class="layui-input-block">
+        <input type="text" name="myRealName" maxlength="20" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_user.real_name}}">
+      </div>
+    </div>
+    <div class="layui-form-item">
+      <label class="layui-form-label">手机号码</label>
+      <div class="layui-input-block">
+        <input type="text" name="myPhone" maxlength="13" lay-verify="required" autocomplete="off" class="layui-input" value="{{$my_user.real_phone}}">
       </div>
     </div>
     <div class="layui-form-item">
@@ -76,32 +89,47 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
-document.getElementsByName('myTicker')[0].value = "{{$my_user.user_tick}}";
+document.getElementsByName('myParentType')[0].value = "{{$my_user.parent_type}}";
+document.getElementsByName('myUserType')[0].value = "{{$my_user.user_type}}";
+document.getElementsByName('mySexType')[0].value = "{{$my_user.wx_sex}}";
 // 处理 layui 过程...
 layui.use(['layer','form'], function(){
   var $ = layui.jquery;
   var form = layui.form;
   form.on('submit(formUser)', function(data) {
-    var theTickerName = $("select[name='myTicker']").find("option:selected").text();
-    var theTickerID = data.field.myTicker;
-    var theUserID = {{$my_user.user_id}};
+    var strRealPhone = data.field.myPhone.trim();
+    if( !(/^1[3|4|5|7|8]\d{9}$/.test(strRealPhone)) ) {
+      layer.msg("【手机号码】有错误，请确认！", {icon: 2});
+      $("input[name='myPhone']").focus();
+      return false;
+    }
+    var dbUser = new Object();
+    dbUser['real_phone'] = data.field.myPhone.trim();
+    dbUser['real_name'] = data.field.myRealName.trim();
+    dbUser['parent_type'] = data.field.myParentType;
+    dbUser['user_type'] = data.field.myUserType;
+    dbUser['wx_sex'] = data.field.mySexType;
+    dbUser['user_id'] = {{$my_user.user_id}};
     $.ajaxSetup({ cache:false });
     layer.load(2);
     $.ajax({
       type: "post",
       async: true,
+      data: dbUser,
       url: siteurl+"/Admin/saveUser",
-      data: {user_id: theUserID, user_tick: theTickerID},
       success: function(ajaxData) {
         layer.closeAll('loading');
         layer.msg('恭喜！保存成功！', {icon: 1,time: 1000}, function() {
-          parent.doModUser(theTickerName);
+          dbUser['parent_type'] = $("select[name='myParentType']").find("option:selected").text();
+          dbUser['user_type'] = $("select[name='myUserType']").find("option:selected").text();
+          dbUser['wx_sex'] = $("select[name='mySexType']").find("option:selected").text();
+          parent.doModUser(dbUser);
           parent.layer.closeAll('iframe');
         });
       },
-      error: function(e) {
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
         layer.closeAll('loading');
-        layer.alert(e, {icon: 2});
+        layer.alert(textStatus+': '+XMLHttpRequest.status+','+errorThrown, {icon: 2});
       }
     });
     // 避免form自动跳转...

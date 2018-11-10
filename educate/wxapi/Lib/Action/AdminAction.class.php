@@ -1242,29 +1242,18 @@ class AdminAction extends Action
     $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
     // 设置查询条件，查询分页数据，设置模板...
     $arrUser = D('user')->limit($pageLimit)->order('user_id DESC')->select();
+    // 对用户记录的表现形式进行修正...
+    $arrSexType = eval(SEX_TYPE);
+    $arrUserType = eval(USER_TYPE);
+    $arrParentType = eval(PARENT_TYPE);
+    foreach ($arrUser as &$dbUser) {
+      $dbUser['wx_sex'] = $arrSexType[$dbUser['wx_sex']];
+      $dbUser['user_type'] = $arrUserType[$dbUser['user_type']];
+      $dbUser['parent_type'] = $arrParentType[$dbUser['parent_type']];
+    }
     // 设置模板参数，返回模板数据...
-    $this->assign('my_admin_tick', USER_ADMIN_TICK);
     $this->assign('my_user', $arrUser);
     echo $this->fetch('pageUser');
-    
-    // 获取节点服务器的标记符号...
-    /*$dbSys = D('system')->field('web_tag')->find();
-    // 准备需要的分页参数...
-    $pagePer = C('PAGE_PER'); // 每页显示的条数...
-    $pageCur = (isset($_GET['p']) ? $_GET['p'] : 1);  // 当前页码...
-    $pageLimit = (($pageCur-1)*$pagePer).','.$pagePer; // 读取范围...
-    $pageLimit = urlsafe_b64encode($pageLimit);
-    // 准备服务器链接地址，去掉最后的反斜杠...
-    $strServer = $this->m_weLogin['redirect_uri'];
-    $strServer = removeSlash($strServer);
-    // 准备请求链接地址，调用接口，返回数据...
-    $strPageUrl = sprintf("%s/wxapi.php/Login/getPageUser/limit/%s/node_tag/%s", $strServer, $pageLimit, $dbSys['web_tag']);
-    $strResult = http_get($strPageUrl);
-    $arrUser = json_decode($strResult, true);
-    // 设置模板参数，返回模板数据...
-    $this->assign('my_admin_tick', USER_ADMIN_TICK);
-    $this->assign('my_user', $arrUser);
-    echo $this->fetch('pageUser');*/
   }
   //
   // 获取单个用户信息...
@@ -1273,25 +1262,13 @@ class AdminAction extends Action
     // 获取用户数据通过用户编号...
     $map['user_id'] = $_GET['user_id'];
     $dbUser = D('user')->where($map)->find();
-    // 获取模板数据...
-    $this->assign('my_normal_tick', USER_NORMAL_TICK);
-    $this->assign('my_admin_tick', USER_ADMIN_TICK);
+    // 定义用户身份类型数组内容，需要使用eval...
+    $dbUser['arrUserType'] = eval(USER_TYPE);
+    $dbUser['arrParentType'] = eval(PARENT_TYPE);
+    $dbUser['arrSexType'] = eval(SEX_TYPE);
+    // 获取模板数据，返回模版页面内容...
     $this->assign('my_user', $dbUser);
     echo $this->fetch('getUser');
-    
-    /*$nUserID = $_GET['user_id'];
-    // 准备服务器链接地址，去掉最后的反斜杠...
-    $strServer = $this->m_weLogin['redirect_uri'];
-    $strServer = removeSlash($strServer);
-    // 准备请求链接地址，调用接口，返回数据...
-    $strUrl = sprintf("%s/wxapi.php/Login/getUser/user_id/%d", $strServer, $nUserID);
-    $strResult = http_get($strUrl);
-    $dbUser = json_decode($strResult, true);
-    // 获取模板数据...
-    $this->assign('my_normal_tick', USER_NORMAL_TICK);
-    $this->assign('my_admin_tick', USER_ADMIN_TICK);
-    $this->assign('my_user', $dbUser);
-    echo $this->fetch('getUser');*/
   }
   //
   // 保存用户修改后信息...

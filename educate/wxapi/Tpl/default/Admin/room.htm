@@ -1,6 +1,10 @@
 
 <include file = "Common:admin_header" />
 
+<script src="/wxapi/public/js/jquery-1.12.4.min.js" language="javascript"></script>
+<script src="/wxapi/public/js/jquery.jedate.js" language="javascript"></script>
+<link href="/wxapi/public/css/jedate.css" type="text/css" rel="stylesheet">
+
 <style>
 .btn-del {
   float: left;
@@ -12,6 +16,22 @@
 }
 .layui-form-item {
   margin-bottom: 10px;
+}
+.date-datainp {
+  border:1px #A5D2EC solid;
+}
+.date-wicon {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAQCAYAAADj5tSrAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABZ0RVh0Q3JlYXRpb24gVGltZQAwNi8xNS8xNGnF/oAAAAAcdEVYdFNvZnR3YXJlAEFkb2JlIEZpcmV3b3JrcyBDUzVxteM2AAAAoElEQVQ4jWPceOnNfwYqAz9dYRQ+E7UtwAaGjyUsDAyYYUgJ2HT5LXZLcEmSCnA6duOlN///////H0bDALl8dPH/////Z8FuNW6Qtvw2nL3lyjsGBgYGhlmRqnj1kGwJuqHIlhJlCXq8EOITEsdqCXLEbbr8FisfFkTo+vBZRFZwERNEFFkCiw90nxJtCalxQmzegltCzVyP1RJq5HZ8AABuNZr0628DMwAAAABJRU5ErkJggg==");
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+.date-workinput {
+  width: 160px;
+  line-height: 32px;
+  border: 1px #A5D2EC solid;
+  border-radius: 4px;
+  font-size: 14px;
+  padding: 2px 5px;
 }
 </style>
 
@@ -71,6 +91,14 @@
 // 获取网站地址...
 var siteurl="{{:__APP__}}";
 var g_cur_page = 0;
+
+// 处理海报截图无法加载的问题...
+function doErrImg() {
+  var img = event.srcElement; // 获取事件对象...
+  img.src  = "/wxapi/public/images/blank.gif";
+  img.onerror = null; // 控制不要一直跳动
+  img.className = ''; 
+}
 //
 // 点击某一行事件...
 function doTrClick(inRoomID, objTr) {
@@ -98,7 +126,7 @@ function doTrClick(inRoomID, objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['530px', '575px'],
+        area: ['510px', '575px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 直播教室 - " + nLiveRoomID,
         content: ajaxData,
         success: function() {
@@ -118,6 +146,18 @@ function doTrClick(inRoomID, objTr) {
               $('#myPoster').attr('src', res.poster_fdfs+'_200x300');
             }
           });
+          // 更新开始日期，设置日期格式...
+          $("input[name='myStartTime']").jeDate({
+            zIndex: 119891016,
+            isinitVal: false,
+            format: "YYYY-MM-DD hh:mm:ss",
+          });
+          // 更新结束日期，设置日期格式...
+          $("input[name='myEndTime']").jeDate({
+            zIndex: 119891016,
+            isinitVal: false,
+            format: "YYYY-MM-DD hh:mm:ss",
+          });
           // 针对form的操作处理...
           var form = layui.form;
           form.render();
@@ -128,6 +168,13 @@ function doTrClick(inRoomID, objTr) {
             arrData['room_id'] = inRoomID;
             arrData['room_name'] = data.field.myRoomName;
             arrData['real_name'] = data.field.myTeacherName;
+            arrData['start_time'] = data.field.myStartTime;
+            arrData['end_time'] = data.field.myEndTime;
+            // 结束时间必须大于开始时间...
+            if(arrData['start_time'] >= arrData['end_time']) {
+              layer.msg('直播【结束时间】必须大于【开始时间】', {icon: 2});
+              return false;
+            }
             // 发送摄像头数据，通过ajax异步发送存盘命令...
             layer.load(2);
             $.ajax({
@@ -139,8 +186,11 @@ function doTrClick(inRoomID, objTr) {
                 layer.closeAll('loading');
                 layer.msg('恭喜！保存成功！', {icon: 1,time: 1000,shade: 0.2}, function() {
                   layer.closeAll('page');
+                  // 对话框页面关闭之后的记录操作...
                   $(objTr).children('td').eq(3).text(arrData['room_name']);
                   $(objTr).children('td').eq(4).text(arrData['real_name']);
+                  $(objTr).children('td').eq(5).text(arrData['start_time']);
+                  $(objTr).children('td').eq(6).text(arrData['end_time']);
                 });
               },
               error: function(XMLHttpRequest, textStatus, errorThrown) {
