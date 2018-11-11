@@ -89,6 +89,11 @@ class AdminAction extends Action
       $this->display('Common:error_page');
       return;
     }
+    // 进行用户类型和用户性别的替换操作...
+    $arrSexType = eval(SEX_TYPE);
+    $arrUserType = eval(USER_TYPE);
+    $dbLogin['wx_sex'] = $arrSexType[$dbLogin['wx_sex']];
+    $dbLogin['user_type'] = $arrUserType[$dbLogin['user_type']];
     // 进行模板设置，让模版去替换头像...
     $this->assign('my_login', $dbLogin);
     $this->display('Admin:userInfo');
@@ -120,8 +125,8 @@ class AdminAction extends Action
   {
     // 获取用户类型编号、所在门店编号...
     $nUserType = Cookie::get('wx_usertype');
-    // 如果用户类型编号小于或等于0，跳转到前台页面，不能进行后台操作...
-    $strAction = (($nUserType <= 0) ? '/Home/room' : '/Admin/system');
+    // 如果用户类型编号小于运营维护，跳转到前台页面，不能进行后台操作...
+    $strAction = (($nUserType < kMaintainUser) ? '/Home/room' : '/Admin/system');
     // 重定向到最终计算之后的跳转页面...
     header("Location: ".__APP__.$strAction);
   }

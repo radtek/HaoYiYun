@@ -37,11 +37,7 @@
       <label class="layui-form-label">性 别</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
-        <switch name="my_login.sex">
-          <case value='1'>男</case>
-          <case value='2'>女</case>
-          <default />男
-        </switch>
+        {{$my_login.wx_sex}}
         </label>
       </div>
     </div>
@@ -54,23 +50,23 @@
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">国 家</label>
+      <label class="layui-form-label">国家地区</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
-        {{$my_login.wx_country}}
+        {{$my_login.wx_country}}&nbsp;{{$my_login.wx_province}}&nbsp;{{$my_login.wx_city}}
         </label>
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">地 区</label>
+      <label class="layui-form-label">用户类型</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
-        {{$my_login.wx_province}}&nbsp;{{$my_login.wx_city}}
+        {{$my_login.user_type}}
         </label>
       </div>
     </div>
     <div class="layui-form-item">
-      <label class="layui-form-label">登录时间</label>
+      <label class="layui-form-label">最近登录</label>
       <div class="layui-input-block">
         <label class="layui-form-label" style="width:100%">
         {{$my_login.update_time}}
