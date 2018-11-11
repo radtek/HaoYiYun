@@ -8,6 +8,16 @@
       </div>
     </div>
     <div class="layui-form-item">
+      <label class="layui-form-label">授课科目</label>
+      <div class="layui-input-block">
+        <select name="myRoomSubject" lay-verify="required" lay-search="">
+          <volist name="my_room.arrSubject" id="vo">
+          <option value="{{$vo.subject_id}}">{{$vo.subject_name}}</option>
+          </volist>
+        </select>
+      </div>
+    </div>
+    <div class="layui-form-item">
       <label class="layui-form-label">授课讲师</label>
       <div class="layui-input-block">
         <select name="myRoomTeacher" lay-verify="required" lay-search="">
@@ -45,5 +55,6 @@
 </div>
 <script>
 // 这里没有jquery，直接用document事先设定选中项，之后才能被layui识别到...
+document.getElementsByName('myRoomSubject')[0].value = {{$my_room.subject_id|default=0}};
 document.getElementsByName('myRoomTeacher')[0].value = {{$my_room.teacher_id|default=0}};
 </script>

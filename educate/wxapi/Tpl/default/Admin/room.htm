@@ -52,19 +52,21 @@
             <colgroup>
               <col width="5%">
               <col width="10%">
+              <col width="10%">
               <col width="15%">
               <col width="15%">
               <col width="15%">
-              <col width="20%">
-              <col width="20%">
+              <col width="15%">
+              <col width="15%">
             </colgroup>
             <thead>
               <tr>
                 <th><input id="myAll" type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th>状态</th>
                 <th>编号</th>
-                <th>名称</th>
-                <th>讲师</th>
+                <th>教室名称</th>
+                <th>授课科目</th>
+                <th>授课讲师</th>
                 <th>开始时间</th>
                 <th>结束时间</th>
               </tr> 
@@ -126,7 +128,7 @@ function doTrClick(inRoomID, objTr) {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['510px', '575px'],
+        area: ['510px', '625px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>编辑 - 直播教室 - " + nLiveRoomID,
         content: ajaxData,
         success: function() {
@@ -170,10 +172,17 @@ function doTrClick(inRoomID, objTr) {
             arrData['start_time'] = data.field.myStartTime;
             arrData['end_time'] = data.field.myEndTime;
             arrData['teacher_id'] = data.field.myRoomTeacher;
+            arrData['subject_id'] = data.field.myRoomSubject;
             var strRealName = $("select[name='myRoomTeacher']").find("option:selected").text();
+            var strSubjectName = $("select[name='myRoomSubject']").find("option:selected").text();
+            // 授课讲师或授课科目不能为空...
+            if(arrData['teacher_id'] <= 0 || arrData['subject_id'] <= 0) {
+              layer.msg('【授课科目】和【授课讲师】不能为空！', {icon: 2,shade: 0.2});
+              return false;
+            }
             // 结束时间必须大于开始时间...
             if(arrData['start_time'] >= arrData['end_time']) {
-              layer.msg('直播【结束时间】必须大于【开始时间】', {icon: 2});
+              layer.msg('直播【结束时间】必须大于【开始时间】', {icon: 2,shade: 0.2});
               return false;
             }
             // 发送摄像头数据，通过ajax异步发送存盘命令...
@@ -189,9 +198,10 @@ function doTrClick(inRoomID, objTr) {
                   layer.closeAll('page');
                   // 对话框页面关闭之后的记录操作...
                   $(objTr).children('td').eq(3).text(arrData['room_name']);
-                  $(objTr).children('td').eq(4).text(strRealName.split('-')[0]);
-                  $(objTr).children('td').eq(5).text(arrData['start_time']);
-                  $(objTr).children('td').eq(6).text(arrData['end_time']);
+                  $(objTr).children('td').eq(4).text(strSubjectName);
+                  $(objTr).children('td').eq(5).text(strRealName.split('-')[0]);
+                  $(objTr).children('td').eq(6).text(arrData['start_time']);
+                  $(objTr).children('td').eq(7).text(arrData['end_time']);
                 });
               },
               error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -221,6 +231,7 @@ function doAddRoom() {
   // 异步添加通道信息...
   var index = layer.load(2);
   var $ = layui.jquery;
+  var thePosterID = 0;
   $.ajaxSetup({ cache:false });
   $.ajax({
     type: "get",
@@ -233,16 +244,64 @@ function doAddRoom() {
         closeBtn: 1,
         fixed: true,
         shadeClose: false,
-        area: ['530px', '450px'],
+        area: ['510px', '625px'],
         title: "<i class='fa fa-video-camera'>&nbsp;&nbsp;</i>添加 - 直播教室",
         content: ajaxData,
         success: function() {
+          // 点击上传海报的操作...
+          var upload = layui.upload;
+          upload.render({
+            accept: 'file',
+            elem: '#myUpload',
+            exts: 'jpg|png|jpeg|gif',
+            url: siteurl+"/Admin/upload/poster_id/"+thePosterID,
+            done: function(res) {
+              // 发生错误，弹出错误信息框...
+              if(res.code > 0 || res.err_code > 0) {
+                return layer.msg('上传失败：' + res.err_msg, {icon: 2});
+              }
+              // 没有错误，更新海报图片地址信息，保存最新的海报编号...
+              $('#myPoster').attr('src', res.poster_fdfs+'_200x300');
+              thePosterID = res.poster_id;
+            }
+          });
+          // 更新开始日期，设置日期格式...
+          $("input[name='myStartTime']").jeDate({
+            zIndex: 119891016,
+            isinitVal: true,
+            format: "YYYY-MM-DD hh:mm:ss",
+          });
+          // 更新结束日期，设置日期格式...
+          $("input[name='myEndTime']").jeDate({
+            zIndex: 119891016,
+            isinitVal: true,
+            format: "YYYY-MM-DD hh:mm:ss",
+          });
+          // 设置房间名称为焦点...
+          $("input[name='myRoomName']").focus();
+          // 针对form的操作处理...
           var form = layui.form;
           form.render();
           // 这里必须调用render才能显示select...
           form.on('submit(formRoom)', function(data) {
             // 定义post发送数组集合...
             var arrData = new Object();
+            arrData['poster_id'] = thePosterID;
+            arrData['room_name'] = data.field.myRoomName;
+            arrData['start_time'] = data.field.myStartTime;
+            arrData['end_time'] = data.field.myEndTime;
+            arrData['teacher_id'] = data.field.myRoomTeacher;
+            arrData['subject_id'] = data.field.myRoomSubject;
+            // 授课讲师或授课科目不能为空...
+            if(arrData['teacher_id'] <= 0 || arrData['subject_id'] <= 0) {
+              layer.msg('【授课科目】和【授课讲师】不能为空！', {icon: 2,shade: 0.2});
+              return false;
+            }
+            // 结束时间必须大于开始时间...
+            if(arrData['start_time'] >= arrData['end_time']) {
+              layer.msg('直播【结束时间】必须大于【开始时间】', {icon: 2,shade: 0.2});
+              return false;
+            }
             // 向服务器发送添加通道命令...
             layer.load(2);
             $.ajax({
@@ -293,7 +352,7 @@ function doDelRoom() {
   });
   // 判断数据的有效性...
   if( strList.length <= 0 ) {
-    layer.msg('请先选择要删除的记录！', {anim: 6});
+    layer.msg('请先选择要删除的记录！', {icon: 2,anim: 6,shade: 0.2});
     return;
   }
   // 去除最后一个分号...

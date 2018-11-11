@@ -985,6 +985,8 @@ class AdminAction extends Action
     // 查找所有的老师用户列表，根据用户类型查询...
     $map['user_type'] = array('eq', kTeacherUser);
     $dbRoom['arrTeacher'] = D('user')->where($map)->field('user_id,real_name,wx_nickname')->select();
+    // 查找所有的科目记录列表...
+    $dbRoom['arrSubject'] = D('subject')->select();
     // 赋值给模版对象...
     $this->assign('my_room', $dbRoom);
     // 返回构造好的数据...
@@ -1028,19 +1030,13 @@ class AdminAction extends Action
       $condition['room_id'] = $_GET['room_id'];
       $dbRoom = D('RoomView')->where($condition)->field('room_id,poster_id,poster_fdfs')->find();
       do {
-        // 如果没有找到指定的房间，返回错误...
-        if( !is_array($dbRoom) ) {
-          $arrErr['err_code'] = true;
-          $arrErr['err_msg'] = "查找房间记录失败！";
-          break;
-        }
         // 构造海报图片记录字段信息...
         $dbImage['file_fdfs'] = $strPosterImg;
         $dbImage['file_size'] = $theSize;
         $dbImage['created'] = date('Y-m-d H:i:s');
         $dbImage['updated'] = date('Y-m-d H:i:s');
         // 如果有海报记录，先删除图片再更新记录...
-        if( $dbRoom['poster_id'] > 0 ) {
+        if( is_array($dbRoom) && $dbRoom['poster_id'] > 0 ) {
           // 判断该房间下的海报是否有效，先删除这个海报的物理存在...
           if( isset($dbRoom['poster_fdfs']) && strlen($dbRoom['poster_fdfs']) > 0 ) { 
             if( !fastdfs_storage_delete_file1($dbRoom['poster_fdfs']) ) {
@@ -1052,9 +1048,12 @@ class AdminAction extends Action
           D('image')->save($dbImage);
         } else {
           // 房间里的海报是无效的，创建新的图片记录...
-          $dbRoom['poster_id'] = D('image')->add($dbImage);
+          $arrErr['poster_id'] = D('image')->add($dbImage);
           // 将对应的海报编号更新到房间记录当中...
-          D('room')->save($dbRoom);
+          if( is_array($dbRoom) && $dbRoom['room_id'] > 0 ) {
+            $dbRoom['poster_id'] = $arrErr['poster_id'];
+            D('room')->save($dbRoom);
+          }
         }
       } while( false );
     }
@@ -1062,11 +1061,61 @@ class AdminAction extends Action
     echo json_encode($arrErr);
   }
   //
+  // 添加房间记录信息...
+  public function addRoom()
+  {
+    $dbRoom = $_POST;
+    $dbRoom['created'] = date('Y-m-d H:i:s');
+    $dbRoom['updated'] = date('Y-m-d H:i:s');
+    D('room')->add($dbRoom);
+  }
+  //
   // 修改房间记录信息...
   public function modRoom()
   {
     $condition['room_id'] = $_POST['room_id'];
     D('room')->where($condition)->save($_POST);
+  }
+  //
+  // 删除房间记录信息...
+  public function delRoom()
+  {
+    // 组合通道查询条件房间记录...
+    $map['room_id'] = array('in', $_POST['list']);
+    $arrRoom = D('RoomView')->where($map)->field('room_id,image_id,image_fdfs,poster_id,poster_fdfs')->select();
+    // 遍历房间记录列表，删除对应的截图和海报记录...
+    foreach ($arrRoom as &$dbRoom) {
+      // 删除图片和视频文件，逐一删除...
+      fastdfs_storage_delete_file1($dbRoom['image_fdfs']);
+      fastdfs_storage_delete_file1($dbRoom['poster_fdfs']);
+      // 删除截图图片记录和海报图片记录，只能逐条删除...
+      D('image')->delete($dbRoom['image_id']);
+      D('image')->delete($dbRoom['poster_id']);
+    }
+    // 直接删除房间列表数据记录...
+    D('room')->where($map)->delete();
+    ///////////////////////////////////
+    // 下面是重新获取新的分页数据...
+    ///////////////////////////////////
+    // 得到每页条数，总记录数，计算总页数...
+    $pagePer = C('PAGE_PER');
+    $totalNum = D('room')->count();
+    $max_page = intval($totalNum / $pagePer);
+    // 判断是否是整数倍的页码...
+    $max_page += (($totalNum % $pagePer) ? 1 : 0);
+    // 重新计算当前页面编号，总页面数...
+    if( $max_page <= 0 ) {
+      $arrJson['curr'] = 0;
+      $arrJson['pages'] = 0;
+      $arrJson['total'] = $totalNum;
+    } else {
+      $nCurPage = (($_POST['page'] > $max_page) ? $max_page : $_POST['page']);
+      $arrJson['curr'] = $nCurPage;
+      $arrJson['pages'] = $max_page;
+      $arrJson['total'] = $totalNum;
+    }
+    // 返回json数据包...
+    echo json_encode($arrJson);
   }
   //
   // 获取新通道页面...
