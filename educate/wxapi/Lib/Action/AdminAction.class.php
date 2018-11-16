@@ -192,7 +192,7 @@ class AdminAction extends Action
           $dbData['total_space'] = $dtItem['total_space'];
           $dbData['free_space'] = $dtItem['free_space'];
           $dbData['use_space'] = $dtItem['total_space'] - $dtItem['free_space'];
-          $dbData['use_percent'] = $dbData['use_space']*100/$dtItem['total_space'];
+          $dbData['use_percent'] = round($dbData['use_space']*100/$dtItem['total_space'], 2);
           $dbData['status'] = $dtItem['status'];
           $arrData[$dtKey] = $dbData;
         }
