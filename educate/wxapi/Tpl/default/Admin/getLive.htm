@@ -1,6 +1,6 @@
 
 <blockquote class="layui-elem-quote" style="margin-top:5px;">
-  温馨提示：【直播服务器】支持 hls、rtmp，能够按需上传，自动分配上传地址，无需人工干预。
+  温馨提示：【直播服务器】低延时UDP服务器，能够按需上传，自动分配上传地址，无需人工干预。
 </blockquote>
 
 <!-- 错误信息栏 -->
@@ -20,19 +20,19 @@
     <tr>
       <th>序号</th>
       <th>状态</th>
-      <th>RTMP地址</th>
-      <th>HLS地址</th>
-      <th>已挂载通道数</th>
+      <th>TCP命令服务</th>
+      <th>UDP数据服务</th>
+      <th>已挂载房间数</th>
     </tr>
   </thead>
   <tbody>
-    <volist name="my_show.list" id="vo">
-    <tr class="feed-cursor" onclick="doCameraList('{{$vo[0]}}');">
+    <volist name="my_show.list_data" id="vo">
+    <tr class="feed-cursor" onclick="doRoomList({{$vo.server_id}});">
       <td>{{$key+1}}</td>
       <td class="feed-online">ONLINE</td>
-      <td>{{$vo[0]}}</td>
-      <td>{{$vo[1]}}</td>
-      <td>{{$vo[2]}}</td>
+      <td>{{$vo.remote_addr}}:{{$vo.remote_port}}</td>
+      <td>{{$vo.udp_addr}}:{{$vo.udp_port}}</td>
+      <td>{{$vo.room_num}}</td>
     </tr>
     </volist>
   </tbody>

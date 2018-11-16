@@ -1,6 +1,6 @@
 
 <blockquote class="layui-elem-quote" style="margin-top:5px;">
-  温馨提示：【中转客户端】是指正在与中转服务器交互的终端，便于分析中转服务器状态。<br>
+  温馨提示：【中转客户端】是指正在与中心服务器交互的终端，便于分析中心服务器状态。<br>
 </blockquote>
 
 <!-- 错误信息栏 -->
@@ -25,19 +25,12 @@
     </tr>
   </thead>
   <tbody>
-    <volist name="my_show.list" id="vo">
+    <volist name="my_show.list_data" id="vo">
     <tr>
-      <td>
-        <switch name="vo[0]">
-          <case value="1">PHP终端</case>
-          <case value="2">采集终端</case>
-          <case value="3">直播终端</case>
-          <case value="4">播放终端</case>
-        </switch>
-      </td>
+      <td>{{$vo.client_type}}</td>
       <td class="feed-online">ACTIVE</td>
-      <td>{{$vo[1]}}</td>
-      <td>{{$vo[2]}}</td>
+      <td>{{$vo.client_addr}}</td>
+      <td>{{$vo.client_port}}</td>
     </tr>
     </volist>
   </tbody>

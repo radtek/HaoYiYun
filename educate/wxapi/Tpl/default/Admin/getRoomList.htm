@@ -30,12 +30,12 @@
 <body>
 
 <!-- 错误信息栏 -->
-<gt name="my_show.err_code" value="0"> 
+<if condition="($my_show.err_code gt 0) OR ($my_show.list_num elt 0)">
 <div class="weui_msg" style="margin-top:20px;">
   <div class="weui_icon_area"><i class="weui_icon_safe weui_icon_safe_warn"></i></div>
   <div class="weui_text_area">
     <h2 class="weui_msg_title">{{$my_show.err_msg}}</h2>
-    <p class="weui_msg_desc">当前服务器没有挂载任何有效的直播通道</p>
+    <p class="weui_msg_desc">当前服务器没有挂载任何有效的直播教室</p>
   </div>
 </div>
 <else/>
@@ -43,43 +43,38 @@
   <div class="feed-table">
     <table class="layui-table">
       <colgroup>
-        <col width="15%">
+        <col width="10%">
         <col width="20%">
         <col width="20%">
         <col width="20%">
       </colgroup>
       <thead>
         <tr>
-          <th>通道编号</th>
-          <th>通道名称</th>
-          <th>通道类型</th>
-          <th>观看用户数</th>
+          <th>教室序号</th>
+          <th>教室编号</th>
+          <th>讲师数量</th>
+          <th>学生数量</th>
         </tr>
       </thead>
       <tbody>
-        <volist name="my_show.list" id="vo">
-        <tr class="feed-cursor" onclick="doPlayerList('{{$my_server}}',{{$vo.camera_id}});">
-          <td>{{$vo.camera_id}}</td>
-          <td>
-            <switch name="vo.stream_prop">
-              <case value="0">摄像头</case>
-              <case value="1">MP4文件</case>
-              <case value="2">流转发</case>
-            </switch>
-          </td>
-          <td>{{$vo.camera_name}}</td>
-          <td>{{$vo.player_num}}</td>
+        <volist name="my_show.list_data" id="vo">
+        <tr class="feed-cursor">
+          <td>{{$key+1}}</td>
+          <td>{{$vo.room_id}}</td>
+          <td>{{$vo.teacher}}</td>
+          <td>{{$vo.student}}</td>
         </tr>
         </volist>
       </tbody>
     </table>
   </div>
 </div>
-</gt>
+</if>
 
 <script>
+// onclick="doPlayerList({{$my_server_id}},{{$vo.room_id}});"
 // 处理点击观看用户列表...
-function doPlayerList(inRtmpAddr, inCameraID) {
+function doPlayerList(inSocketFD, inRoomID) {
   layer.open({
     type: 2, //0(dialog), 1(page), 2(iframe), 3(loading), 4(tips)
     closeBtn: 1,
@@ -87,8 +82,8 @@ function doPlayerList(inRtmpAddr, inCameraID) {
     scrollbar: false,
     shadeClose: false,
     area: ['600px', '450px'],
-    content: "{{:__APP__}}/Admin/getPlayerList/server/" + inRtmpAddr + '/camera/' + inCameraID,
-    title: "<i class='layui-icon'>&#xe612;</i>&nbsp;&nbsp;观看用户列表 - 通道编号：" + inCameraID
+    content: "{{:__APP__}}/Admin/getPlayerList/server_id/" + inSocketFD + '/room_id/' + inRoomID,
+    title: "<i class='layui-icon'>&#xe612;</i>&nbsp;&nbsp;观看用户列表 - 教室编号：" + inRoomID
   });  
 }
 // 处理 layui 过程...

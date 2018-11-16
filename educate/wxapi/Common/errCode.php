@@ -85,6 +85,10 @@ define('kCmd_UdpServer_DelTeacher',  14);
 define('kCmd_UdpServer_AddStudent',  15);
 define('kCmd_UdpServer_DelStudent',  16);
 define('kCmd_PHP_GetUdpServer',      17);
+define('kCmd_PHP_GetAllServer',      18);
+define('kCmd_PHP_GetAllClient',      19);
+define('kCmd_PHP_GetRoomList',       20);
+define('kCmd_PHP_GetPlayerList',     21);
 
 //////////////////////////////////////////////////////
 // 定义一组通用的公用函数列表...
